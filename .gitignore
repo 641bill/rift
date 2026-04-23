@@ -1,0 +1,23 @@
+# child repos
+scala-native-rift/
+scala-native/
+scala-parallel-collections-amordo/
+rift-bootstrap/
+Claude_output/
+
+# large data
+trip_data/
+trip_fare/
+tmp/
+.tmp/
+cache/
+
+# os
+.DS_Store
+
+# proof/build artifacts
+proof/.lake/
+proof/build/
+
+# misc
+*.log
