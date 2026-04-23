@@ -1,9 +1,16 @@
 # child repos
 scala-native-rift/
+scala-native-amordo/
 scala-native/
 scala-parallel-collections-amordo/
 rift-bootstrap/
 Claude_output/
+
+# local tooling
+.codex/
+.conductor/
+.metals/
+.vscode/
 
 # large data
 trip_data/

@@ -1,9 +1,0 @@
-[submodule "scala-native-rift"]
-	path = scala-native-rift
-	url = https://github.com/amordo/scala-native.git
-[submodule "scala-native"]
-	path = scala-native
-	url = https://github.com/amordo/scala-native.git
-[submodule "scala-parallel-collections-amordo"]
-	path = scala-parallel-collections-amordo
-	url = https://github.com/amordo/scala-parallel-collections.git
