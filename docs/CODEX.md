@@ -6,7 +6,8 @@ This file is the operating manual for using Codex on Rift after the project pivo
 
 Every new session should establish four things clearly:
 
-1. **The design pack**: `DESIGN.md`, `ROADMAP.md`, `CODEX.md`.
+1. **The design pack**: `DESIGN.md`, `ROADMAP.md`, `CODEX.md`, and the
+   consolidated prior-work review in `docs/Rift Literature Review.md`.
 2. **The implementation target**: the Scala Native fork at `git@github.com:641bill/scala-native.git`, branch `feature/rift`.
 3. **The current phase and last trustworthy result**: not just "what we hoped was true," but what has actually been rerun and accepted.
 4. **One concrete deliverable**: a code change, benchmark rerun, or proof step.

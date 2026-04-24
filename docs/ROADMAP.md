@@ -26,6 +26,11 @@ position relative to Broom, StreamFlex, Yak, Stancu-style static hybrid
 analysis, Tofte-Talpin/MLKit, Hallenberg-Elsman typed regions, and
 Reggio/Verona capabilities.
 
+These comparison anchors are consolidated in
+`docs/Rift Literature Review.md` (9-paper critical review). Use that document
+as the authoritative reference when a phase section below points at a specific
+paper.
+
 ## 2. Status Summary
 
 | Phase | Status | Evidence | Main remaining work |
@@ -269,6 +274,12 @@ Do not claim Phase 5 success until these criteria are met.
 Goal: compare Rift against dataflow/parallel-collection systems at the API
 level, not only as raw arrays.
 
+Prior-work anchors: Paper 1 (Broom, HotOS 2015) and Paper 3 (Yak, OSDI 2016)
+in `docs/Rift Literature Review.md`. Broom maps dataflow operator lifetimes
+onto transferable/actor-scoped/temporary regions but has no static
+enforcement; Yak's two-path hypothesis (GC heap for control, regions for
+data) is the memory-model target for DEBS and parallel-collections work.
+
 Current status:
 
 - `sandbox/PIPELINE_PARCOLL_COMPARISON.md` records the amordo
@@ -294,6 +305,14 @@ Exit criteria:
 
 Goal: make `Scoped` and `Streaming` regions safe by construction rather than by
 convention.
+
+Prior-work anchors: Paper 2 (StreamFlex, OOPSLA 2007), Paper 4 (Stancu et al.
+static hybrid, ISMM 2015), and Paper 8 (Reggio, OOPSLA 2023) in
+`docs/Rift Literature Review.md`. StreamFlex demonstrates implicit ownership
+types with near-zero annotation burden; Reggio provides the capability-based
+per-region strategy story but demands pervasive annotations. The goal is
+something between them using Scala 3 capture checking, per the lit review's
+design recommendations section D.
 
 Required work:
 
@@ -348,6 +367,13 @@ Exit criteria:
 ## 12. Phase 9: Lean Mechanization
 
 Goal: mechanize the core safety story.
+
+Prior-work anchors: Paper 5 (Tofte-Talpin retrospective, HOSC 2004) and
+Papers 7 & 9 (typed regions with tag-free generational GC, JFP 2021 / PADL
+2020) in `docs/Rift Literature Review.md`. The lit review notes that no
+mechanized proofs exist for any hybrid region+GC system and flags the PLDI
+2023 soundness bug in Elsman's region-typed calculus as the motivating risk
+for mechanization.
 
 Required model:
 
