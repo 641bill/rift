@@ -19,6 +19,9 @@ tmp/
 .tmp/
 cache/
 
+# local literature PDFs; extracted benchmark contracts belong in docs/evidence
+docs/literature/*.pdf
+
 # os
 .DS_Store
 

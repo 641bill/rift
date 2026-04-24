@@ -12,10 +12,11 @@ handoff update)
 
 Status: active research fork. The Phase 5 input-boundary checkpoint, reusable
 ranking backend, Q2 bounded cell-table checkpoint, Q1 primitive route-table
-checkpoint, Q2 latest-empty taxi-table checkpoint, and Q2 array-backed ranking
-checkpoint are committed locally. The packed Grid cell-key diagnostic
-checkpoint is the current local diff until committed. The fork is ahead of
-`origin/feature/rift` unless pushed.
+checkpoint, Q2 latest-empty taxi-table checkpoint, Q2 array-backed ranking
+checkpoint, and packed Grid cell-key diagnostic checkpoint are committed
+locally. This update adds the literature benchmark contract and the first
+Broom-style dataflow methodology harness as the current local diff until
+committed. The fork is ahead of `origin/feature/rift` unless pushed.
 
 ## 1. Project Objective
 
@@ -252,6 +253,7 @@ Completed and validated by recorded benchmark runs:
 - Added GCBench runtime matrix and topology matrix.
 - Added ListOfLists runtime, flat, chunked, topology, and report-subset matrices.
 - Added cleaned pipeline raw-array runtime matrix.
+- Added Broom-style dataflow SELECT/AGGREGATE/JOIN methodology matrix.
 - Added scripts to run matrices with Immix/current SafeZone/improved SafeZone/Rift modes.
 - Added DEBS Q1/Q2 implementation and sample/real-data runners.
 
@@ -265,6 +267,7 @@ Key files:
 - `sandbox/src/main/scala-next/ListOfListsChunkedMatrix.scala`
 - `sandbox/src/main/scala-next/ListOfListsTopologyMatrix.scala`
 - `sandbox/src/main/scala-next/PipelineRuntimeMatrix.scala`
+- `sandbox/src/main/scala-next/DataflowRegionMatrix.scala`
 - `sandbox/run_gcbench_runtime_matrix.sh`
 - `sandbox/run_gcbench_topology_matrix.sh`
 - `sandbox/run_listoflists_runtime_matrix.sh`
@@ -273,10 +276,14 @@ Key files:
 - `sandbox/run_listoflists_topology_matrix.sh`
 - `sandbox/run_listoflists_topology_report_subset.sh`
 - `sandbox/run_pipeline_runtime_matrix.sh`
+- `sandbox/run_dataflow_region_matrix.sh`
 
 Validation:
 
 - Results are recorded in `sandbox/PHASE0_BASELINES.md`, `sandbox/PHASE4_LAYOUT.md`, `sandbox/PHASE4_TOPOLOGY.md`, `sandbox/PHASE4_EXIT.md`, and `sandbox/PIPELINE_PARCOLL_COMPARISON.md`.
+- The dataflow matrix compiles and has smoke plus local 3-run median results in
+  `sandbox/DATAFLOW_REGION_MATRIX.md`. It is methodology reproduction evidence,
+  not exact Naiad/Broom artifact reproduction.
 
 ### 4.8 DEBS 2015 Work
 
@@ -586,6 +593,108 @@ Interpretation:
 - Within the raw-array surrogate, Rift is not a win at 100k.
 - Fair next comparison requires a Rift-backed collection with the same API shape as `ParVector`/`ZoneParVector`.
 
+### Broom-Style Dataflow Methodology Matrix
+
+Sources:
+
+- `docs/LITERATURE_BENCHMARK_CONTRACT.md`
+- `sandbox/DATAFLOW_REGION_MATRIX.md`
+- `evidence/DATAFLOW_REGION_MATRIX.md`
+
+Compile/check command:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile
+```
+
+Smoke command:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+DATAFLOW_EPOCHS=2 DATAFLOW_DOCS_PER_EPOCH=1000 DATAFLOW_BENCHMARK_RUNS=1 DATAFLOW_WARMUPS=0 \
+  zsh sandbox/run_dataflow_region_matrix.sh
+```
+
+Local median command:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+DATAFLOW_BENCHMARK_RUNS=3 DATAFLOW_WARMUPS=1 \
+  zsh sandbox/run_dataflow_region_matrix.sh
+```
+
+Local median configuration:
+
+- `DATAFLOW_EPOCHS=10`
+- `DATAFLOW_DOCS_PER_EPOCH=100000`
+- `DATAFLOW_AUTHORS_PER_EPOCH=20`
+- `DATAFLOW_KEY_SPACE=65536`
+- `DATAFLOW_AUTHOR_KEY_SPACE=256`
+- `DATAFLOW_SELECT_MODULO=8`
+- runs `3`, warmups `1`
+
+| Operator | Mode | Median elapsed ms | Median GC ms | Median Rift op ms | Median region objects |
+|---|---|---:|---:|---:|---:|
+| SELECT | heap | 29.100 | 7.134 | 0.000 | 0 |
+| SELECT | Rift HPZone | 23.549 | 0.000 | 0.055 | 1124990 |
+| SELECT | Rift Streaming | 23.466 | 0.000 | 0.043 | 1124990 |
+| AGGREGATE | heap | 61.204 | 20.346 | 0.000 | 0 |
+| AGGREGATE | Rift HPZone | 43.812 | 0.000 | 0.236 | 1627152 |
+| AGGREGATE | Rift Streaming | 43.934 | 0.000 | 0.254 | 1627152 |
+| JOIN | heap | 28.548 | 7.249 | 0.000 | 0 |
+| JOIN | Rift HPZone | 23.043 | 0.000 | 0.043 | 1078279 |
+| JOIN | Rift Streaming | 23.330 | 0.000 | 0.040 | 1078279 |
+
+Interpretation:
+
+- This is the first current benchmark harness that directly follows the Broom
+  operator methodology: epoch-local SELECT, AGGREGATE, and JOIN data objects
+  are allocated on heap or in regions with the same logical program.
+- It uses ordinary Scala object graphs in regions: document records, selected
+  outputs, aggregate entries, author entries, join outputs, and table arrays.
+- The local controlled workload shows material GC removal because the data
+  objects are intentionally epoch-local and allocation-heavy.
+- Rift operation time remains small in this harness.
+
+Caveats:
+
+- This is not an exact Naiad/Broom reproduction. The original artifact is not
+  available in the workspace.
+- SafeZone modes are not implemented in this harness yet.
+- The local median size is smaller than the Broom paper's 40-epoch,
+  500k-600k document-per-epoch vertex experiment.
+- The benchmark currently uses trusted `HPZone`/`Streaming` APIs, not the
+  future safe capture-checked API.
+
+Provisional Broom-scale single-run command:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+DATAFLOW_EPOCHS=40 DATAFLOW_DOCS_PER_EPOCH=500000 DATAFLOW_BENCHMARK_RUNS=1 DATAFLOW_WARMUPS=0 \
+  zsh sandbox/run_dataflow_region_matrix.sh
+```
+
+| Operator | Mode | Elapsed ms | GC ms | Rift op ms | Region objects |
+|---|---|---:|---:|---:|---:|
+| SELECT | heap | 1193.248 | 440.094 | 0.000 | 0 |
+| SELECT | Rift HPZone | 471.136 | 0.000 | 2.378 | 22500066 |
+| SELECT | Rift Streaming | 475.792 | 0.000 | 2.211 | 22500066 |
+| AGGREGATE | heap | 906.687 | 263.886 | 0.000 | 0 |
+| AGGREGATE | Rift HPZone | 688.029 | 0.000 | 2.956 | 22621480 |
+| AGGREGATE | Rift Streaming | 700.530 | 0.000 | 4.881 | 22621480 |
+| JOIN | heap | 587.596 | 163.944 | 0.000 | 0 |
+| JOIN | Rift HPZone | 492.409 | 0.000 | 1.105 | 21563289 |
+| JOIN | Rift Streaming | 455.895 | 0.000 | 1.013 | 21563289 |
+
+Interpretation:
+
+- This single run uses the paper-scale input shape of 40 epochs and 500k
+  documents per epoch, but it is still a local synthetic harness.
+- It is useful as a stress/provenance checkpoint because heap GC time becomes
+  hundreds of milliseconds while Rift GC remains zero, but it is not a
+  headline median.
+
 ### DEBS 2015 Status
 
 Source: `bench/debs2015/RESULTS.md`
@@ -752,6 +861,26 @@ Pipeline:
 - The cleaned raw-array pipeline does not currently show a Rift win.
 - The amordo `ZoneParVector` comparison is not apples-to-apples; Rift raw arrays are lower-level than parallel collection APIs.
 
+Broom-style dataflow:
+
+- The new `DataflowRegionMatrix` is the first local methodology benchmark that
+  moves ordinary Scala dataflow objects into regions without changing the
+  logical SELECT/AGGREGATE/JOIN programs.
+- At 10 epochs x 100k documents, Rift HPZone medians are faster than heap on
+  all three operators and measured GC time drops to zero in the timed runs:
+  SELECT `23.549 ms` vs heap `29.100 ms`, AGGREGATE `43.812 ms` vs heap
+  `61.204 ms`, JOIN `23.043 ms` vs heap `28.548 ms`.
+- A provisional 40-epoch x 500k-document single run shows the same direction
+  at a Broom-like input scale: SELECT heap `1193.248 ms` with `440.094 ms` GC
+  vs HPZone `471.136 ms`; AGGREGATE heap `906.687 ms` with `263.886 ms` GC vs
+  HPZone `688.029 ms`; JOIN heap `587.596 ms` with `163.944 ms` GC vs HPZone
+  `492.409 ms`.
+- This strengthens the hypothesis that region placement can help when the
+  workload is allocation-heavy with clear epoch lifetimes. It does not settle
+  DEBS, where Q2 median/rank CPU work still dominates.
+- The result is a Broom-style methodology reproduction, not exact Naiad/Broom
+  evidence, and SafeZone modes are still missing from this harness.
+
 DEBS:
 
 - Q1/Q2 correctness is established for bounded sorted real-data samples up to 1M rows.
@@ -844,9 +973,10 @@ Roadmap source: `/Users/siyaoliu/rift/Claude_output/ROADMAP.md`
 | Phase 3 runtime-only benchmarks | Done enough for current story | GCBench and ListOfLists runtime medians recorded; pipeline surrogate recorded. | Commix is not included. Pipeline provenance remains surrogate. |
 | Phase 4 topology/layout | Done enough to move on | `PHASE4_LAYOUT.md`, `PHASE4_TOPOLOGY.md`, `PHASE4_EXIT.md`. | Chunked layout still not a Rift win vs improved SafeZone. Mixed GC/region safety story needs Phase 6 tests. |
 | Phase 5 streaming operators and DEBS | In progress | DEBS Q1/Q2 run simultaneously on real data; outputs match; instrumentation added; Q1 and Q2 window entries have shared heap/Rift backends; Q2 active profit values live in window entries; Q2 median scratch arrays are region-backed and reused; Q2 ranking uses primitive cell keys internally; RunBoth input bytes use a heap/Rift allocation-placement split; the reusable ranking backend region-allocates Q1/Q2 ranking objects and top-k result arrays; Q2 bounded per-cell tables, Q1 route-table arrays, Q2 latest-empty taxi arrays, and Q2 ranking-index arrays are region-backed in Rift modes. New `diag_*` counters identify remaining heap/control paths, and the shared `Grid.cellKeyOrZero` hot path removes temporary `Some(Cell)`/`Cell` allocation from both heap and Rift. | Current 1M packed-cell medians are faster than heap with lower GC/RSS (`10969.616 ms` heap, `10770.260 ms` HPZone, `10665.729 ms` Streaming), but Q2 processing still dominates and the bounded-sample result is not final application evidence. Need Commix, SafeZone comparison, full-month input, Q2 median/rank design work, remaining control/collection work, and safe API boundaries. |
-| Phase 6 capture checking | Open | Only design templates and early Rift API surface exist. | Implement positive/negative capture tests and fill `REPORT_CAPTURE_CHECK.md`. |
-| Phase 7 Lean mechanization | Open | Design pack has Lean stubs/templates. | Port or start proof work; prove without `sorry`. |
-| Phase 8 writing | Not started beyond notes | Result packs and this handoff exist. | Thesis/paper narrative after evidence stabilizes. |
+| Phase 6 Broom/parallel-collections evidence | Started | `docs/LITERATURE_BENCHMARK_CONTRACT.md` extracts the paper comparison contract. `DataflowRegionMatrix` now runs Broom-style SELECT/AGGREGATE/JOIN methodology workloads with ordinary Scala objects in heap or Rift regions and records local 3-run medians. | Add SafeZone modes, run Broom-scale settings if feasible, add RSS collection, and do not claim exact Naiad/Broom reproduction. Build a fair Rift collection/operator API before redoing parallel-collections claims. |
+| Phase 7 capture checking | Open | Only design templates and early Rift API surface exist. | Implement positive/negative capture tests and fill `REPORT_CAPTURE_CHECK.md`. |
+| Phase 8 Lean mechanization | Open | Design pack has Lean stubs/templates. | Port or start proof work; prove without `sorry`. |
+| Phase 9 writing | Not started beyond notes | Result packs and this handoff exist. | Thesis/paper narrative after evidence stabilizes. |
 
 Is Phase 0 actually complete?
 
@@ -862,6 +992,7 @@ Docs / roadmap / design:
 - `/Users/siyaoliu/rift/Claude_output/ROADMAP.md`
 - `/Users/siyaoliu/rift/Claude_output/CODEX.md`
 - `docs/HANDOFF.md`
+- `docs/LITERATURE_BENCHMARK_CONTRACT.md`
 - `docs/STREAM_GC_EVIDENCE_AND_COMPARISON_PLAN.md`
 - `AGENTS.md`
 - `CLAUDE.md`
@@ -898,6 +1029,7 @@ Benchmark harnesses:
 - `sandbox/src/main/scala-next/ListOfListsChunkedMatrix.scala`
 - `sandbox/src/main/scala-next/ListOfListsTopologyMatrix.scala`
 - `sandbox/src/main/scala-next/PipelineRuntimeMatrix.scala`
+- `sandbox/src/main/scala-next/DataflowRegionMatrix.scala`
 - `sandbox/src/main/scala-next/debs2015/*`
 - `bench/debs2015/*`
 
@@ -908,6 +1040,7 @@ Notes / result packs:
 - `sandbox/PHASE4_TOPOLOGY.md`
 - `sandbox/PHASE4_EXIT.md`
 - `sandbox/PIPELINE_PARCOLL_COMPARISON.md`
+- `sandbox/DATAFLOW_REGION_MATRIX.md`
 - `bench/debs2015/RESULTS.md`
 
 Scripts:
@@ -920,6 +1053,7 @@ Scripts:
 - `sandbox/run_listoflists_topology_matrix.sh`
 - `sandbox/run_listoflists_topology_report_subset.sh`
 - `sandbox/run_pipeline_runtime_matrix.sh`
+- `sandbox/run_dataflow_region_matrix.sh`
 - `bench/debs2015/join_nyc_taxi_sample.sh`
 - `bench/debs2015/run_both_sample_matrix.sh`
 - `bench/debs2015/run_both_instrumented_matrix.sh`
@@ -946,6 +1080,9 @@ Benchmarking uncertainties:
 - Commix is missing from most comparison tables.
 - Improved SafeZone comparison is not yet present for DEBS because DEBS currently compares heap vs Q1 Rift modes, not SafeZone modes.
 - Pipeline is a surrogate. Do not present it as a reproduction of the old Broom/Naiad-style result.
+- `DataflowRegionMatrix` is a Broom-style methodology reproduction, not an
+  exact Naiad/Broom artifact reproduction. It does not yet include SafeZone
+  modes, RSS collection, or median Broom-scale 40-epoch 500k+ document runs.
 - Older result packs were generated from then-uncommitted code. The current
   input-boundary, ranking/result, Q2 cell-table, Q1 route-table, Q2 taxi-table,
   and Q2 array-ranking experiments now have local commit boundaries once this
@@ -976,7 +1113,10 @@ Immediate next step:
    median elapsed is `10969.616 ms`, HPZone is `10770.260 ms`, and Streaming is
    `10665.729 ms`; GC medians are `383.827 ms`, `349.488 ms`, and `334.689 ms`
    respectively.
-2. The next implementation target should be Q2 median/rank maintenance, not
+2. Treat the new `DataflowRegionMatrix` result as started Phase 6/Broom-style
+   methodology evidence. The next benchmark step is adding SafeZone modes and
+   collecting RSS/median Broom-scale runs if local runtime allows.
+3. The next DEBS implementation target should be Q2 median/rank maintenance, not
    parser/input work. The design must preserve the same logical query for heap
    and Rift; heap should use ordinary allocation and Rift should use region
    allocation at the same lifetime boundary.
@@ -1004,6 +1144,12 @@ Next technical milestone:
    - Do not repeat the uncommitted Q1 indexed-heap ranking design unchanged; it
      preserved correctness but regressed Q1 processing.
 3. Rerun 100k and 1M instrumented matrices with medians after each change.
+4. In parallel with DEBS, extend the dataflow methodology harness:
+   - Add current/improved SafeZone modes for SELECT/AGGREGATE/JOIN if capture
+     annotations can express the object graph cleanly.
+   - Collect RSS with `/usr/bin/time -l` in the script or a companion wrapper.
+   - Upgrade the 40-epoch, 500k-document-per-epoch single run to a median run
+     only after RSS collection and SafeZone feasibility are understood.
 
 What should not be done yet:
 
@@ -1060,16 +1206,19 @@ What is stable enough:
 2. `DESIGN.md`
 3. `ROADMAP.md`
 4. `/Users/siyaoliu/rift/docs/Rift Literature Review.md`
-5. `/Users/siyaoliu/rift/Claude_output/CODEX.md`
-6. `sandbox/PHASE0_BASELINES.md`
-7. `sandbox/PHASE4_EXIT.md`
-8. `bench/debs2015/RESULTS.md`
+5. `docs/LITERATURE_BENCHMARK_CONTRACT.md`
+6. `/Users/siyaoliu/rift/Claude_output/CODEX.md`
+7. `sandbox/PHASE0_BASELINES.md`
+8. `sandbox/PHASE4_EXIT.md`
+9. `sandbox/DATAFLOW_REGION_MATRIX.md`
+10. `bench/debs2015/RESULTS.md`
 
 ## Safe Next Action
 
 The implementation worktree should now be clean and ahead of
-`origin/feature/rift`. The safest next technical action is to design and test a
-fair treatment for the remaining tree/taxi/latency metadata, or add allocation
+`origin/feature/rift`. The safest next technical actions are to add SafeZone
+modes/RSS collection to `DataflowRegionMatrix`, and to design and test a fair
+treatment for the remaining DEBS tree/taxi/latency metadata or add allocation
 attribution around those structures before changing them. Do not reintroduce
 reset-per-event top-k snapshots; reusable top-k arrays are the accepted lower
 overhead shape.

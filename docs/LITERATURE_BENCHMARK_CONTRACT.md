@@ -1,0 +1,88 @@
+# Rift Literature Benchmark Contract
+
+Date: 2026-04-25
+
+Status: extracted from local PDFs under `docs/literature/`. The PDFs are local
+research references and are not committed as project source unless explicitly
+requested.
+
+## Purpose
+
+This file translates the Broom, Yak, StreamFlex, and Stancu et al. papers into
+concrete reproduction targets for Rift. It is not a claim that Rift has already
+matched those systems. It is the comparison contract that keeps the benchmark
+plan tied to prior work while the implementation continues.
+
+The standard for new benchmarks is:
+
+- Heap and Rift variants must run the same logical program.
+- The intended variable is allocation placement and lifetime policy.
+- Region-managed values may be ordinary Scala objects.
+- Primitive-only layouts are allowed only when labeled as layout experiments or
+  interim safety workarounds.
+- Results must separate runtime-only effects, topology/layout effects, and
+  application/operator evidence.
+
+## Prior-Work Benchmark Targets
+
+| System | Workload in paper | Original setup and metric | Reported effect | Rift reproduction target |
+|---|---|---|---|---|
+| Broom | List-of-lists allocator microbenchmark | Allocate/free 40 list-of-lists; each structure has `n` lists of `n` objects, `n=500..3000`. | Region runtime reduced time by about 59%. | Already covered locally by ListOfLists same-layout matrix; keep current/improved SafeZone and Rift HPZone baselines. |
+| Broom | Emulated Naiad SELECT, AGGREGATE, JOIN vertices | Synthetic per-epoch inputs: documents receive 500k-600k new entries per epoch; authors receive 10-20 new entries per epoch; run after 40 epochs. | SELECT about 13%, AGGREGATE about 20%, JOIN about 36% runtime reduction. | Add a Broom-style dataflow matrix with ordinary Scala message/value objects allocated either on heap or in an epoch region. Label it methodology reproduction, not exact Naiad reproduction. |
+| Broom | Naiad workflows and incremental SCC motivation | Naiad v0.4 on Mono; examples include TPC-H Q17, shopper workflow, and SCC over 15M vertices / 80M edges. | GC often accounts for 20%-40% of runtime and can create synchronization delays. | Use as motivation and future comparison. Exact artifact is unavailable, so do not claim exact reproduction. |
+| Yak | Hyracks external sort, word count, distributed grep | 11-node cluster; YahooWebmap 72GB; data/control split with epochs at operator open/close. | Overall normalized runtime 0.14-0.64 vs Parallel Scavenge; GC time 0.02-0.11. | Future: implement Hyracks-like sort/word-count/grep surrogates or run on a real dataflow engine only if available. Track epoch annotations, GC time, app time, memory, and pause proxy. |
+| Yak | Hadoop in-map combiner, top-word selector, distributed word filter | 11-node cluster; StackOverflow 37GB; epochs around map/reduce tasks. | Overall normalized runtime 0.73-0.89; GC time 0.17-0.26; app time sometimes higher. | Future: reproduce map/reduce task-shape locally only after the dataflow operator harness is stable. |
+| Yak | GraphChi connected components, community detection, PageRank | One node; Sampletwitter-2010, 100M edges, 62M vertices; epochs around sub-intervals. | Overall normalized runtime 0.70-0.86; GC time 0.15-0.56. | Future: graph-processing benchmark with explicit sub-interval regions and a control/data split. |
+| StreamFlex | StreamIt BeamFormer and FilterBank | Ovm and HotSpot Java baselines; 10,000 iterations. | StreamFlex reported substantially lower run time than Java baselines on those stream kernels. | Future: add stream-kernel latency/throughput matrix once the Rift streaming API has a safe shape. |
+| StreamFlex | IDS and event-correlation latency | Periodic stream processing; deadline miss and per-item latency measurements. | StreamFlex avoids large GC-induced deadline misses in the reported event-correlation case. | Future: collect per-event latency distributions and max-pause proxies, not just median throughput. |
+| Stancu et al. | SPECjbb2005 transaction regions | 7 annotations; each warehouse 100k iterations; young gen varied 1MB-256MB. | About 77%-78% memory region-freed; up to 22% speedup at small young gen; fewer young collections. | Future: add annotation-count and region-freed-byte metrics to Rift safe API experiments. Keep fallback/escape counts visible. |
+
+## Immediate Reproduction Order
+
+1. Keep the local ListOfLists matrix as the Broom allocator microbenchmark
+   reproduction.
+2. Add a Broom-style SELECT/AGGREGATE/JOIN dataflow matrix in the Scala Native
+   fork. It should use ordinary Scala objects for message records, aggregate
+   entries, join entries, and output records.
+3. Use that matrix to compare heap vs Rift HPZone vs Rift Streaming first.
+   SafeZone can be added afterward, but missing SafeZone must be documented.
+4. Continue DEBS Phase 5 only when changes preserve the same logical program:
+   heap uses `new`, Rift uses `region.alloc` at the same lifetime boundary.
+5. Defer Yak-scale systems, StreamFlex latency kernels, and Stancu-style
+   annotation accounting until the Broom-style operator harness is stable.
+
+Current implementation note: step 2 has started in
+`scala-native-rift/sandbox/src/main/scala-next/DataflowRegionMatrix.scala`, with
+local medians and a provisional 40-epoch x 500k-document single run recorded in
+`scala-native-rift/sandbox/DATAFLOW_REGION_MATRIX.md` and synced to
+`evidence/DATAFLOW_REGION_MATRIX.md`.
+
+## Metrics Required For Reproduction Claims
+
+Every benchmark result intended for comparison should include:
+
+- command and environment variables;
+- run count and whether the result is median or single-run;
+- elapsed time;
+- GC collection count and GC collection duration;
+- Rift region operation time and allocation/open/close/reset counters where
+  applicable;
+- memory/RSS when collected by the surrounding script;
+- correctness checksum or output comparison;
+- annotation count or explicit statement that the benchmark is still using
+  trusted `HPZone` APIs;
+- clear label: exact reproduction, methodology reproduction, surrogate, or
+  local diagnostic.
+
+## Current Contract Gaps
+
+- The available Broom/Naiad implementation is not open in this workspace; exact
+  Naiad numbers cannot be reproduced from the paper alone.
+- Yak's original evaluation is distributed and JVM-specific. Rift should compare
+  against the control/data-space idea first, not pretend a local microbenchmark
+  replaces the cluster result.
+- StreamFlex's strongest axis is latency predictability. Rift currently records
+  throughput and GC duration, but not per-event latency tails outside DEBS
+  output-latency fields.
+- Stancu et al. measure annotation burden and region-freed memory. Rift does not
+  yet have a safe API or compiler report capable of making that comparison.
