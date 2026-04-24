@@ -1,12 +1,14 @@
 # Rift Project Handoff
 
-Date: 2026-04-23
+Date: 2026-04-24
 
 Active worktree: `/Users/siyaoliu/rift/scala-native-rift`
 
 Active branch: `feature/rift`
 
-Head commit: `ddbba577aecd4c0adc741cbf7085ee93548c46b4` (`upstream/main`, `Update sbt 2 to 2.0.0-RC9 (#4782)`)
+Upstream sync point: `ddbba577aecd4c0adc741cbf7085ee93548c46b4` (`upstream/main`, `Update sbt 2 to 2.0.0-RC9 (#4782)`)
+
+Current `feature/rift` head: `967e0ba60` (`advance DEBS region evidence`)
 
 Status: active research fork with substantial uncommitted and untracked work.
 
@@ -37,7 +39,8 @@ Use this worktree for active Rift work:
 
 - `/Users/siyaoliu/rift/scala-native-rift`
 - branch: `feature/rift`
-- current head: `ddbba577a`
+- upstream sync point: `ddbba577a`
+- current head: `967e0ba60` (`advance DEBS region evidence`)
 
 Current implementation remotes:
 
@@ -298,12 +301,64 @@ Validation:
 - 10k, 100k, and 1M RunBoth matrices matched heap/Rift outputs after stripping only final measured-latency column.
 - 100k and 1M instrumented matrices also matched.
 
-Current limitation:
+Current limitation as of 2026-04-23:
 
 - Q2 is still heap-only.
 - `Trip.parse` still allocates strings/arrays/`Trip` objects on the heap.
 - Q1 still uses heap `HashMap`, `TreeSet`, `RankedRoute`, output arrays, and output formatting.
 - Therefore Rift DEBS still depends heavily on GC and does not yet provide strong application-level evidence.
+
+### 2026-04-24 Q2 fairness pivot and region-backed Q2 data path
+
+Advanced on child `feature/rift` commit `967e0ba60` and synced into
+`evidence/DEBS_RESULTS.md`. Five sub-phases landed in sequence:
+
+1. **Shared Q2 window entries.** `Q2Heap` and `Q2RiftWindows` now share one
+   bucketed-window implementation. Heap mode allocates `ProfitEntry` /
+   `EmptyEntry` with ordinary `new`; Rift modes allocate the same classes with
+   `region.alloc` into per-timestamp regions and close regions when each 15-min
+   profit bucket or 30-min empty-taxi bucket expires. Region entries store
+   primitive cell/taxi keys, not heap `Cell` or `String` references.
+2. **Q2 profit state as region source-of-truth.** `ProfitStats` now keeps only
+   list head, count, dirty bit, and cached median on the heap. Active profit
+   values live exclusively in the region-backed `ProfitEntry` list; no heap
+   `ArrayBuffer[Double]` duplicate.
+3. **Q2 median scratch arrays in region.** Median recomputation allocates its
+   temporary sort `Array[Double]` in a dedicated scratch region in Rift modes
+   and resets it immediately after the median is cached.
+4. **RunBoth phase breakdown + scratch batching.** `Debs2015RunBothRunner`
+   now reports coarse phase timers (`read`, `parse`, `q1_process`, `q1_output`,
+   `q2_process`, `q2_output`, `close`, `tracked`, `untracked`). Median scratch
+   reset was batched from per-dirty-cell to per-trip, cutting resets from
+   `171197` to `87438` on 100k and Rift op ms from `~51.5` to `~28`.
+5. **Q2 primitive cell keys in ranking.** `ProfitableArea` now stores
+   `cellKey: Int`; ranking tie-breaking and `Q2Output` use a no-allocation
+   decimal-lexicographic comparator equivalent to comparing `"east.south"`.
+
+Current single-run 100k result (before any parser-level change):
+
+| Mode | Elapsed ms | Q2 process ms | Q2 output ms | GC ms | Rift op ms | Rift resets | Region objects |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| heap | 1813.074 | 880.566 | 155.863 | 90.540 | 0.000 | 0 | 0 |
+| Rift HPZone | 1863.806 | 909.965 | 160.252 | 84.775 | 28.815 | 87438 | 465481 |
+| Rift Streaming | 1832.249 | 895.328 | 156.544 | 82.728 | 28.681 | 87438 | 465481 |
+
+Phase mix at 100k: Q2 process is about `48-50%` of elapsed, read+parse `~22%`,
+Q2 output `~9%`, GC `~4.5-4.8%`, Rift op `~2.7%`. These are single-run numbers;
+ordering between heap and Rift modes is not yet stable.
+
+Current limitation as of 2026-04-24:
+
+- Q2 window data and active profit values are now region-backed. Q2 control
+  metadata (ranking `TreeSet`, cached medians, latest-by-cell map) remains on
+  the GC heap by design.
+- `Trip.parseInto` still calls `line.substring(...)` three times per event for
+  `taxiId`, `pickupTimestamp`, `dropoffTimestamp`. This is the next identified
+  heap-allocation boundary to eliminate.
+- Q1 ranking state (`HashMap`, `TreeSet`, `RankedRoute`) and `Q2` ranking
+  `TreeSet[ProfitableArea]` remain heap-based.
+- Output formatting still allocates on the heap.
+- DEBS rows remain single-run measurements, not medians.
 
 ## 5. Benchmark And Validation Summary
 
@@ -769,6 +824,8 @@ Notes / result packs:
 - `sandbox/PHASE4_EXIT.md`
 - `sandbox/PIPELINE_PARCOLL_COMPARISON.md`
 - `bench/debs2015/RESULTS.md`
+- `/Users/siyaoliu/rift/evidence/ALL_PHASE_RESULTS.md` (parent-repo cross-phase rollup)
+- `/Users/siyaoliu/rift/docs/Rift Literature Review.md` (9-paper critical review of hybrid region/GC systems)
 
 Scripts:
 
