@@ -26,11 +26,6 @@ position relative to Broom, StreamFlex, Yak, Stancu-style static hybrid
 analysis, Tofte-Talpin/MLKit, Hallenberg-Elsman typed regions, and
 Reggio/Verona capabilities.
 
-These comparison anchors are consolidated in
-`docs/Rift Literature Review.md` (9-paper critical review). Use that document
-as the authoritative reference when a phase section below points at a specific
-paper.
-
 ## 2. Status Summary
 
 | Phase | Status | Evidence | Main remaining work |
@@ -40,7 +35,7 @@ paper.
 | Phase 2: in-tree runtime/compiler path | Partially done | `RiftRuntime.c/h`, `RiftRegion`, plugin lowering, `RiftRegionTest`. | Header/API cleanup, broader tests, commit boundary, stats ABI decision. |
 | Phase 3: runtime-only evaluation | Done enough for current claim | GCBench and ListOfLists medians show Rift wins over heap and improved SafeZone. | Add Commix where relevant; avoid overclaiming pipeline. |
 | Phase 4: topology/layout decomposition | Done enough to move on | `PHASE4_LAYOUT.md`, `PHASE4_TOPOLOGY.md`, `PHASE4_EXIT.md`. | Carry safety finding into Phase 6; chunked layout still not clear Rift win vs improved SafeZone. |
-| Phase 5: application evidence | In progress, not complete | DEBS Q1/Q2 scaffold runs and outputs match on bounded real-data samples. | Region-heavy parser/Q1/Q2, medians, SafeZone/Commix modes, full-month scale. |
+| Phase 5: application evidence | In progress, not complete | DEBS Q1/Q2 scaffold runs and outputs match on bounded real-data samples; RunBoth uses a shared byte parser and region-backed input buffer; Rift modes now region-allocate Q1/Q2 window entries, Q2 median scratch, ranking objects, and top-k result arrays. | Region result reset overhead, heap control collections, medians after ranking changes, SafeZone/Commix modes, full-month scale. |
 | Phase 6: Broom/parallel-collections API evidence | Open | Only raw-array surrogate and amordo comparison note exist. | Build fair Rift-backed collection/operator API. |
 | Phase 7: capture-checked safe API | Open | Runtime kind constants exist; safety tests not implemented. | Positive/negative capture tests, safe `Scoped`/`Streaming` API, report gaps. |
 | Phase 8: native GC/region integration hardening | Open | Safety bug found for unrooted region-to-GC references. | Decide reject/root/scan strategy; test mixed references. |
@@ -130,7 +125,8 @@ Exit criteria:
 Risks:
 
 - Current code is uncommitted and untracked in important areas.
-- `origin` should point at `git@github.com:641bill/scala-native.git`.
+- `origin` points at `https://github.com/amordo/scala-native.git`, not the
+  intended `641bill` fork.
 - `RiftRuntime.h` does not currently declare all stats functions used by Scala
   externs.
 
@@ -206,21 +202,33 @@ Current status:
 - Heap, Rift HPZone, and Rift Streaming outputs match after stripping only the
   measured latency column.
 - Instrumented runs report GC counters, RSS, and Rift counters.
-- A parser fast path now avoids `String.split`, per-row `Option` allocation,
-  and per-row `Trip` allocation in hot runners. This improves all modes, but it
-  is not yet region-heavy evidence because input strings, taxi/timestamp
-  strings, ranking objects, and outputs remain heap-based.
+- The RunBoth hot path now uses a shared byte parser. Heap mode uses a heap
+  input byte buffer; Rift modes allocate the same run-lifetime input buffer in
+  a region. The parser avoids `String.split`, per-row `Option`, per-row `Trip`,
+  per-row line strings, and per-row taxi/timestamp substrings in the RunBoth
+  path.
 - Q1 now uses a shared bucketed-window implementation for heap and Rift. Heap
   allocates the same bucket-entry class with `new`; Rift allocates it with
   `region.alloc` and closes the per-timestamp region at bucket eviction.
+- Q2 now uses the same shared-backend shape for profit-window and empty-taxi
+  window entries. Heap allocates the same entry classes with `new`; Rift
+  allocates them with `region.alloc` and closes each per-timestamp region at
+  window eviction.
 
 Current limitation:
 
-- Current Rift DEBS region-allocates only Q1 bucket entries, using the same Q1
-  bucketed algorithm as heap.
-- Q2 is heap-only.
-- Parser, Q1 ranking, Q2 ranking, median structures, output arrays, and output
-  formatting remain heap-heavy.
+- Current Rift DEBS region-allocates Q1 and Q2 window entries using the same
+  bucketed algorithms as heap.
+- Q1/Q2 ranking control metadata still uses heap maps/trees, but Rift modes now
+  allocate Q1 `RankedRoute`/`Route`/`Cell` objects and Q2 `ProfitableArea`
+  objects in run-lifetime regions.
+- Returned top-k arrays are allocated in resettable snapshot regions in Rift
+  modes. Runners keep only heap primitive snapshots between outputs so
+  region-backed arrays do not escape across `process` calls.
+- Output formatting now writes directly to `Writer` through shared code and
+  avoids hot per-row `StringBuilder.toString` and Q2 `f""` formatting.
+- Q2 median scratch arrays are region-backed in Rift modes and reset at the
+  trip/operator boundary. Q2 ranking uses packed primitive cell keys internally.
 - Therefore current DEBS does not yet establish that Rift is faster at the
   application level.
 
@@ -231,29 +239,74 @@ Current provisional evidence:
 | 1M RunBoth elapsed | 21658.215 ms | 22314.989 ms | 22184.467 ms |
 | 1M instrumented elapsed | 22827.882 ms | 22366.285 ms | 22810.687 ms |
 | 1M instrumented GC time | 1051.752 ms | 1003.171 ms | 1012.489 ms |
+| 100k after Q2 windows, elapsed | 1837.501 ms | 1794.929 ms | 1843.627 ms |
+| 100k after Q2 windows, region objects | 0 | 294284 | 294284 |
+| 100k after Q2 profit values, elapsed | 1816.773 ms | 1791.195 ms | 1802.942 ms |
+| 100k after Q2 median scratch, elapsed | 1881.304 ms | 1920.875 ms | 1937.911 ms |
+| 100k after Q2 median scratch, region resets | 0 | 171197 | 171197 |
+| 100k after per-trip scratch reset, elapsed | 1748.744 ms | 1775.350 ms | 1768.716 ms |
+| 100k after per-trip scratch reset, region resets | 0 | 87438 | 87438 |
+| 100k after primitive Q2 ranking keys, elapsed | 1813.074 ms | 1863.806 ms | 1832.249 ms |
+| 100k phase share after primitive Q2 ranking keys, Q2 process | 48.6% | 48.8% | 48.9% |
+| 100k after region-backed input buffer, elapsed | 1557.171 ms | 1703.600 ms | 1591.372 ms |
+| 100k after region-backed input buffer, read+parse share | 9.6% | 8.8% | 9.4% |
+| 1M after region-backed input buffer, elapsed | 18692.484 ms | 17789.410 ms | 17280.431 ms |
+| 1M after region-backed input buffer, GC time | 731.171 ms | 644.394 ms | 643.015 ms |
+| 1M median after region-backed input buffer, elapsed | 17047.611 ms | 17119.396 ms | 17210.458 ms |
+| 1M median after region-backed input buffer, GC time | 684.338 ms | 640.062 ms | 628.808 ms |
+| 1M single after region ranking/result snapshots, elapsed | 16363.012 ms | 17243.387 ms | 17301.238 ms |
+| 1M single after region ranking/result snapshots, GC time | 601.615 ms | 503.198 ms | 529.115 ms |
+| 1M single after region ranking/result snapshots, Rift op time | 0.000 ms | 933.640 ms | 936.641 ms |
+| 1M single after region ranking/result snapshots, peak RSS | 1148436480 | 1088684032 | 1088618496 |
 
 Immediate next step:
 
 - Preserve benchmark fairness before adding more region code. Heap and Rift
   variants should be the same logical program with allocation/lifetime policy
   as the variable, not separate hand-specialized algorithms.
-- Next, implement the same shared-backend shape for Q2 window entries and other
-  structured-lifetime data before optimizing ranking internals.
+- The input-buffer median rerun is complete. The single-run Rift win after the
+  byte-reader change did not hold as a median: Rift reduced GC time, but region
+  operation time offset it.
+- The first ranking/result-region experiment is complete enough to guide the
+  next design step. It moved ordinary Scala ranking/result objects into Rift
+  regions and reduced GC/RSS in places, but the resettable top-k snapshot region
+  adds too much reset/bookkeeping overhead for a headline win.
+- Next, design a lower-overhead region-backed top-k/result view or collection
+  API before moving more tiny per-event objects into reset-per-event regions.
 
 Implementation substeps:
 
-- Treat input/parser cleanup as shared noise reduction only; it is not by itself
-  Rift evidence.
+- Treat input/parser cleanup as shared noise reduction unless the only
+  allocation-placement difference is explicit, as with the current heap input
+  buffer vs Rift region input buffer.
 - Keep Q1 heap and Rift algorithms aligned. Any future Q1 optimization must be
   shared by both modes unless the only difference is allocation placement.
-- Implement region-shaped Q2 profit and empty-taxi windows with a heap backend
-  and a Rift backend over the same algorithm.
-- Only replace Q2 median/ranking data structures after the window lifetime
-  boundary is represented fairly for heap and Rift.
+- Q2 profit and empty-taxi windows now have heap and Rift backends over the
+  same algorithm.
+- Q2 active profit values now live in window entries instead of a heap
+  `ArrayBuffer`; Q2 median scratch arrays are region-backed in Rift modes and
+  reset once per processed trip.
+- Q1/Q2 ranking objects now have a heap/Rift allocation-placement split, but
+  heap maps/trees remain the control metadata. This is trusted HPZone
+  benchmark code, not the final safe mixed-reference story.
+- Primitive keys and packed cell/route IDs remain acceptable only as shared
+  noise cleanup or as temporary boundaries where mixed-reference safety is not
+  implemented.
+- RunBoth input bytes now have a heap/Rift allocation-placement split over the
+  same byte parser. Single-query Q1/Q2 runners still use the older file input
+  path and are not the source of Phase 5 input-buffer evidence.
+- Do not add more reset-per-event region scratch paths without measuring reset
+  cost; the snapshot-result experiment shows region resets can replace GC as
+  the bottleneck.
+- Only replace Q2 ranking/control data structures further if the change keeps
+  heap and Rift on the same logical algorithm and uses a region lifetime that
+  can be reclaimed without excessive reset churn.
 - Use primitive keys and packed cell/route IDs only when the change is shared
   across modes or needed to avoid unsafe region-to-GC references.
 - Keep heap roots explicit for any heap object referenced from region memory.
-- Rerun 100k and 1M instrumented matrices with medians after each change.
+- Rerun 100k and 1M instrumented matrices with medians after each change that
+  looks promising in a single run. Single-run ranking/result numbers are
+  diagnostic only.
 - Add Commix and improved SafeZone modes where meaningful.
 - Scale to full-month joined/sorted data only after the bounded samples have a
   stable region-heavy implementation.
@@ -273,12 +326,6 @@ Do not claim Phase 5 success until these criteria are met.
 
 Goal: compare Rift against dataflow/parallel-collection systems at the API
 level, not only as raw arrays.
-
-Prior-work anchors: Paper 1 (Broom, HotOS 2015) and Paper 3 (Yak, OSDI 2016)
-in `docs/Rift Literature Review.md`. Broom maps dataflow operator lifetimes
-onto transferable/actor-scoped/temporary regions but has no static
-enforcement; Yak's two-path hypothesis (GC heap for control, regions for
-data) is the memory-model target for DEBS and parallel-collections work.
 
 Current status:
 
@@ -305,14 +352,6 @@ Exit criteria:
 
 Goal: make `Scoped` and `Streaming` regions safe by construction rather than by
 convention.
-
-Prior-work anchors: Paper 2 (StreamFlex, OOPSLA 2007), Paper 4 (Stancu et al.
-static hybrid, ISMM 2015), and Paper 8 (Reggio, OOPSLA 2023) in
-`docs/Rift Literature Review.md`. StreamFlex demonstrates implicit ownership
-types with near-zero annotation burden; Reggio provides the capability-based
-per-region strategy story but demands pervasive annotations. The goal is
-something between them using Scala 3 capture checking, per the lit review's
-design recommendations section D.
 
 Required work:
 
@@ -367,13 +406,6 @@ Exit criteria:
 ## 12. Phase 9: Lean Mechanization
 
 Goal: mechanize the core safety story.
-
-Prior-work anchors: Paper 5 (Tofte-Talpin retrospective, HOSC 2004) and
-Papers 7 & 9 (typed regions with tag-free generational GC, JFP 2021 / PADL
-2020) in `docs/Rift Literature Review.md`. The lit review notes that no
-mechanized proofs exist for any hybrid region+GC system and flags the PLDI
-2023 soundness bug in Elsman's region-typed calculus as the motivating risk
-for mechanization.
 
 Required model:
 

@@ -52,6 +52,9 @@ Current reliable evidence:
   explicit caveat that several results use uncommitted runtime changes.
 - DEBS correctness on bounded sorted samples is partially validated.
 - DEBS performance is provisional and not yet an application-level Rift win.
+  Current phase timers show Q2 processing is the dominant measured phase, while
+  GC and Rift region operations are both small shares of total elapsed time on
+  the 100k bounded sample.
 - The raw-array pipeline is a surrogate and must not be presented as a
   replacement for Broom-style or `ZoneParVector` collection evidence.
 
@@ -68,8 +71,11 @@ framing:
 - Layout and topology are first-order effects. They must be reported separately
   from allocator effects.
 - Application evidence must allocate the application's dominant data operations
-  in regions. Current DEBS only region-allocates part of Q1, while parsing, Q2,
-  ranking, and output still allocate heavily on the GC heap.
+  in regions. Current DEBS region-allocates Q1/Q2 window entries, Q2 active
+  profit values, Q2 median scratch, the RunBoth input buffer, and provisional
+  ranking/result objects in Rift modes. It still does not prove an
+  application-level win because ranking/result reset costs are visible and
+  control collections remain heap-managed.
 - The literature-review target is broader than local baselines: Rift must be
   compared against Broom, StreamFlex, Yak, Stancu-style hybrid static analysis,
   the MLKit typed-region lineage, and Reggio/Verona-style capabilities.
@@ -134,6 +140,26 @@ The important corrected invariant is about GC visibility:
   referenced from a region.
 - `HPZone` remains a trusted path. It may be used to measure runtime potential,
   but it is not the safety story.
+
+Region-managed values are allowed to be ordinary Scala objects. Rift is not a
+primitive-record-only system. Packed primitive keys in the current DEBS code are
+an interim boundary technique used where the runtime cannot yet prove or expose
+mixed-reference safety. The intended v1 safe mixed-reference policy is:
+
+- `GC -> region`: allowed only when the heap object's type/capture set proves
+  the heap object cannot outlive the region it points into.
+- `region -> GC`: allowed only for immutable/static referents or explicit
+  GC-visible root handles. A region object must not be the sole owner of a
+  collectible heap object because Scala Native's GC does not scan Rift slabs.
+- No GC scanning of arbitrary region slabs in v1; that would complicate
+  non-moving native-runtime assumptions and should be evaluated only after the
+  explicit-root/static-capture design is tested.
+
+Stable heap references used by region objects must therefore be independently
+rooted metadata, static/immutable objects, or future checked root handles. The
+current benchmark HPZone paths are trusted experiments and must be labeled as
+such when they store heap metadata or heap collection entries that point at
+region objects.
 
 This correction comes from two repo-grounded findings:
 
@@ -257,19 +283,40 @@ For DEBS 2015:
 - Current Q1 uses a shared bucketed-window implementation. Heap mode allocates
   the same `BucketWindowEntry` class on the GC heap; Rift modes allocate that
   class in per-timestamp regions and close the bucket region at eviction.
-- Current Q2 is heap-only.
-- Parsing now avoids `String.split`, per-row `Option` allocation, and per-row
-  `Trip` allocation in hot runners, but still uses `Source.getLines`, line
-  strings, taxi/timestamp strings, and heap output formatting.
-- Q1 ranking still uses heap `HashMap`, `TreeSet`, `RankedRoute`, arrays, and
-  output formatting.
-- Q2 uses heap queues, maps, `ProfitStats`, `ArrayBuffer`, sorted arrays,
-  `TreeSet`, `ProfitableArea`, and output formatting.
+- Current Q2 uses a shared bucketed-window implementation for profit and
+  empty-taxi window entries. Heap mode allocates the same entry classes on the
+  GC heap; Rift modes allocate those entries in per-timestamp regions and close
+  each region at window eviction.
+- RunBoth parsing now uses a shared byte parser. Heap mode allocates the input
+  byte buffer on the GC heap; Rift modes allocate the same run-lifetime input
+  buffer in a region. The hot RunBoth path avoids `String.split`, per-row
+  `Option`, per-row `Trip`, per-row line strings, and per-row taxi/timestamp
+  substrings. Durable taxi IDs remain heap metadata and are interned only when
+  first seen.
+- Q1 ranking uses heap `HashMap`/`TreeSet` control metadata. In Rift modes,
+  `RankedRoute`, `Route`, and `Cell` ranking objects are now allocated in a
+  run-lifetime region, and returned top-k arrays are allocated in a resettable
+  snapshot region.
+- Q2 window queues now hold primitive-key entries in heap or Rift memory, and
+  active profit values are stored in those entries rather than duplicated in a
+  heap `ArrayBuffer`.
+- Q2 median sorting arrays are heap-allocated in heap mode and allocated in a
+  resettable scratch region in Rift modes. The current Rift version resets that
+  scratch region on every median recomputation, which is correct but likely too
+  fine-grained for final performance evidence.
+- Q2 still uses heap maps, `ProfitStats` control metadata, `TreeSet`, taxi-id
+  metadata, and latency arrays. In Rift modes, `ProfitableArea` ranking objects
+  are region-allocated, returned top-k arrays are allocated in a resettable
+  snapshot region, and output rows are written directly through shared
+  writer-based formatting rather than per-row `StringBuilder.toString`.
 
-Therefore current DEBS does not yet exercise the region-heavy application
-design. It primarily proves correctness of the scaffold, demonstrates the
-intended fair-comparison shape for Q1 window entries, and shows where GC
-pressure remains.
+Therefore current DEBS exercises more of the region-heavy application design,
+but it is still not Phase 5 success. The newest ranking/result experiment
+reduces GC time and can reduce RSS at 1M, but it makes region reset/bookkeeping
+visible and slows elapsed time. The remaining pressure is in heap collection
+metadata, latency arrays, broader collection state, and the need for a
+lower-overhead region-backed top-k/result view rather than resetting a 32 KB
+snapshot slab on every processed event.
 
 For parallel collections:
 
@@ -336,6 +383,10 @@ Interpretation:
   evidence. A change is Phase-5 relevant only if it preserves the same logical
   benchmark for heap and Rift while moving structured-lifetime data into region
   memory or making that lifetime boundary explicit.
+- The current Q2 direction follows that boundary: timestamp-bucket window
+  entries and median scratch buffers are region-backed in Rift modes, while
+  long-lived maps/trees remain heap metadata. Primitive packed keys are used in
+  the shared logic to avoid accidental heap objects in the hot path.
 
 ## 11. Formal Model
 
