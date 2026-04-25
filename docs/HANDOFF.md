@@ -6,20 +6,17 @@ Active worktree: `/Users/siyaoliu/rift/scala-native-rift`
 
 Active branch: `feature/rift`
 
-Head commit at this update: the local `feature/rift` head after the packed
-Grid cell-key diagnostic checkpoint (see `git log -1` after committing this
-handoff update)
+Implementation head at this update: local `feature/rift` commit `826a85490`
+(`Fix Stancu batching and Rift counter overhead`)
 
 Status: active research fork. The Phase 5 input-boundary checkpoint, reusable
 ranking backend, Q2 bounded cell-table checkpoint, Q1 primitive route-table
 checkpoint, Q2 latest-empty taxi-table checkpoint, Q2 array-backed ranking
 checkpoint, packed Grid cell-key diagnostic checkpoint, literature benchmark
 contract, and Broom-style dataflow methodology harness are committed locally.
-The StreamFlex-style throughput/latency methodology harness is also committed
-locally. This update adds the Yak-style epoch/control-data methodology harness
-as committed local evidence and the Stancu-style transaction/accounting probe
-as the current local diff until committed. The fork is ahead of
-`origin/feature/rift` unless pushed.
+The StreamFlex-style throughput/latency, Yak-style epoch/control-data, and
+Stancu-style transaction/accounting methodology harnesses are also committed
+locally. The fork is ahead of `origin/feature/rift` unless pushed.
 
 ## 1. Project Objective
 
@@ -174,6 +171,11 @@ Completed and partially validated:
   - Huge slabs avoid synchronous `MAP_POPULATE` and `MADV_HUGEPAGE`.
   - Reused regular slabs are zeroed once when acquired from TLS/global pool.
   - `reset` zeroes the retained first slab before reuse.
+- Phase 6 evidence hardening moved Rift allocation-count stats out of the
+  per-object atomic hot path. Regions now accumulate raw/object/slow allocation
+  counts locally and flush them at reset/close. This preserved allocation
+  counters while removing instrumentation overhead that distorted small-object
+  Stancu/StreamFlex/Yak results.
 
 Files touched:
 
@@ -652,8 +654,8 @@ Native-only instrumented median command:
 
 ```sh
 cd /Users/siyaoliu/rift/scala-native-rift
-DATAFLOW_BUILD=0 DATAFLOW_BENCHMARK_RUNS=3 DATAFLOW_WARMUPS=1 \
-DATAFLOW_OUTPUT_DIR=/tmp/dataflow-region-instrumented-100k \
+DATAFLOW_BENCHMARK_RUNS=3 DATAFLOW_WARMUPS=1 \
+DATAFLOW_OUTPUT_DIR=/tmp/dataflow-region-instrumented-fixed \
   zsh sandbox/run_dataflow_region_instrumented_matrix.sh
 ```
 
@@ -669,31 +671,31 @@ Local median configuration:
 
 | Operator | Mode | Median elapsed ms | Median GC ms | Median Rift op ms | Median region objects |
 |---|---|---:|---:|---:|---:|
-| SELECT | heap | 26.760 | 6.554 | 0.000 | 0 |
-| SELECT | current SafeZone | 26.599 | 0.000 | 0.000 | 0 |
-| SELECT | improved SafeZone | 24.035 | 0.000 | 0.000 | 0 |
-| SELECT | Rift HPZone | 22.934 | 0.000 | 0.052 | 1124990 |
-| SELECT | Rift Streaming | 22.958 | 0.000 | 0.044 | 1124990 |
-| AGGREGATE | heap | 57.705 | 19.240 | 0.000 | 0 |
-| AGGREGATE | current SafeZone | 49.599 | 0.000 | 0.000 | 0 |
-| AGGREGATE | improved SafeZone | 41.426 | 0.000 | 0.000 | 0 |
-| AGGREGATE | Rift HPZone | 43.046 | 0.000 | 0.198 | 1627152 |
-| AGGREGATE | Rift Streaming | 42.802 | 0.000 | 0.232 | 1627152 |
-| JOIN | heap | 28.189 | 7.084 | 0.000 | 0 |
-| JOIN | current SafeZone | 26.705 | 0.000 | 0.000 | 0 |
-| JOIN | improved SafeZone | 22.789 | 0.000 | 0.000 | 0 |
-| JOIN | Rift HPZone | 22.554 | 0.000 | 0.036 | 1078279 |
-| JOIN | Rift Streaming | 23.025 | 0.000 | 0.038 | 1078279 |
+| SELECT | heap | 28.398 | 7.131 | 0.000 | 0 |
+| SELECT | current SafeZone | 26.413 | 0.000 | 0.000 | 0 |
+| SELECT | improved SafeZone | 23.600 | 0.000 | 0.000 | 0 |
+| SELECT | Rift HPZone | 21.614 | 0.000 | 0.051 | 1124990 |
+| SELECT | Rift Streaming | 24.445 | 0.000 | 0.046 | 1124990 |
+| AGGREGATE | heap | 59.906 | 19.908 | 0.000 | 0 |
+| AGGREGATE | current SafeZone | 51.568 | 0.000 | 0.000 | 0 |
+| AGGREGATE | improved SafeZone | 43.216 | 0.000 | 0.000 | 0 |
+| AGGREGATE | Rift HPZone | 41.870 | 0.000 | 0.273 | 1627152 |
+| AGGREGATE | Rift Streaming | 48.003 | 0.000 | 0.320 | 1627152 |
+| JOIN | heap | 28.347 | 7.415 | 0.000 | 0 |
+| JOIN | current SafeZone | 27.032 | 0.000 | 0.000 | 0 |
+| JOIN | improved SafeZone | 24.079 | 0.000 | 0.000 | 0 |
+| JOIN | Rift HPZone | 21.481 | 0.000 | 0.075 | 1078279 |
+| JOIN | Rift Streaming | 36.120 | 0.000 | 0.046 | 1078279 |
 
 Peak RSS by mode for the same native-only run:
 
 | Mode | Peak RSS bytes |
 |---|---:|
-| heap | 40026112 |
-| current SafeZone | 47005696 |
+| heap | 40042496 |
+| current SafeZone | 47038464 |
 | improved SafeZone | 47005696 |
 | Rift HPZone | 46891008 |
-| Rift Streaming | 46858240 |
+| Rift Streaming | 46874624 |
 
 Interpretation:
 
@@ -704,8 +706,9 @@ Interpretation:
   outputs, aggregate entries, author entries, join outputs, and table arrays.
 - The local controlled workload shows material GC removal because the data
   objects are intentionally epoch-local and allocation-heavy.
-- Improved SafeZone is a strong baseline in this harness: it is faster than
-  heap on all three operators and roughly tied with Rift at 10 x 100k scale.
+- Improved SafeZone is a strong baseline in this harness. In the post-counter
+  rerun, Rift HPZone is fastest on all three operators, but Rift Streaming is
+  inconsistent and regressed on JOIN.
 - Rift operation time remains small in this harness.
 
 Caveats:
@@ -805,11 +808,11 @@ Pressure native-only median command:
 
 ```sh
 cd /Users/siyaoliu/rift/scala-native-rift
-STREAMFLEX_BUILD=0 STREAMFLEX_BENCHMARK_RUNS=3 STREAMFLEX_WARMUPS=1 \
+STREAMFLEX_BENCHMARK_RUNS=3 STREAMFLEX_WARMUPS=1 \
 STREAMFLEX_EVENTS=1000000 STREAMFLEX_OBJECTS_PER_EVENT=8 \
 STREAMFLEX_LATENCY_EVENTS=50000 STREAMFLEX_LATENCY_OBJECTS_PER_EVENT=64 \
 STREAMFLEX_PERIOD_NS=80000 \
-STREAMFLEX_OUTPUT_DIR=/tmp/streamflex-region-pressure \
+STREAMFLEX_OUTPUT_DIR=/tmp/streamflex-region-pressure-fixed \
   zsh sandbox/run_streamflex_region_instrumented_matrix.sh
 ```
 
@@ -846,16 +849,16 @@ Pressure local median configuration:
 
 | Workload | Mode | Median elapsed ms | Median GC ms | Median Rift op ms | p99 ns | p999 ns | Max ns | Deadline misses |
 |---|---|---:|---:|---:|---:|---:|---:|---:|
-| throughput | heap | 441.436 | 108.755 | 0.000 |  |  |  |  |
-| throughput | current SafeZone | 524.746 | 0.000 | 0.000 |  |  |  |  |
-| throughput | improved SafeZone | 406.979 | 0.000 | 0.000 |  |  |  |  |
-| throughput | Rift HPZone | 385.368 | 0.000 | 1.284 |  |  |  |  |
-| throughput | Rift Streaming | 381.738 | 0.000 | 0.851 |  |  |  |  |
-| latency | heap | 174.279 | 30.379 | 0.000 | 3375 | 303542 | 477209 | 89 |
-| latency | current SafeZone | 175.123 | 0.772 | 0.000 | 4208 | 8292 | 251792 | 1 |
-| latency | improved SafeZone | 180.706 | 0.831 | 0.000 | 4125 | 13625 | 512042 | 5 |
-| latency | Rift HPZone | 165.043 | 0.507 | 2.669 | 3875 | 9125 | 30667 | 0 |
-| latency | Rift Streaming | 158.773 | 0.472 | 0.829 | 3750 | 9542 | 34500 | 0 |
+| throughput | heap | 634.472 | 141.804 | 0.000 |  |  |  |  |
+| throughput | current SafeZone | 409.749 | 0.000 | 0.000 |  |  |  |  |
+| throughput | improved SafeZone | 412.827 | 0.000 | 0.000 |  |  |  |  |
+| throughput | Rift HPZone | 331.740 | 0.000 | 1.237 |  |  |  |  |
+| throughput | Rift Streaming | 329.896 | 0.000 | 0.835 |  |  |  |  |
+| latency | heap | 169.331 | 29.931 | 0.000 | 2792 | 327625 | 467958 | 89 |
+| latency | current SafeZone | 174.989 | 0.757 | 0.000 | 3542 | 8166 | 299042 | 1 |
+| latency | improved SafeZone | 181.317 | 0.827 | 0.000 | 4250 | 13625 | 310084 | 6 |
+| latency | Rift HPZone | 143.955 | 0.525 | 2.927 | 3250 | 3625 | 247500 | 1 |
+| latency | Rift Streaming | 157.792 | 0.496 | 1.106 | 3541 | 6917 | 28209 | 0 |
 
 Interpretation:
 
@@ -864,9 +867,10 @@ Interpretation:
   with the same logical pipeline.
 - The pressure run reproduces the relevant axis from StreamFlex rather than the
   exact artifact: heap has large p999/max latency and `89` deadline misses,
-  while Rift HPZone and Streaming have zero misses and low region-op time.
-- SafeZone also removes almost all GC time, but in the pressure run it keeps
-  occasional latency misses and is slower than Rift on throughput.
+  while Rift Streaming has zero misses and low region-op time.
+- SafeZone also removes almost all GC time, but in the pressure rerun it keeps
+  occasional latency misses and is slower than Rift on throughput. HPZone has
+  one deadline miss in the fixed rerun, so keep latency claims mode-specific.
 - Streaming has lower region-op time than HPZone in latency mode because it
   opens once and resets across events.
 
@@ -914,9 +918,9 @@ Pressure native-only median command:
 
 ```sh
 cd /Users/siyaoliu/rift/scala-native-rift
-YAK_BUILD=0 YAK_BENCHMARK_RUNS=3 YAK_WARMUPS=1 \
+YAK_BENCHMARK_RUNS=3 YAK_WARMUPS=1 \
 YAK_EPOCHS=40 YAK_RECORDS_PER_EPOCH=250000 YAK_MESSAGES_PER_EPOCH=250000 \
-YAK_OUTPUT_DIR=/tmp/yak-region-pressure \
+YAK_OUTPUT_DIR=/tmp/yak-region-pressure-fixed \
   zsh sandbox/run_yak_region_instrumented_matrix.sh
 ```
 
@@ -949,16 +953,16 @@ Pressure local median configuration:
 
 | Workload | Mode | Median elapsed ms | Median GC ms | Median Rift op ms | Logical data objects |
 |---|---|---:|---:|---:|---:|
-| wordcount | heap | 240.541 | 35.225 | 0.000 | 10000000 |
-| wordcount | current SafeZone | 237.253 | 0.000 | 0.000 | 10000000 |
-| wordcount | improved SafeZone | 197.373 | 0.000 | 0.000 | 10000000 |
-| wordcount | Rift HPZone | 214.210 | 0.000 | 0.314 | 10000000 |
-| wordcount | Rift Streaming | 209.944 | 0.000 | 0.275 | 10000000 |
-| graphstep | heap | 239.001 | 29.774 | 0.000 | 10000000 |
-| graphstep | current SafeZone | 275.357 | 0.000 | 0.000 | 10000000 |
-| graphstep | improved SafeZone | 206.425 | 0.000 | 0.000 | 10000000 |
-| graphstep | Rift HPZone | 229.265 | 0.000 | 0.406 | 10000000 |
-| graphstep | Rift Streaming | 224.885 | 0.000 | 0.365 | 10000000 |
+| wordcount | heap | 243.522 | 32.850 | 0.000 | 10000000 |
+| wordcount | current SafeZone | 228.260 | 0.000 | 0.000 | 10000000 |
+| wordcount | improved SafeZone | 194.933 | 0.000 | 0.000 | 10000000 |
+| wordcount | Rift HPZone | 224.415 | 0.000 | 0.346 | 10000000 |
+| wordcount | Rift Streaming | 199.156 | 0.000 | 0.258 | 10000000 |
+| graphstep | heap | 240.890 | 38.498 | 0.000 | 10000000 |
+| graphstep | current SafeZone | 273.608 | 0.000 | 0.000 | 10000000 |
+| graphstep | improved SafeZone | 203.729 | 0.000 | 0.000 | 10000000 |
+| graphstep | Rift HPZone | 213.454 | 0.000 | 0.409 | 10000000 |
+| graphstep | Rift Streaming | 209.528 | 0.000 | 0.408 | 10000000 |
 
 Interpretation:
 
@@ -1000,6 +1004,7 @@ Smoke command:
 ```sh
 cd /Users/siyaoliu/rift/scala-native-rift
 STANCU_TRANSACTIONS=2000 STANCU_BENCHMARK_RUNS=1 STANCU_WARMUPS=0 \
+STANCU_TX_PER_REGION=64 \
   zsh sandbox/run_stancu_region_instrumented_matrix.sh
 ```
 
@@ -1008,6 +1013,7 @@ Default native-only median command:
 ```sh
 cd /Users/siyaoliu/rift/scala-native-rift
 STANCU_BUILD=0 STANCU_BENCHMARK_RUNS=3 STANCU_WARMUPS=1 \
+STANCU_TX_PER_REGION=64 \
 STANCU_OUTPUT_DIR=/tmp/stancu-region-instrumented \
   zsh sandbox/run_stancu_region_instrumented_matrix.sh
 ```
@@ -1017,7 +1023,7 @@ Pressure native-only median command:
 ```sh
 cd /Users/siyaoliu/rift/scala-native-rift
 STANCU_BUILD=0 STANCU_BENCHMARK_RUNS=3 STANCU_WARMUPS=1 \
-STANCU_TRANSACTIONS=1000000 \
+STANCU_TRANSACTIONS=1000000 STANCU_TX_PER_REGION=64 \
 STANCU_OUTPUT_DIR=/tmp/stancu-region-pressure \
   zsh sandbox/run_stancu_region_instrumented_matrix.sh
 ```
@@ -1026,41 +1032,58 @@ Default local median configuration:
 
 - `STANCU_TRANSACTIONS=200000`
 - `STANCU_ITEMS_PER_TX=8`
+- `STANCU_TX_PER_REGION=64`
 - runs `3`, warmups `1`
 
 | Mode | Median elapsed ms | Median GC ms | Median Rift op ms | Logical region objects | Region-candidate objects | Escaped objects |
 |---|---:|---:|---:|---:|---:|---:|
-| heap | 43.180 | 4.785 | 0.000 | 1800000 | 99.76% | 0 |
-| current SafeZone | 57.125 | 1.495 | 0.000 | 1800000 | 99.76% | 0 |
-| improved SafeZone | 57.782 | 1.481 | 0.000 | 1800000 | 99.76% | 0 |
-| Rift HPZone | 65.729 | 0.545 | 10.413 | 1800000 | 99.76% | 0 |
-| Rift Streaming | 51.769 | 0.000 | 3.243 | 1800000 | 99.76% | 0 |
+| heap | 43.871 | 4.483 | 0.000 | 1800000 | 99.76% | 0 |
+| current SafeZone | 37.313 | 0.000 | 0.000 | 1800000 | 99.76% | 0 |
+| improved SafeZone | 34.412 | 0.000 | 0.000 | 1800000 | 99.76% | 0 |
+| Rift HPZone | 40.308 | 0.000 | 0.186 | 1800000 | 99.76% | 0 |
+| Rift Streaming | 40.126 | 0.000 | 0.063 | 1800000 | 99.76% | 0 |
 
 Pressure local median configuration:
 
 - `STANCU_TRANSACTIONS=1000000`
 - `STANCU_ITEMS_PER_TX=8`
+- `STANCU_TX_PER_REGION=64`
 - runs `3`, warmups `1`
 
 | Mode | Median elapsed ms | Median GC ms | Median Rift op ms | Logical region objects | Region-candidate objects | Escaped objects |
 |---|---:|---:|---:|---:|---:|---:|
-| heap | 217.335 | 23.743 | 0.000 | 9000000 | 99.95% | 0 |
-| current SafeZone | 281.234 | 8.013 | 0.000 | 9000000 | 99.95% | 0 |
-| improved SafeZone | 286.893 | 7.261 | 0.000 | 9000000 | 99.95% | 0 |
-| Rift HPZone | 332.947 | 2.483 | 53.415 | 9000000 | 99.95% | 0 |
-| Rift Streaming | 262.075 | 0.000 | 16.300 | 9000000 | 99.95% | 0 |
+| heap | 223.611 | 23.924 | 0.000 | 9000000 | 99.95% | 0 |
+| current SafeZone | 173.976 | 0.307 | 0.000 | 9000000 | 99.95% | 0 |
+| improved SafeZone | 174.620 | 0.315 | 0.000 | 9000000 | 99.95% | 0 |
+| Rift HPZone | 201.447 | 0.000 | 0.772 | 9000000 | 99.95% | 0 |
+| Rift Streaming | 199.438 | 0.000 | 0.317 | 9000000 | 99.95% | 0 |
+
+Heavier local median configuration:
+
+- `STANCU_TRANSACTIONS=500000`
+- `STANCU_ITEMS_PER_TX=32`
+- `STANCU_TX_PER_REGION=64`
+- runs `3`, warmups `1`
+
+| Mode | Median elapsed ms | Median GC ms | Median Rift op ms | Logical region objects | Region-candidate objects | Escaped objects |
+|---|---:|---:|---:|---:|---:|---:|
+| heap | 387.420 | 40.579 | 0.000 | 16500000 | 99.97% | 0 |
+| current SafeZone | 333.532 | 0.000 | 0.000 | 16500000 | 99.97% | 0 |
+| improved SafeZone | 328.298 | 0.000 | 0.000 | 16500000 | 99.97% | 0 |
+| Rift HPZone | 364.288 | 0.000 | 1.077 | 16500000 | 99.97% | 0 |
+| Rift Streaming | 341.879 | 0.000 | 0.588 | 16500000 | 99.97% | 0 |
 
 Interpretation:
 
-- This is a useful negative result. The accounting looks favorable:
-  `99.95%` of logical objects are region candidates and no region objects
-  intentionally escape, but heap is fastest.
-- The current per-transaction region boundary is too fine-grained. HPZone pays
-  one open/close per transaction; Streaming reduces that to resets but still
-  does not offset the small measured GC cost.
+- The original per-transaction result was a useful negative result. The
+  accounting looked favorable, but the boundary was too fine-grained and Rift
+  allocation counters paid atomics in the hot allocation path.
+- The fixed result batches `64` transactions per region and flushes Rift
+  allocation stats at reset/close. Rift now beats heap and removes measured
+  heap GC, but SafeZone remains faster on this small transaction probe.
 - This means "region-candidate fraction" is not sufficient as a research claim.
-  The lifetime boundary must be coarse enough that reclaim and reset overhead
-  are lower than GC cost.
+  The lifetime boundary must be coarse enough and the runtime statistics path
+  must stay out of hot per-object allocation.
 
 Caveats:
 
@@ -1068,8 +1091,8 @@ Caveats:
 - `explicit_region_boundaries=1` in the result pack is a manual accounting
   field for the benchmark's one logical placement site, not a compiler-produced
   annotation count.
-- The harness does not yet test coarser transaction batches, compiler
-  inference, or capture-check rejection cases.
+- The harness does not yet test compiler inference or capture-check rejection
+  cases.
 
 ### DEBS 2015 Status
 
@@ -1244,12 +1267,12 @@ Broom-style dataflow:
   logical SELECT/AGGREGATE/JOIN programs.
 - At 10 epochs x 100k documents, the native-only instrumented medians show heap
   GC time while current SafeZone, improved SafeZone, HPZone, and Streaming all
-  report zero measured GC in timed runs. Rift is fastest or effectively tied on
-  SELECT/JOIN, while improved SafeZone is strongest on AGGREGATE:
-  SELECT heap `26.760 ms`, improved SafeZone `24.035 ms`, HPZone `22.934 ms`;
-  AGGREGATE heap `57.705 ms`, improved SafeZone `41.426 ms`, HPZone
-  `43.046 ms`; JOIN heap `28.189 ms`, improved SafeZone `22.789 ms`, HPZone
-  `22.554 ms`.
+  report zero measured GC in timed runs. After the Rift allocation-counter fix,
+  HPZone is strongest on all three local operators, while Streaming is mixed:
+  SELECT heap `28.398 ms`, improved SafeZone `23.600 ms`, HPZone `21.614 ms`;
+  AGGREGATE heap `59.906 ms`, improved SafeZone `43.216 ms`, HPZone
+  `41.870 ms`; JOIN heap `28.347 ms`, improved SafeZone `24.079 ms`, HPZone
+  `21.481 ms`, Streaming `36.120 ms`.
 - A provisional 40-epoch x 500k-document native-only single run shows the same
   allocation-sensitive shape at a Broom-like input scale: SELECT heap
   `623.761 ms` with `207.058 ms` GC vs improved SafeZone `463.303 ms` and
@@ -1274,13 +1297,13 @@ StreamFlex-style stream latency:
   zero median GC time and zero deadline misses, with throughput medians
   `37.638 ms` and `37.683 ms` versus heap `41.444 ms`.
 - Under the allocation-pressure configuration, heap throughput is
-  `441.436 ms` with `108.755 ms` median GC time. Rift HPZone is `385.368 ms`
-  with `1.284 ms` region-op time, and Rift Streaming is `381.738 ms` with
-  `0.851 ms` region-op time.
+  `634.472 ms` with `141.804 ms` median GC time. Rift HPZone is `331.740 ms`
+  with `1.237 ms` region-op time, and Rift Streaming is `329.896 ms` with
+  `0.835 ms` region-op time.
 - The pressure latency run shows the clearest StreamFlex-style result: heap
-  has p999 `303542 ns`, max `477209 ns`, and `89` deadline misses; Rift HPZone
-  has p999 `9125 ns`, max `30667 ns`, and zero misses; Rift Streaming has p999
-  `9542 ns`, max `34500 ns`, and zero misses.
+  has p999 `327625 ns`, max `467958 ns`, and `89` deadline misses; Rift HPZone
+  has p999 `3625 ns`, max `247500 ns`, and one miss; Rift Streaming has p999
+  `6917 ns`, max `28209 ns`, and zero misses.
 - This strengthens the latency-predictability argument for region-managed
   stream data, but it is not an exact StreamFlex/Ovm reproduction and does not
   include scheduler/queuing delay.
@@ -1293,9 +1316,11 @@ Yak-style control/data split:
 - At the default local size, heap spends `12.062 ms` GC on `wordcount` and
   `9.283 ms` GC on `graphstep`; Rift removes that GC and beats heap on elapsed
   time. Improved SafeZone is the fastest or effectively tied.
-- At the pressure size, heap spends `35.225 ms` GC on `wordcount` and
-  `29.774 ms` GC on `graphstep`. Rift HPZone/Streaming remove measured heap GC
-  and beat heap, but improved SafeZone is faster than Rift on both workloads.
+- At the pressure size after the Rift allocation-counter fix, heap spends
+  `32.850 ms` GC on `wordcount` and `38.498 ms` GC on `graphstep`. Rift
+  HPZone/Streaming remove measured heap GC and beat heap; Streaming is close
+  to improved SafeZone (`199.156 ms` vs `194.933 ms` for wordcount and
+  `209.528 ms` vs `203.729 ms` for graphstep).
 - This supports the control/data split as a local methodology result, but it
   weakens any claim that Rift currently surpasses improved SafeZone on
   Yak-shaped epoch workloads.
@@ -1310,13 +1335,19 @@ Stancu-style annotation/accounting:
 - It reports a high region-candidate object fraction: `99.76%` at default
   size and `99.95%` at pressure size, with `explicit_region_boundaries=1` and
   `escaped_region_objects=0`.
-- Despite that favorable accounting, heap is fastest in both runs. At pressure
-  size, heap is `217.335 ms` with `23.743 ms` GC; Rift Streaming is
-  `262.075 ms` with zero GC but `16.300 ms` region-op time; Rift HPZone is
-  `332.947 ms` because one million open/close pairs cost `53.415 ms`.
-- This weakens a simplistic "many region-candidate objects implies speedup"
-  story. Stancu-style evidence needs both candidate fraction and a good
-  lifetime-boundary granularity.
+- The first per-transaction result was negative: high candidate fraction alone
+  did not beat heap when Rift paid one reset/open/close boundary per
+  transaction and the runtime counted each allocation with atomics.
+- The current fixed result batches `64` transactions per region and moves Rift
+  allocation statistics out of the per-object atomic hot path. At pressure
+  size, heap is `223.611 ms` with `23.924 ms` GC; Rift HPZone is
+  `201.447 ms` with zero GC and `0.772 ms` region-op time; Rift Streaming is
+  `199.438 ms` with zero GC and `0.317 ms` region-op time.
+- SafeZone remains stronger on this probe: current SafeZone is `173.976 ms`
+  and improved SafeZone is `174.620 ms` at pressure size.
+- This now supports a Rift-vs-heap Stancu-style accounting story, but not a
+  Rift-vs-SafeZone story. Boundary granularity and instrumentation overhead
+  were the key corrections.
 
 DEBS:
 
@@ -1410,7 +1441,7 @@ Roadmap source: `/Users/siyaoliu/rift/Claude_output/ROADMAP.md`
 | Phase 3 runtime-only benchmarks | Done enough for current story | GCBench and ListOfLists runtime medians recorded; pipeline surrogate recorded. | Commix is not included. Pipeline provenance remains surrogate. |
 | Phase 4 topology/layout | Done enough to move on | `PHASE4_LAYOUT.md`, `PHASE4_TOPOLOGY.md`, `PHASE4_EXIT.md`. | Chunked layout still not a Rift win vs improved SafeZone. Mixed GC/region safety story needs Phase 6 tests. |
 | Phase 5 streaming operators and DEBS | In progress | DEBS Q1/Q2 run simultaneously on real data; outputs match; instrumentation added; Q1 and Q2 window entries have shared heap/Rift backends; Q2 active profit values live in window entries; Q2 median scratch arrays are region-backed and reused; Q2 ranking uses primitive cell keys internally; RunBoth input bytes use a heap/Rift allocation-placement split; the reusable ranking backend region-allocates Q1/Q2 ranking objects and top-k result arrays; Q2 bounded per-cell tables, Q1 route-table arrays, Q2 latest-empty taxi arrays, and Q2 ranking-index arrays are region-backed in Rift modes. New `diag_*` counters identify remaining heap/control paths, and the shared `Grid.cellKeyOrZero` hot path removes temporary `Some(Cell)`/`Cell` allocation from both heap and Rift. | Current 1M packed-cell medians are faster than heap with lower GC/RSS (`10969.616 ms` heap, `10770.260 ms` HPZone, `10665.729 ms` Streaming), but Q2 processing still dominates and the bounded-sample result is not final application evidence. Need Commix, SafeZone comparison, full-month input, Q2 median/rank design work, remaining control/collection work, and safe API boundaries. |
-| Phase 6 literature-benchmark evidence | Started | `docs/LITERATURE_BENCHMARK_CONTRACT.md` extracts the paper comparison contract. `DataflowRegionMatrix` now runs Broom-style SELECT/AGGREGATE/JOIN methodology workloads with ordinary Scala objects in heap, current SafeZone, improved SafeZone, Rift HPZone, and Rift Streaming modes. Native-only local medians include peak RSS, and a Broom-scale single run is recorded. `StreamFlexRegionMatrix` now runs stream throughput/latency methodology workloads with deadline-miss and latency-tail metrics. `YakRegionMatrix` now runs word-count and graph-step control/data split workloads. `StancuRegionMatrix` now runs transaction/accounting probes. | Keep improved SafeZone in all claims, and do not claim exact Naiad/Broom, exact StreamFlex/Ovm, exact Yak, or exact Stancu reproduction. Next choices are either coarser Stancu transaction batching/safe API rejection probes or returning to DEBS with the literature findings in mind. Build a fair Rift collection/operator API before redoing parallel-collections claims. |
+| Phase 6 literature-benchmark evidence | Started | `docs/LITERATURE_BENCHMARK_CONTRACT.md` extracts the paper comparison contract. `DataflowRegionMatrix` now runs Broom-style SELECT/AGGREGATE/JOIN methodology workloads with ordinary Scala objects in heap, current SafeZone, improved SafeZone, Rift HPZone, and Rift Streaming modes. Native-only local medians include peak RSS, and a Broom-scale single run is recorded. `StreamFlexRegionMatrix` now runs stream throughput/latency methodology workloads with deadline-miss and latency-tail metrics. `YakRegionMatrix` now runs word-count and graph-step control/data split workloads. `StancuRegionMatrix` now runs transaction/accounting probes with batched transaction regions. | Keep improved SafeZone in all claims, and do not claim exact Naiad/Broom, exact StreamFlex/Ovm, exact Yak, or exact Stancu reproduction. The current sequence gives strong Broom/Dataflow HPZone evidence, strong StreamFlex-style throughput/latency evidence, Yak-style Rift-vs-heap and near-improved-SafeZone evidence, and Stancu-style Rift-vs-heap evidence after batching/fixed counters. Next choices are safe API rejection probes or returning to DEBS with the literature findings in mind. Build a fair Rift collection/operator API before redoing parallel-collections claims. |
 | Phase 7 capture checking | Open | Only design templates and early Rift API surface exist. | Implement positive/negative capture tests and fill `REPORT_CAPTURE_CHECK.md`. |
 | Phase 8 Lean mechanization | Open | Design pack has Lean stubs/templates. | Port or start proof work; prove without `sorry`. |
 | Phase 9 writing | Not started beyond notes | Result packs and this handoff exist. | Thesis/paper narrative after evidence stabilizes. |
@@ -1539,9 +1570,10 @@ Benchmarking uncertainties:
   split locally but not distributed execution, escaping-object promotion,
   write-barrier overhead, or STW epoch-end behavior.
 - `StancuRegionMatrix` is a Stancu-style accounting probe, not SPECjbb2005 and
-  not a static points-to analysis. Its current negative result suggests the
-  next question is boundary granularity and safe API reporting, not just region
-  candidate fraction.
+  not a static points-to analysis. Its initial per-transaction result was
+  negative, but batching `64` transactions per region plus the Rift
+  allocation-counter fix now gives a Rift-vs-heap win. It still does not beat
+  SafeZone or provide compiler-produced annotation/capture reports.
 - Older result packs were generated from then-uncommitted code. The current
   input-boundary, ranking/result, Q2 cell-table, Q1 route-table, Q2 taxi-table,
   and Q2 array-ranking experiments now have local commit boundaries once this
@@ -1562,6 +1594,8 @@ Docs needing possible revision:
   active design. The active `DESIGN.md` and `ROADMAP.md` have been revised
   through the Q2 array-backed ranking checkpoint.
 - `RiftRuntime.h` does not include the newest stats API used by Scala externs.
+- Rift allocation counters now flush at region reset/close, so stats sampled
+  while a region is still open may lag until the boundary is reached.
 
 ## 10. Exact Next Recommended Steps
 
@@ -1572,23 +1606,26 @@ Immediate next step:
    median elapsed is `10969.616 ms`, HPZone is `10770.260 ms`, and Streaming is
    `10665.729 ms`; GC medians are `383.827 ms`, `349.488 ms`, and `334.689 ms`
    respectively.
-2. Treat the new `DataflowRegionMatrix` result as started Phase 6/Broom-style
-   methodology evidence with improved SafeZone included. The next benchmark
-   step is upgrading the Broom-scale stress run to medians if needed, not
-   presenting it as an exact Naiad/Broom reproduction.
-3. Treat the new `StreamFlexRegionMatrix` result as started Phase
-   6/StreamFlex-style methodology evidence. The pressure run is useful because
-   it shows latency-tail and deadline-miss effects, but it is still not exact
-   StreamFlex/Ovm.
-4. Treat the new `YakRegionMatrix` result as started Phase 6/Yak-style
-   methodology evidence. It supports the control/data split locally, but it is
-   mixed against improved SafeZone and is not exact Yak.
-5. Treat the new `StancuRegionMatrix` result as started Phase
-   6/Stancu-style accounting evidence. It is a negative performance result:
-   high region-candidate fraction alone does not beat heap with a
-   per-transaction boundary.
-6. The next choice is either a targeted Stancu follow-up for coarser transaction
-   batches and safe API accept/reject probes, or returning to DEBS with the
+2. Treat the `DataflowRegionMatrix` result as started Phase 6/Broom-style
+   methodology evidence with improved SafeZone included. The post-counter-fix
+   10 x 100k medians show HPZone beating heap and improved SafeZone on
+   SELECT/AGGREGATE/JOIN; the Broom-scale stress run is still a single run and
+   should not be presented as exact Naiad/Broom reproduction.
+3. Treat the `StreamFlexRegionMatrix` result as strong Phase
+   6/StreamFlex-style methodology evidence. The fixed pressure run shows Rift
+   throughput around `330 ms` vs heap `634 ms`, and Streaming has zero deadline
+   misses. It is still not exact StreamFlex/Ovm.
+4. Treat the `YakRegionMatrix` result as Phase 6/Yak-style methodology
+   evidence. It supports the control/data split locally: Rift beats heap and
+   Streaming is close to improved SafeZone under pressure, but this is not
+   exact Yak.
+5. Treat the `StancuRegionMatrix` result as started Phase 6/Stancu-style
+   accounting evidence. The initial per-transaction result was negative, but
+   batched transaction regions plus the lower-overhead Rift counter path now
+   give a Rift-vs-heap win. It is not a Rift-vs-SafeZone win and not a compiler
+   annotation result.
+6. The next choice is either safe API accept/reject probes for the region object
+   patterns now used by the literature harnesses, or returning to DEBS with the
    literature findings in mind.
 7. The next DEBS implementation target, when returning to DEBS, should be Q2
    median/rank maintenance, not parser/input work. The design must preserve the
@@ -1597,11 +1634,10 @@ Immediate next step:
 
 Next technical milestone:
 
-1. Extend the Stancu probe only if needed:
-   - add `transactions_per_region` batching to test granularity;
-   - add capture-check positive/negative cases for transaction object escape;
-   - keep accounting fields for region-candidate fraction and explicit
-     boundaries.
+1. Add capture/safety guardrails before broadening the region object graphs:
+   positive tests for nested region object graphs and closures that do not
+   escape; negative tests for heap-retains-region, unrooted region-retains-heap,
+   escaping closures, and use-after-reset.
 2. Continue the DEBS "region-heavy" path with measurement first after the
    literature sequence. The goal should be to reduce GC pressure in the actual
    dominant data operations, not just window entries.
@@ -1639,8 +1675,8 @@ What should not be done yet:
 - Do not claim Rift has strong DEBS application-level evidence.
 - Do not move to Phase 6/7 as if Phase 5 is complete.
 - Do not treat the literature sequence as proving final application evidence.
-  It produced strong Broom/StreamFlex signals, mixed Yak evidence, and a
-  negative Stancu performance result.
+  It produced strong Broom/StreamFlex signals, mixed-but-good Yak evidence, and
+  a Stancu-style Rift-vs-heap win after batching/fixed counters.
 - Do not optimize random runtime code before confirming whether the cost is
   allocator/runtime overhead or an avoidable API/lifetime shape.
 - Do not compare Rift raw-array pipeline directly against `ZoneParVector` as if the APIs are equivalent.
@@ -1706,11 +1742,11 @@ What is stable enough:
 
 The implementation worktree should now be clean and ahead of
 `origin/feature/rift` after committing the Stancu checkpoint. The safest next
-technical action is either a narrow Stancu follow-up for coarser transaction
-region batching plus safe API accept/reject probes, or returning to DEBS Phase
-5 with the updated literature evidence: region placement wins when data
-lifetimes are epochal and allocation-heavy, but fine-grained region boundaries
-can lose even with high candidate fraction.
+technical action is either safe API accept/reject probes for the region object
+patterns now used by the literature harnesses, or returning to DEBS Phase 5
+with the updated literature evidence: region placement wins when data lifetimes
+are epochal and allocation-heavy, but fine-grained region boundaries can lose
+even with high candidate fraction.
 
 ## Unsafe Assumptions To Avoid
 

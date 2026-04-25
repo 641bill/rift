@@ -35,7 +35,7 @@ The standard for new benchmarks is:
 | Yak | GraphChi connected components, community detection, PageRank | One node; Sampletwitter-2010, 100M edges, 62M vertices; epochs around sub-intervals. | Overall normalized runtime 0.70-0.86; GC time 0.15-0.56. | Future: graph-processing benchmark with explicit sub-interval regions and a control/data split. |
 | StreamFlex | StreamIt BeamFormer and FilterBank | Ovm and HotSpot Java baselines; 10,000 iterations. | StreamFlex reported substantially lower run time than Java baselines on those stream kernels. | Started locally with a StreamFlex-style throughput/latency matrix over ordinary Scala packet/event objects. Still not exact BeamFormer/FilterBank. |
 | StreamFlex | IDS and event-correlation latency | Periodic stream processing; deadline miss and per-item latency measurements. | StreamFlex avoids large GC-induced deadline misses in the reported event-correlation case. | Started locally: collect per-event latency distributions, max-pause proxies, and deadline misses for heap/SafeZone/Rift modes. |
-| Stancu et al. | SPECjbb2005 transaction regions | 7 annotations; each warehouse 100k iterations; young gen varied 1MB-256MB. | About 77%-78% memory region-freed; up to 22% speedup at small young gen; fewer young collections. | Started locally with a transaction-shaped accounting probe. Current result is negative for performance: high region-candidate fraction does not beat heap when the region/reset boundary is too fine-grained. |
+| Stancu et al. | SPECjbb2005 transaction regions | 7 annotations; each warehouse 100k iterations; young gen varied 1MB-256MB. | About 77%-78% memory region-freed; up to 22% speedup at small young gen; fewer young collections. | Started locally with a transaction-shaped accounting probe. Initial per-transaction regions lost; batching 64 transactions per region plus lower-overhead Rift counters gives a Rift-vs-heap win, but SafeZone remains faster. |
 
 ## Immediate Reproduction Order
 
@@ -65,31 +65,34 @@ Step 4 is implemented in
 `scala-native-rift/sandbox/src/main/scala-next/StreamFlexRegionMatrix.scala`.
 It records default and allocation-pressure native-only medians in
 `scala-native-rift/sandbox/STREAMFLEX_REGION_MATRIX.md`, synced to
-`evidence/STREAMFLEX_REGION_MATRIX.md`. The pressure run is the current
-StreamFlex-style signal: heap has `89` deadline misses and `30.379 ms` median
-GC time in the latency workload, while Rift HPZone and Streaming have zero
-deadline misses with low region-op time. This is not an exact StreamFlex/Ovm
-reproduction.
+`evidence/STREAMFLEX_REGION_MATRIX.md`. After the Rift allocation-counter fix,
+the pressure run is the current StreamFlex-style signal: heap throughput is
+`634.472 ms` with `141.804 ms` GC, while Rift HPZone/Streaming are
+`331.740 ms`/`329.896 ms`. Heap has `89` latency deadline misses; Rift
+Streaming has zero. This is not an exact StreamFlex/Ovm reproduction.
 
 Step 5 is started in
 `scala-native-rift/sandbox/src/main/scala-next/YakRegionMatrix.scala`. It
 records default and epoch-pressure native-only medians in
 `scala-native-rift/sandbox/YAK_REGION_MATRIX.md`, synced to
-`evidence/YAK_REGION_MATRIX.md`. The local Yak-style result is mixed: Rift
-removes heap GC and beats heap on word-count and graph-step workloads, but
-improved SafeZone is faster than Rift in the pressure run. This supports the
-control/data split but does not show a Rift-over-improved-SafeZone win, and it
-is not an exact Yak/Hyracks/Hadoop/GraphChi reproduction.
+`evidence/YAK_REGION_MATRIX.md`. After the Rift allocation-counter fix, the
+local Yak-style result is good but still mixed against improved SafeZone: Rift
+Streaming is `199.156 ms` vs heap `243.522 ms` on wordcount and `209.528 ms`
+vs heap `240.890 ms` on graphstep, close to improved SafeZone
+(`194.933 ms`/`203.729 ms`). This supports the control/data split but is not
+an exact Yak/Hyracks/Hadoop/GraphChi reproduction.
 
 The Stancu-style probe is started in
 `scala-native-rift/sandbox/src/main/scala-next/StancuRegionMatrix.scala`. It
 records default and transaction-pressure native-only medians in
 `scala-native-rift/sandbox/STANCU_REGION_MATRIX.md`, synced to
-`evidence/STANCU_REGION_MATRIX.md`. The current local result is a useful
-negative finding: even with `99.95%` logical region-candidate objects and zero
-intentional escapes, heap is fastest because per-transaction region/reset
-overhead outweighs the measured GC savings. This is not SPECjbb2005 or Stancu
-et al.'s static analysis.
+`evidence/STANCU_REGION_MATRIX.md`. The current local result has two findings:
+per-transaction regions were too fine-grained, while batching 64 transactions
+per region plus lower-overhead Rift allocation counters fixes the Rift-vs-heap
+direction. At one million transactions, heap is `223.611 ms`, Rift HPZone is
+`201.447 ms`, and Rift Streaming is `199.438 ms`; improved SafeZone is still
+faster at `174.620 ms`. This is not SPECjbb2005 or Stancu et al.'s static
+analysis.
 
 ## Metrics Required For Reproduction Claims
 
