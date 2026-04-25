@@ -17,6 +17,7 @@ checkpoint, packed Grid cell-key diagnostic checkpoint, literature benchmark
 contract, and Broom-style dataflow methodology harness are committed locally.
 The StreamFlex-style throughput/latency methodology harness is also committed
 locally. This update adds the Yak-style epoch/control-data methodology harness
+as committed local evidence and the Stancu-style transaction/accounting probe
 as the current local diff until committed. The fork is ahead of
 `origin/feature/rift` unless pushed.
 
@@ -258,6 +259,7 @@ Completed and validated by recorded benchmark runs:
 - Added Broom-style dataflow SELECT/AGGREGATE/JOIN methodology matrix.
 - Added StreamFlex-style stream throughput/latency methodology matrix.
 - Added Yak-style epoch/control-data methodology matrix.
+- Added Stancu-style transaction/accounting methodology matrix.
 - Added scripts to run matrices with Immix/current SafeZone/improved SafeZone/Rift modes.
 - Added DEBS Q1/Q2 implementation and sample/real-data runners.
 
@@ -274,6 +276,7 @@ Key files:
 - `sandbox/src/main/scala-next/DataflowRegionMatrix.scala`
 - `sandbox/src/main/scala-next/StreamFlexRegionMatrix.scala`
 - `sandbox/src/main/scala-next/YakRegionMatrix.scala`
+- `sandbox/src/main/scala-next/StancuRegionMatrix.scala`
 - `sandbox/run_gcbench_runtime_matrix.sh`
 - `sandbox/run_gcbench_topology_matrix.sh`
 - `sandbox/run_listoflists_runtime_matrix.sh`
@@ -285,6 +288,7 @@ Key files:
 - `sandbox/run_dataflow_region_matrix.sh`
 - `sandbox/run_streamflex_region_instrumented_matrix.sh`
 - `sandbox/run_yak_region_instrumented_matrix.sh`
+- `sandbox/run_stancu_region_instrumented_matrix.sh`
 
 Validation:
 
@@ -300,6 +304,10 @@ Validation:
   epoch-pressure 3-run median in `sandbox/YAK_REGION_MATRIX.md`. It is
   methodology reproduction evidence, not exact Yak/Hyracks/Hadoop/GraphChi
   artifact reproduction.
+- The Stancu matrix compiles and has smoke, default 3-run medians, and one
+  transaction-pressure 3-run median in `sandbox/STANCU_REGION_MATRIX.md`. It is
+  methodology/accounting evidence, not exact SPECjbb2005 or Stancu static
+  analysis reproduction.
 
 ### 4.8 DEBS 2015 Work
 
@@ -972,6 +980,97 @@ Caveats:
 - The benchmark currently uses trusted `HPZone`/`Streaming` APIs, not the
   future safe capture-checked API.
 
+### Stancu-Style Transaction/Accounting Matrix
+
+Sources:
+
+- `docs/LITERATURE_BENCHMARK_CONTRACT.md`
+- `sandbox/STANCU_REGION_MATRIX.md`
+- `evidence/STANCU_REGION_MATRIX.md`
+
+Compile/check command:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile
+```
+
+Smoke command:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+STANCU_TRANSACTIONS=2000 STANCU_BENCHMARK_RUNS=1 STANCU_WARMUPS=0 \
+  zsh sandbox/run_stancu_region_instrumented_matrix.sh
+```
+
+Default native-only median command:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+STANCU_BUILD=0 STANCU_BENCHMARK_RUNS=3 STANCU_WARMUPS=1 \
+STANCU_OUTPUT_DIR=/tmp/stancu-region-instrumented \
+  zsh sandbox/run_stancu_region_instrumented_matrix.sh
+```
+
+Pressure native-only median command:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+STANCU_BUILD=0 STANCU_BENCHMARK_RUNS=3 STANCU_WARMUPS=1 \
+STANCU_TRANSACTIONS=1000000 \
+STANCU_OUTPUT_DIR=/tmp/stancu-region-pressure \
+  zsh sandbox/run_stancu_region_instrumented_matrix.sh
+```
+
+Default local median configuration:
+
+- `STANCU_TRANSACTIONS=200000`
+- `STANCU_ITEMS_PER_TX=8`
+- runs `3`, warmups `1`
+
+| Mode | Median elapsed ms | Median GC ms | Median Rift op ms | Logical region objects | Region-candidate objects | Escaped objects |
+|---|---:|---:|---:|---:|---:|---:|
+| heap | 43.180 | 4.785 | 0.000 | 1800000 | 99.76% | 0 |
+| current SafeZone | 57.125 | 1.495 | 0.000 | 1800000 | 99.76% | 0 |
+| improved SafeZone | 57.782 | 1.481 | 0.000 | 1800000 | 99.76% | 0 |
+| Rift HPZone | 65.729 | 0.545 | 10.413 | 1800000 | 99.76% | 0 |
+| Rift Streaming | 51.769 | 0.000 | 3.243 | 1800000 | 99.76% | 0 |
+
+Pressure local median configuration:
+
+- `STANCU_TRANSACTIONS=1000000`
+- `STANCU_ITEMS_PER_TX=8`
+- runs `3`, warmups `1`
+
+| Mode | Median elapsed ms | Median GC ms | Median Rift op ms | Logical region objects | Region-candidate objects | Escaped objects |
+|---|---:|---:|---:|---:|---:|---:|
+| heap | 217.335 | 23.743 | 0.000 | 9000000 | 99.95% | 0 |
+| current SafeZone | 281.234 | 8.013 | 0.000 | 9000000 | 99.95% | 0 |
+| improved SafeZone | 286.893 | 7.261 | 0.000 | 9000000 | 99.95% | 0 |
+| Rift HPZone | 332.947 | 2.483 | 53.415 | 9000000 | 99.95% | 0 |
+| Rift Streaming | 262.075 | 0.000 | 16.300 | 9000000 | 99.95% | 0 |
+
+Interpretation:
+
+- This is a useful negative result. The accounting looks favorable:
+  `99.95%` of logical objects are region candidates and no region objects
+  intentionally escape, but heap is fastest.
+- The current per-transaction region boundary is too fine-grained. HPZone pays
+  one open/close per transaction; Streaming reduces that to resets but still
+  does not offset the small measured GC cost.
+- This means "region-candidate fraction" is not sufficient as a research claim.
+  The lifetime boundary must be coarse enough that reclaim and reset overhead
+  are lower than GC cost.
+
+Caveats:
+
+- This is not SPECjbb2005 and not Stancu et al.'s static analysis.
+- `explicit_region_boundaries=1` in the result pack is a manual accounting
+  field for the benchmark's one logical placement site, not a compiler-produced
+  annotation count.
+- The harness does not yet test coarser transaction batches, compiler
+  inference, or capture-check rejection cases.
+
 ### DEBS 2015 Status
 
 Source: `bench/debs2015/RESULTS.md`
@@ -1204,6 +1303,21 @@ Yak-style control/data split:
   distributed execution, Yak's dynamic escaping-object promotion, and
   write-barrier/STW comparisons.
 
+Stancu-style annotation/accounting:
+
+- The new `StancuRegionMatrix` is a local transaction-shaped accounting probe,
+  not SPECjbb2005 and not Stancu et al.'s static analysis.
+- It reports a high region-candidate object fraction: `99.76%` at default
+  size and `99.95%` at pressure size, with `explicit_region_boundaries=1` and
+  `escaped_region_objects=0`.
+- Despite that favorable accounting, heap is fastest in both runs. At pressure
+  size, heap is `217.335 ms` with `23.743 ms` GC; Rift Streaming is
+  `262.075 ms` with zero GC but `16.300 ms` region-op time; Rift HPZone is
+  `332.947 ms` because one million open/close pairs cost `53.415 ms`.
+- This weakens a simplistic "many region-candidate objects implies speedup"
+  story. Stancu-style evidence needs both candidate fraction and a good
+  lifetime-boundary granularity.
+
 DEBS:
 
 - Q1/Q2 correctness is established for bounded sorted real-data samples up to 1M rows.
@@ -1296,7 +1410,7 @@ Roadmap source: `/Users/siyaoliu/rift/Claude_output/ROADMAP.md`
 | Phase 3 runtime-only benchmarks | Done enough for current story | GCBench and ListOfLists runtime medians recorded; pipeline surrogate recorded. | Commix is not included. Pipeline provenance remains surrogate. |
 | Phase 4 topology/layout | Done enough to move on | `PHASE4_LAYOUT.md`, `PHASE4_TOPOLOGY.md`, `PHASE4_EXIT.md`. | Chunked layout still not a Rift win vs improved SafeZone. Mixed GC/region safety story needs Phase 6 tests. |
 | Phase 5 streaming operators and DEBS | In progress | DEBS Q1/Q2 run simultaneously on real data; outputs match; instrumentation added; Q1 and Q2 window entries have shared heap/Rift backends; Q2 active profit values live in window entries; Q2 median scratch arrays are region-backed and reused; Q2 ranking uses primitive cell keys internally; RunBoth input bytes use a heap/Rift allocation-placement split; the reusable ranking backend region-allocates Q1/Q2 ranking objects and top-k result arrays; Q2 bounded per-cell tables, Q1 route-table arrays, Q2 latest-empty taxi arrays, and Q2 ranking-index arrays are region-backed in Rift modes. New `diag_*` counters identify remaining heap/control paths, and the shared `Grid.cellKeyOrZero` hot path removes temporary `Some(Cell)`/`Cell` allocation from both heap and Rift. | Current 1M packed-cell medians are faster than heap with lower GC/RSS (`10969.616 ms` heap, `10770.260 ms` HPZone, `10665.729 ms` Streaming), but Q2 processing still dominates and the bounded-sample result is not final application evidence. Need Commix, SafeZone comparison, full-month input, Q2 median/rank design work, remaining control/collection work, and safe API boundaries. |
-| Phase 6 literature-benchmark evidence | Started | `docs/LITERATURE_BENCHMARK_CONTRACT.md` extracts the paper comparison contract. `DataflowRegionMatrix` now runs Broom-style SELECT/AGGREGATE/JOIN methodology workloads with ordinary Scala objects in heap, current SafeZone, improved SafeZone, Rift HPZone, and Rift Streaming modes. Native-only local medians include peak RSS, and a Broom-scale single run is recorded. `StreamFlexRegionMatrix` now runs stream throughput/latency methodology workloads with deadline-miss and latency-tail metrics. `YakRegionMatrix` now runs word-count and graph-step control/data split workloads. | Keep improved SafeZone in all claims, and do not claim exact Naiad/Broom, exact StreamFlex/Ovm, or exact Yak reproduction. Next literature target is Stancu-style annotation/accounting probes. Build a fair Rift collection/operator API before redoing parallel-collections claims. |
+| Phase 6 literature-benchmark evidence | Started | `docs/LITERATURE_BENCHMARK_CONTRACT.md` extracts the paper comparison contract. `DataflowRegionMatrix` now runs Broom-style SELECT/AGGREGATE/JOIN methodology workloads with ordinary Scala objects in heap, current SafeZone, improved SafeZone, Rift HPZone, and Rift Streaming modes. Native-only local medians include peak RSS, and a Broom-scale single run is recorded. `StreamFlexRegionMatrix` now runs stream throughput/latency methodology workloads with deadline-miss and latency-tail metrics. `YakRegionMatrix` now runs word-count and graph-step control/data split workloads. `StancuRegionMatrix` now runs transaction/accounting probes. | Keep improved SafeZone in all claims, and do not claim exact Naiad/Broom, exact StreamFlex/Ovm, exact Yak, or exact Stancu reproduction. Next choices are either coarser Stancu transaction batching/safe API rejection probes or returning to DEBS with the literature findings in mind. Build a fair Rift collection/operator API before redoing parallel-collections claims. |
 | Phase 7 capture checking | Open | Only design templates and early Rift API surface exist. | Implement positive/negative capture tests and fill `REPORT_CAPTURE_CHECK.md`. |
 | Phase 8 Lean mechanization | Open | Design pack has Lean stubs/templates. | Port or start proof work; prove without `sorry`. |
 | Phase 9 writing | Not started beyond notes | Result packs and this handoff exist. | Thesis/paper narrative after evidence stabilizes. |
@@ -1355,6 +1469,7 @@ Benchmark harnesses:
 - `sandbox/src/main/scala-next/DataflowRegionMatrix.scala`
 - `sandbox/src/main/scala-next/StreamFlexRegionMatrix.scala`
 - `sandbox/src/main/scala-next/YakRegionMatrix.scala`
+- `sandbox/src/main/scala-next/StancuRegionMatrix.scala`
 - `sandbox/src/main/scala-next/debs2015/*`
 - `bench/debs2015/*`
 
@@ -1368,6 +1483,7 @@ Notes / result packs:
 - `sandbox/DATAFLOW_REGION_MATRIX.md`
 - `sandbox/STREAMFLEX_REGION_MATRIX.md`
 - `sandbox/YAK_REGION_MATRIX.md`
+- `sandbox/STANCU_REGION_MATRIX.md`
 - `bench/debs2015/RESULTS.md`
 
 Scripts:
@@ -1383,6 +1499,7 @@ Scripts:
 - `sandbox/run_dataflow_region_matrix.sh`
 - `sandbox/run_streamflex_region_instrumented_matrix.sh`
 - `sandbox/run_yak_region_instrumented_matrix.sh`
+- `sandbox/run_stancu_region_instrumented_matrix.sh`
 - `bench/debs2015/join_nyc_taxi_sample.sh`
 - `bench/debs2015/run_both_sample_matrix.sh`
 - `bench/debs2015/run_both_instrumented_matrix.sh`
@@ -1421,6 +1538,10 @@ Benchmarking uncertainties:
   Hyracks/Hadoop/GraphChi or Yak runtime reproduction. It tests the control/data
   split locally but not distributed execution, escaping-object promotion,
   write-barrier overhead, or STW epoch-end behavior.
+- `StancuRegionMatrix` is a Stancu-style accounting probe, not SPECjbb2005 and
+  not a static points-to analysis. Its current negative result suggests the
+  next question is boundary granularity and safe API reporting, not just region
+  candidate fraction.
 - Older result packs were generated from then-uncommitted code. The current
   input-boundary, ranking/result, Q2 cell-table, Q1 route-table, Q2 taxi-table,
   and Q2 array-ranking experiments now have local commit boundaries once this
@@ -1462,17 +1583,25 @@ Immediate next step:
 4. Treat the new `YakRegionMatrix` result as started Phase 6/Yak-style
    methodology evidence. It supports the control/data split locally, but it is
    mixed against improved SafeZone and is not exact Yak.
-5. The next literature-benchmark step is Stancu-style annotation/accounting
-   probes. Do this before returning to DEBS unless the user redirects.
-6. The next DEBS implementation target, when returning to DEBS, should be Q2
+5. Treat the new `StancuRegionMatrix` result as started Phase
+   6/Stancu-style accounting evidence. It is a negative performance result:
+   high region-candidate fraction alone does not beat heap with a
+   per-transaction boundary.
+6. The next choice is either a targeted Stancu follow-up for coarser transaction
+   batches and safe API accept/reject probes, or returning to DEBS with the
+   literature findings in mind.
+7. The next DEBS implementation target, when returning to DEBS, should be Q2
    median/rank maintenance, not parser/input work. The design must preserve the
    same logical query for heap and Rift; heap should use ordinary allocation
    and Rift should use region allocation at the same lifetime boundary.
 
 Next technical milestone:
 
-1. Add a Stancu-style safe-API/accounting probe: count annotations,
-   region-freed objects/bytes where available, and rejection/escape cases.
+1. Extend the Stancu probe only if needed:
+   - add `transactions_per_region` batching to test granularity;
+   - add capture-check positive/negative cases for transaction object escape;
+   - keep accounting fields for region-candidate fraction and explicit
+     boundaries.
 2. Continue the DEBS "region-heavy" path with measurement first after the
    literature sequence. The goal should be to reduce GC pressure in the actual
    dominant data operations, not just window entries.
@@ -1509,9 +1638,9 @@ What should not be done yet:
 
 - Do not claim Rift has strong DEBS application-level evidence.
 - Do not move to Phase 6/7 as if Phase 5 is complete.
-- Do not go back to DEBS immediately if the active goal is the agreed
-  literature sequence: Broom-family evidence, then StreamFlex, then Yak, then
-  Stancu, then DEBS.
+- Do not treat the literature sequence as proving final application evidence.
+  It produced strong Broom/StreamFlex signals, mixed Yak evidence, and a
+  negative Stancu performance result.
 - Do not optimize random runtime code before confirming whether the cost is
   allocator/runtime overhead or an avoidable API/lifetime shape.
 - Do not compare Rift raw-array pipeline directly against `ZoneParVector` as if the APIs are equivalent.
@@ -1570,16 +1699,18 @@ What is stable enough:
 9. `sandbox/DATAFLOW_REGION_MATRIX.md`
 10. `sandbox/STREAMFLEX_REGION_MATRIX.md`
 11. `sandbox/YAK_REGION_MATRIX.md`
-12. `bench/debs2015/RESULTS.md`
+12. `sandbox/STANCU_REGION_MATRIX.md`
+13. `bench/debs2015/RESULTS.md`
 
 ## Safe Next Action
 
 The implementation worktree should now be clean and ahead of
-`origin/feature/rift` after committing the Yak checkpoint. The safest next
-technical action is a Stancu-style annotation/accounting probe: use a small
-transaction-like workload, count explicit region annotations or API boundaries,
-report region-managed object/byte fraction where possible, and include safe API
-accept/reject cases. Return to DEBS after that literature sequence.
+`origin/feature/rift` after committing the Stancu checkpoint. The safest next
+technical action is either a narrow Stancu follow-up for coarser transaction
+region batching plus safe API accept/reject probes, or returning to DEBS Phase
+5 with the updated literature evidence: region placement wins when data
+lifetimes are epochal and allocation-heavy, but fine-grained region boundaries
+can lose even with high candidate fraction.
 
 ## Unsafe Assumptions To Avoid
 
