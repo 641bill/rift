@@ -18,10 +18,11 @@ checkpoint, JVM same-input GC probe, literature benchmark contract, and
 Broom-style dataflow methodology harness are committed locally.
 The StreamFlex-style throughput/latency, Yak-style epoch/control-data, and
 Stancu-style transaction/accounting methodology harnesses are also committed
-locally. A Scala-next checked Rift-region API slice is committed locally on the
-implementation branch `codex/safe-region-api-checked-slice` at `e8c3b961d`.
-It is not a complete compiler capture-checking implementation. The fork is
-ahead of `origin/feature/rift` unless pushed.
+locally. A Scala-next checked Rift-region API slice has been reviewed and
+merged into `feature/rift` at `79953ad8d`; its source branch was
+`codex/safe-region-api-checked-slice` at `e8c3b961d`. It is not a complete
+compiler capture-checking implementation. The fork is ahead of
+`origin/feature/rift` unless pushed.
 
 ## 1. Project Objective
 
@@ -77,11 +78,10 @@ Repo-layout quirks:
 - Always inspect `git status --short --untracked-files=all` and `git diff --stat`
   before continuing.
 
-At the 2026-04-26 checked-API update, the implementation slice was committed
-on branch `codex/safe-region-api-checked-slice` at `e8c3b961d`. The original
-`/Users/siyaoliu/rift/scala-native-rift` worktree was not edited for this slice.
-Recheck before continuing; if an implementation worktree is dirty, inspect the
-diff rather than assuming it belongs to a previous phase.
+At the 2026-04-26 checked-API update, the implementation slice was merged into
+`feature/rift` at `79953ad8d` after review. Recheck before continuing; if an
+implementation worktree is dirty, inspect the diff rather than assuming it
+belongs to a previous phase.
 
 ## 3. Revised Project Framing
 
@@ -245,8 +245,9 @@ Validation:
 
 ### 4.6 Checked Rift Region API Slice
 
-Completed in the Codex worktree clone on 2026-04-26 and committed on
-implementation branch `codex/safe-region-api-checked-slice` at `e8c3b961d`:
+Completed in the Codex worktree clone on 2026-04-26, committed on implementation
+branch `codex/safe-region-api-checked-slice` at `e8c3b961d`, then reviewed and
+merged into `feature/rift` at `79953ad8d`:
 
 - Added Scala-next replacements for `RiftRegion` and `RiftAllocator` that use
   `language.experimental.captureChecking`.
@@ -257,8 +258,8 @@ implementation branch `codex/safe-region-api-checked-slice` at `e8c3b961d`:
   runtime region, passes a `StreamingRegion^` capability to the body, and closes
   it in `finally`.
 - Added `RiftRegion.reset { region ?=> ... }` for streaming epochs. The region
-  is reset after the body, and checked uses cannot return region-local values
-  from the reset block.
+  is reset in `finally` after the body succeeds or throws, and checked uses
+  cannot return region-local values from the reset block.
 - In Scala-next, `RiftRegion.alloc(new T(...))` returns `T^{region}` for the
   implicit region, and inherited `region.alloc(new T(...))` returns `T^{this}`.
   `RiftRegion` overrides `allocImpl`, so the inherited checked member allocation
@@ -271,7 +272,7 @@ Tests added:
 
 - `unit-tests/native/src/test/scala-next/scala/scala/scalanative/memory/RiftRegionCheckedTest.scala`
   positive runtime tests for ordinary region object graphs, non-escaping closure
-  capture, and checked streaming reset.
+  capture, checked streaming reset, and reset after an exception in an epoch.
 - `nscplugin/src/test/scala-next/scala/RiftRegionCheckedCompilerTest.scala`
   compiler tests for positive object-graph/closure cases and negative return
   escape, closure-retains-region-handle-in-heap, heap-retains-region-value, and
@@ -286,7 +287,7 @@ Validation:
 
 - `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project nativelib3_next" compile` passed.
 - `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"` passed `6/6`.
-- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionTest scala.scalanative.memory.RiftRegionCheckedTest"` passed `8/8`.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionTest scala.scalanative.memory.RiftRegionCheckedTest"` passed `9/9`.
 
 Exact current safety boundary:
 
