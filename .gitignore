@@ -1,5 +1,6 @@
 # child repos
 scala-native-rift/
+scala-native-rift-*/
 scala-native-amordo/
 scala-native/
 scala-parallel-collections-amordo/
