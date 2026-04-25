@@ -1,6 +1,6 @@
 # Rift Project Handoff
 
-Date: 2026-04-25
+Date: 2026-04-26
 
 Active worktree: `/Users/siyaoliu/rift/scala-native-rift`
 
@@ -18,7 +18,10 @@ checkpoint, JVM same-input GC probe, literature benchmark contract, and
 Broom-style dataflow methodology harness are committed locally.
 The StreamFlex-style throughput/latency, Yak-style epoch/control-data, and
 Stancu-style transaction/accounting methodology harnesses are also committed
-locally. The fork is ahead of `origin/feature/rift` unless pushed.
+locally. A Scala-next checked Rift-region API slice is committed locally on the
+implementation branch `codex/safe-region-api-checked-slice` at `e8c3b961d`.
+It is not a complete compiler capture-checking implementation. The fork is
+ahead of `origin/feature/rift` unless pushed.
 
 ## 1. Project Objective
 
@@ -74,9 +77,11 @@ Repo-layout quirks:
 - Always inspect `git status --short --untracked-files=all` and `git diff --stat`
   before continuing.
 
-At this update, `git status --short --untracked-files=all` should be clean in
-the implementation worktree. Recheck before continuing; if it is dirty, inspect
-the diff rather than assuming it belongs to the previous phase.
+At the 2026-04-26 checked-API update, the implementation slice was committed
+on branch `codex/safe-region-api-checked-slice` at `e8c3b961d`. The original
+`/Users/siyaoliu/rift/scala-native-rift` worktree was not edited for this slice.
+Recheck before continuing; if an implementation worktree is dirty, inspect the
+diff rather than assuming it belongs to a previous phase.
 
 ## 3. Revised Project Framing
 
@@ -238,7 +243,69 @@ Validation:
 - The benchmark and test harnesses compile/link through Scala Native.
 - No dedicated compiler-plugin regression suite has been run.
 
-### 4.6 Build-System Fix
+### 4.6 Checked Rift Region API Slice
+
+Completed in the Codex worktree clone on 2026-04-26 and committed on
+implementation branch `codex/safe-region-api-checked-slice` at `e8c3b961d`:
+
+- Added Scala-next replacements for `RiftRegion` and `RiftAllocator` that use
+  `language.experimental.captureChecking`.
+- Added `RiftRegion.scoped { region ?=> ... }`, which opens a `Scoped` runtime
+  region, passes a `ScopedRegion^` capability to the body, and closes the
+  region in `finally`.
+- Added `RiftRegion.streaming { region ?=> ... }`, which opens a `Streaming`
+  runtime region, passes a `StreamingRegion^` capability to the body, and closes
+  it in `finally`.
+- Added `RiftRegion.reset { region ?=> ... }` for streaming epochs. The region
+  is reset after the body, and checked uses cannot return region-local values
+  from the reset block.
+- In Scala-next, `RiftRegion.alloc(new T(...))` returns `T^{region}` for the
+  implicit region, and inherited `region.alloc(new T(...))` returns `T^{this}`.
+  `RiftRegion` overrides `allocImpl`, so the inherited checked member allocation
+  still uses the Rift allocator path.
+- Added `trustedOpen` as an explicit alias for `open`; the existing `open`,
+  raw allocation, direct `reset()`, and `HPZone` mode remain trusted benchmark
+  APIs, not safe APIs.
+
+Tests added:
+
+- `unit-tests/native/src/test/scala-next/scala/scala/scalanative/memory/RiftRegionCheckedTest.scala`
+  positive runtime tests for ordinary region object graphs, non-escaping closure
+  capture, and checked streaming reset.
+- `nscplugin/src/test/scala-next/scala/RiftRegionCheckedCompilerTest.scala`
+  compiler tests for positive object-graph/closure cases and negative return
+  escape, closure-retains-region-handle-in-heap, heap-retains-region-value, and
+  reset-epoch escape cases.
+- `unit-tests/native/src/test/scala-next/scala/scala/scalanative/memory/RiftRegionTest.scala`
+  is a Scala-next replacement of the existing Rift runtime test with
+  `captureChecking` enabled, so the old HPZone/runtime tests still run under the
+  experimental checked API source set without changing the general Scala-3
+  source.
+
+Validation:
+
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project nativelib3_next" compile` passed.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"` passed `6/6`.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionTest scala.scalanative.memory.RiftRegionCheckedTest"` passed `8/8`.
+
+Exact current safety boundary:
+
+- Checked: region-local object and array allocation through the Scala-next
+  `scoped`, `streaming`, and `reset` context-function boundaries; direct return
+  of a region-local value; storing a region-local value in ordinary heap state;
+  storing a closure that captures the region handle in ordinary heap state; and
+  returning region-local values from a reset epoch.
+- Trusted/unsafe: `HPZone`, `open`/`trustedOpen`, raw pointer allocation,
+  direct `region.reset()`, benchmark APIs, and all existing DEBS/dataflow
+  harnesses using manual `RiftRegion.open`.
+- Still open: direct return of a closure that captures only a region-local
+  value compiled in a first test attempt; this remains a Scala capture-checker
+  gap for Rift's closure story. The safe API also does not yet enforce the full
+  mixed-reference policy for region-to-GC immutable/static handles or explicit
+  GC root handles. There is no broad compiler capture-checking extension in this
+  slice.
+
+### 4.7 Build-System Fix
 
 Completed and validated for this worktree:
 
@@ -252,7 +319,7 @@ Validation:
 
 - sbt builds now proceed in this worktree.
 
-### 4.7 Benchmark Harness Additions
+### 4.8 Benchmark Harness Additions
 
 Completed and validated by recorded benchmark runs:
 
@@ -313,7 +380,7 @@ Validation:
   methodology/accounting evidence, not exact SPECjbb2005 or Stancu static
   analysis reproduction.
 
-### 4.8 DEBS 2015 Work
+### 4.9 DEBS 2015 Work
 
 Completed and partially validated:
 
