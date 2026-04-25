@@ -33,8 +33,8 @@ The standard for new benchmarks is:
 | Yak | Hyracks external sort, word count, distributed grep | 11-node cluster; YahooWebmap 72GB; data/control split with epochs at operator open/close. | Overall normalized runtime 0.14-0.64 vs Parallel Scavenge; GC time 0.02-0.11. | Future: implement Hyracks-like sort/word-count/grep surrogates or run on a real dataflow engine only if available. Track epoch annotations, GC time, app time, memory, and pause proxy. |
 | Yak | Hadoop in-map combiner, top-word selector, distributed word filter | 11-node cluster; StackOverflow 37GB; epochs around map/reduce tasks. | Overall normalized runtime 0.73-0.89; GC time 0.17-0.26; app time sometimes higher. | Future: reproduce map/reduce task-shape locally only after the dataflow operator harness is stable. |
 | Yak | GraphChi connected components, community detection, PageRank | One node; Sampletwitter-2010, 100M edges, 62M vertices; epochs around sub-intervals. | Overall normalized runtime 0.70-0.86; GC time 0.15-0.56. | Future: graph-processing benchmark with explicit sub-interval regions and a control/data split. |
-| StreamFlex | StreamIt BeamFormer and FilterBank | Ovm and HotSpot Java baselines; 10,000 iterations. | StreamFlex reported substantially lower run time than Java baselines on those stream kernels. | Future: add stream-kernel latency/throughput matrix once the Rift streaming API has a safe shape. |
-| StreamFlex | IDS and event-correlation latency | Periodic stream processing; deadline miss and per-item latency measurements. | StreamFlex avoids large GC-induced deadline misses in the reported event-correlation case. | Future: collect per-event latency distributions and max-pause proxies, not just median throughput. |
+| StreamFlex | StreamIt BeamFormer and FilterBank | Ovm and HotSpot Java baselines; 10,000 iterations. | StreamFlex reported substantially lower run time than Java baselines on those stream kernels. | Started locally with a StreamFlex-style throughput/latency matrix over ordinary Scala packet/event objects. Still not exact BeamFormer/FilterBank. |
+| StreamFlex | IDS and event-correlation latency | Periodic stream processing; deadline miss and per-item latency measurements. | StreamFlex avoids large GC-induced deadline misses in the reported event-correlation case. | Started locally: collect per-event latency distributions, max-pause proxies, and deadline misses for heap/SafeZone/Rift modes. |
 | Stancu et al. | SPECjbb2005 transaction regions | 7 annotations; each warehouse 100k iterations; young gen varied 1MB-256MB. | About 77%-78% memory region-freed; up to 22% speedup at small young gen; fewer young collections. | Future: add annotation-count and region-freed-byte metrics to Rift safe API experiments. Keep fallback/escape counts visible. |
 
 ## Immediate Reproduction Order
@@ -46,17 +46,30 @@ The standard for new benchmarks is:
    entries, join entries, and output records.
 3. Use that matrix to compare heap, current SafeZone, improved SafeZone, Rift
    HPZone, and Rift Streaming.
-4. Continue DEBS Phase 5 only when changes preserve the same logical program:
+4. Add a StreamFlex-style throughput/latency matrix over ordinary Scala stream
+   objects, with deadline-miss and tail-latency rows. This is methodology
+   reproduction, not exact StreamFlex/Ovm.
+5. Add Yak-style epoch/control-data benchmarks next, then Stancu-style
+   annotation/accounting probes.
+6. Continue DEBS Phase 5 only when changes preserve the same logical program:
    heap uses `new`, Rift uses `region.alloc` at the same lifetime boundary.
-5. Defer Yak-scale systems, StreamFlex latency kernels, and Stancu-style
-   annotation accounting until the Broom-style operator harness is stable.
 
-Current implementation note: step 2 has started in
+Current implementation note: step 2 is implemented in
 `scala-native-rift/sandbox/src/main/scala-next/DataflowRegionMatrix.scala`, with
 native-only local medians, peak RSS, current/improved SafeZone modes, and a
 provisional 40-epoch x 500k-document single run recorded in
 `scala-native-rift/sandbox/DATAFLOW_REGION_MATRIX.md` and synced to
 `evidence/DATAFLOW_REGION_MATRIX.md`.
+
+Step 4 is implemented in
+`scala-native-rift/sandbox/src/main/scala-next/StreamFlexRegionMatrix.scala`.
+It records default and allocation-pressure native-only medians in
+`scala-native-rift/sandbox/STREAMFLEX_REGION_MATRIX.md`, synced to
+`evidence/STREAMFLEX_REGION_MATRIX.md`. The pressure run is the current
+StreamFlex-style signal: heap has `89` deadline misses and `30.379 ms` median
+GC time in the latency workload, while Rift HPZone and Streaming have zero
+deadline misses with low region-op time. This is not an exact StreamFlex/Ovm
+reproduction.
 
 ## Metrics Required For Reproduction Claims
 
@@ -82,8 +95,9 @@ Every benchmark result intended for comparison should include:
 - Yak's original evaluation is distributed and JVM-specific. Rift should compare
   against the control/data-space idea first, not pretend a local microbenchmark
   replaces the cluster result.
-- StreamFlex's strongest axis is latency predictability. Rift currently records
-  throughput and GC duration, but not per-event latency tails outside DEBS
-  output-latency fields.
+- StreamFlex's strongest axis is latency predictability. Rift now has a local
+  methodology harness with per-event latency tails and deadline misses, but it
+  does not run the original StreamIt/Ovm kernels or model scheduler/queuing
+  delay.
 - Stancu et al. measure annotation burden and region-freed memory. Rift does not
   yet have a safe API or compiler report capable of making that comparison.
