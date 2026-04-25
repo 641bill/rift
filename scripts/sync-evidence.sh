@@ -14,6 +14,7 @@ cp -f "$FORK/sandbox/PHASE4_EXIT.md" "$DEST/" 2>/dev/null || true
 cp -f "$FORK/sandbox/PIPELINE_PARCOLL_COMPARISON.md" "$DEST/" 2>/dev/null || true
 cp -f "$FORK/sandbox/DATAFLOW_REGION_MATRIX.md" "$DEST/" 2>/dev/null || true
 cp -f "$FORK/sandbox/STREAMFLEX_REGION_MATRIX.md" "$DEST/" 2>/dev/null || true
+cp -f "$FORK/sandbox/YAK_REGION_MATRIX.md" "$DEST/" 2>/dev/null || true
 
 cp -f "$FORK/bench/debs2015/RESULTS.md" "$DEST/DEBS_RESULTS.md" 2>/dev/null || true
 cp -f "$FORK/bench/debs2015/ATTRIBUTION.md" "$DEST/DEBS_ATTRIBUTION.md" 2>/dev/null || true

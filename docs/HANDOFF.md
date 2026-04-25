@@ -15,9 +15,10 @@ ranking backend, Q2 bounded cell-table checkpoint, Q1 primitive route-table
 checkpoint, Q2 latest-empty taxi-table checkpoint, Q2 array-backed ranking
 checkpoint, packed Grid cell-key diagnostic checkpoint, literature benchmark
 contract, and Broom-style dataflow methodology harness are committed locally.
-This update adds the StreamFlex-style throughput/latency methodology harness as
-the current local diff until committed. The fork is ahead of `origin/feature/rift`
-unless pushed.
+The StreamFlex-style throughput/latency methodology harness is also committed
+locally. This update adds the Yak-style epoch/control-data methodology harness
+as the current local diff until committed. The fork is ahead of
+`origin/feature/rift` unless pushed.
 
 ## 1. Project Objective
 
@@ -256,6 +257,7 @@ Completed and validated by recorded benchmark runs:
 - Added cleaned pipeline raw-array runtime matrix.
 - Added Broom-style dataflow SELECT/AGGREGATE/JOIN methodology matrix.
 - Added StreamFlex-style stream throughput/latency methodology matrix.
+- Added Yak-style epoch/control-data methodology matrix.
 - Added scripts to run matrices with Immix/current SafeZone/improved SafeZone/Rift modes.
 - Added DEBS Q1/Q2 implementation and sample/real-data runners.
 
@@ -271,6 +273,7 @@ Key files:
 - `sandbox/src/main/scala-next/PipelineRuntimeMatrix.scala`
 - `sandbox/src/main/scala-next/DataflowRegionMatrix.scala`
 - `sandbox/src/main/scala-next/StreamFlexRegionMatrix.scala`
+- `sandbox/src/main/scala-next/YakRegionMatrix.scala`
 - `sandbox/run_gcbench_runtime_matrix.sh`
 - `sandbox/run_gcbench_topology_matrix.sh`
 - `sandbox/run_listoflists_runtime_matrix.sh`
@@ -281,6 +284,7 @@ Key files:
 - `sandbox/run_pipeline_runtime_matrix.sh`
 - `sandbox/run_dataflow_region_matrix.sh`
 - `sandbox/run_streamflex_region_instrumented_matrix.sh`
+- `sandbox/run_yak_region_instrumented_matrix.sh`
 
 Validation:
 
@@ -292,6 +296,10 @@ Validation:
   allocation-pressure 3-run median in `sandbox/STREAMFLEX_REGION_MATRIX.md`.
   It is methodology reproduction evidence, not exact StreamFlex/Ovm artifact
   reproduction.
+- The Yak matrix compiles and has smoke, default 3-run medians, and one
+  epoch-pressure 3-run median in `sandbox/YAK_REGION_MATRIX.md`. It is
+  methodology reproduction evidence, not exact Yak/Hyracks/Hadoop/GraphChi
+  artifact reproduction.
 
 ### 4.8 DEBS 2015 Work
 
@@ -861,6 +869,109 @@ Caveats:
 - The benchmark currently uses trusted `HPZone`/`Streaming` APIs, not the
   future safe capture-checked API.
 
+### Yak-Style Epoch/Control-Data Matrix
+
+Sources:
+
+- `docs/LITERATURE_BENCHMARK_CONTRACT.md`
+- `sandbox/YAK_REGION_MATRIX.md`
+- `evidence/YAK_REGION_MATRIX.md`
+
+Compile/check command:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile
+```
+
+Smoke command:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+YAK_EPOCHS=2 YAK_RECORDS_PER_EPOCH=1000 YAK_MESSAGES_PER_EPOCH=1000 \
+YAK_BENCHMARK_RUNS=1 YAK_WARMUPS=0 \
+  zsh sandbox/run_yak_region_instrumented_matrix.sh
+```
+
+Default native-only median command:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+YAK_BUILD=0 YAK_BENCHMARK_RUNS=3 YAK_WARMUPS=1 \
+YAK_OUTPUT_DIR=/tmp/yak-region-instrumented \
+  zsh sandbox/run_yak_region_instrumented_matrix.sh
+```
+
+Pressure native-only median command:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+YAK_BUILD=0 YAK_BENCHMARK_RUNS=3 YAK_WARMUPS=1 \
+YAK_EPOCHS=40 YAK_RECORDS_PER_EPOCH=250000 YAK_MESSAGES_PER_EPOCH=250000 \
+YAK_OUTPUT_DIR=/tmp/yak-region-pressure \
+  zsh sandbox/run_yak_region_instrumented_matrix.sh
+```
+
+Default local median configuration:
+
+- `YAK_EPOCHS=20`
+- `YAK_RECORDS_PER_EPOCH=100000`
+- `YAK_MESSAGES_PER_EPOCH=100000`
+- runs `3`, warmups `1`
+
+| Workload | Mode | Median elapsed ms | Median GC ms | Median Rift op ms | Logical data objects |
+|---|---|---:|---:|---:|---:|
+| wordcount | heap | 51.961 | 12.062 | 0.000 | 2000000 |
+| wordcount | current SafeZone | 41.143 | 0.000 | 0.000 | 2000000 |
+| wordcount | improved SafeZone | 40.005 | 0.000 | 0.000 | 2000000 |
+| wordcount | Rift HPZone | 42.075 | 0.000 | 0.053 | 2000000 |
+| wordcount | Rift Streaming | 41.873 | 0.000 | 0.053 | 2000000 |
+| graphstep | heap | 56.235 | 9.283 | 0.000 | 2000000 |
+| graphstep | current SafeZone | 47.417 | 0.000 | 0.000 | 2000000 |
+| graphstep | improved SafeZone | 46.859 | 0.000 | 0.000 | 2000000 |
+| graphstep | Rift HPZone | 48.126 | 0.000 | 0.077 | 2000000 |
+| graphstep | Rift Streaming | 46.909 | 0.000 | 0.072 | 2000000 |
+
+Pressure local median configuration:
+
+- `YAK_EPOCHS=40`
+- `YAK_RECORDS_PER_EPOCH=250000`
+- `YAK_MESSAGES_PER_EPOCH=250000`
+- runs `3`, warmups `1`
+
+| Workload | Mode | Median elapsed ms | Median GC ms | Median Rift op ms | Logical data objects |
+|---|---|---:|---:|---:|---:|
+| wordcount | heap | 240.541 | 35.225 | 0.000 | 10000000 |
+| wordcount | current SafeZone | 237.253 | 0.000 | 0.000 | 10000000 |
+| wordcount | improved SafeZone | 197.373 | 0.000 | 0.000 | 10000000 |
+| wordcount | Rift HPZone | 214.210 | 0.000 | 0.314 | 10000000 |
+| wordcount | Rift Streaming | 209.944 | 0.000 | 0.275 | 10000000 |
+| graphstep | heap | 239.001 | 29.774 | 0.000 | 10000000 |
+| graphstep | current SafeZone | 275.357 | 0.000 | 0.000 | 10000000 |
+| graphstep | improved SafeZone | 206.425 | 0.000 | 0.000 | 10000000 |
+| graphstep | Rift HPZone | 229.265 | 0.000 | 0.406 | 10000000 |
+| graphstep | Rift Streaming | 224.885 | 0.000 | 0.365 | 10000000 |
+
+Interpretation:
+
+- This is the first local Yak-style harness for Rift: heap control arrays remain
+  durable while epoch-local word-count tokens or graph messages are allocated
+  on heap, in SafeZone, or in Rift regions.
+- Rift removes measured heap GC and beats heap on both workloads.
+- Improved SafeZone is faster than Rift in the pressure run, so the current
+  result supports the Yak control/data split but not a Rift-over-improved-
+  SafeZone claim.
+- Rift operation time is small: below `0.5 ms` even for ten million region
+  objects per workload.
+
+Caveats:
+
+- This is not an exact Yak reproduction. It does not run Hyracks, Hadoop, or
+  GraphChi, and it does not implement Yak's dynamic promotion/write-barrier
+  mechanism.
+- The benchmark currently uses trusted `HPZone`/`Streaming` APIs, not the
+  future safe capture-checked API.
+
 ### DEBS 2015 Status
 
 Source: `bench/debs2015/RESULTS.md`
@@ -1075,6 +1186,24 @@ StreamFlex-style stream latency:
   stream data, but it is not an exact StreamFlex/Ovm reproduction and does not
   include scheduler/queuing delay.
 
+Yak-style control/data split:
+
+- The new `YakRegionMatrix` is a local methodology benchmark for Yak's core
+  observation: durable control metadata has generational behavior, while the
+  data path creates many epoch-local objects.
+- At the default local size, heap spends `12.062 ms` GC on `wordcount` and
+  `9.283 ms` GC on `graphstep`; Rift removes that GC and beats heap on elapsed
+  time. Improved SafeZone is the fastest or effectively tied.
+- At the pressure size, heap spends `35.225 ms` GC on `wordcount` and
+  `29.774 ms` GC on `graphstep`. Rift HPZone/Streaming remove measured heap GC
+  and beat heap, but improved SafeZone is faster than Rift on both workloads.
+- This supports the control/data split as a local methodology result, but it
+  weakens any claim that Rift currently surpasses improved SafeZone on
+  Yak-shaped epoch workloads.
+- The result is not exact Yak evidence: it lacks Hyracks/Hadoop/GraphChi,
+  distributed execution, Yak's dynamic escaping-object promotion, and
+  write-barrier/STW comparisons.
+
 DEBS:
 
 - Q1/Q2 correctness is established for bounded sorted real-data samples up to 1M rows.
@@ -1167,7 +1296,7 @@ Roadmap source: `/Users/siyaoliu/rift/Claude_output/ROADMAP.md`
 | Phase 3 runtime-only benchmarks | Done enough for current story | GCBench and ListOfLists runtime medians recorded; pipeline surrogate recorded. | Commix is not included. Pipeline provenance remains surrogate. |
 | Phase 4 topology/layout | Done enough to move on | `PHASE4_LAYOUT.md`, `PHASE4_TOPOLOGY.md`, `PHASE4_EXIT.md`. | Chunked layout still not a Rift win vs improved SafeZone. Mixed GC/region safety story needs Phase 6 tests. |
 | Phase 5 streaming operators and DEBS | In progress | DEBS Q1/Q2 run simultaneously on real data; outputs match; instrumentation added; Q1 and Q2 window entries have shared heap/Rift backends; Q2 active profit values live in window entries; Q2 median scratch arrays are region-backed and reused; Q2 ranking uses primitive cell keys internally; RunBoth input bytes use a heap/Rift allocation-placement split; the reusable ranking backend region-allocates Q1/Q2 ranking objects and top-k result arrays; Q2 bounded per-cell tables, Q1 route-table arrays, Q2 latest-empty taxi arrays, and Q2 ranking-index arrays are region-backed in Rift modes. New `diag_*` counters identify remaining heap/control paths, and the shared `Grid.cellKeyOrZero` hot path removes temporary `Some(Cell)`/`Cell` allocation from both heap and Rift. | Current 1M packed-cell medians are faster than heap with lower GC/RSS (`10969.616 ms` heap, `10770.260 ms` HPZone, `10665.729 ms` Streaming), but Q2 processing still dominates and the bounded-sample result is not final application evidence. Need Commix, SafeZone comparison, full-month input, Q2 median/rank design work, remaining control/collection work, and safe API boundaries. |
-| Phase 6 literature-benchmark evidence | Started | `docs/LITERATURE_BENCHMARK_CONTRACT.md` extracts the paper comparison contract. `DataflowRegionMatrix` now runs Broom-style SELECT/AGGREGATE/JOIN methodology workloads with ordinary Scala objects in heap, current SafeZone, improved SafeZone, Rift HPZone, and Rift Streaming modes. Native-only local medians include peak RSS, and a Broom-scale single run is recorded. `StreamFlexRegionMatrix` now runs stream throughput/latency methodology workloads with deadline-miss and latency-tail metrics. | Upgrade the Broom-scale single run to medians only if needed, keep improved SafeZone in all claims, and do not claim exact Naiad/Broom or exact StreamFlex/Ovm reproduction. Next literature targets are Yak-style epoch/control-data benchmarks and Stancu-style annotation/accounting probes. Build a fair Rift collection/operator API before redoing parallel-collections claims. |
+| Phase 6 literature-benchmark evidence | Started | `docs/LITERATURE_BENCHMARK_CONTRACT.md` extracts the paper comparison contract. `DataflowRegionMatrix` now runs Broom-style SELECT/AGGREGATE/JOIN methodology workloads with ordinary Scala objects in heap, current SafeZone, improved SafeZone, Rift HPZone, and Rift Streaming modes. Native-only local medians include peak RSS, and a Broom-scale single run is recorded. `StreamFlexRegionMatrix` now runs stream throughput/latency methodology workloads with deadline-miss and latency-tail metrics. `YakRegionMatrix` now runs word-count and graph-step control/data split workloads. | Keep improved SafeZone in all claims, and do not claim exact Naiad/Broom, exact StreamFlex/Ovm, or exact Yak reproduction. Next literature target is Stancu-style annotation/accounting probes. Build a fair Rift collection/operator API before redoing parallel-collections claims. |
 | Phase 7 capture checking | Open | Only design templates and early Rift API surface exist. | Implement positive/negative capture tests and fill `REPORT_CAPTURE_CHECK.md`. |
 | Phase 8 Lean mechanization | Open | Design pack has Lean stubs/templates. | Port or start proof work; prove without `sorry`. |
 | Phase 9 writing | Not started beyond notes | Result packs and this handoff exist. | Thesis/paper narrative after evidence stabilizes. |
@@ -1225,6 +1354,7 @@ Benchmark harnesses:
 - `sandbox/src/main/scala-next/PipelineRuntimeMatrix.scala`
 - `sandbox/src/main/scala-next/DataflowRegionMatrix.scala`
 - `sandbox/src/main/scala-next/StreamFlexRegionMatrix.scala`
+- `sandbox/src/main/scala-next/YakRegionMatrix.scala`
 - `sandbox/src/main/scala-next/debs2015/*`
 - `bench/debs2015/*`
 
@@ -1237,6 +1367,7 @@ Notes / result packs:
 - `sandbox/PIPELINE_PARCOLL_COMPARISON.md`
 - `sandbox/DATAFLOW_REGION_MATRIX.md`
 - `sandbox/STREAMFLEX_REGION_MATRIX.md`
+- `sandbox/YAK_REGION_MATRIX.md`
 - `bench/debs2015/RESULTS.md`
 
 Scripts:
@@ -1251,6 +1382,7 @@ Scripts:
 - `sandbox/run_pipeline_runtime_matrix.sh`
 - `sandbox/run_dataflow_region_matrix.sh`
 - `sandbox/run_streamflex_region_instrumented_matrix.sh`
+- `sandbox/run_yak_region_instrumented_matrix.sh`
 - `bench/debs2015/join_nyc_taxi_sample.sh`
 - `bench/debs2015/run_both_sample_matrix.sh`
 - `bench/debs2015/run_both_instrumented_matrix.sh`
@@ -1285,6 +1417,10 @@ Benchmarking uncertainties:
   an exact Ovm/StreamFlex artifact reproduction. It records per-event
   processing latency tails and deadline misses, but not full periodic
   scheduler/queuing delay.
+- `YakRegionMatrix` is a Yak-style methodology reproduction, not an exact
+  Hyracks/Hadoop/GraphChi or Yak runtime reproduction. It tests the control/data
+  split locally but not distributed execution, escaping-object promotion,
+  write-barrier overhead, or STW epoch-end behavior.
 - Older result packs were generated from then-uncommitted code. The current
   input-boundary, ranking/result, Q2 cell-table, Q1 route-table, Q2 taxi-table,
   and Q2 array-ranking experiments now have local commit boundaries once this
@@ -1323,26 +1459,24 @@ Immediate next step:
    6/StreamFlex-style methodology evidence. The pressure run is useful because
    it shows latency-tail and deadline-miss effects, but it is still not exact
    StreamFlex/Ovm.
-4. The next literature-benchmark step is Yak-style epoch/control-data evidence,
-   followed by Stancu-style annotation/accounting probes. Do this before
-   returning to DEBS unless the user redirects.
-5. The next DEBS implementation target, when returning to DEBS, should be Q2
+4. Treat the new `YakRegionMatrix` result as started Phase 6/Yak-style
+   methodology evidence. It supports the control/data split locally, but it is
+   mixed against improved SafeZone and is not exact Yak.
+5. The next literature-benchmark step is Stancu-style annotation/accounting
+   probes. Do this before returning to DEBS unless the user redirects.
+6. The next DEBS implementation target, when returning to DEBS, should be Q2
    median/rank maintenance, not parser/input work. The design must preserve the
    same logical query for heap and Rift; heap should use ordinary allocation
    and Rift should use region allocation at the same lifetime boundary.
 
 Next technical milestone:
 
-1. Add a Yak-style local harness that separates long-lived/control metadata
-   from epoch-local data objects. The first local shape should be simple and
-   reproducible: word-count or external-sort-like operators with per-epoch
-   records in regions and durable dictionaries/control state on heap.
-2. Then add a Stancu-style safe-API/accounting probe: count annotations,
+1. Add a Stancu-style safe-API/accounting probe: count annotations,
    region-freed objects/bytes where available, and rejection/escape cases.
-3. Continue the DEBS "region-heavy" path with measurement first after the
+2. Continue the DEBS "region-heavy" path with measurement first after the
    literature sequence. The goal should be to reduce GC pressure in the actual
    dominant data operations, not just window entries.
-4. Start DEBS with a narrow measurement-driven plan:
+3. Start DEBS with a narrow measurement-driven plan:
    - Add allocation counters or coarse heap allocation attribution around
      remaining Q1 tree metadata, durable taxi-id metadata, latency arrays,
      output formatting, and Q2 median/rank maintenance.
@@ -1361,8 +1495,8 @@ Next technical milestone:
      only difference is allocation placement.
    - Do not repeat the uncommitted Q1 indexed-heap ranking design unchanged; it
      preserved correctness but regressed Q1 processing.
-5. Rerun 100k and 1M instrumented matrices with medians after each DEBS change.
-6. Extend the dataflow methodology harness only as needed:
+4. Rerun 100k and 1M instrumented matrices with medians after each DEBS change.
+5. Extend the literature methodology harnesses only as needed:
    - Upgrade the 40-epoch, 500k-document-per-epoch single run to a median run
      only if we need a headline Broom-style methodology table.
    - Add a short note comparing the local percentages against the Broom paper's
@@ -1435,17 +1569,17 @@ What is stable enough:
 8. `sandbox/PHASE4_EXIT.md`
 9. `sandbox/DATAFLOW_REGION_MATRIX.md`
 10. `sandbox/STREAMFLEX_REGION_MATRIX.md`
-11. `bench/debs2015/RESULTS.md`
+11. `sandbox/YAK_REGION_MATRIX.md`
+12. `bench/debs2015/RESULTS.md`
 
 ## Safe Next Action
 
 The implementation worktree should now be clean and ahead of
-`origin/feature/rift` after committing the StreamFlex checkpoint. The safest
-next technical action is a Yak-style epoch/control-data harness: keep durable
-control metadata on heap, allocate epoch-local data objects in regions, and
-measure elapsed time, GC time, region-op time, RSS, and correctness checksums
-across heap/current SafeZone/improved SafeZone/Rift modes. After Yak, add a
-Stancu-style annotation/accounting probe. Return to DEBS after that sequence.
+`origin/feature/rift` after committing the Yak checkpoint. The safest next
+technical action is a Stancu-style annotation/accounting probe: use a small
+transaction-like workload, count explicit region annotations or API boundaries,
+report region-managed object/byte fraction where possible, and include safe API
+accept/reject cases. Return to DEBS after that literature sequence.
 
 ## Unsafe Assumptions To Avoid
 

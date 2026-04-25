@@ -30,7 +30,7 @@ The standard for new benchmarks is:
 | Broom | List-of-lists allocator microbenchmark | Allocate/free 40 list-of-lists; each structure has `n` lists of `n` objects, `n=500..3000`. | Region runtime reduced time by about 59%. | Already covered locally by ListOfLists same-layout matrix; keep current/improved SafeZone and Rift HPZone baselines. |
 | Broom | Emulated Naiad SELECT, AGGREGATE, JOIN vertices | Synthetic per-epoch inputs: documents receive 500k-600k new entries per epoch; authors receive 10-20 new entries per epoch; run after 40 epochs. | SELECT about 13%, AGGREGATE about 20%, JOIN about 36% runtime reduction. | Add a Broom-style dataflow matrix with ordinary Scala message/value objects allocated either on heap or in an epoch region. Label it methodology reproduction, not exact Naiad reproduction. |
 | Broom | Naiad workflows and incremental SCC motivation | Naiad v0.4 on Mono; examples include TPC-H Q17, shopper workflow, and SCC over 15M vertices / 80M edges. | GC often accounts for 20%-40% of runtime and can create synchronization delays. | Use as motivation and future comparison. Exact artifact is unavailable, so do not claim exact reproduction. |
-| Yak | Hyracks external sort, word count, distributed grep | 11-node cluster; YahooWebmap 72GB; data/control split with epochs at operator open/close. | Overall normalized runtime 0.14-0.64 vs Parallel Scavenge; GC time 0.02-0.11. | Future: implement Hyracks-like sort/word-count/grep surrogates or run on a real dataflow engine only if available. Track epoch annotations, GC time, app time, memory, and pause proxy. |
+| Yak | Hyracks external sort, word count, distributed grep | 11-node cluster; YahooWebmap 72GB; data/control split with epochs at operator open/close. | Overall normalized runtime 0.14-0.64 vs Parallel Scavenge; GC time 0.02-0.11. | Started locally with word-count-style durable control metadata plus epoch-local data records. Still not Hyracks or distributed Yak. |
 | Yak | Hadoop in-map combiner, top-word selector, distributed word filter | 11-node cluster; StackOverflow 37GB; epochs around map/reduce tasks. | Overall normalized runtime 0.73-0.89; GC time 0.17-0.26; app time sometimes higher. | Future: reproduce map/reduce task-shape locally only after the dataflow operator harness is stable. |
 | Yak | GraphChi connected components, community detection, PageRank | One node; Sampletwitter-2010, 100M edges, 62M vertices; epochs around sub-intervals. | Overall normalized runtime 0.70-0.86; GC time 0.15-0.56. | Future: graph-processing benchmark with explicit sub-interval regions and a control/data split. |
 | StreamFlex | StreamIt BeamFormer and FilterBank | Ovm and HotSpot Java baselines; 10,000 iterations. | StreamFlex reported substantially lower run time than Java baselines on those stream kernels. | Started locally with a StreamFlex-style throughput/latency matrix over ordinary Scala packet/event objects. Still not exact BeamFormer/FilterBank. |
@@ -71,6 +71,16 @@ GC time in the latency workload, while Rift HPZone and Streaming have zero
 deadline misses with low region-op time. This is not an exact StreamFlex/Ovm
 reproduction.
 
+Step 5 is started in
+`scala-native-rift/sandbox/src/main/scala-next/YakRegionMatrix.scala`. It
+records default and epoch-pressure native-only medians in
+`scala-native-rift/sandbox/YAK_REGION_MATRIX.md`, synced to
+`evidence/YAK_REGION_MATRIX.md`. The local Yak-style result is mixed: Rift
+removes heap GC and beats heap on word-count and graph-step workloads, but
+improved SafeZone is faster than Rift in the pressure run. This supports the
+control/data split but does not show a Rift-over-improved-SafeZone win, and it
+is not an exact Yak/Hyracks/Hadoop/GraphChi reproduction.
+
 ## Metrics Required For Reproduction Claims
 
 Every benchmark result intended for comparison should include:
@@ -92,9 +102,10 @@ Every benchmark result intended for comparison should include:
 
 - The available Broom/Naiad implementation is not open in this workspace; exact
   Naiad numbers cannot be reproduced from the paper alone.
-- Yak's original evaluation is distributed and JVM-specific. Rift should compare
-  against the control/data-space idea first, not pretend a local microbenchmark
-  replaces the cluster result.
+- Yak's original evaluation is distributed and JVM-specific. Rift now has a
+  local control/data-space methodology harness, but it must not be presented as
+  a replacement for Yak's cluster result or dynamic promotion/write-barrier
+  safety story.
 - StreamFlex's strongest axis is latency predictability. Rift now has a local
   methodology harness with per-event latency tails and deadline misses, but it
   does not run the original StreamIt/Ovm kernels or model scheduler/queuing
