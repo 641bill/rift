@@ -1,6 +1,6 @@
 # Rift All-Phase Results Rollup
 
-Date: 2026-04-24
+Date: 2026-04-26
 
 This file gathers the current numeric and validation evidence across all
 roadmap phases. It is a rollup, not the primary raw log. Prefer the source files
@@ -16,6 +16,10 @@ listed below for command provenance and detailed interpretation.
 | Phase 4 topology | `evidence/PHASE4_TOPOLOGY.md` |
 | Phase 4 exit summary | `evidence/PHASE4_EXIT.md` |
 | Phase 5 DEBS | `evidence/DEBS_RESULTS.md` |
+| Phase 6 Broom-style dataflow | `evidence/DATAFLOW_REGION_MATRIX.md` |
+| Phase 6 StreamFlex-style stream latency | `evidence/STREAMFLEX_REGION_MATRIX.md` |
+| Phase 6 Yak-style control/data split | `evidence/YAK_REGION_MATRIX.md` |
+| Phase 6 Stancu-style transaction accounting | `evidence/STANCU_REGION_MATRIX.md` |
 | Phase 6 pipeline / parallel collections | `evidence/PIPELINE_PARCOLL_COMPARISON.md` |
 | Current roadmap status | `docs/ROADMAP.md` |
 | Handoff / caveats | `docs/HANDOFF.md` |
@@ -39,7 +43,8 @@ listed below for command provenance and detailed interpretation.
 | Phase 3: runtime-only evaluation | Done enough for current claim | Validated with caveats | Same-layout GCBench/ListOfLists runtime medians |
 | Phase 4: topology/layout decomposition | Done enough to move on | Validated/provisional mix | Layout, topology, targeted runtime follow-up, safety finding |
 | Phase 5: application evidence | In progress | Partially validated/provisional | DEBS correctness and single-run instrumented matrices |
-| Phase 6: Broom / parallel collections API evidence | Open | Provisional surrogate only | amordo comparison and Rift raw-array surrogate |
+| Phase 6: literature-aligned methodology evidence | Started | Validated methodology medians with caveats | Broom-style dataflow, StreamFlex-style latency/throughput, Yak-style control/data, Stancu-style transaction accounting |
+| Phase 6b: Broom / parallel collections API evidence | Open | Provisional surrogate only | amordo comparison and Rift raw-array surrogate |
 | Phase 7: capture-checked safe API | Open | No benchmark data | Safety finding only |
 | Phase 8: native GC/region integration hardening | Open | No benchmark data | Safety finding only |
 | Phase 9: Lean mechanization | Open | No data | None |
@@ -440,7 +445,50 @@ Interpretation:
 Caveat: this is a fairness/noise cleanup, not a Rift-specific win. It removes
 accidental heap `Cell` and cell-id string allocation from the shared Q2 path.
 
-## Phase 6: Broom / Parallel Collections API Evidence
+## Phase 6: Literature-Aligned Methodology Evidence
+
+Sources:
+
+- `evidence/DATAFLOW_REGION_MATRIX.md`
+- `evidence/STREAMFLEX_REGION_MATRIX.md`
+- `evidence/YAK_REGION_MATRIX.md`
+- `evidence/STANCU_REGION_MATRIX.md`
+
+These are local methodology reproductions. They do not claim the original
+Broom/Naiad, StreamFlex/Ovm, Yak/Hyracks/Hadoop/GraphChi, or Stancu/SPECjbb2005
+artifacts are available or reproduced.
+
+### Latest Interpretable Signals
+
+| Literature shape | Local harness | Best current Rift signal | Main caveat |
+|---|---|---|---|
+| Broom dataflow vertices | SELECT/AGGREGATE/JOIN over ordinary epoch-local Scala objects | Post-counter-fix 10 x 100k medians show HPZone ahead of heap and improved SafeZone on SELECT, AGGREGATE, and JOIN; Broom-scale 40 x 500k is still single-run. | Methodology reproduction, not exact Naiad/Broom. |
+| StreamFlex stream latency | Throughput and per-event latency/deadline-miss workloads | Pressure rerun shows Rift throughput around `330 ms` vs heap `634 ms`; Streaming has zero deadline misses in that run. | Does not run StreamIt/Ovm kernels or model scheduler/queueing delay. |
+| Yak control/data split | Wordcount and graphstep epoch-local data objects with durable heap control state | Pressure rerun shows Streaming near improved SafeZone and faster than heap: `199.156 ms` vs heap `243.522 ms` on wordcount, `209.528 ms` vs heap `240.890 ms` on graphstep. | Not distributed Yak and no dynamic promotion/write barrier. |
+| Stancu transaction accounting | Warehouse transaction-shaped object graph with durable heap state | Boundary sweep confirms a Rift-vs-heap win only when transaction regions are coarse enough: at 200k transactions, 64 tx/region gives Streaming `38.844 ms` vs heap `43.189 ms`. | Not SPECjbb2005 or static analysis; SafeZone remains faster. |
+
+### Stancu Boundary Sweep, 2026-04-26
+
+Configuration:
+
+- `STANCU_TRANSACTIONS=200000`
+- `STANCU_ITEMS_PER_TX=8`
+- `STANCU_WAREHOUSES=64`
+- `STANCU_PRODUCTS=4096`
+- runs `3`, warmups `1`
+
+| Tx per region | Heap ms | Improved SafeZone ms | Rift HPZone ms | Rift Streaming ms | Rift Streaming op ms | Interpretation |
+|---:|---:|---:|---:|---:|---:|---|
+| 1 | 44.592 | 62.564 | 63.257 | 50.487 | 3.922 | Too fine-grained; Rift does not beat heap. |
+| 64 | 43.189 | 37.057 | 39.522 | 38.844 | 0.060 | Best measured boundary; Rift beats heap but not SafeZone. |
+| 512 | 45.315 | 38.436 | 40.025 | 39.717 | 0.065 | Still a Rift-vs-heap win, but not better than 64. |
+
+The Stancu-style evidence should therefore be described as a coarse-boundary
+Rift-vs-heap accounting result. It is not evidence that a high
+region-candidate object fraction alone is enough, and it is not a static
+annotation/inference result.
+
+## Phase 6b: Broom / Parallel Collections API Evidence
 
 Source: `evidence/PIPELINE_PARCOLL_COMPARISON.md`
 
