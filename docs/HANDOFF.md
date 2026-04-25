@@ -6,16 +6,16 @@ Active worktree: `/Users/siyaoliu/rift/scala-native-rift`
 
 Active branch: `feature/rift`
 
-Implementation head at this update: local `feature/rift` commit `97e95306d`
-(`Move DEBS output snapshots into regions`)
+Implementation head at this update: local `feature/rift` commit `4be6f0a63`
+(`Add JVM DEBS GC probe`)
 
 Status: active research fork. The Phase 5 input-boundary checkpoint, reusable
 ranking backend, Q2 bounded cell-table checkpoint, Q1 primitive route-table
 checkpoint, Q2 latest-empty taxi-table checkpoint, Q2 array-backed ranking
 checkpoint, Q2 taxi-id table checkpoint, Q1 indexed-ranking checkpoint,
 RunBoth output-snapshot placement checkpoint, packed Grid cell-key diagnostic
-checkpoint, literature benchmark contract, and Broom-style dataflow methodology
-harness are committed locally.
+checkpoint, JVM same-input GC probe, literature benchmark contract, and
+Broom-style dataflow methodology harness are committed locally.
 The StreamFlex-style throughput/latency, Yak-style epoch/control-data, and
 Stancu-style transaction/accounting methodology harnesses are also committed
 locally. The fork is ahead of `origin/feature/rift` unless pushed.
@@ -1274,6 +1274,11 @@ Recorded as run:
 - After the RunBoth output-snapshot placement checkpoint, compile, sample,
   100k median, and 1M median RunBoth matrices matched outputs across heap,
   Rift HPZone, and Rift Streaming.
+- The JVM same-input GC probe in `bench/debs2015/jvm/DebsJvmGcProbe.java`
+  processed the same 100k/1M joined CSVs with JVM-managed per-row objects and
+  a bounded 30-minute window. It is not a full JVM Q1/Q2 port. It shows default
+  JVM heap GC time is tiny on 1M (`6 ms` in window mode), while constrained
+  heap headroom makes GC dominate (`1322 ms` at `-Xmx8m`).
 
 Not yet run or not recorded:
 
