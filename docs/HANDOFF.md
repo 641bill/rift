@@ -624,6 +624,15 @@ DATAFLOW_BENCHMARK_RUNS=3 DATAFLOW_WARMUPS=1 \
   zsh sandbox/run_dataflow_region_matrix.sh
 ```
 
+Native-only instrumented median command:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+DATAFLOW_BUILD=0 DATAFLOW_BENCHMARK_RUNS=3 DATAFLOW_WARMUPS=1 \
+DATAFLOW_OUTPUT_DIR=/tmp/dataflow-region-instrumented-100k \
+  zsh sandbox/run_dataflow_region_instrumented_matrix.sh
+```
+
 Local median configuration:
 
 - `DATAFLOW_EPOCHS=10`
@@ -636,15 +645,31 @@ Local median configuration:
 
 | Operator | Mode | Median elapsed ms | Median GC ms | Median Rift op ms | Median region objects |
 |---|---|---:|---:|---:|---:|
-| SELECT | heap | 29.100 | 7.134 | 0.000 | 0 |
-| SELECT | Rift HPZone | 23.549 | 0.000 | 0.055 | 1124990 |
-| SELECT | Rift Streaming | 23.466 | 0.000 | 0.043 | 1124990 |
-| AGGREGATE | heap | 61.204 | 20.346 | 0.000 | 0 |
-| AGGREGATE | Rift HPZone | 43.812 | 0.000 | 0.236 | 1627152 |
-| AGGREGATE | Rift Streaming | 43.934 | 0.000 | 0.254 | 1627152 |
-| JOIN | heap | 28.548 | 7.249 | 0.000 | 0 |
-| JOIN | Rift HPZone | 23.043 | 0.000 | 0.043 | 1078279 |
-| JOIN | Rift Streaming | 23.330 | 0.000 | 0.040 | 1078279 |
+| SELECT | heap | 26.760 | 6.554 | 0.000 | 0 |
+| SELECT | current SafeZone | 26.599 | 0.000 | 0.000 | 0 |
+| SELECT | improved SafeZone | 24.035 | 0.000 | 0.000 | 0 |
+| SELECT | Rift HPZone | 22.934 | 0.000 | 0.052 | 1124990 |
+| SELECT | Rift Streaming | 22.958 | 0.000 | 0.044 | 1124990 |
+| AGGREGATE | heap | 57.705 | 19.240 | 0.000 | 0 |
+| AGGREGATE | current SafeZone | 49.599 | 0.000 | 0.000 | 0 |
+| AGGREGATE | improved SafeZone | 41.426 | 0.000 | 0.000 | 0 |
+| AGGREGATE | Rift HPZone | 43.046 | 0.000 | 0.198 | 1627152 |
+| AGGREGATE | Rift Streaming | 42.802 | 0.000 | 0.232 | 1627152 |
+| JOIN | heap | 28.189 | 7.084 | 0.000 | 0 |
+| JOIN | current SafeZone | 26.705 | 0.000 | 0.000 | 0 |
+| JOIN | improved SafeZone | 22.789 | 0.000 | 0.000 | 0 |
+| JOIN | Rift HPZone | 22.554 | 0.000 | 0.036 | 1078279 |
+| JOIN | Rift Streaming | 23.025 | 0.000 | 0.038 | 1078279 |
+
+Peak RSS by mode for the same native-only run:
+
+| Mode | Peak RSS bytes |
+|---|---:|
+| heap | 40026112 |
+| current SafeZone | 47005696 |
+| improved SafeZone | 47005696 |
+| Rift HPZone | 46891008 |
+| Rift Streaming | 46858240 |
 
 Interpretation:
 
@@ -655,13 +680,14 @@ Interpretation:
   outputs, aggregate entries, author entries, join outputs, and table arrays.
 - The local controlled workload shows material GC removal because the data
   objects are intentionally epoch-local and allocation-heavy.
+- Improved SafeZone is a strong baseline in this harness: it is faster than
+  heap on all three operators and roughly tied with Rift at 10 x 100k scale.
 - Rift operation time remains small in this harness.
 
 Caveats:
 
 - This is not an exact Naiad/Broom reproduction. The original artifact is not
   available in the workspace.
-- SafeZone modes are not implemented in this harness yet.
 - The local median size is smaller than the Broom paper's 40-epoch,
   500k-600k document-per-epoch vertex experiment.
 - The benchmark currently uses trusted `HPZone`/`Streaming` APIs, not the
@@ -673,19 +699,40 @@ Provisional Broom-scale single-run command:
 cd /Users/siyaoliu/rift/scala-native-rift
 DATAFLOW_EPOCHS=40 DATAFLOW_DOCS_PER_EPOCH=500000 DATAFLOW_BENCHMARK_RUNS=1 DATAFLOW_WARMUPS=0 \
   zsh sandbox/run_dataflow_region_matrix.sh
+
+DATAFLOW_BUILD=0 DATAFLOW_EPOCHS=40 DATAFLOW_DOCS_PER_EPOCH=500000 \
+DATAFLOW_BENCHMARK_RUNS=1 DATAFLOW_WARMUPS=0 \
+DATAFLOW_OUTPUT_DIR=/tmp/dataflow-region-instrumented-broom-scale \
+  zsh sandbox/run_dataflow_region_instrumented_matrix.sh
 ```
 
 | Operator | Mode | Elapsed ms | GC ms | Rift op ms | Region objects |
 |---|---|---:|---:|---:|---:|
-| SELECT | heap | 1193.248 | 440.094 | 0.000 | 0 |
-| SELECT | Rift HPZone | 471.136 | 0.000 | 2.378 | 22500066 |
-| SELECT | Rift Streaming | 475.792 | 0.000 | 2.211 | 22500066 |
-| AGGREGATE | heap | 906.687 | 263.886 | 0.000 | 0 |
-| AGGREGATE | Rift HPZone | 688.029 | 0.000 | 2.956 | 22621480 |
-| AGGREGATE | Rift Streaming | 700.530 | 0.000 | 4.881 | 22621480 |
-| JOIN | heap | 587.596 | 163.944 | 0.000 | 0 |
-| JOIN | Rift HPZone | 492.409 | 0.000 | 1.105 | 21563289 |
-| JOIN | Rift Streaming | 455.895 | 0.000 | 1.013 | 21563289 |
+| SELECT | heap | 623.761 | 207.058 | 0.000 | 0 |
+| SELECT | current SafeZone | 766.753 | 0.000 | 0.000 | 0 |
+| SELECT | improved SafeZone | 463.303 | 0.000 | 0.000 | 0 |
+| SELECT | Rift HPZone | 451.041 | 0.000 | 2.109 | 22500066 |
+| SELECT | Rift Streaming | 452.422 | 0.000 | 1.848 | 22500066 |
+| AGGREGATE | heap | 859.726 | 269.652 | 0.000 | 0 |
+| AGGREGATE | current SafeZone | 924.995 | 0.000 | 0.000 | 0 |
+| AGGREGATE | improved SafeZone | 618.133 | 0.000 | 0.000 | 0 |
+| AGGREGATE | Rift HPZone | 620.342 | 0.000 | 2.048 | 22621480 |
+| AGGREGATE | Rift Streaming | 630.151 | 0.000 | 2.112 | 22621480 |
+| JOIN | heap | 602.540 | 184.929 | 0.000 | 0 |
+| JOIN | current SafeZone | 748.152 | 0.000 | 0.000 | 0 |
+| JOIN | improved SafeZone | 470.770 | 0.000 | 0.000 | 0 |
+| JOIN | Rift HPZone | 447.803 | 0.000 | 0.968 | 21563289 |
+| JOIN | Rift Streaming | 448.956 | 0.000 | 0.867 | 21563289 |
+
+Peak RSS by mode for the same native-only run:
+
+| Mode | Peak RSS bytes |
+|---|---:|
+| heap | 290504704 |
+| current SafeZone | 226590720 |
+| improved SafeZone | 226607104 |
+| Rift HPZone | 226361344 |
+| Rift Streaming | 226344960 |
 
 Interpretation:
 
@@ -694,6 +741,9 @@ Interpretation:
 - It is useful as a stress/provenance checkpoint because heap GC time becomes
   hundreds of milliseconds while Rift GC remains zero, but it is not a
   headline median.
+- Improved SafeZone is a strong baseline here too; Rift is slightly faster on
+  SELECT and JOIN in this single run, while improved SafeZone is slightly
+  faster on AGGREGATE.
 
 ### DEBS 2015 Status
 
@@ -866,20 +916,27 @@ Broom-style dataflow:
 - The new `DataflowRegionMatrix` is the first local methodology benchmark that
   moves ordinary Scala dataflow objects into regions without changing the
   logical SELECT/AGGREGATE/JOIN programs.
-- At 10 epochs x 100k documents, Rift HPZone medians are faster than heap on
-  all three operators and measured GC time drops to zero in the timed runs:
-  SELECT `23.549 ms` vs heap `29.100 ms`, AGGREGATE `43.812 ms` vs heap
-  `61.204 ms`, JOIN `23.043 ms` vs heap `28.548 ms`.
-- A provisional 40-epoch x 500k-document single run shows the same direction
-  at a Broom-like input scale: SELECT heap `1193.248 ms` with `440.094 ms` GC
-  vs HPZone `471.136 ms`; AGGREGATE heap `906.687 ms` with `263.886 ms` GC vs
-  HPZone `688.029 ms`; JOIN heap `587.596 ms` with `163.944 ms` GC vs HPZone
-  `492.409 ms`.
+- At 10 epochs x 100k documents, the native-only instrumented medians show heap
+  GC time while current SafeZone, improved SafeZone, HPZone, and Streaming all
+  report zero measured GC in timed runs. Rift is fastest or effectively tied on
+  SELECT/JOIN, while improved SafeZone is strongest on AGGREGATE:
+  SELECT heap `26.760 ms`, improved SafeZone `24.035 ms`, HPZone `22.934 ms`;
+  AGGREGATE heap `57.705 ms`, improved SafeZone `41.426 ms`, HPZone
+  `43.046 ms`; JOIN heap `28.189 ms`, improved SafeZone `22.789 ms`, HPZone
+  `22.554 ms`.
+- A provisional 40-epoch x 500k-document native-only single run shows the same
+  allocation-sensitive shape at a Broom-like input scale: SELECT heap
+  `623.761 ms` with `207.058 ms` GC vs improved SafeZone `463.303 ms` and
+  HPZone `451.041 ms`; AGGREGATE heap `859.726 ms` with `269.652 ms` GC vs
+  improved SafeZone `618.133 ms` and HPZone `620.342 ms`; JOIN heap
+  `602.540 ms` with `184.929 ms` GC vs improved SafeZone `470.770 ms` and
+  HPZone `447.803 ms`.
 - This strengthens the hypothesis that region placement can help when the
   workload is allocation-heavy with clear epoch lifetimes. It does not settle
   DEBS, where Q2 median/rank CPU work still dominates.
 - The result is a Broom-style methodology reproduction, not exact Naiad/Broom
-  evidence, and SafeZone modes are still missing from this harness.
+  evidence. Improved SafeZone is a serious baseline in this harness and must
+  stay in comparison tables.
 
 DEBS:
 
@@ -973,7 +1030,7 @@ Roadmap source: `/Users/siyaoliu/rift/Claude_output/ROADMAP.md`
 | Phase 3 runtime-only benchmarks | Done enough for current story | GCBench and ListOfLists runtime medians recorded; pipeline surrogate recorded. | Commix is not included. Pipeline provenance remains surrogate. |
 | Phase 4 topology/layout | Done enough to move on | `PHASE4_LAYOUT.md`, `PHASE4_TOPOLOGY.md`, `PHASE4_EXIT.md`. | Chunked layout still not a Rift win vs improved SafeZone. Mixed GC/region safety story needs Phase 6 tests. |
 | Phase 5 streaming operators and DEBS | In progress | DEBS Q1/Q2 run simultaneously on real data; outputs match; instrumentation added; Q1 and Q2 window entries have shared heap/Rift backends; Q2 active profit values live in window entries; Q2 median scratch arrays are region-backed and reused; Q2 ranking uses primitive cell keys internally; RunBoth input bytes use a heap/Rift allocation-placement split; the reusable ranking backend region-allocates Q1/Q2 ranking objects and top-k result arrays; Q2 bounded per-cell tables, Q1 route-table arrays, Q2 latest-empty taxi arrays, and Q2 ranking-index arrays are region-backed in Rift modes. New `diag_*` counters identify remaining heap/control paths, and the shared `Grid.cellKeyOrZero` hot path removes temporary `Some(Cell)`/`Cell` allocation from both heap and Rift. | Current 1M packed-cell medians are faster than heap with lower GC/RSS (`10969.616 ms` heap, `10770.260 ms` HPZone, `10665.729 ms` Streaming), but Q2 processing still dominates and the bounded-sample result is not final application evidence. Need Commix, SafeZone comparison, full-month input, Q2 median/rank design work, remaining control/collection work, and safe API boundaries. |
-| Phase 6 Broom/parallel-collections evidence | Started | `docs/LITERATURE_BENCHMARK_CONTRACT.md` extracts the paper comparison contract. `DataflowRegionMatrix` now runs Broom-style SELECT/AGGREGATE/JOIN methodology workloads with ordinary Scala objects in heap or Rift regions and records local 3-run medians. | Add SafeZone modes, run Broom-scale settings if feasible, add RSS collection, and do not claim exact Naiad/Broom reproduction. Build a fair Rift collection/operator API before redoing parallel-collections claims. |
+| Phase 6 Broom/parallel-collections evidence | Started | `docs/LITERATURE_BENCHMARK_CONTRACT.md` extracts the paper comparison contract. `DataflowRegionMatrix` now runs Broom-style SELECT/AGGREGATE/JOIN methodology workloads with ordinary Scala objects in heap, current SafeZone, improved SafeZone, Rift HPZone, and Rift Streaming modes. Native-only local medians include peak RSS, and a Broom-scale single run is recorded. | Upgrade the Broom-scale single run to medians if needed, keep improved SafeZone in all claims, and do not claim exact Naiad/Broom reproduction. Build a fair Rift collection/operator API before redoing parallel-collections claims. |
 | Phase 7 capture checking | Open | Only design templates and early Rift API surface exist. | Implement positive/negative capture tests and fill `REPORT_CAPTURE_CHECK.md`. |
 | Phase 8 Lean mechanization | Open | Design pack has Lean stubs/templates. | Port or start proof work; prove without `sorry`. |
 | Phase 9 writing | Not started beyond notes | Result packs and this handoff exist. | Thesis/paper narrative after evidence stabilizes. |
@@ -1081,8 +1138,9 @@ Benchmarking uncertainties:
 - Improved SafeZone comparison is not yet present for DEBS because DEBS currently compares heap vs Q1 Rift modes, not SafeZone modes.
 - Pipeline is a surrogate. Do not present it as a reproduction of the old Broom/Naiad-style result.
 - `DataflowRegionMatrix` is a Broom-style methodology reproduction, not an
-  exact Naiad/Broom artifact reproduction. It does not yet include SafeZone
-  modes, RSS collection, or median Broom-scale 40-epoch 500k+ document runs.
+  exact Naiad/Broom artifact reproduction. It now includes SafeZone modes and
+  native-only RSS collection, but the 40-epoch 500k+ document result is still a
+  single-run stress checkpoint rather than a median.
 - Older result packs were generated from then-uncommitted code. The current
   input-boundary, ranking/result, Q2 cell-table, Q1 route-table, Q2 taxi-table,
   and Q2 array-ranking experiments now have local commit boundaries once this
@@ -1114,8 +1172,9 @@ Immediate next step:
    `10665.729 ms`; GC medians are `383.827 ms`, `349.488 ms`, and `334.689 ms`
    respectively.
 2. Treat the new `DataflowRegionMatrix` result as started Phase 6/Broom-style
-   methodology evidence. The next benchmark step is adding SafeZone modes and
-   collecting RSS/median Broom-scale runs if local runtime allows.
+   methodology evidence with improved SafeZone included. The next benchmark
+   step is upgrading the Broom-scale stress run to medians if needed, not
+   presenting it as an exact Naiad/Broom reproduction.
 3. The next DEBS implementation target should be Q2 median/rank maintenance, not
    parser/input work. The design must preserve the same logical query for heap
    and Rift; heap should use ordinary allocation and Rift should use region
@@ -1145,11 +1204,13 @@ Next technical milestone:
      preserved correctness but regressed Q1 processing.
 3. Rerun 100k and 1M instrumented matrices with medians after each change.
 4. In parallel with DEBS, extend the dataflow methodology harness:
-   - Add current/improved SafeZone modes for SELECT/AGGREGATE/JOIN if capture
-     annotations can express the object graph cleanly.
-   - Collect RSS with `/usr/bin/time -l` in the script or a companion wrapper.
    - Upgrade the 40-epoch, 500k-document-per-epoch single run to a median run
-     only after RSS collection and SafeZone feasibility are understood.
+     only if we need a headline Broom-style methodology table.
+   - Add a short note comparing the local percentages against the Broom paper's
+     reported SELECT/AGGREGATE/JOIN reductions without claiming exact
+     reproduction.
+   - Consider SafeZone trace counters if current vs improved SafeZone needs
+     root-bookkeeping attribution at Broom scale.
 
 What should not be done yet:
 
@@ -1216,12 +1277,11 @@ What is stable enough:
 ## Safe Next Action
 
 The implementation worktree should now be clean and ahead of
-`origin/feature/rift`. The safest next technical actions are to add SafeZone
-modes/RSS collection to `DataflowRegionMatrix`, and to design and test a fair
-treatment for the remaining DEBS tree/taxi/latency metadata or add allocation
-attribution around those structures before changing them. Do not reintroduce
-reset-per-event top-k snapshots; reusable top-k arrays are the accepted lower
-overhead shape.
+`origin/feature/rift`. The safest next technical actions are to commit the
+Dataflow SafeZone/RSS checkpoint, then design and test a fair treatment for the
+remaining DEBS tree/taxi/latency metadata or add allocation attribution around
+those structures before changing them. Do not reintroduce reset-per-event top-k
+snapshots; reusable top-k arrays are the accepted lower overhead shape.
 
 ## Unsafe Assumptions To Avoid
 

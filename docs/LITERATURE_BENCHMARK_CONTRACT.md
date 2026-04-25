@@ -44,8 +44,8 @@ The standard for new benchmarks is:
 2. Add a Broom-style SELECT/AGGREGATE/JOIN dataflow matrix in the Scala Native
    fork. It should use ordinary Scala objects for message records, aggregate
    entries, join entries, and output records.
-3. Use that matrix to compare heap vs Rift HPZone vs Rift Streaming first.
-   SafeZone can be added afterward, but missing SafeZone must be documented.
+3. Use that matrix to compare heap, current SafeZone, improved SafeZone, Rift
+   HPZone, and Rift Streaming.
 4. Continue DEBS Phase 5 only when changes preserve the same logical program:
    heap uses `new`, Rift uses `region.alloc` at the same lifetime boundary.
 5. Defer Yak-scale systems, StreamFlex latency kernels, and Stancu-style
@@ -53,7 +53,8 @@ The standard for new benchmarks is:
 
 Current implementation note: step 2 has started in
 `scala-native-rift/sandbox/src/main/scala-next/DataflowRegionMatrix.scala`, with
-local medians and a provisional 40-epoch x 500k-document single run recorded in
+native-only local medians, peak RSS, current/improved SafeZone modes, and a
+provisional 40-epoch x 500k-document single run recorded in
 `scala-native-rift/sandbox/DATAFLOW_REGION_MATRIX.md` and synced to
 `evidence/DATAFLOW_REGION_MATRIX.md`.
 
