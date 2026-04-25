@@ -18,11 +18,10 @@ checkpoint, JVM same-input GC probe, literature benchmark contract, and
 Broom-style dataflow methodology harness are committed locally.
 The StreamFlex-style throughput/latency, Yak-style epoch/control-data, and
 Stancu-style transaction/accounting methodology harnesses are also committed
-locally. A Scala-next checked Rift-region API slice has now been started in the
-Codex worktree clone at
-`/Users/siyaoliu/.codex/worktrees/d991/rift/scala-native-rift`; it is not a
-complete compiler capture-checking implementation. The fork is ahead of
-`origin/feature/rift` unless pushed.
+locally. A Scala-next checked Rift-region API slice is committed locally on the
+implementation branch `codex/safe-region-api-checked-slice` at `e8c3b961d`.
+It is not a complete compiler capture-checking implementation. The fork is
+ahead of `origin/feature/rift` unless pushed.
 
 ## 1. Project Objective
 
@@ -78,12 +77,11 @@ Repo-layout quirks:
 - Always inspect `git status --short --untracked-files=all` and `git diff --stat`
   before continuing.
 
-At the 2026-04-26 checked-API update, the Codex implementation clone under
-`/Users/siyaoliu/.codex/worktrees/d991/rift/scala-native-rift` is intentionally
-dirty with the Scala-next checked-region API and tests. Recheck before
-continuing; if the implementation worktree is dirty, inspect the diff rather
-than assuming it belongs to a previous phase. The original
+At the 2026-04-26 checked-API update, the implementation slice was committed
+on branch `codex/safe-region-api-checked-slice` at `e8c3b961d`. The original
 `/Users/siyaoliu/rift/scala-native-rift` worktree was not edited for this slice.
+Recheck before continuing; if an implementation worktree is dirty, inspect the
+diff rather than assuming it belongs to a previous phase.
 
 ## 3. Revised Project Framing
 
@@ -247,7 +245,8 @@ Validation:
 
 ### 4.6 Checked Rift Region API Slice
 
-Completed in the Codex worktree clone on 2026-04-26:
+Completed in the Codex worktree clone on 2026-04-26 and committed on
+implementation branch `codex/safe-region-api-checked-slice` at `e8c3b961d`:
 
 - Added Scala-next replacements for `RiftRegion` and `RiftAllocator` that use
   `language.experimental.captureChecking`.
