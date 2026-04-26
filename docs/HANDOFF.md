@@ -9,8 +9,8 @@ Active implementation branch for this update:
 `feature/rift`
 
 Implementation commit at this update:
-`171431848c66d6c95560b2a9c908d365bbbcafc0`
-(`Add checked Rift object buffer`)
+`a7632c1be096a870b7cfacdb23c6195c03aa2103`
+(`Narrow checked Rift guards and region-back latencies`)
 
 Status: active research fork. The Phase 5 input-boundary checkpoint, reusable
 ranking backend, Q2 bounded cell-table checkpoint, Q1 primitive route-table
@@ -38,7 +38,12 @@ v1 operations take the owner region token explicitly and reject direct heap
 stores or inner-region values stored into an outer buffer in compiler probes.
 The StreamFlex-style throughput/latency, Yak-style epoch/control-data, and
 Stancu-style transaction/accounting methodology harnesses are also committed
-locally. A Scala-next checked Rift-region API slice has been reviewed and
+locally. The latest checkpoint narrows checked allocation guards to the
+`ScopedRegion`/`StreamingRegion` safe API surface, leaves low-level
+`RiftRegion.open(...)` benchmark allocation explicitly trusted, and replaces
+RunBoth's generic latency `ArrayBuffer[Long]` collectors with shared primitive
+buffers whose Rift backing arrays live in the existing run snapshot region.
+A Scala-next checked Rift-region API slice has been reviewed and
 merged into `feature/rift` at `79953ad8d`; its source branch was
 `codex/safe-region-api-checked-slice` at `e8c3b961d`. The Q2 incremental
 median branch was merged at `255522fbc`, and Stancu boundary evidence was
@@ -53,7 +58,9 @@ the returned-function guard at `183469749`, the explicit `HeapRoot` handle at
 rejection were then committed at `a0b653ef6`; explicit `{region}` constructor
 field provenance was committed at `7b1a2c5f8`; checked region-array store
 guards were committed at `8800e0613`; the explicit-owner checked
-`ObjectBuffer` API was committed at `171431848`. The checked API is not a
+`ObjectBuffer` API was committed at `171431848`; checked guard narrowing plus
+RunBoth region-backed latency buffers were committed at `a7632c1be`. The
+checked API is not a
 complete compiler capture-checking implementation. The fork is ahead of
 `origin/feature/rift` unless pushed.
 
@@ -106,7 +113,7 @@ Use this worktree for this active Rift session:
 - `/Users/siyaoliu/rift/scala-native-rift`
 - branch: `feature/rift`
 - current implementation commit at this handoff update:
-  `accf7a5f91159529d505499db0d7c3431e1109f3`
+  `a7632c1be096a870b7cfacdb23c6195c03aa2103`
 - `origin`: `git@github.com:641bill/scala-native.git`
 - `upstream`: `https://github.com/scala-native/scala-native.git`
 
@@ -350,7 +357,10 @@ Tests added:
   region-array stores of `HeapRoot` handles. The checked collection update
   added `RiftRegion.ObjectBuffer` probes for storing region objects, rejecting
   direct heap objects, storing `HeapRoot` handles, rejecting inner-region
-  values stored into an outer buffer, and rejecting buffer escape.
+  values stored into an outer buffer, and rejecting buffer escape. The latest
+  guard-boundary update adds a regression probe that trusted
+  `RiftRegion.open(RiftRegion.HPZone)` allocation can still build linked
+  benchmark objects without the checked mixed-reference guard.
 - `unit-tests/native/src/test/scala-next/scala/scala/scalanative/memory/RiftRegionCheckedTest.scala`
   now includes runtime smoke cases for a region object containing an explicit
   `HeapRoot` handle and region-owned arrays containing region values plus
@@ -365,7 +375,7 @@ Tests added:
 Validation:
 
 - `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project nativelib3_next" compile` passed.
-- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"` passed `29/29` after the checked `ObjectBuffer` update.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"` passed `30/30` after narrowing checked guards to `ScopedRegion`/`StreamingRegion` and adding the trusted-open linked-object regression test.
 - `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionTest scala.scalanative.memory.RiftRegionCheckedTest"` passed `12/12` after the checked `ObjectBuffer` update.
 
 Exact current safety boundary:
@@ -1664,10 +1674,10 @@ DEBS:
   `5976.447 ms`, Streaming elapsed `5948.755 ms`, GC fell from `67.086 ms` to
   `59.658 ms`/`55.056 ms`, and Rift RSS was about `114 MB` versus heap
   `305758208` bytes. Median sort computes and values sorted are now zero.
-- Remaining app control state is still substantial, especially latency arrays,
-  Q2 rank/output maintenance, and any broader collection API work. The current
-  Rift elapsed/RSS win is still bounded-sample evidence, so this is stronger
-  evidence but still not final Phase 5 success.
+- Remaining app control state is still substantial, especially Q2 rank/output
+  maintenance and any broader collection API work. The current Rift elapsed/RSS
+  win is still bounded-sample evidence, so this is stronger evidence but still
+  not final Phase 5 success.
 
 Why Rift DEBS still uses so much GC:
 
@@ -1680,7 +1690,9 @@ Why Rift DEBS still uses so much GC:
   region-backed dense array in Rift modes. Q2 ranking-index arrays are also
   region-backed in Rift modes. Q2 taxi-id table entries and taxi-id byte copies
   are also region-backed in Rift modes. RunBoth Q2 previous-output snapshots
-  are region-backed in Rift modes. Latency arrays remain heap-based.
+  are region-backed in Rift modes. RunBoth latency backing arrays are now
+  region-backed in Rift modes and copied to heap only for the final `Metrics`
+  object, which outlives the region.
 - Q1 window entries, route-table arrays, ranking-index arrays, ranking
   `RankedRoute`/`Route`/`Cell` objects, and top-k result arrays are
   region-backed in Rift modes. RunBoth Q1 previous-output snapshots are
@@ -1695,8 +1707,9 @@ Why Rift DEBS still uses so much GC:
   are region-backed in Rift modes, removes Q2 taxi-id table entries/bytes from
   the GC heap, and removes Q1 ranking-index tree nodes by replacing the
   `TreeSet` with a shared indexed heap whose arrays and ranked objects are
-  region-backed in Rift modes. The remaining heap pressure is latency arrays,
-  Q2 rank/output maintenance internals, and broader collections.
+  region-backed in Rift modes, and moves RunBoth latency backing arrays into
+  the snapshot region. The remaining heap pressure is Q2 rank/output
+  maintenance internals, final metrics/output objects, and broader collections.
   Fine-grained
   result-snapshot reset overhead was fixed by the reusable ranking backend and
   should not be reintroduced.
@@ -1713,9 +1726,9 @@ Roadmap source: `/Users/siyaoliu/rift/Claude_output/ROADMAP.md`
 | Phase 2 in-tree runtime | Partially done | In-tree `RiftRuntime.c/h`, Scala facade, compiler lowering, `RiftRegionTest`, benchmark use. | Make API/header complete, run broader tests, decide stats ABI, clean up untracked state. |
 | Phase 3 runtime-only benchmarks | Done enough for current story | GCBench and ListOfLists runtime medians recorded; pipeline surrogate recorded. | Commix is not included. Pipeline provenance remains surrogate. |
 | Phase 4 topology/layout | Done enough to move on | `PHASE4_LAYOUT.md`, `PHASE4_TOPOLOGY.md`, `PHASE4_EXIT.md`. | Chunked layout still not a Rift win vs improved SafeZone. Mixed GC/region safety story needs Phase 6 tests. |
-| Phase 5 streaming operators and DEBS | In progress | DEBS Q1/Q2 run simultaneously on real data; outputs match; instrumentation added; Q1 and Q2 window entries have shared heap/Rift backends; Q2 active profit values live in window entries; Q2 ranking uses primitive cell keys internally; RunBoth input bytes use a heap/Rift allocation-placement split; the reusable ranking backend region-allocates Q1/Q2 ranking objects and top-k result arrays; Q2 bounded per-cell tables, Q1 route-table arrays, Q1 ranking-index arrays, Q2 latest-empty taxi arrays, Q2 ranking-index arrays, Q2 taxi-id table entries/bytes, RunBoth output snapshots, and Q2 incremental median heap arrays are region-backed in Rift modes. New `diag_*` counters identify remaining heap/control paths, and the shared `Grid.cellKeyOrZero` hot path removes temporary `Some(Cell)`/`Cell` allocation from both heap and Rift. | Current 1M Q2 incremental-median medians are heap `5976.447 ms`, HPZone `5794.879 ms`, and Streaming `5948.755 ms`; heap GC is `67.086 ms`, HPZone GC is `59.658 ms`, Streaming GC is `55.056 ms`; heap RSS is `305758208`, Rift RSS about `114 MB`. This is stronger bounded-sample evidence, but still not final application evidence. Need Commix, SafeZone comparison, full-month input, Q2 rank/output work, remaining control/collection work, and safe API boundaries. |
+| Phase 5 streaming operators and DEBS | In progress | DEBS Q1/Q2 run simultaneously on real data; outputs match; instrumentation added; Q1 and Q2 window entries have shared heap/Rift backends; Q2 active profit values live in window entries; Q2 ranking uses primitive cell keys internally; RunBoth input bytes use a heap/Rift allocation-placement split; the reusable ranking backend region-allocates Q1/Q2 ranking objects and top-k result arrays; Q2 bounded per-cell tables, Q1 route-table arrays, Q1 ranking-index arrays, Q2 latest-empty taxi arrays, Q2 ranking-index arrays, Q2 taxi-id table entries/bytes, RunBoth output snapshots, Q2 incremental median heap arrays, and RunBoth latency buffers are region-backed in Rift modes. New `diag_*` counters identify remaining heap/control paths, and the shared `Grid.cellKeyOrZero` hot path removes temporary `Some(Cell)`/`Cell` allocation from both heap and Rift. | Current 1M Q2 incremental-median medians are heap `5976.447 ms`, HPZone `5794.879 ms`, and Streaming `5948.755 ms`; heap GC is `67.086 ms`, HPZone GC is `59.658 ms`, Streaming GC is `55.056 ms`; heap RSS is `305758208`, Rift RSS about `114 MB`. A later 100k single-run validation after region-backed latency buffers matched heap/Rift outputs and measured heap `728.465 ms`, HPZone `651.938 ms`, Streaming `633.442 ms`; treat that as validation only, not a headline. Need Commix, SafeZone comparison, full-month input, Q2 rank/output work, remaining control/collection work, and safe API boundaries. |
 | Phase 6 literature-benchmark evidence | Started | `docs/LITERATURE_BENCHMARK_CONTRACT.md` extracts the paper comparison contract. `DataflowRegionMatrix` now runs Broom-style SELECT/AGGREGATE/JOIN methodology workloads with ordinary Scala objects in heap, current SafeZone, improved SafeZone, Rift HPZone, and Rift Streaming modes. Native-only local medians include peak RSS, and a Broom-scale single run is recorded. `StreamFlexRegionMatrix` now runs stream throughput/latency methodology workloads with deadline-miss and latency-tail metrics. `YakRegionMatrix` now runs word-count and graph-step control/data split workloads. `StancuRegionMatrix` now runs transaction/accounting probes with batched transaction regions. The 2026-04-26 Stancu boundary sweep records per-transaction, 64-transaction, and 512-transaction region boundaries. | Keep improved SafeZone in all claims, and do not claim exact Naiad/Broom, exact StreamFlex/Ovm, exact Yak, or exact Stancu reproduction. The current sequence gives strong Broom/Dataflow HPZone evidence, strong StreamFlex-style throughput/latency evidence, Yak-style Rift-vs-heap and near-improved-SafeZone evidence, and Stancu-style Rift-vs-heap evidence after batching/fixed counters. The Stancu weak result is now specifically attributed to too-fine region boundaries. Next choices are safe API rejection probes or returning to DEBS with the literature findings in mind. Build a fair Rift collection/operator API before redoing parallel-collections claims. |
-| Phase 7 capture checking | Started | `RiftRegion.scoped`/`streaming` safe API slice exists. Targeted Scala-next compiler tests now pass for scoped object graphs, for-loop allocation, nested scoped regions, local higher-order consumers, non-escaping closures, return escape rejection, heap retention rejection, nested-region leak rejection, streaming reset escape rejection, conservative returned-function rejection, explicit `HeapRoot` metadata handles, direct unrooted heap-object constructor-argument rejection, region-local alias acceptance, heap-alias rejection, heap-field-selection rejection, explicit `{region}` constructor-field reuse, plain `T^` field-reuse rejection, region-owned array checks, and the explicit-owner `ObjectBuffer` checked container. `docs/REPORT_CAPTURE_CHECK.md` records the current checker behavior. | More pinned diagnostics, broader runtime coverage, static-heap policy, richer collections, and a better ergonomics story for field/container provenance. |
+| Phase 7 capture checking | Started | `RiftRegion.scoped`/`streaming` safe API slice exists. Targeted Scala-next compiler tests now pass for scoped object graphs, for-loop allocation, nested scoped regions, local higher-order consumers, non-escaping closures, return escape rejection, heap retention rejection, nested-region leak rejection, streaming reset escape rejection, conservative returned-function rejection, explicit `HeapRoot` metadata handles, direct unrooted heap-object constructor-argument rejection, region-local alias acceptance, heap-alias rejection, heap-field-selection rejection, explicit `{region}` constructor-field reuse, plain `T^` field-reuse rejection, region-owned array checks, the explicit-owner `ObjectBuffer` checked container, and the explicit split that `RiftRegion.open` is trusted while `ScopedRegion`/`StreamingRegion` allocations are checked. `docs/REPORT_CAPTURE_CHECK.md` records the current checker behavior. | More pinned diagnostics, broader runtime coverage, static-heap policy, richer collections, and a better ergonomics story for field/container provenance. |
 | Phase 8 native GC/region hardening | Started | `HeapRoot` handles give a GC-visible explicit-root path for heap metadata stored from region objects; direct unrooted heap-object constructor arguments, heap aliases, heap field selections, unsafe region-array stores, and unsafe `ObjectBuffer` heap stores are rejected in checked Rift lowering while region-to-region object graphs, simple region-local aliases, stable constructor fields explicitly captured by `{region}`, explicitly captured region arrays, and explicit-owner object buffers still compile. | Extend or deliberately limit the mixed-reference rule for static immutable heap referents and richer containers; decide whether plain `T^` field reuse and method-style container operations need a compiler extension or explicit owner-token APIs. |
 | Phase 9 Lean mechanization | Open | Design pack has Lean stubs/templates. | Port or start proof work; prove without `sorry`. |
 | Phase 10 writing | Not started beyond notes | Result packs and this handoff exist. | Thesis/paper narrative after evidence stabilizes. |
@@ -1905,8 +1918,11 @@ Immediate next step:
    in the local sweep, and 512 transactions per region is still a Rift-vs-heap
    win but not faster than 64. It is not a Rift-vs-SafeZone win and not a
    compiler annotation result.
-6. The first safe API accept/reject probe slice now passes 29/29 in the
-   targeted Scala-next compiler test. Returned closures are rejected
+6. The first safe API accept/reject probe slice now passes 30/30 in the
+   targeted Scala-next compiler test. The latest regression test confirms that
+   trusted `RiftRegion.open(...)` allocation can still build linked benchmark
+   objects while checked `ScopedRegion`/`StreamingRegion` allocation keeps the
+   v1 mixed-reference guard. Returned closures are rejected
    conservatively through direct function-result rejection. Region-to-GC
    metadata has an explicit `HeapRoot` path, and direct unrooted heap-object
    constructor arguments are rejected in checked Rift allocation lowering.
@@ -1920,11 +1936,15 @@ Immediate next step:
    stores are rejected. Plain `T^` selected fields, static immutable heap
    referents, and ergonomic method-style containers still need a checked policy
    or trusted-only labeling.
-7. The next DEBS implementation target should be Q2 rank-maintenance/output
-   variance or the safe region-backed collection/control API, not parser/input
-   work. The design must preserve the same logical query for heap and Rift;
-   heap should use ordinary allocation and Rift should use region allocation at
-   the same lifetime boundary.
+7. RunBoth latency collectors now use shared primitive buffers: heap mode keeps
+   them on the heap, and Rift modes allocate their backing arrays in the
+   existing snapshot region before copying the final metrics arrays out at
+   region close. The next DEBS implementation target should be Q2
+   rank-maintenance/output variance or the safe region-backed
+   collection/control API, not parser/input or latency-buffer work. The design
+   must preserve the same logical query for heap and Rift; heap should use
+   ordinary allocation and Rift should use region allocation at the same
+   lifetime boundary.
 
 Next technical milestone:
 
@@ -1938,7 +1958,7 @@ Next technical milestone:
    dominant data operations, not just window entries.
 3. Start DEBS with a narrow measurement-driven plan:
    - Add allocation counters or coarse heap allocation attribution around
-     remaining latency arrays, output formatting, and Q2 rank/output
+     output formatting, final metrics/output objects, and Q2 rank/output
      maintenance.
    - Treat the RunBoth byte parser and region-backed input buffer as
      implemented. It avoids per-row line strings; the Q2 taxi-id table now
@@ -2037,18 +2057,21 @@ What is stable enough:
 ## Safe Next Action
 
 The implementation branch now contains the merged checked API slice,
-median-backed Q2 incremental-median checkpoint, JVM RunBoth comparison, and Stancu
-boundary evidence. The safest next technical action is to choose between Q2
-rank-maintenance/output variance and safe API accept/reject probes for the
-region object patterns now used by the literature harnesses.
+median-backed Q2 incremental-median checkpoint, JVM RunBoth comparison, Stancu
+boundary evidence, checked guard narrowing for trusted-vs-checked region
+allocation, and region-backed RunBoth latency buffers. The safest next
+technical action is to choose between Q2 rank-maintenance/output variance and
+safe API accept/reject probes for the region object patterns now used by the
+literature harnesses.
 
 ## Unsafe Assumptions To Avoid
 
 - "Rift already has a DEBS application win." It does not yet.
 - "GC time should disappear because Q1/Q2 windows and input bytes use Rift."
-  Tree/taxi/latency metadata and broader collection state are still heap-heavy.
-  The current measurements show Q2 processing and output phases can dominate
-  total elapsed time more than GC or Rift bookkeeping.
+  Some former heap-heavy paths have moved, including taxi-id bytes/entries and
+  latency backing arrays, but broader collection/control state and output
+  formatting remain. The current measurements show Q2 processing and output
+  phases can dominate total elapsed time more than GC or Rift bookkeeping.
 - "SafeZone is solved." Improved SafeZone is much better on some workloads, but current SafeZone pathologies and workload sensitivity still matter.
 - "Layout wins prove allocator wins." They are separate effects.
 - "The current bounded-sample medians prove a final DEBS win." They do not;

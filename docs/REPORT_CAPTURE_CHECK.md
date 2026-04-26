@@ -46,6 +46,10 @@ Scala-next capture checking supports the first Rift safe API slice:
   control metadata. Operations use an explicit owner-token API, for example
   `RiftRegion.append(region, buffer, value)`, so the current checker can reject
   direct heap stores and inner-region values stored into an outer buffer.
+- The checked mixed-reference guard is intentionally limited to the checked
+  `RiftRegion.ScopedRegion`/`RiftRegion.StreamingRegion` API surface.
+  Low-level `RiftRegion.open(...)` remains a trusted benchmark/runtime API; a
+  regression test confirms it can still allocate linked benchmark objects.
 
 Known gaps remain:
 
@@ -75,7 +79,7 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.Rif
 Result:
 
 ```text
-Passed: Total 29, Failed 0, Errors 0, Passed 29
+Passed: Total 30, Failed 0, Errors 0, Passed 30
 ```
 
 Runtime smoke command run on 2026-04-26:
@@ -205,6 +209,7 @@ Current checked compiler probes:
 | `objectBufferCanStoreHeapRoot` | explicit-owner `ObjectBuffer` stores `HeapRoot` handles | compiles | Covers heap metadata through the checked buffer API. |
 | `objectBufferCannotStoreInnerScopedValue` | outer buffer stores value allocated in inner region | fails | Explicit owner token lets capture checking reject cross-region storage. |
 | `objectBufferCannotEscapeScopedRegion` | checked buffer escapes owning region | fails | Covers the heap-control/region-data boundary. |
+| `trustedOpenAllocationAllowsBenchmarkLinkedObjects` | trusted `RiftRegion.open(RiftRegion.HPZone)` allocates linked objects | compiles | Documents the intended split: `open` is trusted/unsafe; `scoped` and `streaming` are checked. |
 | `streamingResetValueCannotEscapeEpoch` | value allocated inside reset epoch used after reset | fails | Covers reset boundary at source level. |
 
 Still missing:

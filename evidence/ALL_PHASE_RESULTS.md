@@ -459,6 +459,9 @@ bounded table, taxi-id, output-snapshot, and Q2 incremental-median work.
 | 1M Q2 incremental medians | heap | 5976.447 | 67.086 | 1387.651 | 2027.508 | 419.937 | 0.000 | 0 | 305758208 |
 | 1M Q2 incremental medians | Rift HPZone | 5794.879 | 59.658 | 1351.446 | 1905.210 | 377.610 | 10.737 | 5494550 | 113950720 |
 | 1M Q2 incremental medians | Rift Streaming | 5948.755 | 55.056 | 1403.377 | 1922.138 | 386.790 | 11.172 | 5494550 | 113934336 |
+| 100k latency-buffer validation | heap | 728.465 | 12.690 | 149.200 | 222.304 | 80.431 | 0.000 | 0 | n/a |
+| 100k latency-buffer validation | Rift HPZone | 651.938 | 5.190 | 144.700 | 200.772 | 49.300 | 2.370 | 602457 | n/a |
+| 100k latency-buffer validation | Rift Streaming | 633.442 | 5.318 | 136.581 | 185.881 | 55.154 | 1.874 | 602457 | n/a |
 
 Common Q2 incremental-median diagnostics at 1M:
 
@@ -470,6 +473,9 @@ Interpretation:
 
 - Q2 incremental medians are now median-backed, not only a single-run
   diagnostic.
+- The latency-buffer validation is a single run after moving RunBoth latency
+  backing arrays into the Rift snapshot region. Heap/Rift outputs matched, but
+  it should not replace the 3-run median checkpoint above.
 - The improvement is shared algorithmic cleanup plus allocation placement:
   heap and Rift use the same two-heap median maintenance, while Rift allocates
   the median/control arrays and related ordinary Scala objects in regions.
@@ -623,6 +629,7 @@ Covered source-level patterns:
 | explicit-owner `ObjectBuffer` stores `HeapRoot` handle | passes compiler probe and native runtime smoke |
 | outer `ObjectBuffer` stores inner-region value | rejected by explicit owner-token type |
 | checked `ObjectBuffer` escapes owning region | rejected |
+| trusted `RiftRegion.open` allocates linked benchmark objects | passes compiler probe |
 | streaming reset value escaping epoch | rejected |
 
 Relevant evidence carried from Phase 4:
@@ -645,7 +652,9 @@ Open work:
   known region arrays reject unrooted heap objects. `RiftRegion.ObjectBuffer`
   is now a checked but explicit-owner first container primitive: it keeps heap
   control metadata, region-allocates the backing object array, and requires
-  calls such as `RiftRegion.append(region, buffer, value)`. Plain `T^`
+  calls such as `RiftRegion.append(region, buffer, value)`. The latest guard
+  narrowing keeps this behavior for checked `ScopedRegion`/`StreamingRegion`
+  code while documenting low-level `RiftRegion.open` as trusted. Plain `T^`
   selected fields, static immutable heap referents, and ergonomic method-style
   containers still need a more complete mixed-reference policy or ergonomics
   story.
