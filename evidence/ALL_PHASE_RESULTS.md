@@ -85,9 +85,9 @@ For performance numbers, use the following rule of thumb:
 | Phase 3: runtime-only evaluation | Done enough for current claim | Validated with caveats | Same-layout GCBench/ListOfLists runtime medians |
 | Phase 4: topology/layout decomposition | Done enough to move on | Validated/provisional mix | Layout, topology, targeted runtime follow-up, safety finding |
 | Phase 5: application evidence | In progress | Bounded-sample medians plus diagnostic attribution | DEBS correctness, 100k/1M medians, and opt-in GC heap allocation attribution |
-| Phase 6: literature-aligned methodology evidence | Started | Validated methodology medians with caveats | Broom-style dataflow including SELECT-only checked RegionBuffer mode, StreamFlex-style latency/throughput, Yak-style control/data plus grouped sort, top-word/filter, GraphChi-style subintervals, and runtime promotion proxy, Stancu-style transaction accounting |
+| Phase 6: literature-aligned methodology evidence | Started | Validated methodology medians with caveats | Broom-style dataflow including checked SELECT/AGGREGATE/JOIN modes, StreamFlex-style latency/throughput, Yak-style control/data plus grouped sort, top-word/filter, GraphChi-style subintervals, and runtime promotion proxy, Stancu-style transaction accounting |
 | Phase 6b: Broom / parallel collections API evidence | Open | Provisional surrogate only | amordo comparison and Rift raw-array surrogate |
-| Phase 7: capture-checked safe API | Started | Compiler-probe, runtime-smoke, focused checked-container benchmark, and SELECT-only checked dataflow evidence | 46 targeted checked-API compiler probes, 18 runtime tests, `CheckedRegionBufferMatrix`, Dataflow SELECT `rift-checked`, plus Phase 4 safety finding |
+| Phase 7: capture-checked safe API | Started | Compiler-probe, runtime-smoke, focused checked-container benchmark, and checked dataflow evidence | 46 targeted checked-API compiler probes, 18 runtime tests, `CheckedRegionBufferMatrix`, Dataflow SELECT/AGGREGATE/JOIN `rift-checked`, plus Phase 4 safety finding |
 | Phase 8: native GC/region integration hardening | Started | Runtime/API smoke evidence, no benchmark data | Explicit `HeapRoot` path, static module/immutable-val path, direct unrooted heap-constructor/alias/field-selection/array-store rejection, owner-token ObjectBuffer/RegionBuffer heap-store rejection, mutable static-var rejection, mutable-head heap-retagging rejection, and explicit `{region}` constructor-field/array reuse |
 | Phase 9: Lean mechanization | Open | No data | None |
 | Phase 10: writing | Not started beyond notes | No data | None |
@@ -695,39 +695,47 @@ artifacts are available or reproduced.
 
 | Literature shape | Local harness | Best current Rift signal | Main caveat |
 |---|---|---|---|
-| Broom dataflow vertices | SELECT/AGGREGATE/JOIN over ordinary epoch-local Scala objects | Post-counter-fix 10 x 100k medians show HPZone ahead of heap and improved SafeZone on SELECT, AGGREGATE, and JOIN; SELECT now has a checked `RegionBuffer` mode that is fastest in the local median. Broom-scale 40 x 500k is still single-run. | Methodology reproduction, not exact Naiad/Broom; checked mode currently covers SELECT only. |
+| Broom dataflow vertices | SELECT/AGGREGATE/JOIN over ordinary epoch-local Scala objects | Post-counter-fix 10 x 100k medians show HPZone ahead of heap and improved SafeZone on SELECT, AGGREGATE, and JOIN; checked `rift-checked` modes are now fastest in local SELECT, AGGREGATE, and JOIN medians. Broom-scale 40 x 500k is still single-run. | Methodology reproduction, not exact Naiad/Broom. |
 | StreamFlex stream latency | Throughput and per-event latency/deadline-miss workloads | Pressure rerun shows Rift throughput around `330 ms` vs heap `634 ms`; Streaming has zero deadline misses in that run. | Does not run StreamIt/Ovm kernels or model scheduler/queueing delay. |
 | Yak control/data split | Wordcount, graphstep, grouped sort, top-word/filter, GraphChi-style subintervals, and promotion/escape epoch workloads with durable heap control state | No-escape pressure rerun shows raw Rift and `yak-runtime` both beat heap and remove measured heap GC. Grouped sort gives a modest HPZone-vs-heap win (`227.393 ms` vs `237.354 ms`) with little heap GC. Top-word/filter is stronger: Streaming is `262.980 ms` vs heap `311.527 ms` and improved SafeZone `271.273 ms`. GraphChi-style subintervals show Streaming at `236.388 ms` vs heap `302.599 ms`, but improved SafeZone remains faster at `228.252 ms`. The corrected runtime-promotion proxy records 10M barrier checks, 10k remembered refs, and 20k promoted objects, but Yak-runtime is slower than heap: `513.465 ms` vs `424.768 ms`. | Not distributed Yak; sort/topword/graphchi are local Hyracks/Hadoop/GraphChi-shaped methodology probes, and promotion is a memory-API-level proxy with object-specific `RuntimePromoter`, not real JVM field barriers, stack scanning, STW coordination, or generic object movement. |
 | Stancu transaction accounting | Warehouse transaction-shaped object graph with durable heap state | Boundary sweep confirms a Rift-vs-heap win only when transaction regions are coarse enough: at 200k transactions, 64 tx/region gives Streaming `38.844 ms` vs heap `43.189 ms`. | Not SPECjbb2005 or static analysis; SafeZone remains faster. |
 
-### Checked Dataflow SELECT, 2026-04-26
+### Checked Dataflow Operators, 2026-04-26
 
 Source: `evidence/DATAFLOW_REGION_MATRIX.md`
 
 Configuration:
 
-- `DATAFLOW_OPERATOR=select`
 - `DATAFLOW_EPOCHS=10`
 - `DATAFLOW_DOCS_PER_EPOCH=100000`
 - runs `3`, warmups `1`
 
-| Mode | Median elapsed ms | Median GC ms | Median Rift op ms | Region objects | Opens/closes/resets | Peak RSS bytes |
-|---|---:|---:|---:|---:|---:|---:|
-| heap | 27.671 | 6.761 | 0.000 | 0 | 0 / 0 / 0 | 39288832 |
-| current SafeZone | 26.304 | 0.000 | 0.000 | 0 | 0 / 0 / 0 | 30392320 |
-| improved SafeZone | 23.403 | 0.000 | 0.000 | 0 | 0 / 0 / 0 | 30392320 |
-| Rift HPZone | 20.186 | 0.000 | 0.039 | 1124990 | 10 / 10 / 0 | 30375936 |
-| Rift Streaming | 20.760 | 0.000 | 0.038 | 1124990 | 1 / 1 / 9 | 30343168 |
-| Rift checked RegionBuffer | 18.472 | 0.000 | 0.133 | 1125100 | 1 / 1 / 10 | 30490624 |
+| Operator | Mode | Median elapsed ms | Median GC ms | Median Rift op ms | Region objects | Opens/closes/resets | Peak RSS bytes |
+|---|---|---:|---:|---:|---:|---:|---:|
+| SELECT | heap | 36.868 | 8.624 | 0.000 | 0 | 0 / 0 / 0 | 75907072 |
+| SELECT | improved SafeZone | 23.454 | 0.000 | 0.000 | 0 | 0 / 0 / 0 | 47120384 |
+| SELECT | Rift HPZone | 20.958 | 0.000 | 0.051 | 1124990 | 10 / 10 / 0 | 47005696 |
+| SELECT | Rift Streaming | 21.042 | 0.000 | 0.040 | 1124990 | 1 / 1 / 9 | 46956544 |
+| SELECT | Rift checked RegionBuffer | 18.865 | 0.000 | 0.178 | 1125100 | 1 / 1 / 10 | 46972928 |
+| AGGREGATE | heap | 51.474 | 11.510 | 0.000 | 0 | 0 / 0 / 0 | 75907072 |
+| AGGREGATE | improved SafeZone | 41.290 | 0.000 | 0.000 | 0 | 0 / 0 / 0 | 47120384 |
+| AGGREGATE | Rift HPZone | 39.118 | 0.000 | 0.218 | 1627152 | 10 / 10 / 0 | 47005696 |
+| AGGREGATE | Rift Streaming | 39.482 | 0.000 | 0.160 | 1627152 | 1 / 1 / 9 | 46956544 |
+| AGGREGATE | Rift checked table | 36.003 | 0.000 | 0.171 | 1627152 | 1 / 1 / 10 | 46972928 |
+| JOIN | heap | 32.170 | 10.966 | 0.000 | 0 | 0 / 0 / 0 | 75907072 |
+| JOIN | improved SafeZone | 22.604 | 0.000 | 0.000 | 0 | 0 / 0 / 0 | 47120384 |
+| JOIN | Rift HPZone | 20.819 | 0.000 | 0.038 | 1078279 | 10 / 10 / 0 | 47005696 |
+| JOIN | Rift Streaming | 21.192 | 0.000 | 0.039 | 1078279 | 1 / 1 / 9 | 46956544 |
+| JOIN | Rift checked RegionBuffer | 18.736 | 0.000 | 0.101 | 1078379 | 1 / 1 / 10 | 46972928 |
 
 Interpretation:
 
-- This is the first existing literature-shaped operator path using checked
-  `RiftRegion.streaming/reset` and `RegionBuffer`.
-- It validates the safety direction on SELECT only; aggregate and join still
-  need checked table/container provenance.
-- The checked result is not a blanket claim that all Broom-style operators are
-  now safe-API wins.
+- This is the first existing literature-shaped operator set using checked
+  `RiftRegion.streaming/reset`, `RegionBuffer`, and region-owned tables.
+- It validates the safety direction across SELECT, AGGREGATE, and JOIN in the
+  local Broom-style methodology harness.
+- It is still not exact Broom/Naiad artifact evidence and not DEBS application
+  evidence.
 
 ### Stancu Boundary Sweep, 2026-04-26
 

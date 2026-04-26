@@ -9,8 +9,8 @@ Active implementation branch for this update:
 `feature/rift`
 
 Implementation commit at this update:
-`69233e5428878402569ebfe373fdb9569bebd3e5`
-(`Add checked Dataflow select mode`)
+`4ab5b898b463e9bc20d65f4626e0060be4e406a5`
+(`Add checked Dataflow aggregate and join`)
 
 Status: active research fork. The Phase 5 input-boundary checkpoint, reusable
 ranking backend, Q2 bounded cell-table checkpoint, Q1 primitive route-table
@@ -48,9 +48,9 @@ store rejection, and inner-region-to-outer-buffer rejection. A focused
 checked-container methodology harness, `CheckedRegionBufferMatrix`, now
 compares a heap growable object buffer against checked `RegionBuffer` under the
 same epoch-local record workload. The first literature-shaped checked operator
-path is also in place: `DataflowRegionMatrix` has a SELECT-only
-`rift-checked` mode using `RiftRegion.streaming/reset` and `RegionBuffer` for
-selected output records.
+set is also in place: `DataflowRegionMatrix` has checked `rift-checked` modes
+for SELECT, AGGREGATE, and JOIN using `RiftRegion.streaming/reset`,
+`RegionBuffer` output buffers, and region-owned aggregate tables.
 The StreamFlex-style throughput/latency, Yak-style epoch/control/data including
 grouped sort, top-word/filter, GraphChi-like subintervals, and
 runtime/promotion proxies, and Stancu-style
@@ -117,7 +117,8 @@ extraction was committed at `1663befb3`; Q2 top-cache medians were recorded at
 `69e0be59`; checked negative diagnostics were pinned at `7704265c`; checked
 static heap metadata was committed at `bed92644`; checked `RegionBuffer` was
 committed at `664c489e1`; the checked `RegionBuffer` matrix was committed at
-`d86a68000`; checked Dataflow SELECT was committed at `69233e542`. The
+`d86a68000`; checked Dataflow SELECT was committed at `69233e542`; checked
+Dataflow AGGREGATE/JOIN was committed at `4ab5b898b`. The
 checked API is not a
 complete compiler capture-checking implementation. The fork is ahead of
 `origin/feature/rift` unless pushed.
@@ -171,7 +172,7 @@ Use this worktree for this active Rift session:
 - `/Users/siyaoliu/rift/scala-native-rift`
 - branch: `feature/rift`
 - current implementation commit at this handoff update:
-  `69233e5428878402569ebfe373fdb9569bebd3e5`
+  `4ab5b898b463e9bc20d65f4626e0060be4e406a5`
 - `origin`: `git@github.com:641bill/scala-native.git`
 - `upstream`: `https://github.com/scala-native/scala-native.git`
 
@@ -502,7 +503,9 @@ Validation:
 - `CHECKED_BUFFER_BUILD=0 CHECKED_BUFFER_OUTPUT_DIR=/tmp/checked-region-buffer-default zsh sandbox/run_checked_region_buffer_matrix.sh` recorded default local 3-run medians: heap `33.825 ms` with `7.611 ms` GC, `rift-checked` `28.654 ms` with `0.000 ms` GC and `0.301 ms` Rift op time. Treat this as focused checked-container evidence, not DEBS evidence.
 - `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile` passed after adding Dataflow SELECT `rift-checked`.
 - `DATAFLOW_OPERATOR=select DATAFLOW_EPOCHS=2 DATAFLOW_DOCS_PER_EPOCH=1000 DATAFLOW_BENCHMARK_RUNS=1 DATAFLOW_WARMUPS=0 DATAFLOW_OUTPUT_DIR=/tmp/dataflow-checked-select-smoke zsh sandbox/run_dataflow_region_instrumented_matrix.sh` native-linked and passed checksum equality across heap, SafeZone, trusted Rift, and checked Rift SELECT rows.
-- `DATAFLOW_BUILD=0 DATAFLOW_OPERATOR=select DATAFLOW_OUTPUT_DIR=/tmp/dataflow-checked-select-default zsh sandbox/run_dataflow_region_instrumented_matrix.sh` recorded default local SELECT medians: heap `27.671 ms`, improved SafeZone `23.403 ms`, trusted HPZone `20.186 ms`, trusted Streaming `20.760 ms`, and checked RegionBuffer `18.472 ms`. This is SELECT-only; aggregate/join checked ports remain open.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile` passed after adding checked Dataflow AGGREGATE/JOIN.
+- `DATAFLOW_EPOCHS=2 DATAFLOW_DOCS_PER_EPOCH=1000 DATAFLOW_BENCHMARK_RUNS=1 DATAFLOW_WARMUPS=0 DATAFLOW_OUTPUT_DIR=/tmp/dataflow-checked-all-smoke zsh sandbox/run_dataflow_region_instrumented_matrix.sh` native-linked and passed checksum equality across heap, SafeZone, trusted Rift, and checked Rift for SELECT, AGGREGATE, and JOIN.
+- `DATAFLOW_BUILD=0 DATAFLOW_OUTPUT_DIR=/tmp/dataflow-checked-all-default zsh sandbox/run_dataflow_region_instrumented_matrix.sh` recorded default local medians where checked Rift is fastest in all three operators: SELECT `18.865 ms`, AGGREGATE `36.003 ms`, and JOIN `18.736 ms`, all with `0.000 ms` measured GC and low Rift op time.
 
 Exact current safety boundary:
 
@@ -2514,10 +2517,10 @@ and the Yak external-sort-shaped grouped-sort, top-word/filter, and
 GraphChi-like subinterval checkpoints, plus checked safe-API probes for those
 object patterns. It now also contains a growable checked owner-token
 `RegionBuffer` plus a focused `CheckedRegionBufferMatrix` benchmark-shaped
-safe-API example, and Dataflow SELECT now has a checked RegionBuffer mode. The
-safest next technical action is to port Dataflow aggregate/join to checked
-containers or run the missing DEBS controls: Commix, SafeZone/improved SafeZone
-if meaningful, and full-month sorted input.
+safe-API example, and Dataflow SELECT/AGGREGATE/JOIN now have checked
+RegionBuffer/table modes. The safest next technical action is to either port
+one DEBS hot path to the checked API shape or run the missing DEBS controls:
+Commix, SafeZone/improved SafeZone if meaningful, and full-month sorted input.
 
 ## Unsafe Assumptions To Avoid
 
