@@ -87,7 +87,10 @@ Current reliable evidence:
   owner-token APIs to keep region data in a region-owned backing array while
   rejecting direct heap and cross-region stores. `RiftRegion.RegionBuffer`
   extends the same rule to a growable checked buffer whose growth arrays are
-  allocated in the owner region. Both
+  allocated in the owner region. The focused `CheckedRegionBufferMatrix`
+  harness now validates this as a benchmark-shaped safe API path: default local
+  medians were heap `33.825 ms` with `7.611 ms` GC versus checked Rift
+  `28.654 ms` with `0.301 ms` Rift op time and no measured GC. Both
   `RiftRegion.append(region, buffer, value)` and `region.append(buffer, value)`
   are covered. The latest probes
   cover reset-epoch record arrays, top-word-style rooted metadata buffers,

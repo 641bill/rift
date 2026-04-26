@@ -87,7 +87,7 @@ For performance numbers, use the following rule of thumb:
 | Phase 5: application evidence | In progress | Bounded-sample medians plus diagnostic attribution | DEBS correctness, 100k/1M medians, and opt-in GC heap allocation attribution |
 | Phase 6: literature-aligned methodology evidence | Started | Validated methodology medians with caveats | Broom-style dataflow, StreamFlex-style latency/throughput, Yak-style control/data plus grouped sort, top-word/filter, GraphChi-style subintervals, and runtime promotion proxy, Stancu-style transaction accounting |
 | Phase 6b: Broom / parallel collections API evidence | Open | Provisional surrogate only | amordo comparison and Rift raw-array surrogate |
-| Phase 7: capture-checked safe API | Started | Compiler-probe and runtime-smoke evidence, no benchmark data | 46 targeted checked-API compiler probes, 18 runtime tests, plus Phase 4 safety finding |
+| Phase 7: capture-checked safe API | Started | Compiler-probe, runtime-smoke, and focused checked-container benchmark evidence | 46 targeted checked-API compiler probes, 18 runtime tests, `CheckedRegionBufferMatrix`, plus Phase 4 safety finding |
 | Phase 8: native GC/region integration hardening | Started | Runtime/API smoke evidence, no benchmark data | Explicit `HeapRoot` path, static module/immutable-val path, direct unrooted heap-constructor/alias/field-selection/array-store rejection, owner-token ObjectBuffer/RegionBuffer heap-store rejection, mutable static-var rejection, mutable-head heap-retagging rejection, and explicit `{region}` constructor-field/array reuse |
 | Phase 9: Lean mechanization | Open | No data | None |
 | Phase 10: writing | Not started beyond notes | No data | None |
@@ -1020,6 +1020,33 @@ Covered source-level patterns:
 | mutable region head retagged from heap object | rejected by Rift allocation lowering guard |
 | streaming reset value escaping epoch | rejected |
 | negative compiler probes | all current negative probes pin an expected capture/safety diagnostic substring |
+
+Focused checked-container benchmark:
+
+Source:
+
+- `sandbox/CHECKED_REGION_BUFFER_MATRIX.md`
+- `sandbox/src/main/scala-next/CheckedRegionBufferMatrix.scala`
+- `sandbox/run_checked_region_buffer_matrix.sh`
+
+Default local median, 10 epochs x 100000 records:
+
+| Mode | Median elapsed ms | Median GC ms | Median Rift op ms | Region objects | Opens/closes/resets | Peak RSS bytes |
+|---|---:|---:|---:|---:|---:|---:|
+| heap | 33.825 | 7.611 | 0.000 | 0 | 0 / 0 / 0 | 22151168 |
+| rift-checked | 28.654 | 0.000 | 0.301 | 1000140 | 1 / 1 / 10 | 25509888 |
+
+Interpretation:
+
+- This is focused Phase 7 evidence, not DEBS evidence.
+- Heap and Rift run the same epoch-local growable-buffer record workload.
+- `rift-checked` uses `RiftRegion.streaming/reset` and checked
+  `RegionBuffer`; it does not use trusted `RiftRegion.open`.
+- The result shows checked RegionBuffer can move ordinary Scala records and
+  backing arrays out of the GC heap with low region-operation overhead.
+- Peak RSS is higher for `rift-checked` because old growth arrays remain until
+  reset. This is expected for region-backed growable buffers and must be
+  monitored in larger operators.
 
 Relevant evidence carried from Phase 4:
 
