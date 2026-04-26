@@ -51,6 +51,13 @@ Scala-next capture checking supports the first Rift safe API slice:
   `region.append(buffer, value)` extension syntax, so the current checker can
   reject direct heap stores and inner-region values stored into an outer
   buffer.
+- `RiftRegion.RegionBuffer` extends the same owner-token checked-container
+  rule to growable buffers. Growth allocates the replacement backing object
+  array in the owner region, copies existing references, and relies on region
+  close/reset to reclaim old backing arrays. Compiler probes cover region
+  objects, explicit `HeapRoot` handles, direct heap-store rejection, and
+  inner-region-to-outer-buffer rejection; the native smoke covers actual
+  growth.
 - The first literature-shaped safe API probes now compile: streaming reset
   epochs can process region-owned arrays of ordinary record objects, a
   top-word-style `ObjectBuffer` can store records that refer to heap metadata
@@ -81,10 +88,10 @@ Known gaps remain:
   `HeapRoot` handles, static module singletons, immutable static/module vals,
   and stable primary-constructor field selections whose source type is
   explicitly region-captured. It also checks stores into known region arrays
-  and the current owner-token `ObjectBuffer` API. Broader cases such as plain
-  `T^` fields, richer static-field provenance, and plain receiver-style
-  collection/container abstractions still need a more precise policy or
-  compiler extension.
+  and the current owner-token `ObjectBuffer`/`RegionBuffer` APIs. Broader
+  cases such as plain `T^` fields, richer static-field provenance, and plain
+  receiver-style collection/container abstractions still need a more precise
+  policy or compiler extension.
 - Mutable linked-list support is provenance-based rather than path-sensitive.
   It tracks observed local assignments to mutable heads, but it is not a full
   dataflow or alias analysis for arbitrary mutable containers.
@@ -235,6 +242,10 @@ Current checked compiler probes:
 | `objectBufferCanStoreHeapRoot` | companion owner-token `ObjectBuffer` append stores `HeapRoot` handles | compiles | Covers heap metadata through the checked buffer API. |
 | `objectBufferCannotStoreInnerScopedValue` | outer buffer stores value allocated in inner region | fails | Explicit owner token lets capture checking reject cross-region storage. |
 | `objectBufferCannotEscapeScopedRegion` | checked buffer escapes owning region | fails | Covers the heap-control/region-data boundary. |
+| `regionBufferCanGrowAndStoreRegionObjects` | growable owner-token `RegionBuffer` stores region objects and grows | compiles | Extends the checked container story beyond fixed-capacity buffers. |
+| `regionBufferCannotStoreHeapObject` | growable `RegionBuffer` append stores direct heap object | fails | Confirms the append lowering guard covers growable buffers too. |
+| `regionBufferCanStoreHeapRoot` | growable `RegionBuffer` stores explicit `HeapRoot` handles | compiles | Covers durable heap metadata through a growable checked buffer. |
+| `regionBufferCannotStoreInnerScopedValue` | outer growable buffer stores value allocated in inner region | fails | Confirms owner tokens still prevent cross-region storage after growth support. |
 | `streamingResetRegionArrayEpochCompiles` | reset epoch processes a region-owned array of ordinary records | compiles | Models sort/dataflow epoch records through the supported checked array shape. |
 | `topwordBufferCanStoreRecordsWithRootedMetadata` | top-word-style buffer stores records that carry rooted heap metadata | compiles | Covers durable heap metadata via `HeapRoot` inside a higher-level checked buffer. |
 | `graphChiSubintervalCanUseRootedHeapVertexMetadata` | GraphChi-style subinterval record refers to durable heap vertex metadata through `HeapRoot` | compiles | Covers the safe data/control split for graph updates. |
@@ -299,16 +310,18 @@ Do not yet claim:
   explicit element captures such as `Array[Leaf^{region}]^{region}`.
   `ObjectBuffer` is supported only through owner-token APIs; both companion
   functions and `region.append/get/length` extension methods are covered.
+  `RegionBuffer` uses the same owner-token policy for growable buffers.
 - full dataflow analysis for arbitrary mutable structures; the current mutable
   linked-list support is a local provenance rule only.
 - automatic allocation inference;
 - a mechanized proof.
 
 The next Phase 8 design decision is how far to extend the allocation rule after
-the first `HeapRoot`, direct-constructor-argument guard, and static-root path:
-aliases, field selections, richer static-field provenance, and container values
-need either a checked policy or trusted-only labeling. Simple region-local
-aliases are currently propagated; heap aliases and heap field selections are
-rejected; explicitly region-captured constructor fields and arrays are
+the first `HeapRoot`, direct-constructor-argument guard, static-root path, and
+owner-token buffer path: aliases, field selections, richer static-field
+provenance, and richer container values need either a checked policy or
+trusted-only labeling. Simple region-local aliases are currently propagated;
+heap aliases and heap field selections are rejected; explicitly
+region-captured constructor fields and arrays are
 accepted. The Phase 4 checksum mismatch is the concrete reason this cannot be
 left implicit.

@@ -9,8 +9,8 @@ Active implementation branch for this update:
 `feature/rift`
 
 Implementation commit at this update:
-`bed92644db77dcb57fe5341cd4cf27c085f185dc`
-(`Allow checked static heap metadata`)
+`664c489e1ba6a6ca95fedc7c0e6e803d94018479`
+(`Add checked RegionBuffer`)
 
 Status: active research fork. The Phase 5 input-boundary checkpoint, reusable
 ranking backend, Q2 bounded cell-table checkpoint, Q1 primitive route-table
@@ -39,7 +39,12 @@ region-owns its backing object array while keeping heap control metadata; its
 v1 operations are owner-token based, including the companion function form
 `RiftRegion.append(region, buffer, value)` and the extension method form
 `region.append(buffer, value)`, and reject direct heap stores or inner-region
-values stored into an outer buffer in compiler probes.
+values stored into an outer buffer in compiler probes. `RiftRegion.RegionBuffer`
+extends that checked-container story to a growable owner-token buffer: growth
+allocates a new backing object array in the owning region, copies references,
+and leaves old backing arrays for region close/reset reclamation. Compiler and
+runtime probes cover growth, region objects, `HeapRoot` handles, direct heap
+store rejection, and inner-region-to-outer-buffer rejection.
 The StreamFlex-style throughput/latency, Yak-style epoch/control/data including
 grouped sort, top-word/filter, GraphChi-like subintervals, and
 runtime/promotion proxies, and Stancu-style
@@ -104,7 +109,8 @@ extraction was committed at `1663befb3`; Q2 top-cache medians were recorded at
 `64b927b22`; checked mutable region list builders were committed at
 `d397289e2`; checked `ObjectBuffer` owner methods were committed at
 `69e0be59`; checked negative diagnostics were pinned at `7704265c`; checked
-static heap metadata was committed at `bed92644`. The
+static heap metadata was committed at `bed92644`; checked `RegionBuffer` was
+committed at `664c489e1`. The
 checked API is not a
 complete compiler capture-checking implementation. The fork is ahead of
 `origin/feature/rift` unless pushed.
@@ -158,7 +164,7 @@ Use this worktree for this active Rift session:
 - `/Users/siyaoliu/rift/scala-native-rift`
 - branch: `feature/rift`
 - current implementation commit at this handoff update:
-  `64b927b2299229be587271547e424271e243aeb3`
+  `664c489e1ba6a6ca95fedc7c0e6e803d94018479`
 - `origin`: `git@github.com:641bill/scala-native.git`
 - `upstream`: `https://github.com/scala-native/scala-native.git`
 
@@ -458,7 +464,10 @@ Tests added:
   checked-API update adds mutable local linked-list head probes: provenance is
   preserved across `null`, direct Rift allocations, and known region values,
   while heap-object assignment drops that provenance and is rejected before
-  storage into region memory.
+  storage into region memory. The current checked-container update adds
+  `RiftRegion.RegionBuffer` probes for growable region-backed buffers: storing
+  region objects, storing `HeapRoot` handles, rejecting direct heap objects,
+  and rejecting values from an inner scoped region stored into an outer buffer.
 - `unit-tests/native/src/test/scala-next/scala/scala/scalanative/memory/RiftRegionCheckedTest.scala`
   now includes runtime smoke cases for a region object containing an explicit
   `HeapRoot` handle and region-owned arrays containing region values plus
@@ -467,7 +476,9 @@ Tests added:
   `region.append/get/length` owner methods. The latest
   runtime slice adds top-word-style buffered records with rooted metadata and
   GraphChi-style subinterval updates through a mutable region-owned linked
-  update list.
+  update list. The current runtime slice adds a `RegionBuffer` smoke that
+  grows from capacity one, stores region objects and explicit `HeapRoot`
+  metadata, and reads them through owner-token methods.
 - `unit-tests/native/src/test/scala-next/scala/scala/scalanative/memory/RiftRegionTest.scala`
   is a Scala-next replacement of the existing Rift runtime test with
   `captureChecking` enabled, so the old HPZone/runtime tests still run under the
@@ -477,8 +488,8 @@ Tests added:
 Validation:
 
 - `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project nativelib3_next" compile` passed.
-- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"` passed `42/42` after adding literature-shaped safe API probes for reset record arrays, top-word rooted metadata buffers, GraphChi rooted/unrooted heap metadata, reset-epoch values stored into outer buffers, mutable local linked-list heads, owner-token `ObjectBuffer` methods, and static heap metadata.
-- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionTest scala.scalanative.memory.RiftRegionCheckedTest"` passed `17/17` after adding top-word, GraphChi, mutable linked-list, owner-token `ObjectBuffer` method, and static heap-metadata runtime smokes.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"` passed `46/46` after adding literature-shaped safe API probes for reset record arrays, top-word rooted metadata buffers, GraphChi rooted/unrooted heap metadata, reset-epoch values stored into outer buffers, mutable local linked-list heads, owner-token `ObjectBuffer` methods, static heap metadata, and growable owner-token `RegionBuffer`.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionTest scala.scalanative.memory.RiftRegionCheckedTest"` passed `18/18` after adding top-word, GraphChi, mutable linked-list, owner-token `ObjectBuffer` method, static heap-metadata, and growable `RegionBuffer` runtime smokes.
 
 Exact current safety boundary:
 
@@ -513,6 +524,10 @@ Exact current safety boundary:
   captured by the owning region, its backing array is allocated in the region,
   and append/get/length operations require the owner token, for example
   `RiftRegion.append(region, buffer, value)` or `region.append(buffer, value)`.
+  `RiftRegion.RegionBuffer` is the growable checked variant. It keeps the same
+  owner-token rule, starts with a region-owned backing array, allocates larger
+  backing arrays in the owner region on growth, and leaves old arrays to be
+  reclaimed with the region rather than individually freed.
   This owner token is intentional in v1 because plain `buffer.append(value)`
   could not prove the same-region relation precisely enough with the current
   checker.
@@ -2079,8 +2094,8 @@ Roadmap source: `/Users/siyaoliu/rift/Claude_output/ROADMAP.md`
 | Phase 4 topology/layout | Done enough to move on | `PHASE4_LAYOUT.md`, `PHASE4_TOPOLOGY.md`, `PHASE4_EXIT.md`. | Chunked layout still not a Rift win vs improved SafeZone. Mixed GC/region safety story needs Phase 6 tests. |
 | Phase 5 streaming operators and DEBS | In progress | DEBS Q1/Q2 run simultaneously on real data; outputs match; instrumentation added; Q1 and Q2 window entries have shared heap/Rift backends; Q2 active profit values live in window entries; Q2 ranking uses primitive cell keys internally; RunBoth input bytes use a heap/Rift allocation-placement split; the reusable ranking backend region-allocates Q1/Q2 ranking objects and top-k result arrays; Q2 bounded per-cell tables, Q1 route-table arrays, Q1 ranking-index arrays, Q2 latest-empty taxi arrays, Q2 ranking-index arrays, Q2 taxi-id table entries/bytes, RunBoth output snapshots, Q2 incremental median heap arrays, and RunBoth latency buffers are region-backed in Rift modes. New `diag_*` counters identify remaining heap/control paths, and the shared `Grid.cellKeyOrZero` hot path removes temporary `Some(Cell)`/`Cell` allocation from both heap and Rift. Q2 rank/output attribution reports change-check time, snapshot time, rank comparisons/swaps, top-candidate comparisons, and changed-output element checks. Q2 top-10 extraction is now cached with conservative invalidation. Opt-in GC heap allocation attribution now reports allocation calls, rounded bytes, allocation-call time, and C-side phase buckets. RunBoth byte output uses the same writer in heap/Rift modes while placing the reusable byte buffer in the region for Rift modes. | Latest 1M byte-output medians are heap `4640.593 ms`, HPZone `4524.706 ms`, and Streaming `4522.308 ms`; GC collection medians are heap `21.025 ms`, HPZone `0.685 ms`, and Streaming `0.635 ms`; heap RSS is `159907840`, HPZone/Streaming RSS is `116785152`. Top 10 recomputes `29983` times out of `1000000` logical calls. The latest 1M allocation-attribution run shows heap at `6,025,143` GC allocation calls, `235,159,552` bytes, and `171.868 ms` allocation-call time, versus about `0.56M` calls, `10.5 MB`, and `12.8-12.9 ms` in Rift modes. Need Commix, SafeZone comparison, full-month input, remaining control/collection work, and safe API boundaries. |
 | Phase 6 literature-benchmark evidence | Started | `docs/LITERATURE_BENCHMARK_CONTRACT.md` extracts the paper comparison contract. `DataflowRegionMatrix` now runs Broom-style SELECT/AGGREGATE/JOIN methodology workloads with ordinary Scala objects in heap, current SafeZone, improved SafeZone, Rift HPZone, and Rift Streaming modes. Native-only local medians include peak RSS, and a Broom-scale single run is recorded. `StreamFlexRegionMatrix` now runs stream throughput/latency methodology workloads with deadline-miss and latency-tail metrics. `YakRegionMatrix` now runs word-count, graph-step, external-sort-shaped grouped sort, top-word/filter, GraphChi-like subintervals, runtime-proxy, and promotion/escape control-data split workloads. `StancuRegionMatrix` now runs transaction/accounting probes with batched transaction regions. The 2026-04-26 Stancu boundary sweep records per-transaction, 64-transaction, and 512-transaction region boundaries. | Keep improved SafeZone in all claims, and do not claim exact Naiad/Broom, exact StreamFlex/Ovm, exact Yak, or exact Stancu reproduction. The current sequence gives strong Broom/Dataflow HPZone evidence, strong StreamFlex-style throughput/latency evidence, Yak-style Rift-vs-heap and near-improved-SafeZone evidence for no-escape epochs, a modest grouped-sort allocation-placement win, a stronger top-word/filter result, a GraphChi-like Rift-vs-heap but not Rift-vs-improved-SafeZone result, a negative memory-API-level dynamic-promotion result, and Stancu-style Rift-vs-heap evidence after batching/fixed counters. The Stancu weak result is now specifically attributed to too-fine region boundaries. Next choices are safe API rejection probes or returning to DEBS with the literature findings in mind. Build a fair Rift collection/operator API before redoing parallel-collections claims. |
-| Phase 7 capture checking | Started | `RiftRegion.scoped`/`streaming` safe API slice exists. Targeted Scala-next compiler tests now pass for scoped object graphs, for-loop allocation, nested scoped regions, local higher-order consumers, non-escaping closures, return escape rejection, heap retention rejection, nested-region leak rejection, streaming reset escape rejection, conservative returned-function rejection, explicit `HeapRoot` metadata handles, static module singleton and immutable module-val metadata, direct unrooted heap-object constructor-argument rejection, region-local alias acceptance, heap-alias rejection, heap-field-selection rejection, explicit `{region}` constructor-field reuse, plain `T^` field-reuse rejection, region-owned array checks, the owner-token `ObjectBuffer` checked container including `region.append/get/length`, reset epoch arrays, top-word rooted metadata buffers, GraphChi rooted/unrooted heap metadata, reset-epoch values stored into outer buffers, mutable local linked-list heads with provenance-preserving assignments, pinned diagnostic substrings for every current negative compiler probe, and the explicit split that `RiftRegion.open` is trusted while `ScopedRegion`/`StreamingRegion` allocations are checked. `docs/REPORT_CAPTURE_CHECK.md` records the current checker behavior. | Richer collections, broader static-field provenance, and a better ergonomics story for field/container provenance beyond local linked-list heads. |
-| Phase 8 native GC/region hardening | Started | `HeapRoot` handles give a GC-visible explicit-root path for heap metadata stored from region objects; direct unrooted heap-object constructor arguments, heap aliases, heap field selections, unsafe region-array stores, unsafe owner-token `ObjectBuffer` heap stores, mutable static vars, and mutable-head heap retagging are rejected in checked Rift lowering while region-to-region object graphs, simple region-local aliases, static module singletons, immutable module vals, stable constructor fields explicitly captured by `{region}`, explicitly captured region arrays, owner-token object buffers, and provenance-preserving mutable local linked-list heads still compile. | Extend or deliberately limit the mixed-reference rule for richer containers; decide whether plain `T^` field reuse and plain receiver-style container operations need a compiler extension or owner-token APIs. |
+| Phase 7 capture checking | Started | `RiftRegion.scoped`/`streaming` safe API slice exists. Targeted Scala-next compiler tests now pass for scoped object graphs, for-loop allocation, nested scoped regions, local higher-order consumers, non-escaping closures, return escape rejection, heap retention rejection, nested-region leak rejection, streaming reset escape rejection, conservative returned-function rejection, explicit `HeapRoot` metadata handles, static module singleton and immutable module-val metadata, direct unrooted heap-object constructor-argument rejection, region-local alias acceptance, heap-alias rejection, heap-field-selection rejection, explicit `{region}` constructor-field reuse, plain `T^` field-reuse rejection, region-owned array checks, owner-token `ObjectBuffer`, growable owner-token `RegionBuffer`, reset epoch arrays, top-word rooted metadata buffers, GraphChi rooted/unrooted heap metadata, reset-epoch values stored into outer buffers, mutable local linked-list heads with provenance-preserving assignments, pinned diagnostic substrings for every current negative compiler probe, and the explicit split that `RiftRegion.open` is trusted while `ScopedRegion`/`StreamingRegion` allocations are checked. `docs/REPORT_CAPTURE_CHECK.md` records the current checker behavior. | Broader collection/operator APIs, broader static-field provenance, and a better ergonomics story for field/container provenance beyond local linked-list heads. |
+| Phase 8 native GC/region hardening | Started | `HeapRoot` handles give a GC-visible explicit-root path for heap metadata stored from region objects; direct unrooted heap-object constructor arguments, heap aliases, heap field selections, unsafe region-array stores, unsafe owner-token `ObjectBuffer`/`RegionBuffer` heap stores, mutable static vars, and mutable-head heap retagging are rejected in checked Rift lowering while region-to-region object graphs, simple region-local aliases, static module singletons, immutable module vals, stable constructor fields explicitly captured by `{region}`, explicitly captured region arrays, owner-token object buffers, growable region buffers, and provenance-preserving mutable local linked-list heads still compile. | Extend or deliberately limit the mixed-reference rule for richer containers; decide whether plain `T^` field reuse and plain receiver-style container operations need a compiler extension or owner-token APIs. |
 | Phase 9 Lean mechanization | Open | Design pack has Lean stubs/templates. | Port or start proof work; prove without `sorry`. |
 | Phase 10 writing | Not started beyond notes | Result packs and this handoff exist. | Thesis/paper narrative after evidence stabilizes. |
 
@@ -2285,7 +2300,7 @@ Immediate next step:
    in the local sweep, and 512 transactions per region is still a Rift-vs-heap
    win but not faster than 64. It is not a Rift-vs-SafeZone win and not a
    compiler annotation result.
-6. The first safe API accept/reject probe slice now passes 30/30 in the
+6. The current safe API accept/reject probe slice now passes 46/46 in the
    targeted Scala-next compiler test. The latest regression test confirms that
    trusted `RiftRegion.open(...)` allocation can still build linked benchmark
    objects while checked `ScopedRegion`/`StreamingRegion` allocation keeps the
@@ -2302,7 +2317,9 @@ Immediate next step:
    unrooted heap objects. The first checked `ObjectBuffer` container uses
    owner-token APIs, including `region.append/get/length`, so ordinary region
    objects and `HeapRoot` handles can be stored while direct heap stores and
-   inner-region-to-outer-buffer stores are rejected. Plain `T^` selected
+   inner-region-to-outer-buffer stores are rejected. The growable checked
+   `RegionBuffer` uses the same owner-token rule and region-backed array
+   growth. Plain `T^` selected
    fields, richer static-field provenance, and plain receiver-style containers
    still need a checked policy or trusted-only labeling.
 7. RunBoth latency collectors now use shared primitive buffers: heap mode keeps
@@ -2482,10 +2499,11 @@ opt-in GC allocation attribution counters plus clean C-side phase buckets. It
 also contains the shared byte-output RunBoth checkpoint with 100k/1M medians
 and the Yak external-sort-shaped grouped-sort, top-word/filter, and
 GraphChi-like subinterval checkpoints, plus checked safe-API probes for those
-object patterns. The safest next technical action is either to extend the
-checked collection story beyond arrays/owner-token `ObjectBuffer` or run the
-missing DEBS controls: Commix, SafeZone/improved SafeZone if meaningful, and
-full-month sorted input.
+object patterns. It now also contains a growable checked owner-token
+`RegionBuffer`. The safest next technical action is to use the checked
+containers in a small benchmark-shaped safe API example, or run the missing
+DEBS controls: Commix, SafeZone/improved SafeZone if meaningful, and full-month
+sorted input.
 
 ## Unsafe Assumptions To Avoid
 

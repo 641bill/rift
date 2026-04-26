@@ -71,7 +71,7 @@ Current reliable evidence:
   are moving into regions. It does not close the SafeZone/Commix/full-scale or
   safe API gaps.
 - Phase 7 checked API evidence has started. The targeted Scala-next compiler
-  suite passed 42/42 for the current `Scoped`/`Streaming` API slice, including
+  suite passed 46/46 for the current `Scoped`/`Streaming` API slice, including
   for-loop allocation, nested scoped regions, local higher-order consumers, and
   direct escape/reset rejection. Returned function values are now rejected
   conservatively because returned closures can hide region-local captures.
@@ -85,7 +85,9 @@ Current reliable evidence:
   array object and reference element type are both explicitly region-captured.
   `RiftRegion.ObjectBuffer` adds a first checked higher-level container, using
   owner-token APIs to keep region data in a region-owned backing array while
-  rejecting direct heap and cross-region stores. Both
+  rejecting direct heap and cross-region stores. `RiftRegion.RegionBuffer`
+  extends the same rule to a growable checked buffer whose growth arrays are
+  allocated in the owner region. Both
   `RiftRegion.append(region, buffer, value)` and `region.append(buffer, value)`
   are covered. The latest probes
   cover reset-epoch record arrays, top-word-style rooted metadata buffers,
@@ -167,7 +169,7 @@ Region modes:
 | Mode | Intended meaning | Current status |
 |---|---|---|
 | `HPZone` | Trusted fast region path for benchmarks and hot loops. No static escape guarantee. | Implemented as a runtime kind and exercised by benchmarks. |
-| `Scoped` | Lexically scoped, capture-checked region. | Runtime kind and checked API slice exist; direct function results are conservatively rejected; `HeapRoot` handles provide explicit region-to-GC metadata roots; direct unrooted heap-object constructor arguments are rejected in checked allocation lowering; simple region-local aliases are propagated; static module singletons and immutable module vals are allowed; owner-token `ObjectBuffer` gives a first checked container primitive. |
+| `Scoped` | Lexically scoped, capture-checked region. | Runtime kind and checked API slice exist; direct function results are conservatively rejected; `HeapRoot` handles provide explicit region-to-GC metadata roots; direct unrooted heap-object constructor arguments are rejected in checked allocation lowering; simple region-local aliases are propagated; static module singletons and immutable module vals are allowed; owner-token `ObjectBuffer` and growable `RegionBuffer` give first checked container primitives. |
 | `Streaming` | Resettable streaming region with capture/use-after-reset constraints. | Runtime kind and checked reset wrapper exist; `HeapRoot` handles are cleared on reset/close; the same checked allocation guard applies inside reset epochs. |
 
 The important corrected invariant is about GC visibility:
@@ -329,14 +331,17 @@ unrooted heap objects and accept region-local values or `HeapRoot` handles.
 `RiftRegion.ObjectBuffer` is the first checked higher-level container: it uses
 heap control metadata plus a region-owned backing object array. Its v1 API is
 owner-token based, for example `RiftRegion.append(region, buffer, value)` or
-the lighter `region.append(buffer, value)` extension method. The current
-checker still needs the owner token; a plain `buffer.append(value)` method does
-not prove the same-region relation. Direct heap stores are rejected by Rift
-lowering, and cross-region stores are rejected by the owner-token type.
+the lighter `region.append(buffer, value)` extension method. `RegionBuffer`
+uses the same owner-token rule but permits growth by allocating larger backing
+arrays in the owner region and leaving old arrays for batch reclamation. The
+current checker still needs the owner token; a plain `buffer.append(value)`
+method does not prove the same-region relation. Direct heap stores are rejected
+by Rift lowering, and cross-region stores are rejected by the owner-token type.
 Checked streaming can express subinterval or epoch data with region-owned
-arrays, `ObjectBuffer`, and local linked-list heads whose assignments preserve
-region-owned provenance. This rule is still a local provenance check, not a
-full dataflow analysis for arbitrary mutable containers.
+arrays, fixed/growable checked buffers, and local linked-list heads whose
+assignments preserve region-owned provenance. This rule is still a local
+provenance check, not a full dataflow analysis for arbitrary mutable
+containers.
 
 Minimum Phase 6 evidence:
 
@@ -352,7 +357,8 @@ Minimum Phase 6 evidence:
   vals are covered positively; mutable static vars are covered negatively.
   Region-owned array containers are covered with
   positive region-value/`HeapRoot` stores and a negative unrooted heap store.
-  `ObjectBuffer` is covered as the first checked higher-level container, with
+  `ObjectBuffer` and growable `RegionBuffer` are covered as the first checked
+  higher-level containers, with
   positive region-value/`HeapRoot` stores, owner-token extension method syntax,
   and negative direct-heap,
   cross-region, and escape probes. Literature-shaped probes now cover

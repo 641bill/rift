@@ -87,8 +87,8 @@ For performance numbers, use the following rule of thumb:
 | Phase 5: application evidence | In progress | Bounded-sample medians plus diagnostic attribution | DEBS correctness, 100k/1M medians, and opt-in GC heap allocation attribution |
 | Phase 6: literature-aligned methodology evidence | Started | Validated methodology medians with caveats | Broom-style dataflow, StreamFlex-style latency/throughput, Yak-style control/data plus grouped sort, top-word/filter, GraphChi-style subintervals, and runtime promotion proxy, Stancu-style transaction accounting |
 | Phase 6b: Broom / parallel collections API evidence | Open | Provisional surrogate only | amordo comparison and Rift raw-array surrogate |
-| Phase 7: capture-checked safe API | Started | Compiler-probe and runtime-smoke evidence, no benchmark data | 42 targeted checked-API compiler probes, 17 runtime tests, plus Phase 4 safety finding |
-| Phase 8: native GC/region integration hardening | Started | Runtime/API smoke evidence, no benchmark data | Explicit `HeapRoot` path, static module/immutable-val path, direct unrooted heap-constructor/alias/field-selection/array-store rejection, owner-token ObjectBuffer heap-store rejection, mutable static-var rejection, mutable-head heap-retagging rejection, and explicit `{region}` constructor-field/array reuse |
+| Phase 7: capture-checked safe API | Started | Compiler-probe and runtime-smoke evidence, no benchmark data | 46 targeted checked-API compiler probes, 18 runtime tests, plus Phase 4 safety finding |
+| Phase 8: native GC/region integration hardening | Started | Runtime/API smoke evidence, no benchmark data | Explicit `HeapRoot` path, static module/immutable-val path, direct unrooted heap-constructor/alias/field-selection/array-store rejection, owner-token ObjectBuffer/RegionBuffer heap-store rejection, mutable static-var rejection, mutable-head heap-retagging rejection, and explicit `{region}` constructor-field/array reuse |
 | Phase 9: Lean mechanization | Open | No data | None |
 | Phase 10: writing | Not started beyond notes | No data | None |
 
@@ -1006,6 +1006,10 @@ Covered source-level patterns:
 | owner-token `ObjectBuffer` method append stores direct heap object | rejected by Rift append lowering guard |
 | outer `ObjectBuffer` stores inner-region value | rejected by explicit owner-token type |
 | checked `ObjectBuffer` escapes owning region | rejected |
+| growable owner-token `RegionBuffer` stores region objects and grows | passes compiler probe and native runtime smoke |
+| growable owner-token `RegionBuffer` stores direct heap object | rejected by Rift append lowering guard |
+| growable owner-token `RegionBuffer` stores `HeapRoot` handle | passes compiler probe and native runtime smoke |
+| outer `RegionBuffer` stores inner-region value | rejected by explicit owner-token type |
 | streaming reset epoch processes region-owned array of ordinary records | passes compiler probe and native runtime smoke |
 | top-word-style `ObjectBuffer` stores records with rooted heap metadata | passes compiler probe and native runtime smoke |
 | GraphChi-style subinterval uses rooted durable heap vertex metadata | passes compiler probe |
@@ -1040,11 +1044,14 @@ Open work:
   is now a checked owner-token first container primitive: it keeps heap control
   metadata, region-allocates the backing object array, and supports calls such
   as `RiftRegion.append(region, buffer, value)` and
-  `region.append(buffer, value)`. The latest guard narrowing keeps this
-  behavior for checked `ScopedRegion`/`StreamingRegion` code while documenting
-  low-level `RiftRegion.open` as trusted. Plain `T^` selected fields, richer
-  static-field provenance, and plain receiver-style containers still need a
-  more complete mixed-reference policy or ergonomics story. Mutable local
+  `region.append(buffer, value)`. `RiftRegion.RegionBuffer` extends that
+  policy to growable buffers by allocating replacement backing arrays in the
+  owner region and reclaiming old arrays with the region. The latest guard
+  narrowing keeps this behavior for checked `ScopedRegion`/`StreamingRegion`
+  code while documenting low-level `RiftRegion.open` as trusted. Plain `T^`
+  selected fields, richer static-field provenance, and plain receiver-style
+  containers still need a more complete mixed-reference policy or ergonomics
+  story. Mutable local
   linked-list heads now work when assignments preserve
   region provenance (`null`, direct Rift allocation, or known region value);
   assigning a heap object drops that provenance and is rejected when the head is
@@ -1072,10 +1079,10 @@ Known design constraint:
 - Region-to-GC references need explicit roots, scanning, or rejection. The
   current checked lowering rejects direct unrooted heap-object constructor
   arguments, simple heap aliases, heap field selections, mutable static vars,
-  and unsafe owner-token `ObjectBuffer` heap stores, and it propagates simple
-  aliases of known region values. It allows static module singletons,
-  immutable module vals, and stable constructor fields whose source type is
-  explicitly captured by `{region}`. It does not yet model plain `T^` selected
+  and unsafe owner-token `ObjectBuffer`/`RegionBuffer` heap stores, and it
+  propagates simple aliases of known region values. It allows static module
+  singletons, immutable module vals, and stable constructor fields whose source
+  type is explicitly captured by `{region}`. It does not yet model plain `T^` selected
   fields or richer static-field provenance. Region-owned arrays require
   explicit element capture such as `Array[T^{region}]^{region}`; more general
   container provenance remains open.
