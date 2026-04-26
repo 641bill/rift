@@ -6,7 +6,8 @@ Active worktree: `/Users/siyaoliu/rift/scala-native-rift`
 
 Branch: `feature/rift`
 
-Head at time of this revision: `ddbba577aecd4c0adc741cbf7085ee93548c46b4`
+Current merge state is tracked in `docs/HANDOFF.md`; the substantive design
+revision began at implementation commit `ddbba577aecd4c0adc741cbf7085ee93548c46b4`.
 
 This document supersedes the older standalone-library framing. The older design
 pack in `/Users/siyaoliu/rift/Claude_output` is useful provenance, but the
@@ -55,12 +56,15 @@ Current reliable evidence:
   win. Current phase timers show Q2 processing is the dominant measured phase.
   With the reusable ranking/result-array backend, Q2 bounded cell tables, Q1
   primitive route table, Q1 indexed ranking, Q2 latest-empty taxi table, Q2
-  array-backed ranking index, Q2 taxi-id table, and RunBoth output snapshots,
-  Rift region-operation time is again a small share of total elapsed time. The
-  latest 1M 3-run median has heap at `8983.464 ms`, HPZone at `8815.087 ms`,
-  and Streaming at `8836.488 ms`; GC time is roughly flat rather than
-  materially improved, with much lower Rift RSS on the bounded sample.
-  SafeZone/Commix/full-scale comparisons and safe API boundaries remain open.
+  array-backed ranking index, Q2 taxi-id table, RunBoth output snapshots, and
+  Q2 incremental median heap arrays, Rift region-operation time is again a
+  small share of total elapsed time. The latest median-backed 1M checkpoint is
+  still the output-snapshot placement step: heap at `8983.464 ms`, HPZone at
+  `8815.087 ms`, and Streaming at `8836.488 ms`; GC time is roughly flat rather
+  than materially improved, with much lower Rift RSS on the bounded sample. The
+  newer Q2 incremental-median checkpoint is merged and smoke/single-run
+  validated but not median-backed yet. SafeZone/Commix/full-scale comparisons
+  and safe API boundaries remain open.
 - The raw-array pipeline is a surrogate and must not be presented as a
   replacement for Broom-style or `ZoneParVector` collection evidence.
 

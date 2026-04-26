@@ -3,14 +3,14 @@
 Date: 2026-04-26
 
 Active worktree for this update:
-`/Users/siyaoliu/.codex/worktrees/8d31/rift/scala-native-rift`
+`/Users/siyaoliu/rift/scala-native-rift`
 
 Active implementation branch for this update:
-`codex/q2-median-rank-finish`
+`feature/rift`
 
 Implementation commit at this update:
-`26ba3a3b7658cef14c034443e4f4c82ed7e854df`
-(`Move Q2 median maintenance to incremental heaps`)
+`ff37eecba0092c30f1907b4fda70917f41269b98`
+(`Record coordinator Q2 rerun evidence`)
 
 Status: active research fork. The Phase 5 input-boundary checkpoint, reusable
 ranking backend, Q2 bounded cell-table checkpoint, Q1 primitive route-table
@@ -18,22 +18,35 @@ checkpoint, Q2 latest-empty taxi-table checkpoint, Q2 array-backed ranking
 checkpoint, Q2 taxi-id table checkpoint, Q1 indexed-ranking checkpoint,
 RunBoth output-snapshot placement checkpoint, packed Grid cell-key diagnostic
 checkpoint, JVM same-input GC probe, literature benchmark contract,
-Broom-style dataflow methodology harness, and the current Q2 incremental median
-heap checkpoint are present locally. The Q2 incremental median patch is
-committed on `codex/q2-median-rank-finish`.
+Broom-style dataflow methodology harness, and Q2 incremental median heap
+checkpoint are merged into `feature/rift`.
 The StreamFlex-style throughput/latency, Yak-style epoch/control-data, and
 Stancu-style transaction/accounting methodology harnesses are also committed
 locally. A Scala-next checked Rift-region API slice has been reviewed and
 merged into `feature/rift` at `79953ad8d`; its source branch was
-`codex/safe-region-api-checked-slice` at `e8c3b961d`. It is not a complete
-compiler capture-checking implementation. The fork is ahead of
-`origin/feature/rift` unless pushed.
+`codex/safe-region-api-checked-slice` at `e8c3b961d`. The Q2 incremental
+median branch was merged at `255522fbc`, and Stancu boundary evidence was
+merged at `fecdb105e`. A docs/evidence-only coordinator note was then committed
+at `ff37eecba`. The checked API is not a complete compiler capture-checking
+implementation. The fork is ahead of `origin/feature/rift` unless pushed.
 
-2026-04-26 update: benchmark-note work was done in the Codex memory-layer
-worktree `/Users/siyaoliu/.codex/worktrees/ba3c/rift`. A local ignored clone of
-the implementation repo was created under that worktree for validation:
-`/Users/siyaoliu/.codex/worktrees/ba3c/rift/scala-native-rift`, at
-implementation commit `4be6f0a63`.
+Parent repo state for this update:
+
+- `/Users/siyaoliu/rift` on `main`
+- parent merge head before this coordinator cleanup: `56ae14c`
+  (`Merge JVM native backend note`)
+- merged parent handoff/evidence branches include checked API (`22619f5` and
+  `7b2a653`), Q2 incremental median (`5250918`), Stancu boundary evidence
+  (`fde1ac1`), and JVM-vs-native backend note (`56ae14c`).
+
+Worker provenance notes:
+
+- Q2 incremental median implementation was developed in Codex worktree
+  `/Users/siyaoliu/.codex/worktrees/8d31/rift/scala-native-rift` on
+  `codex/q2-median-rank-finish` at `26ba3a3b`.
+- Benchmark-note work was developed in Codex memory-layer worktree
+  `/Users/siyaoliu/.codex/worktrees/ba3c/rift`; its local ignored
+  implementation clone validated notes at implementation commit `4be6f0a63`.
 
 ## 1. Project Objective
 
@@ -60,10 +73,10 @@ Current evaluation standard:
 
 Use this worktree for this active Rift session:
 
-- `/Users/siyaoliu/.codex/worktrees/8d31/rift/scala-native-rift`
-- branch: `codex/q2-median-rank-finish`
+- `/Users/siyaoliu/rift/scala-native-rift`
+- branch: `feature/rift`
 - current implementation commit at this handoff update:
-  `26ba3a3b7658cef14c034443e4f4c82ed7e854df`
+  `ff37eecba0092c30f1907b4fda70917f41269b98`
 - `origin`: `git@github.com:641bill/scala-native.git`
 - `upstream`: `https://github.com/scala-native/scala-native.git`
 
@@ -73,7 +86,7 @@ Other directories exist but should not be used for active implementation unless 
 |---|---|
 | `/Users/siyaoliu/rift/Claude_output` | Revised design pack: `DESIGN.md`, `ROADMAP.md`, `CODEX.md`, README, proof/capture templates. Read-only framing source. |
 | `/Users/siyaoliu/rift/rift-bootstrap` | Old standalone bootstrap runtime and microbench. Useful provenance for Phase 1, not active architecture. |
-| `/Users/siyaoliu/rift/scala-native` | Old worktree on `codex/safezone-topology-instrument-4096`; contains prior SafeZone/topology investigation artifacts. Do not continue Rift work there. |
+| `/Users/siyaoliu/rift/scala-native` | Reference-only old investigation repo and git worktree metadata anchor for `scala-native-rift`. Do not continue Rift work there. |
 | `/Users/siyaoliu/rift/scala-parallel-collections-amordo` | External/amordo parallel-collections worktree used for the `ZoneParVector` comparison. |
 | `/Users/siyaoliu/rift/trip_data` and `/Users/siyaoliu/rift/trip_fare` | Downloaded DEBS/NYC taxi split datasets. |
 | `/tmp/debs2015-month1-100000.csv` and `/tmp/debs2015-month1-1000000.csv` | Joined/sorted bounded DEBS inputs generated during Phase 5. |
@@ -85,8 +98,9 @@ Repo-layout quirks:
   the Phase 5 input-boundary checkpoint, the reusable ranking backend, the Q2
   bounded cell-table checkpoint, the Q1 primitive route-table checkpoint, and
   the Q2 latest-empty taxi-table checkpoint, and the Q2 array-backed ranking
-  checkpoint. The current implementation branch also has the committed Q2
-  incremental median heap checkpoint.
+  checkpoint. The current implementation branch also has the checked API
+  slice, the committed Q2 incremental median heap checkpoint, and the Stancu
+  boundary evidence checkpoint.
 - Always inspect `git status --short --untracked-files=all` and `git diff --stat`
   before continuing.
 
@@ -1772,13 +1786,14 @@ Docs needing possible revision:
 
 Immediate next step:
 
-1. Treat the RunBoth output-snapshot checkpoint as the latest median-backed
-   Phase 5 placement evidence, but not as a clean GC-time win. At 1M, heap
-   median elapsed is `8983.464 ms`, HPZone is `8815.087 ms`, and Streaming is
-   `8836.488 ms`; GC medians are `290.712 ms`, `292.155 ms`, and `296.305 ms`
-   respectively. Peak RSS is `431652864` bytes for heap versus about `120 MB`
-   for Rift modes. The implementation branch has a newer Q2 incremental median
-   heap checkpoint, but it only has single-run 100k and 1M diagnostics so far.
+1. Treat the Q2 incremental median heap checkpoint as merged and
+   smoke-validated, but not yet median-backed. A coordinator 100k rerun after
+   merge passed and matched outputs (`677.280 ms` heap, `661.426 ms` HPZone,
+   `646.588 ms` Streaming), and the worker branch also recorded 100k and 1M
+   single-run diagnostics. These are not headline medians. The previous
+   median-backed Phase 5 placement evidence remains the RunBoth output-snapshot
+   checkpoint: at 1M, heap median elapsed is `8983.464 ms`, HPZone is
+   `8815.087 ms`, and Streaming is `8836.488 ms`; GC medians are roughly flat.
 2. Treat the `DataflowRegionMatrix` result as started Phase 6/Broom-style
    methodology evidence with improved SafeZone included. The post-counter-fix
    10 x 100k medians show HPZone beating heap and improved SafeZone on
@@ -1838,8 +1853,8 @@ Next technical milestone:
      only difference is allocation placement.
    - Treat the earlier uncommitted Q1 indexed-heap warning as superseded by the
      measured Q1 indexed-ranking checkpoint in this handoff.
-4. Rerun 100k and 1M instrumented matrices with medians for the Q2 incremental
-   median checkpoint before making any headline throughput claim.
+4. Rerun 100k and 1M instrumented matrices with medians for the merged Q2
+   incremental median checkpoint before making any headline throughput claim.
 5. Extend the literature methodology harnesses only as needed:
    - Upgrade the 40-epoch, 500k-document-per-epoch single run to a median run
      only if we need a headline Broom-style methodology table.
@@ -1920,12 +1935,12 @@ What is stable enough:
 
 ## Safe Next Action
 
-The implementation branch now contains the committed Q2 incremental median heap
-checkpoint. The safest next technical action is to review that branch, rerun
-100k and 1M instrumented medians for the checkpoint, then decide whether the
-next DEBS step should target Q2 rank-maintenance/output variance or safe API
-accept/reject probes for the region object patterns now used by the literature
-harnesses.
+The implementation branch now contains the merged checked API slice, Q2
+incremental median heap checkpoint, and Stancu boundary evidence. The safest
+next technical action is to run 100k and 1M instrumented medians for the merged
+Q2 checkpoint, then choose between Q2 rank-maintenance/output variance and safe
+API accept/reject probes for the region object patterns now used by the
+literature harnesses.
 
 ## Unsafe Assumptions To Avoid
 
