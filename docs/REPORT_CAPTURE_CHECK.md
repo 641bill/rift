@@ -240,7 +240,8 @@ Current checked compiler probes:
 
 Still missing:
 
-- more tests with expected diagnostic text pinned to capture-specific wording;
+- broader negative probes beyond the current set; all current negative compiler
+  probes now pin an expected capture/safety diagnostic substring;
 - broader mixed-reference tests for plain `T^` selected fields, static
   immutable heap values, and higher-level collection/container abstractions;
 - richer mutable-shape tests beyond the local linked-list head case;

@@ -1012,6 +1012,7 @@ Covered source-level patterns:
 | mutable region linked-list builder with local head | passes compiler probe and native runtime smoke |
 | mutable region head retagged from heap object | rejected by Rift allocation lowering guard |
 | streaming reset value escaping epoch | rejected |
+| negative compiler probes | all current negative probes pin an expected capture/safety diagnostic substring |
 
 Relevant evidence carried from Phase 4:
 
