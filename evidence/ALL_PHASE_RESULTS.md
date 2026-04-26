@@ -45,8 +45,8 @@ listed below for command provenance and detailed interpretation.
 | Phase 5: application evidence | In progress | Partially validated/provisional | DEBS correctness and single-run instrumented matrices |
 | Phase 6: literature-aligned methodology evidence | Started | Validated methodology medians with caveats | Broom-style dataflow, StreamFlex-style latency/throughput, Yak-style control/data, Stancu-style transaction accounting |
 | Phase 6b: Broom / parallel collections API evidence | Open | Provisional surrogate only | amordo comparison and Rift raw-array surrogate |
-| Phase 7: capture-checked safe API | Started | Compiler-probe evidence, no benchmark data | 13 targeted checked-API compiler probes plus Phase 4 safety finding |
-| Phase 8: native GC/region integration hardening | Started | Runtime/API smoke evidence, no benchmark data | Explicit `HeapRoot` path plus direct unrooted heap-constructor rejection |
+| Phase 7: capture-checked safe API | Started | Compiler-probe evidence, no benchmark data | 16 targeted checked-API compiler probes plus Phase 4 safety finding |
+| Phase 8: native GC/region integration hardening | Started | Runtime/API smoke evidence, no benchmark data | Explicit `HeapRoot` path plus direct unrooted heap-constructor/alias/field-selection rejection |
 | Phase 9: Lean mechanization | Open | No data | None |
 | Phase 10: writing | Not started beyond notes | No data | None |
 
@@ -576,7 +576,7 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.Rif
 Result on 2026-04-26:
 
 ```text
-Passed: Total 13, Failed 0, Errors 0, Passed 13
+Passed: Total 16, Failed 0, Errors 0, Passed 16
 ```
 
 Runtime smoke command:
@@ -607,6 +607,9 @@ Covered source-level patterns:
 | closure returned from checked scoped region | rejected conservatively by direct function-result guard |
 | region object stores heap metadata via `HeapRoot` | passes compiler probe and native runtime smoke |
 | direct unrooted heap object stored through checked Rift allocation constructor | rejected |
+| local alias of known region value stored through checked Rift allocation constructor | passes compiler probe |
+| local alias of heap object stored through checked Rift allocation constructor | rejected |
+| field selected from heap object stored through checked Rift allocation constructor | rejected |
 | streaming reset value escaping epoch | rejected |
 
 Relevant evidence carried from Phase 4:
@@ -622,8 +625,10 @@ Open work:
   returned functions remains open.
 - Explicit `HeapRoot` handles now cover the safe region-to-GC metadata path.
   Direct unrooted heap-object constructor arguments are now rejected in checked
-  Rift allocation lowering; aliases, field selections, static immutable heap
-  referents, and containers still need a more complete mixed-reference policy.
+  Rift allocation lowering; simple region-local aliases are propagated, while
+  heap aliases and heap field selections are rejected. Selected fields from
+  region-local owners, static immutable heap referents, and containers still
+  need a more complete mixed-reference policy.
 - Most diagnostic strings are not pinned to capture-specific text yet.
 - Broader runtime tests and mixed-reference tests remain open.
 
@@ -631,7 +636,7 @@ Open work:
 
 Numeric benchmark data: none yet. Runtime/API smoke evidence exists for the
 explicit-root path, and compiler evidence exists for the direct unrooted
-heap-object constructor-argument rejection.
+heap-object constructor-argument/alias/field-selection rejection.
 
 Known design constraint:
 
@@ -640,7 +645,9 @@ Known design constraint:
   on the live region object and cleared on reset/close.
 - Region-to-GC references need explicit roots, scanning, or rejection. The
   current checked lowering rejects direct unrooted heap-object constructor
-  arguments but does not model all aliases or selected fields.
+  arguments, simple heap aliases, and heap field selections, and it propagates
+  simple aliases of known region values. It does not yet model selected fields
+  from region-local owners or container provenance.
 - The Phase 4 mixed-topology checksum mismatch is the current concrete
   evidence for this risk.
 
