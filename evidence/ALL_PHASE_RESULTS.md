@@ -45,8 +45,8 @@ listed below for command provenance and detailed interpretation.
 | Phase 5: application evidence | In progress | Partially validated/provisional | DEBS correctness and single-run instrumented matrices |
 | Phase 6: literature-aligned methodology evidence | Started | Validated methodology medians with caveats | Broom-style dataflow, StreamFlex-style latency/throughput, Yak-style control/data, Stancu-style transaction accounting |
 | Phase 6b: Broom / parallel collections API evidence | Open | Provisional surrogate only | amordo comparison and Rift raw-array surrogate |
-| Phase 7: capture-checked safe API | Started | Compiler-probe evidence, no benchmark data | 19 targeted checked-API compiler probes plus Phase 4 safety finding |
-| Phase 8: native GC/region integration hardening | Started | Runtime/API smoke evidence, no benchmark data | Explicit `HeapRoot` path plus direct unrooted heap-constructor/alias/field-selection rejection and explicit `{region}` constructor-field reuse |
+| Phase 7: capture-checked safe API | Started | Compiler-probe evidence, no benchmark data | 24 targeted checked-API compiler probes plus Phase 4 safety finding |
+| Phase 8: native GC/region integration hardening | Started | Runtime/API smoke evidence, no benchmark data | Explicit `HeapRoot` path plus direct unrooted heap-constructor/alias/field-selection/array-store rejection and explicit `{region}` constructor-field/array reuse |
 | Phase 9: Lean mechanization | Open | No data | None |
 | Phase 10: writing | Not started beyond notes | No data | None |
 
@@ -576,7 +576,7 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.Rif
 Result on 2026-04-26:
 
 ```text
-Passed: Total 19, Failed 0, Errors 0, Passed 19
+Passed: Total 24, Failed 0, Errors 0, Passed 24
 ```
 
 Runtime smoke command:
@@ -588,7 +588,7 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memor
 Result on 2026-04-26:
 
 ```text
-Passed: Total 10, Failed 0, Errors 0, Passed 10
+Passed: Total 11, Failed 0, Errors 0, Passed 11
 ```
 
 Covered source-level patterns:
@@ -613,6 +613,11 @@ Covered source-level patterns:
 | stable constructor field explicitly captured by `{region}` reused through checked Rift allocation constructor | passes compiler probe |
 | local alias of stable constructor field explicitly captured by `{region}` reused through checked Rift allocation constructor | passes compiler probe |
 | plain `T^` field selected from region owner reused where `T^{region}` is required | rejected by Scala capture checking |
+| region-owned array with explicitly captured element type stored through checked Rift allocation constructor | passes compiler probe |
+| region-owned array stores region object | passes compiler probe |
+| region-owned array stores unrooted heap object | rejected by Rift array-store guard |
+| heap array stored through checked Rift allocation constructor | rejected |
+| region-owned array stores explicit `HeapRoot` handle | passes compiler probe and native runtime smoke |
 | streaming reset value escaping epoch | rejected |
 
 Relevant evidence carried from Phase 4:
@@ -630,9 +635,11 @@ Open work:
   Direct unrooted heap-object constructor arguments are now rejected in checked
   Rift allocation lowering; simple region-local aliases are propagated, while
   heap aliases and heap field selections are rejected. Stable constructor
-  fields explicitly captured by `{region}` are accepted. Plain `T^` selected
-  fields, static immutable heap referents, and containers still need a more
-  complete mixed-reference policy or ergonomics story.
+  fields explicitly captured by `{region}` are accepted. Region-owned arrays
+  are accepted when reference elements are explicitly captured, and stores into
+  known region arrays reject unrooted heap objects. Plain `T^` selected fields,
+  static immutable heap referents, and higher-level containers still need a
+  more complete mixed-reference policy or ergonomics story.
 - Most diagnostic strings are not pinned to capture-specific text yet.
 - Broader runtime tests and mixed-reference tests remain open.
 
@@ -640,8 +647,8 @@ Open work:
 
 Numeric benchmark data: none yet. Runtime/API smoke evidence exists for the
 explicit-root path, and compiler evidence exists for the direct unrooted
-heap-object constructor-argument/alias/field-selection rejection and explicit
-`{region}` constructor-field reuse.
+heap-object constructor-argument/alias/field-selection/array-store rejection
+and explicit `{region}` constructor-field/array reuse.
 
 Known design constraint:
 
@@ -653,8 +660,9 @@ Known design constraint:
   arguments, simple heap aliases, and heap field selections, and it propagates
   simple aliases of known region values. It allows stable constructor fields
   whose source type is explicitly captured by `{region}`. It does not yet model
-  plain `T^` selected fields, static immutable referents, or container
-  provenance.
+  plain `T^` selected fields or static immutable referents. Region-owned arrays
+  require explicit element capture such as `Array[T^{region}]^{region}`; more
+  general container provenance remains open.
 - The Phase 4 mixed-topology checksum mismatch is the current concrete
   evidence for this risk.
 

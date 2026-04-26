@@ -38,8 +38,8 @@ Reggio/Verona capabilities.
 | Phase 4: topology/layout decomposition | Done enough to move on | `PHASE4_LAYOUT.md`, `PHASE4_TOPOLOGY.md`, `PHASE4_EXIT.md`. | Carry safety finding into Phase 6; chunked layout still not clear Rift win vs improved SafeZone. |
 | Phase 5: application evidence | In progress, not complete | DEBS Q1/Q2 scaffold runs and outputs match on bounded real-data samples; RunBoth uses a shared byte parser and region-backed input buffer; Rift modes now region-allocate Q1/Q2 window entries, Q2 median scratch, ranking objects, reusable top-k result arrays, Q2 bounded cell tables, Q1 primitive route-table arrays, Q1 ranking-index arrays, Q2 latest-empty taxi arrays, Q2 ranking-index arrays, Q2 taxi-id table entries/bytes, RunBoth output snapshots, and Q2 incremental median heap arrays. The current 1M 3-run median after Q2 incremental medians is heap `5976.447 ms`, HPZone `5794.879 ms`, and Streaming `5948.755 ms`; GC drops from heap `67.086 ms` to HPZone `59.658 ms` and Streaming `55.056 ms`, and Rift RSS is around `114 MB` vs heap `306 MB`. | Latency arrays, SafeZone/Commix modes, full-month scale, safe API boundaries, and Q2 rank/output bottleneck. |
 | Phase 6: literature-aligned methodology evidence | Started | `DATAFLOW_REGION_MATRIX.md`, `STREAMFLEX_REGION_MATRIX.md`, `YAK_REGION_MATRIX.md`, and `STANCU_REGION_MATRIX.md` now cover Broom-style dataflow, StreamFlex-style latency/throughput, Yak-style control/data epochs, and Stancu-style transaction accounting. | Keep these labeled as methodology reproductions, not exact paper artifacts. Build fair Rift-backed collection/operator API before claiming a Broom/parallel-collections API comparison. |
-| Phase 7: capture-checked safe API | Started | `RiftRegion.scoped`/`streaming` APIs exist; compiler probes now pass for scoped object graphs, for-loop allocation, nested scoped regions, local higher-order consumers, non-escaping closures, return escape rejection, heap retention rejection, nested-region leak rejection, streaming reset escape rejection, conservative returned-function rejection, explicit `HeapRoot` region-to-GC metadata handles, direct unrooted heap-object constructor-argument rejection, region-local alias acceptance, heap-alias rejection, heap-field-selection rejection, explicitly region-captured constructor-field reuse, and plain `T^` field-reuse rejection. `docs/REPORT_CAPTURE_CHECK.md` records the slice. | More pinned diagnostics, runtime coverage beyond the existing smoke tests, static-heap/container policy, and a better ergonomics story for field provenance. |
-| Phase 8: native GC/region integration hardening | Started | Safety bug found for unrooted region-to-GC references; v1 explicit `HeapRoot` handles now retain heap metadata through a GC-visible list on the live region object, and checked allocation lowering rejects direct unrooted heap-object constructor arguments while allowing region-to-region object graphs, simple region-local aliases, and stable constructor fields explicitly captured by `{region}`. | Extend or deliberately limit the mixed-reference rule for static immutable heap referents and containers; decide whether plain `T^` field reuse needs a compiler extension or explicit region-captured field types. |
+| Phase 7: capture-checked safe API | Started | `RiftRegion.scoped`/`streaming` APIs exist; compiler probes now pass for scoped object graphs, for-loop allocation, nested scoped regions, local higher-order consumers, non-escaping closures, return escape rejection, heap retention rejection, nested-region leak rejection, streaming reset escape rejection, conservative returned-function rejection, explicit `HeapRoot` region-to-GC metadata handles, direct unrooted heap-object constructor-argument rejection, region-local alias acceptance, heap-alias rejection, heap-field-selection rejection, explicitly region-captured constructor-field reuse, plain `T^` field-reuse rejection, and region-owned array container checks. `docs/REPORT_CAPTURE_CHECK.md` records the slice. | More pinned diagnostics, broader runtime coverage, static-heap/higher-level-container policy, and a better ergonomics story for field and array element provenance. |
+| Phase 8: native GC/region integration hardening | Started | Safety bug found for unrooted region-to-GC references; v1 explicit `HeapRoot` handles now retain heap metadata through a GC-visible list on the live region object, and checked allocation lowering rejects direct unrooted heap-object constructor arguments and region-array stores while allowing region-to-region object graphs, simple region-local aliases, stable constructor fields explicitly captured by `{region}`, and region arrays with explicitly captured element types. | Extend or deliberately limit the mixed-reference rule for static immutable heap referents and higher-level containers; decide whether plain `T^` field reuse needs a compiler extension or explicit region-captured field types. |
 | Phase 9: Lean mechanization | Open | Design target only; older proof pack is not active in fork. | Core calculus and proofs without `sorry`. |
 | Phase 10: writing | Not started beyond notes | Handoff and result packs exist. | Paper/thesis narrative after evidence stabilizes. |
 
@@ -549,6 +549,9 @@ Required work:
   heap field selections are rejected. Stable constructor fields with source
   type `T^{region}` are allowed; plain `T^` fields selected from a region owner
   are rejected by Scala capture checking when `T^{region}` is required.
+  Region-owned arrays are allowed when reference elements are explicitly
+  captured, for example `Array[T^{region}]^{region}`; stores into known region
+  arrays reject unrooted heap objects.
 - Create or update `REPORT_CAPTURE_CHECK.md` with exact checker behavior. The
   first report slice is filled in from the 2026-04-26 targeted compiler run.
 - Decide whether current Scala 3 capture checking is enough or whether the fork
@@ -560,8 +563,9 @@ Exit criteria:
 - Negative cases fail for capture/safety reasons, not incidental type errors.
 - Any checker limitation is documented and reflected in the design. Current
   documented limitations are conservative rejection of direct function results,
-  incomplete static-heap/container mixed-reference modeling, limited ergonomics
-  for plain selected fields, and mostly unpinned diagnostic text.
+  incomplete static-heap/higher-level-container mixed-reference modeling,
+  limited ergonomics for plain selected fields and array element captures, and
+  mostly unpinned diagnostic text.
 
 Comparison obligation:
 
@@ -591,7 +595,7 @@ Required tests:
   compiler and runtime smoke coverage; direct unrooted heap-object constructor
   arguments and simple heap aliases/field selections now fail in checked
   allocation lowering. Stable constructor fields explicitly captured by
-  `{region}` are allowed.
+  `{region}` are allowed. Stores into known region-owned arrays are checked.
 - GC-to-region references through heap fields must fail for safe regions.
 - HPZone versions of these cases must be labeled unsafe/trusted.
 

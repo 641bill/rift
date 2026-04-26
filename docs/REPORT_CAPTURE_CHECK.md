@@ -36,6 +36,11 @@ Scala-next capture checking supports the first Rift safe API slice:
   explicitly tied to the region capability, for example a local
   `Pair(val leaf: Leaf^{region})`. Plain `Leaf^` fields remain rejected by
   Scala capture checking when the result is required to be `Leaf^{region}`.
+- region-owned arrays can be used as checked containers when both the array
+  object and reference element type are explicitly region-captured, for example
+  `Array[Leaf^{region}]^{region}`. Stores into known region arrays are checked
+  so unrooted heap objects cannot be retained by region memory; `HeapRoot`
+  values are allowed.
 
 Known gaps remain:
 
@@ -48,8 +53,9 @@ Known gaps remain:
   arguments in checked Rift allocation and allows values known to be allocated
   in the same region, simple local aliases of those values, primitives/null,
   `HeapRoot` handles, and stable primary-constructor field selections whose
-  source type is explicitly region-captured. Broader cases such as plain `T^`
-  fields, static immutable referents, and aliased containers still need a more
+  source type is explicitly region-captured. It also checks stores into known
+  region arrays. Broader cases such as plain `T^` fields, static immutable
+  referents, and general collection/container abstractions still need a more
   precise policy or compiler extension.
 - The tests validate source-level capture behavior and allocation lowering.
   They do not yet prove safe close/reset mechanically.
@@ -63,7 +69,7 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.Rif
 Result:
 
 ```text
-Passed: Total 19, Failed 0, Errors 0, Passed 19
+Passed: Total 24, Failed 0, Errors 0, Passed 24
 ```
 
 Runtime smoke command run on 2026-04-26:
@@ -75,7 +81,7 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memor
 Result:
 
 ```text
-Passed: Total 10, Failed 0, Errors 0, Passed 10
+Passed: Total 11, Failed 0, Errors 0, Passed 11
 ```
 
 ## 2 — The three hard patterns
@@ -183,13 +189,18 @@ Current checked compiler probes:
 | `explicitRegionParamFieldCanBeStoredInScopedObject` | stable constructor field with type `Leaf^{region}` is reused in another region object | compiles | Covers the supported selected-field path. |
 | `explicitRegionParamFieldAliasCanBeStoredInScopedObject` | alias of a stable constructor field with type `Leaf^{region}` is reused | compiles | Covers selected-field alias propagation after the source checker proves the region capture. |
 | `plainRegionOwnerParamFieldCannotBeStoredAsRegionValue` | plain `Leaf^` field from a region-local owner is reused where `Leaf^{region}` is required | fails | Current Scala capture checking gives the field its own capability; this is a real ergonomics limitation. |
+| `regionOwnedArrayCanBeStoredInScopedObject` | region object stores a region-owned array with region-captured element type | compiles | Covers array-as-container constructor use. |
+| `regionOwnedArrayCanStoreRegionObject` | region-owned array stores a region-allocated object | compiles | Requires `Array[Leaf^{region}]^{region}` rather than just `Array[Leaf]^{region}`. |
+| `regionOwnedArrayCannotStoreHeapObject` | region-owned array stores an unrooted heap object | fails | Covers the new array-store guard. |
+| `heapArrayCannotBeStoredInScopedObject` | region object stores a heap array | fails | Prevents heap containers from becoming region-owned implicitly. |
+| `regionOwnedArrayCanStoreHeapRoot` | region-owned array stores explicit `HeapRoot` handles | compiles | Covers the safe heap-metadata container path. |
 | `streamingResetValueCannotEscapeEpoch` | value allocated inside reset epoch used after reset | fails | Covers reset boundary at source level. |
 
 Still missing:
 
 - more tests with expected diagnostic text pinned to capture-specific wording;
 - broader mixed-reference tests for plain `T^` selected fields, static
-  immutable heap values, and container shapes;
+  immutable heap values, and higher-level collection/container abstractions;
 - precise support for pure returned closures that provably do not capture
   region-local state.
 
@@ -227,8 +238,9 @@ Do not yet claim:
   region-to-GC metadata, and direct unrooted constructor arguments are now
   rejected in checked Rift allocation lowering. Stable constructor fields whose
   source types are explicitly tied to `{region}` are supported, but plain `T^`
-  selected fields, static immutable referents, and container aliases are not
-  fully modeled yet;
+  selected fields, static immutable referents, and general collection aliases
+  are not fully modeled yet. Region-owned arrays are supported only with
+  explicit element captures such as `Array[Leaf^{region}]^{region}`;
 - automatic allocation inference;
 - a mechanized proof.
 
@@ -237,5 +249,5 @@ the first `HeapRoot` and direct-constructor-argument guard: aliases, field
 selections, static immutable referents, and container values need either a
 checked policy or trusted-only labeling. Simple region-local aliases are
 currently propagated; heap aliases and heap field selections are rejected;
-explicitly region-captured constructor fields are accepted. The Phase 4
-checksum mismatch is the concrete reason this cannot be left implicit.
+explicitly region-captured constructor fields and arrays are accepted. The
+Phase 4 checksum mismatch is the concrete reason this cannot be left implicit.
