@@ -65,10 +65,11 @@ Current reliable evidence:
   drops from about `306 MB` to about `114 MB`. SafeZone/Commix/full-scale
   comparisons and safe API boundaries remain open.
 - Phase 7 checked API evidence has started. The targeted Scala-next compiler
-  suite passed 10/10 for the first `Scoped`/`Streaming` API slice, including
+  suite passed 11/11 for the first `Scoped`/`Streaming` API slice, including
   for-loop allocation, nested scoped regions, local higher-order consumers, and
-  direct escape/reset rejection. Returned closures and mixed references remain
-  open.
+  direct escape/reset rejection. Returned function values are now rejected
+  conservatively because returned closures can hide region-local captures.
+  Mixed references remain open.
 - The raw-array pipeline is a surrogate and must not be presented as a
   replacement for Broom-style or `ZoneParVector` collection evidence.
 
@@ -141,7 +142,7 @@ Region modes:
 | Mode | Intended meaning | Current status |
 |---|---|---|
 | `HPZone` | Trusted fast region path for benchmarks and hot loops. No static escape guarantee. | Implemented as a runtime kind and exercised by benchmarks. |
-| `Scoped` | Lexically scoped, capture-checked region. | Runtime kind and first checked API slice exist; not complete for returned closures or mixed references. |
+| `Scoped` | Lexically scoped, capture-checked region. | Runtime kind and first checked API slice exist; direct function results are conservatively rejected; mixed references remain open. |
 | `Streaming` | Resettable streaming region with capture/use-after-reset constraints. | Runtime kind and checked reset wrapper exist; not complete for mixed references. |
 
 The important corrected invariant is about GC visibility:
@@ -273,10 +274,11 @@ make this problem explicit in tests and proof obligations. The first
 Scala-next checked API slice now passes compiler probes for scoped object
 graphs, for-loop allocation, nested scoped regions returning pure values, local
 higher-order consumers, non-escaping closures, direct return escape rejection,
-heap retention rejection, nested-region leak rejection, and streaming reset
-escape rejection. This is useful evidence, but it is not a complete closure
-story: a returned closure that captures only a region-local value compiled in
-an earlier probe and remains a documented gap.
+heap retention rejection, nested-region leak rejection, streaming reset escape
+rejection, and returned-closure rejection. This is useful evidence, but it is
+not a complete closure story: the v1 API rejects direct function results from
+checked region boundaries because a returned closure can hide region-local
+captures that the current checker does not expose in the result type.
 
 Minimum Phase 6 evidence:
 

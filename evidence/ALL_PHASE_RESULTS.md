@@ -45,7 +45,7 @@ listed below for command provenance and detailed interpretation.
 | Phase 5: application evidence | In progress | Partially validated/provisional | DEBS correctness and single-run instrumented matrices |
 | Phase 6: literature-aligned methodology evidence | Started | Validated methodology medians with caveats | Broom-style dataflow, StreamFlex-style latency/throughput, Yak-style control/data, Stancu-style transaction accounting |
 | Phase 6b: Broom / parallel collections API evidence | Open | Provisional surrogate only | amordo comparison and Rift raw-array surrogate |
-| Phase 7: capture-checked safe API | Started | Compiler-probe evidence, no benchmark data | 10 targeted checked-API compiler probes plus Phase 4 safety finding |
+| Phase 7: capture-checked safe API | Started | Compiler-probe evidence, no benchmark data | 11 targeted checked-API compiler probes plus Phase 4 safety finding |
 | Phase 8: native GC/region integration hardening | Open | No benchmark data | Safety finding only |
 | Phase 9: Lean mechanization | Open | No data | None |
 | Phase 10: writing | Not started beyond notes | No data | None |
@@ -604,6 +604,7 @@ Covered source-level patterns:
 | inner-region value escaping outer scope | rejected |
 | heap singleton retaining scoped value | rejected |
 | closure stored in heap state while capturing region handle | rejected |
+| closure returned from checked scoped region | rejected conservatively by direct function-result guard |
 | streaming reset value escaping epoch | rejected |
 
 Relevant evidence carried from Phase 4:
@@ -615,11 +616,11 @@ Relevant evidence carried from Phase 4:
 
 Open work:
 
-- Returned closure that captures only a region-local value remains a documented
-  gap.
+- Returned closures are rejected conservatively; precise support for pure
+  returned functions remains open.
 - Unrooted region-to-GC ownership still needs static rejection or explicit root
   handles.
-- Diagnostic strings are not pinned to capture-specific text yet.
+- Most diagnostic strings are not pinned to capture-specific text yet.
 - Broader runtime tests and mixed-reference tests remain open.
 
 ## Phase 8: Native GC/Region Integration Hardening

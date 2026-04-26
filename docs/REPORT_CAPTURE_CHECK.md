@@ -22,13 +22,17 @@ Scala-next capture checking supports the first Rift safe API slice:
 - rejection of direct return escape, heap retention through an object field, an
   inner scoped value escaping an outer scope, and streaming reset values
   escaping an epoch.
+- conservative rejection of function values returned directly from checked
+  `scoped`, `streaming`, and `reset` boundaries. This closes the previously
+  observed returned-closure escape in the v1 API by rejecting that whole result
+  shape for now.
 
 Known gaps remain:
 
-- A direct returned closure that captures only a region-local value compiled in
-  an earlier probe. The current checked test covers the related case where the
-  escaping closure captures the region handle directly, but the closure story is
-  not complete.
+- The returned-closure gap is closed conservatively, not precisely. The API
+  rejects direct function results even if a particular returned function is pure
+  and does not capture region-local state. A future compiler/API extension
+  should distinguish those cases.
 - The checker slice does not enforce the full mixed-reference policy. In
   particular, unrooted region-to-GC ownership still needs either static
   rejection, explicit root handles, or GC-visible region metadata.
@@ -44,7 +48,7 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.Rif
 Result:
 
 ```text
-Passed: Total 10, Failed 0, Errors 0, Passed 10
+Passed: Total 11, Failed 0, Errors 0, Passed 11
 ```
 
 Runtime smoke command run on 2026-04-26:
@@ -135,10 +139,15 @@ def memoInRegion(using rg: ScopedRegion): Int => Array[Int]^{rg} = ???
 ```
 
 - **Expectation**: may require reach capabilities (`rg*`) or explicit capture-set parameters.
-- **Result**: still open. A first direct probe where a returned closure captured
-  only a region-local value compiled; this remains a checker/API gap for Rift.
+- **Result**: rejected conservatively for now. A direct probe where a returned
+  closure captured only a region-local value compiled before the
+  `CanReturnFromRegion` guard. The v1 checked API now rejects direct
+  `Function0`-`Function22` results from `scoped`, `streaming`, and `reset`
+  boundaries with the diagnostic `Rift checked regions cannot return function
+  values yet`.
 - **Notes**: the exact formulation matters. Document the minimal working
-  version before using this shape in benchmark APIs.
+  version before using this shape in benchmark APIs. This is safe but
+  conservative, and it is more restrictive than the final Rift target.
 
 ## 3 — Negative tests
 
@@ -149,14 +158,16 @@ Current checked compiler probes:
 | `scopedValueCannotEscapeByReturn` | scoped value returned from `RiftRegion.scoped` | fails | Error text is not pinned yet; test only requires a compiler diagnostic. |
 | `innerScopedValueCannotEscapeOuterScope` | inner scoped value returned through outer scope | fails | Covers nested-region leakage. |
 | `closureCapturingScopedValueCannotEscape` | closure stored in heap state while capturing region handle | fails | Does not cover the harder closure-local-value-only escape gap. |
+| `closureCapturingScopedValueCannotEscapeByReturn` | closure returned from scoped region while capturing region-local value | fails | Rejected by the v1 `CanReturnFromRegion` function-result guard. |
 | `heapObjectCannotRetainScopedValue` | heap singleton retains scoped value | fails | Covers GC-to-region retention through heap state. |
 | `streamingResetValueCannotEscapeEpoch` | value allocated inside reset epoch used after reset | fails | Covers reset boundary at source level. |
 
 Still missing:
 
 - a negative test for unrooted region-to-GC ownership;
-- a test whose expected diagnostic text is pinned to capture-specific wording;
-- a minimal returned-closure test that should fail rather than compile.
+- more tests with expected diagnostic text pinned to capture-specific wording;
+- precise support for pure returned closures that provably do not capture
+  region-local state.
 
 ## 4 — Interactions with Scala Native
 
@@ -186,7 +197,8 @@ Claim only the checked slice that is tested:
 
 Do not yet claim:
 
-- complete closure safety for returned closures;
+- precise support for returned closures; v1 rejects direct function results
+  conservatively;
 - complete mixed GC/region safety;
 - automatic allocation inference;
 - a mechanized proof.
