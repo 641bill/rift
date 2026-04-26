@@ -101,7 +101,7 @@ For performance numbers, use the following rule of thumb:
 | Phase 2 | Integrated Rift into Scala Native runtime/compiler paths. | Mostly enablement work; judged by smoke/tests more than standalone speed tables. |
 | Phase 3 | Reran same-layout runtime matrices. | Rift has credible allocator/runtime wins on allocation-heavy linked structures. |
 | Phase 4 | Split allocator effects from layout/topology effects. | Layout and reference topology can dominate allocator choice; mixed region/GC references require a safety story. |
-| Phase 5 | Built DEBS Q1/Q2 runners and progressively moved structured-lifetime state into regions. | Current DEBS evidence shows bounded-sample elapsed/RSS wins and lower heap allocation pressure, but Q2 CPU/output work and missing controls keep it short of final application proof. |
+| Phase 5 | Built DEBS Q1/Q2 runners and progressively moved structured-lifetime state into regions. | Current DEBS evidence shows bounded-sample elapsed/RSS wins and much lower heap allocation pressure, but Q1/Q2 CPU, I/O, and missing controls keep it short of final application proof. |
 | Phase 6 | Built methodology harnesses for Broom/StreamFlex/Yak/Stancu comparison axes. | These support the broader research story but are not exact reproductions of closed or unavailable artifacts. |
 | Phase 7 | Added checked `scoped`/`streaming` API probes using Scala capture checking. | Source-level safety evidence is started; ergonomics and broader container patterns remain open. |
 | Phase 8 | Added explicit heap-root handles and conservative mixed-reference rejection. | Region memory is not GC-scanned, so region-to-heap references need roots or static rejection. |
@@ -603,6 +603,46 @@ Interpretation:
 - The next fair DEBS step is shared output-row construction/formatting that
   exposes per-row scratch lifetimes without changing the Q1/Q2 algorithms.
 
+### Byte-Output RunBoth Checkpoint
+
+Source: `evidence/DEBS_RESULTS.md`.
+
+RunBoth now uses a shared byte-oriented output writer. Heap mode uses a heap
+byte buffer; Rift modes allocate the reusable byte buffer in the existing run
+snapshot region. This is a shared output-backend cleanup, not a different DEBS
+query algorithm.
+
+Clean allocation-attribution rows after byte output:
+
+| Input | Mode | Total GC alloc calls | Total GC alloc bytes | Total GC alloc ms | Q1 output calls / bytes / ms | Q2 output calls / bytes / ms | GC collect ms | RSS bytes |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| 100k | heap | 674381 | 49120368 | 29.327 | 75 / 115888 / 0.013 | 63676 / 1067968 / 1.543 | 8.789 | 55394304 |
+| 100k | Rift HPZone | 76467 | 1482832 | 1.751 | 72 / 1152 / 0.002 | 63674 / 1018784 / 1.431 | 0.000 | 38830080 |
+| 100k | Rift Streaming | 76487 | 1483216 | 1.746 | 72 / 1152 / 0.002 | 63674 / 1018784 / 1.432 | 0.000 | 38813696 |
+| 1M | heap | 6025143 | 235159552 | 171.868 | 397 / 514256 / 0.055 | 490897 / 8362256 / 10.491 | 20.156 | 159940608 |
+| 1M | Rift HPZone | 562793 | 10537200 | 12.923 | 392 / 6272 / 0.011 | 490892 / 7854272 / 11.227 | 0.670 | 116785152 |
+| 1M | Rift Streaming | 562813 | 10537584 | 12.801 | 392 / 6272 / 0.010 | 490892 / 7854272 / 11.127 | 0.618 | 116785152 |
+
+Non-attribution 3-run medians after byte output:
+
+| Input | Mode | Elapsed ms | Throughput events/s | Q1 process ms | Q2 process ms | Q1 output ms | Q2 output ms | GC collect ms | Rift op ms | Region objects | RSS bytes |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 100k | heap | 478.524 | 208975.789 | 135.282 | 123.914 | 10.811 | 9.945 | 8.212 | 0.000 | 0 | 55377920 |
+| 100k | Rift HPZone | 463.141 | 215917.084 | 132.179 | 112.300 | 10.848 | 10.132 | 0.000 | 1.704 | 602460 | 38830080 |
+| 100k | Rift Streaming | 470.538 | 212522.838 | 134.977 | 116.505 | 10.946 | 10.194 | 0.000 | 1.823 | 602460 | 38830080 |
+| 1M | heap | 4640.593 | 215489.696 | 1339.997 | 1240.706 | 65.032 | 78.033 | 21.025 | 0.000 | 0 | 159907840 |
+| 1M | Rift HPZone | 4524.706 | 221008.853 | 1313.434 | 1143.983 | 60.996 | 82.963 | 0.685 | 10.245 | 5494565 | 116785152 |
+| 1M | Rift Streaming | 4522.308 | 221126.019 | 1307.018 | 1146.500 | 59.912 | 83.045 | 0.635 | 9.626 | 5494565 | 116785152 |
+
+Interpretation:
+
+- Rift DEBS now has bounded-sample evidence that the GC heap is mostly the
+  fallback path: after byte output, Rift 1M heap allocation is about `0.56M`
+  calls and `10.5 MB`, and GC collection time is below `1 ms`.
+- The remaining gap to a final Phase 5 claim is no longer "move obvious output
+  strings/builders into regions"; it is controls and scope: Commix/SafeZone,
+  full-month input, and safe API coverage.
+
 Common Q2 incremental-median diagnostics at 1M:
 
 | Q2 rank fixes | Median sort computes | Median values sorted | Median reads | Median heap adds | Median heap removes | Median rebalances |
@@ -875,12 +915,13 @@ Status:
 - Mixed GC-plus-region data is safety-sensitive because Rift regions are not
   scanned by the GC.
 - DEBS correctness is partially validated on bounded sorted real-data samples.
-- DEBS now has stronger bounded-sample evidence after Q2 top-10 caching:
-  HPZone and Streaming are faster than heap at 1M with much lower RSS, and
-  allocation attribution shows materially lower heap allocation calls/bytes and
-  measured allocation-call time. This is still not final application evidence
-  without SafeZone/Commix, full-month scale, and safe API controls.
-- Latest DEBS phase breakdown shows Q2 rank/output work still dominates more
-  than Rift bookkeeping alone.
+- DEBS now has stronger bounded-sample evidence after Q2 top-10 caching and
+  byte-oriented output: HPZone and Streaming are faster than heap at 1M with
+  lower RSS, and allocation attribution shows much lower heap allocation
+  calls/bytes and measured allocation-call time. This is still not final
+  application evidence without SafeZone/Commix, full-month scale, and safe API
+  controls.
+- Latest DEBS phase breakdown shows remaining cost is mostly Q1/Q2 CPU and
+  file I/O rather than Rift bookkeeping or GC collection.
 - The pipeline/parallel-collections story is still a surrogate until a fair
   Rift-backed collection API exists.
