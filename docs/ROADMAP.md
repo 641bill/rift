@@ -36,9 +36,9 @@ Reggio/Verona capabilities.
 | Phase 2: in-tree runtime/compiler path | Partially done | `RiftRuntime.c/h`, `RiftRegion`, plugin lowering, `RiftRegionTest`. | Header/API cleanup, broader tests, commit boundary, stats ABI decision. |
 | Phase 3: runtime-only evaluation | Done enough for current claim | GCBench and ListOfLists medians show Rift wins over heap and improved SafeZone. | Add Commix where relevant; avoid overclaiming pipeline. |
 | Phase 4: topology/layout decomposition | Done enough to move on | `PHASE4_LAYOUT.md`, `PHASE4_TOPOLOGY.md`, `PHASE4_EXIT.md`. | Carry safety finding into Phase 6; chunked layout still not clear Rift win vs improved SafeZone. |
-| Phase 5: application evidence | In progress, not complete | DEBS Q1/Q2 scaffold runs and outputs match on bounded real-data samples; RunBoth uses a shared byte parser and region-backed input buffer; Rift modes now region-allocate Q1/Q2 window entries, Q2 median scratch, ranking objects, reusable top-k result arrays, Q2 bounded cell tables, Q1 primitive route-table arrays, Q1 ranking-index arrays, Q2 latest-empty taxi arrays, Q2 ranking-index arrays, Q2 taxi-id table entries/bytes, RunBoth output snapshots, and Q2 incremental median heap arrays. The current 1M 3-run median after the output-snapshot placement step is heap `8983.464 ms`, HPZone `8815.087 ms`, and Streaming `8836.488 ms`; GC time is not materially improved, and Rift RSS is around `120 MB`. The newer Q2 incremental-median checkpoint is merged and smoke/single-run validated, but not median-backed yet. | Latency arrays, SafeZone/Commix modes, full-month scale, safe API boundaries, Q2 rank/output bottleneck, and median reruns for the merged Q2 checkpoint. |
+| Phase 5: application evidence | In progress, not complete | DEBS Q1/Q2 scaffold runs and outputs match on bounded real-data samples; RunBoth uses a shared byte parser and region-backed input buffer; Rift modes now region-allocate Q1/Q2 window entries, Q2 median scratch, ranking objects, reusable top-k result arrays, Q2 bounded cell tables, Q1 primitive route-table arrays, Q1 ranking-index arrays, Q2 latest-empty taxi arrays, Q2 ranking-index arrays, Q2 taxi-id table entries/bytes, RunBoth output snapshots, and Q2 incremental median heap arrays. The current 1M 3-run median after Q2 incremental medians is heap `5976.447 ms`, HPZone `5794.879 ms`, and Streaming `5948.755 ms`; GC drops from heap `67.086 ms` to HPZone `59.658 ms` and Streaming `55.056 ms`, and Rift RSS is around `114 MB` vs heap `306 MB`. | Latency arrays, SafeZone/Commix modes, full-month scale, safe API boundaries, and Q2 rank/output bottleneck. |
 | Phase 6: literature-aligned methodology evidence | Started | `DATAFLOW_REGION_MATRIX.md`, `STREAMFLEX_REGION_MATRIX.md`, `YAK_REGION_MATRIX.md`, and `STANCU_REGION_MATRIX.md` now cover Broom-style dataflow, StreamFlex-style latency/throughput, Yak-style control/data epochs, and Stancu-style transaction accounting. | Keep these labeled as methodology reproductions, not exact paper artifacts. Build fair Rift-backed collection/operator API before claiming a Broom/parallel-collections API comparison. |
-| Phase 7: capture-checked safe API | Open | Runtime kind constants exist; safety tests not implemented. | Positive/negative capture tests, safe `Scoped`/`Streaming` API, report gaps. |
+| Phase 7: capture-checked safe API | Started | `RiftRegion.scoped`/`streaming` APIs exist; compiler probes now pass for scoped object graphs, for-loop allocation, nested scoped regions, local higher-order consumers, non-escaping closures, return escape rejection, heap retention rejection, nested-region leak rejection, and streaming reset escape rejection. `docs/REPORT_CAPTURE_CHECK.md` records the slice. | Returned-closure gap, unrooted region-to-GC ownership, pinned diagnostics, runtime coverage beyond the existing smoke tests, and mixed-reference policy. |
 | Phase 8: native GC/region integration hardening | Open | Safety bug found for unrooted region-to-GC references. | Decide reject/root/scan strategy; test mixed references. |
 | Phase 9: Lean mechanization | Open | Design target only; older proof pack is not active in fork. | Core calculus and proofs without `sorry`. |
 | Phase 10: writing | Not started beyond notes | Handoff and result packs exist. | Paper/thesis narrative after evidence stabilizes. |
@@ -340,6 +340,14 @@ Current provisional evidence:
 | 1M 3-run median after output snapshots, GC time | 290.712 ms | 292.155 ms | 296.305 ms |
 | 1M 3-run median after output snapshots, Rift op time | 0.000 ms | 10.053 ms | 10.061 ms |
 | 1M 3-run median after output snapshots, peak RSS | 431652864 | 119865344 | 119898112 |
+| 100k 3-run median after Q2 incremental medians, elapsed | 619.735 ms | 626.609 ms | 610.258 ms |
+| 100k 3-run median after Q2 incremental medians, GC time | 8.091 ms | 5.839 ms | 5.781 ms |
+| 100k 3-run median after Q2 incremental medians, Rift op time | 0.000 ms | 1.518 ms | 1.573 ms |
+| 100k 3-run median after Q2 incremental medians, peak RSS | 97370112 | 40173568 | 40173568 |
+| 1M 3-run median after Q2 incremental medians, elapsed | 5976.447 ms | 5794.879 ms | 5948.755 ms |
+| 1M 3-run median after Q2 incremental medians, GC time | 67.086 ms | 59.658 ms | 55.056 ms |
+| 1M 3-run median after Q2 incremental medians, Rift op time | 0.000 ms | 10.737 ms | 11.172 ms |
+| 1M 3-run median after Q2 incremental medians, peak RSS | 305758208 | 113950720 | 113934336 |
 
 Immediate next step:
 
@@ -395,6 +403,13 @@ Immediate next step:
   medians are heap `8983.464 ms`, HPZone `8815.087 ms`, and Streaming
   `8836.488 ms`, with GC roughly flat/slightly higher in Rift and RSS around
   `120 MB`.
+- The Q2 incremental-median step replaced dirty-cell copy/sort recomputation
+  with shared per-cell two-heap median maintenance. Heap and Rift use the same
+  Q2 algorithm; Rift modes allocate the `ProfitStats` and median heap arrays in
+  the run-lifetime ranking/control region. The 1M medians are heap
+  `5976.447 ms`, HPZone `5794.879 ms`, and Streaming `5948.755 ms`; HPZone is
+  `181.568 ms` faster than heap, Streaming is `27.692 ms` faster, GC drops to
+  `59.658 ms`/`55.056 ms`, and RSS is about `114 MB` for Rift.
 - Next, continue moving dominant heap control/collection state only where the
   heap and Rift paths remain the same logical program and the lifetime boundary
   is explicit.
@@ -517,13 +532,19 @@ convention.
 
 Required work:
 
-- Define user-facing safe APIs for scoped and streaming regions.
+- Define user-facing safe APIs for scoped and streaming regions. First slice is
+  implemented as `RiftRegion.scoped`, `RiftRegion.streaming`, and
+  `RiftRegion.reset`.
 - Add positive compile/run tests for for-loops, nested regions, and
-  higher-order code.
+  higher-order code. Compiler probes now cover for-loop allocation, nested
+  scoped regions, and a local higher-order consumer.
 - Add negative compile tests for return escape, closure capture escape,
   cross-region leakage, use-after-reset, GC-to-region fields, and unrooted
-  region-to-GC ownership.
-- Create or update `REPORT_CAPTURE_CHECK.md` with exact checker behavior.
+  region-to-GC ownership. Current probes cover return escape, a heap singleton
+  retaining a scoped value, a closure that captures the region handle, nested
+  inner-region leakage, and streaming reset escape.
+- Create or update `REPORT_CAPTURE_CHECK.md` with exact checker behavior. The
+  first report slice is filled in from the 2026-04-26 targeted compiler run.
 - Decide whether current Scala 3 capture checking is enough or whether the fork
   needs a small compiler extension.
 
@@ -531,7 +552,9 @@ Exit criteria:
 
 - Positive cases compile and run.
 - Negative cases fail for capture/safety reasons, not incidental type errors.
-- Any checker limitation is documented and reflected in the design.
+- Any checker limitation is documented and reflected in the design. Current
+  documented limitations are returned closures that capture only region-local
+  values, unrooted region-to-GC ownership, and unpinned diagnostic text.
 
 Comparison obligation:
 
@@ -614,13 +637,15 @@ evidence.
 
 After these docs, the safest technical next action is:
 
-1. Create a clean commit or patch boundary for the current dirty worktree after
-   user approval.
-2. Run a read-only allocation-pressure diagnosis for DEBS.
-3. Continue the fair-backend DEBS conversion: same logical query algorithm,
-   heap backend with `new`, Rift backend with `region.alloc` and region
-   close/reset at the same lifetime boundary.
-4. Rerun 100k and 1M instrumented medians.
+1. Preserve the current Q2 incremental-median medians as the latest bounded
+   Phase 5 evidence.
+2. Choose one narrow next implementation target: Q2 rank/output variance, or
+   Phase 7 safe API accept/reject probes for the region object patterns already
+   used by DEBS and the literature harnesses.
+3. If continuing DEBS, keep the fair-backend rule: same logical query
+   algorithm, heap backend with `new`, Rift backend with `region.alloc` and
+   region close/reset at the same lifetime boundary.
+4. Rerun 100k and 1M instrumented medians after the next DEBS change.
 
 Do not move straight to new runtime micro-optimizations unless the DEBS
 diagnosis points there.

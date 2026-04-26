@@ -45,7 +45,7 @@ listed below for command provenance and detailed interpretation.
 | Phase 5: application evidence | In progress | Partially validated/provisional | DEBS correctness and single-run instrumented matrices |
 | Phase 6: literature-aligned methodology evidence | Started | Validated methodology medians with caveats | Broom-style dataflow, StreamFlex-style latency/throughput, Yak-style control/data, Stancu-style transaction accounting |
 | Phase 6b: Broom / parallel collections API evidence | Open | Provisional surrogate only | amordo comparison and Rift raw-array surrogate |
-| Phase 7: capture-checked safe API | Open | No benchmark data | Safety finding only |
+| Phase 7: capture-checked safe API | Started | Compiler-probe evidence, no benchmark data | 10 targeted checked-API compiler probes plus Phase 4 safety finding |
 | Phase 8: native GC/region integration hardening | Open | No benchmark data | Safety finding only |
 | Phase 9: Lean mechanization | Open | No data | None |
 | Phase 10: writing | Not started beyond notes | No data | None |
@@ -445,6 +445,38 @@ Interpretation:
 Caveat: this is a fairness/noise cleanup, not a Rift-specific win. It removes
 accidental heap `Cell` and cell-id string allocation from the shared Q2 path.
 
+### Latest DEBS Placement Checkpoints
+
+Source of truth: `evidence/DEBS_RESULTS.md`. The rollup below records the
+latest median-backed bounded-sample checkpoints after the reusable ranking,
+bounded table, taxi-id, output-snapshot, and Q2 incremental-median work.
+
+| Checkpoint | Mode | Elapsed ms | GC ms | Q1 process ms | Q2 process ms | Q2 output ms | Rift op ms | Region objects | Peak RSS bytes |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1M output snapshots | heap | 8983.464 | 290.712 | 1253.609 | 5393.901 | 323.657 | 0.000 | 0 | 431652864 |
+| 1M output snapshots | Rift HPZone | 8815.087 | 292.155 | 1209.080 | 5221.554 | 337.780 | 10.053 | 5561840 | 119865344 |
+| 1M output snapshots | Rift Streaming | 8836.488 | 296.305 | 1216.835 | 5233.309 | 349.659 | 10.061 | 5561840 | 119898112 |
+| 1M Q2 incremental medians | heap | 5976.447 | 67.086 | 1387.651 | 2027.508 | 419.937 | 0.000 | 0 | 305758208 |
+| 1M Q2 incremental medians | Rift HPZone | 5794.879 | 59.658 | 1351.446 | 1905.210 | 377.610 | 10.737 | 5494550 | 113950720 |
+| 1M Q2 incremental medians | Rift Streaming | 5948.755 | 55.056 | 1403.377 | 1922.138 | 386.790 | 11.172 | 5494550 | 113934336 |
+
+Common Q2 incremental-median diagnostics at 1M:
+
+| Q2 rank fixes | Median sort computes | Median values sorted | Median reads | Median heap adds | Median heap removes | Median rebalances |
+|---:|---:|---:|---:|---:|---:|---:|
+| 3252279 | 0 | 0 | 3320865 | 981885 | 981883 | 898934 |
+
+Interpretation:
+
+- Q2 incremental medians are now median-backed, not only a single-run
+  diagnostic.
+- The improvement is shared algorithmic cleanup plus allocation placement:
+  heap and Rift use the same two-heap median maintenance, while Rift allocates
+  the median/control arrays and related ordinary Scala objects in regions.
+- Rift still does not prove final DEBS success because SafeZone/Commix,
+  full-month scale, and safe API boundaries remain open. The remaining DEBS
+  bottleneck is Q2 rank/output work rather than Rift allocator overhead.
+
 ## Phase 6: Literature-Aligned Methodology Evidence
 
 Sources:
@@ -532,7 +564,35 @@ Caveat:
 
 ## Phase 7: Capture-Checked Safe API
 
-Numeric data: none yet.
+Numeric benchmark data: none yet. Compiler-probe evidence now exists for the
+first checked API slice.
+
+Targeted command:
+
+```bash
+ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"
+```
+
+Result on 2026-04-26:
+
+```text
+Passed: Total 10, Failed 0, Errors 0, Passed 10
+```
+
+Covered source-level patterns:
+
+| Pattern | Evidence |
+|---|---|
+| scoped ordinary object graph | passes compiler probe |
+| scoped for-loop allocation | passes compiler probe |
+| nested scoped regions returning pure values | passes compiler probe |
+| local higher-order consumer of region value | passes compiler probe |
+| non-escaping closure using scoped value | passes compiler probe |
+| scoped value returned from scope | rejected |
+| inner-region value escaping outer scope | rejected |
+| heap singleton retaining scoped value | rejected |
+| closure stored in heap state while capturing region handle | rejected |
+| streaming reset value escaping epoch | rejected |
 
 Relevant evidence carried from Phase 4:
 
@@ -543,9 +603,12 @@ Relevant evidence carried from Phase 4:
 
 Open work:
 
-- Positive and negative capture-checking tests.
-- Safe `Scoped`/`Streaming` API.
-- Report using `REPORT_CAPTURE_CHECK.md`.
+- Returned closure that captures only a region-local value remains a documented
+  gap.
+- Unrooted region-to-GC ownership still needs static rejection or explicit root
+  handles.
+- Diagnostic strings are not pinned to capture-specific text yet.
+- Broader runtime tests and mixed-reference tests remain open.
 
 ## Phase 8: Native GC/Region Integration Hardening
 
@@ -594,9 +657,11 @@ Status:
 - Mixed GC-plus-region data is safety-sensitive because Rift regions are not
   scanned by the GC.
 - DEBS correctness is partially validated on bounded sorted real-data samples.
-- DEBS performance is still provisional and not yet an application-level Rift
-  win.
-- Latest DEBS phase breakdown shows Q2 processing, read/parse, and output work
-  dominate more than GC or Rift bookkeeping alone.
+- DEBS now has stronger bounded-sample evidence after Q2 incremental medians:
+  HPZone is faster than heap at 1M with much lower RSS, but this is still not
+  final application evidence without SafeZone/Commix, full-month scale, and
+  safe API controls.
+- Latest DEBS phase breakdown shows Q2 rank/output work still dominates more
+  than Rift bookkeeping alone.
 - The pipeline/parallel-collections story is still a surrogate until a fair
   Rift-backed collection API exists.

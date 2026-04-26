@@ -1,51 +1,97 @@
 # REPORT — Scala 3 capture checking: what we can and can't express
 
-**Status**: draft. To be filled in during Phase 6.
-**Pinned Scala version**: `3.8.0-RC3` (see `build.sbt`).
+**Status**: partially filled from the current Scala-next checked Rift API slice.
+This is not a complete Phase 7 report yet.
+**Checked compiler version**: `3.8.4-RC1-bin-20260402-44bbcdf-NIGHTLY`
+via `ENABLE_EXPERIMENTAL_COMPILER=1` in the Scala Native fork.
 
 This report documents, precisely, which patterns from Rift's design the shipping Scala 3 capture checker can and cannot express. If anything in this report contradicts the design, the design changes, not the report.
 
 ## 1 — Executive summary
 
-To be filled in once Phase 6 completes. Template:
+Current result:
 
-> Scala 3.8 capture checking supports patterns (a), (b), and most of (c) without extension. Pattern (c.ii) — higher-order functions that return region-parameterized closures — requires [extension X / workaround Y / is expressible but awkward]. The design document has been updated at §N to reflect this.
+Scala-next capture checking supports the first Rift safe API slice:
+
+- ordinary Scala object graphs allocated in `RiftRegion.scoped`;
+- transient for-loop allocation inside a scoped region;
+- nested scoped regions returning pure values;
+- non-escaping closures that read scoped region values;
+- higher-order helper functions that consume a region-allocated value and return
+  a non-region value;
+- rejection of direct return escape, heap retention through an object field, an
+  inner scoped value escaping an outer scope, and streaming reset values
+  escaping an epoch.
+
+Known gaps remain:
+
+- A direct returned closure that captures only a region-local value compiled in
+  an earlier probe. The current checked test covers the related case where the
+  escaping closure captures the region handle directly, but the closure story is
+  not complete.
+- The checker slice does not enforce the full mixed-reference policy. In
+  particular, unrooted region-to-GC ownership still needs either static
+  rejection, explicit root handles, or GC-visible region metadata.
+- The tests validate source-level capture behavior and allocation lowering.
+  They do not yet prove safe close/reset mechanically.
+
+Targeted command run on 2026-04-26:
+
+```bash
+ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"
+```
+
+Result:
+
+```text
+Passed: Total 10, Failed 0, Errors 0, Passed 10
+```
 
 ## 2 — The three hard patterns
 
 ### 2.1 — Pattern (a): region value through a for-loop
 
 ```scala
-Region.scoped { rg ?=>
+RiftRegion.scoped { rg ?=>
   var total = 0
   for i <- 1 to 1000 do
-    val p = rg.allocBytes(16)
+    val p = rg.alloc(new Box(i))
     total += 1
   total
 }
 ```
 
 - **Expectation**: compiles.
-- **Result**: TBD.
-- **Notes**: this tests whether the `for`-loop's implicit closure over `rg` is correctly handled as transient capture.
+- **Result**: compiles.
+- **Evidence**:
+  `nscplugin/src/test/scala-next/scala/RiftRegionCheckedCompilerTest.scala`,
+  `scopedForLoopAllocationCompiles`.
+- **Notes**: this tests whether the `for` loop's closure-like translation keeps
+  the region capability transient.
 
 ### 2.2 — Pattern (b): nested regions with outer-return
 
 ```scala
-Region.scoped { outer ?=>
-  Region.scoped { inner ?=>
+RiftRegion.scoped { outer ?=>
+  RiftRegion.scoped { inner ?=>
     var sum = 0
     for i <- 1 to 100 do
-      val p = inner.allocBytes(16)
+      val p = inner.alloc(new Box(i))
       sum += 1
-    sum  // Int — no capture of inner
+    sum
   }
 }
 ```
 
 - **Expectation**: compiles; the `inner` capability does not escape because the return value is a pure `Int`.
-- **Result**: TBD.
-- **Notes**: what happens if the inner block returns `Ptr[Byte]^{outer}`? Should compile. What if it returns `Ptr[Byte]^{inner}`? Should fail.
+- **Result**: compiles for pure return values.
+- **Evidence**:
+  `nscplugin/src/test/scala-next/scala/RiftRegionCheckedCompilerTest.scala`,
+  `nestedScopedRegionsReturningPureValueCompiles`.
+- **Negative evidence**: returning an inner-region object to the outer scope
+  fails in `innerScopedValueCannotEscapeOuterScope`.
+- **Notes**: a dedicated positive test for returning an outer-region value from
+  an inner block has not been added yet.
 
 ### 2.3 — Pattern (c): higher-order region-parameterized functions
 
@@ -54,13 +100,20 @@ Two sub-patterns, each with increasing difficulty:
 **(c.i)** — helper takes a region + a consumer:
 
 ```scala
-def withBuffer[T](using rg: ScopedRegion)(n: Int)(use: Ptr[Byte]^{rg} => T): T =
-  val buf = rg.allocBytes(n)
-  use(buf)
+def withBox(using rg: RiftRegion.ScopedRegion^)(
+    use: Box^{rg} => Int
+): Int =
+  val box: Box^{rg} = RiftRegion.alloc(new Box(40))
+  use(box)
 ```
 
 - **Expectation**: compiles.
-- **Result**: TBD.
+- **Result**: compiles for a non-capturing result type (`Int`).
+- **Evidence**:
+  `nscplugin/src/test/scala-next/scala/RiftRegionCheckedCompilerTest.scala`,
+  `scopedHigherOrderConsumerCompiles`.
+- **Notes**: this is enough for many local helper/consumer patterns. It is not
+  yet evidence for a fully capture-polymorphic collection API.
 
 **(c.ii)** — helper returns a region-parameterized closure (the Tofte-Talpin / StreamFlex hard case):
 
@@ -70,33 +123,63 @@ def memoInRegion(using rg: ScopedRegion): Int => Array[Int]^{rg} = ???
 ```
 
 - **Expectation**: may require reach capabilities (`rg*`) or explicit capture-set parameters.
-- **Result**: TBD.
-- **Notes**: the exact formulation matters. Document the minimal working version.
+- **Result**: still open. A first direct probe where a returned closure captured
+  only a region-local value compiled; this remains a checker/API gap for Rift.
+- **Notes**: the exact formulation matters. Document the minimal working
+  version before using this shape in benchmark APIs.
 
 ## 3 — Negative tests
 
-For each file in `tests/neg/`, record the error message Scala 3.8 produces. If the error is confusing or misleading, file an upstream issue on the Scala repository and link it here.
+Current checked compiler probes:
 
-| Test file | Expected failure | Actual error message | Notes |
+| Test | Expected failure | Result | Notes |
 |---|---|---|---|
-| `EscapeViaReturn.scala` | escape | — | — |
-| `EscapeViaClosure.scala` | escape via closure | — | — |
-| `UseAfterReset.scala` | separation/reset | — | — |
+| `scopedValueCannotEscapeByReturn` | scoped value returned from `RiftRegion.scoped` | fails | Error text is not pinned yet; test only requires a compiler diagnostic. |
+| `innerScopedValueCannotEscapeOuterScope` | inner scoped value returned through outer scope | fails | Covers nested-region leakage. |
+| `closureCapturingScopedValueCannotEscape` | closure stored in heap state while capturing region handle | fails | Does not cover the harder closure-local-value-only escape gap. |
+| `heapObjectCannotRetainScopedValue` | heap singleton retains scoped value | fails | Covers GC-to-region retention through heap state. |
+| `streamingResetValueCannotEscapeEpoch` | value allocated inside reset epoch used after reset | fails | Covers reset boundary at source level. |
+
+Still missing:
+
+- a negative test for unrooted region-to-GC ownership;
+- a test whose expected diagnostic text is pinned to capture-specific wording;
+- a minimal returned-closure test that should fail rather than compile.
 
 ## 4 — Interactions with Scala Native
 
 Three specific concerns that Scala 3 (JVM) developers don't hit:
 
-1. **`@extern` methods and capture sets.** Do capture annotations survive the extern boundary? Specifically: can `RiftC.rift_alloc_slow` have a capture set, or does extern erase it?
-2. **`Ptr[T]^{rg}` at the NIR level.** The capture annotation is erased at runtime, but does it survive the typer-to-NIR transformation in the compiler plugin? Verify with `-Xprint:nir`.
-3. **`@alwaysinline` and capture sets.** If we mark an allocation wrapper `inline`, does the capture information survive inlining?
+1. **Extern methods and capture sets.** The safe Scala API does not annotate C
+   extern functions directly. Allocation goes through Scala wrappers whose
+   result type captures the region capability, then lowers to the Rift runtime.
+2. **`T^{rg}` at the NIR level.** The tests show the source program typechecks
+   and NIR compilation succeeds, but this report has not yet archived
+   `-Xprint:nir` output.
+3. **Inlining and capture sets.** `RiftRegion.alloc` is inline, while
+   `allocImpl` is noinline for lowering. The current tests pass through this
+   path, but an explicit inline-stability test has not been added.
 
 ## 5 — Upstream issues filed
 
-List each Scala (or Scala Native) issue filed during Phase 6. Format:
-
-- `scala/scala3#NNNNN` — one-line description — status.
+None filed from this report slice yet.
 
 ## 6 — Recommendations for Phase 8 writeup
 
-To be filled in: what the thesis should claim about capture-checking integration, what it should not claim, what work is carved out as "requires a separate paper."
+Claim only the checked slice that is tested:
+
+- scoped ordinary object graphs can be allocated and used without escape;
+- streaming reset boundaries can reject direct epoch-value escape;
+- local higher-order consumers are expressible.
+
+Do not yet claim:
+
+- complete closure safety for returned closures;
+- complete mixed GC/region safety;
+- automatic allocation inference;
+- a mechanized proof.
+
+The next Phase 8 design decision should be whether unrooted region-to-GC
+references are rejected statically in safe APIs or represented through explicit
+GC-visible root handles. The Phase 4 checksum mismatch is the concrete reason
+this cannot be left implicit.

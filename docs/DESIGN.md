@@ -59,12 +59,16 @@ Current reliable evidence:
   array-backed ranking index, Q2 taxi-id table, RunBoth output snapshots, and
   Q2 incremental median heap arrays, Rift region-operation time is again a
   small share of total elapsed time. The latest median-backed 1M checkpoint is
-  still the output-snapshot placement step: heap at `8983.464 ms`, HPZone at
-  `8815.087 ms`, and Streaming at `8836.488 ms`; GC time is roughly flat rather
-  than materially improved, with much lower Rift RSS on the bounded sample. The
-  newer Q2 incremental-median checkpoint is merged and smoke/single-run
-  validated but not median-backed yet. SafeZone/Commix/full-scale comparisons
-  and safe API boundaries remain open.
+  now the Q2 incremental-median step: heap at `5976.447 ms`, HPZone at
+  `5794.879 ms`, and Streaming at `5948.755 ms`. GC time drops from heap
+  `67.086 ms` to HPZone `59.658 ms` and Streaming `55.056 ms`, and peak RSS
+  drops from about `306 MB` to about `114 MB`. SafeZone/Commix/full-scale
+  comparisons and safe API boundaries remain open.
+- Phase 7 checked API evidence has started. The targeted Scala-next compiler
+  suite passed 10/10 for the first `Scoped`/`Streaming` API slice, including
+  for-loop allocation, nested scoped regions, local higher-order consumers, and
+  direct escape/reset rejection. Returned closures and mixed references remain
+  open.
 - The raw-array pipeline is a surrogate and must not be presented as a
   replacement for Broom-style or `ZoneParVector` collection evidence.
 
@@ -137,8 +141,8 @@ Region modes:
 | Mode | Intended meaning | Current status |
 |---|---|---|
 | `HPZone` | Trusted fast region path for benchmarks and hot loops. No static escape guarantee. | Implemented as a runtime kind and exercised by benchmarks. |
-| `Scoped` | Lexically scoped, capture-checked region. | Runtime kind exists; static safe API is not implemented. |
-| `Streaming` | Resettable streaming region with capture/use-after-reset constraints. | Runtime kind exists; static safe API is not implemented. |
+| `Scoped` | Lexically scoped, capture-checked region. | Runtime kind and first checked API slice exist; not complete for returned closures or mixed references. |
+| `Streaming` | Resettable streaming region with capture/use-after-reset constraints. | Runtime kind and checked reset wrapper exist; not complete for mixed references. |
 
 The important corrected invariant is about GC visibility:
 
@@ -265,15 +269,25 @@ The design intentionally avoids:
 
 The open hard problem is closure-region interaction. Prior systems either
 avoid closures, restrict them heavily, or handle escapes dynamically. Rift must
-make this problem explicit in tests and proof obligations.
+make this problem explicit in tests and proof obligations. The first
+Scala-next checked API slice now passes compiler probes for scoped object
+graphs, for-loop allocation, nested scoped regions returning pure values, local
+higher-order consumers, non-escaping closures, direct return escape rejection,
+heap retention rejection, nested-region leak rejection, and streaming reset
+escape rejection. This is useful evidence, but it is not a complete closure
+story: a returned closure that captures only a region-local value compiled in
+an earlier probe and remains a documented gap.
 
 Minimum Phase 6 evidence:
 
 - Positive cases for for-loops, nested regions, and higher-order functions.
+  Initial compiler probes now exist for this slice.
 - Negative cases for return escape, closure capture escape, cross-region
-  leakage, use-after-reset, and unrooted region-to-GC ownership.
+  leakage, use-after-reset, and unrooted region-to-GC ownership. Initial probes
+  cover all except unrooted region-to-GC ownership.
 - A report stating exactly what current Scala capture checking can express and
-  what requires compiler or API changes.
+  what requires compiler or API changes. The first slice is recorded in
+  `docs/REPORT_CAPTURE_CHECK.md`.
 
 ## 9. Application And Library Design
 
@@ -352,15 +366,15 @@ For DEBS 2015:
 
 Therefore current DEBS exercises more of the region-heavy application design,
 but it is still not Phase 5 success. The newest 1M 3-run median with
-region-backed output snapshots has HPZone at `8815.087 ms` and Streaming at
-`8836.488 ms` versus heap at `8983.464 ms`. Rift operation time remains about
-`10 ms`, but GC time is not materially better: heap is `290.712 ms`, HPZone is
-`292.155 ms`, and Streaming is `296.305 ms`. Rift modes reduce peak RSS from
-`431652864` bytes to about `120 MB` on the bounded sample. Q2 still remains the
+Q2 incremental medians has HPZone at `5794.879 ms` and Streaming at
+`5948.755 ms` versus heap at `5976.447 ms`. Rift operation time remains about
+`11 ms`; GC time is lower but not dominant: heap is `67.086 ms`, HPZone is
+`59.658 ms`, and Streaming is `55.056 ms`. Rift modes reduce peak RSS from
+`305758208` bytes to about `114 MB` on the bounded sample. Q2 still remains the
 dominant phase, and the evidence is still bounded-sample. The remaining
-pressure is in latency arrays, broader collection state, SafeZone/Commix/full-scale
-comparisons, and the need for safe region-backed collections/control structures
-that preserve the heap logical program.
+pressure is in latency arrays, Q2 rank/output work, SafeZone/Commix/full-scale
+comparisons, and the need for safe region-backed collections/control
+structures that preserve the heap logical program.
 
 For parallel collections:
 
@@ -438,6 +452,9 @@ DEBS status:
 | 1M after output snapshots, elapsed | 8983.464 ms | 8815.087 ms | 8836.488 ms | 3-run median, bounded sample |
 | 1M after output snapshots, GC time | 290.712 ms | 292.155 ms | 296.305 ms | 3-run median, bounded sample |
 | 1M after output snapshots, peak RSS bytes | 431652864 | 119865344 | 119898112 | 3-run median, bounded sample |
+| 1M after Q2 incremental medians, elapsed | 5976.447 ms | 5794.879 ms | 5948.755 ms | 3-run median, bounded sample |
+| 1M after Q2 incremental medians, GC time | 67.086 ms | 59.658 ms | 55.056 ms | 3-run median, bounded sample |
+| 1M after Q2 incremental medians, peak RSS bytes | 305758208 | 113950720 | 113934336 | 3-run median, bounded sample |
 
 Interpretation:
 
