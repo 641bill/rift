@@ -9,17 +9,17 @@ Active implementation branch for this update:
 `feature/rift`
 
 Implementation commit at this update:
-`ff37eecba0092c30f1907b4fda70917f41269b98`
-(`Record coordinator Q2 rerun evidence`)
+`346a5bd6e`
+(`Add fair JVM DEBS RunBoth comparison`)
 
 Status: active research fork. The Phase 5 input-boundary checkpoint, reusable
 ranking backend, Q2 bounded cell-table checkpoint, Q1 primitive route-table
 checkpoint, Q2 latest-empty taxi-table checkpoint, Q2 array-backed ranking
 checkpoint, Q2 taxi-id table checkpoint, Q1 indexed-ranking checkpoint,
 RunBoth output-snapshot placement checkpoint, packed Grid cell-key diagnostic
-checkpoint, JVM same-input GC probe, literature benchmark contract,
-Broom-style dataflow methodology harness, and Q2 incremental median heap
-checkpoint are merged into `feature/rift`.
+checkpoint, JVM same-input GC probe, JVM RunBoth cross-check, literature
+benchmark contract, Broom-style dataflow methodology harness, and Q2
+incremental median heap checkpoint are merged into `feature/rift`.
 The StreamFlex-style throughput/latency, Yak-style epoch/control-data, and
 Stancu-style transaction/accounting methodology harnesses are also committed
 locally. A Scala-next checked Rift-region API slice has been reviewed and
@@ -27,8 +27,10 @@ merged into `feature/rift` at `79953ad8d`; its source branch was
 `codex/safe-region-api-checked-slice` at `e8c3b961d`. The Q2 incremental
 median branch was merged at `255522fbc`, and Stancu boundary evidence was
 merged at `fecdb105e`. A docs/evidence-only coordinator note was then committed
-at `ff37eecba`. The checked API is not a complete compiler capture-checking
-implementation. The fork is ahead of `origin/feature/rift` unless pushed.
+at `ff37eecba`, and the fair JVM RunBoth cross-check was cherry-picked onto
+current `feature/rift` at `346a5bd6e`. The checked API is not a complete
+compiler capture-checking implementation. The fork is ahead of
+`origin/feature/rift` unless pushed.
 
 Parent repo state for this update:
 
@@ -44,6 +46,9 @@ Worker provenance notes:
 - Q2 incremental median implementation was developed in Codex worktree
   `/Users/siyaoliu/.codex/worktrees/8d31/rift/scala-native-rift` on
   `codex/q2-median-rank-finish` at `26ba3a3b`.
+- JVM RunBoth comparison implementation was developed on implementation branch
+  `codex/jvm-debs-comparison` at `2ccb474d9` and cherry-picked onto current
+  `feature/rift` as `346a5bd6e`.
 - Benchmark-note work was developed in Codex memory-layer worktree
   `/Users/siyaoliu/.codex/worktrees/ba3c/rift`; its local ignored
   implementation clone validated notes at implementation commit `4be6f0a63`.
@@ -76,7 +81,7 @@ Use this worktree for this active Rift session:
 - `/Users/siyaoliu/rift/scala-native-rift`
 - branch: `feature/rift`
 - current implementation commit at this handoff update:
-  `ff37eecba0092c30f1907b4fda70917f41269b98`
+  `346a5bd6e`
 - `origin`: `git@github.com:641bill/scala-native.git`
 - `upstream`: `https://github.com/scala-native/scala-native.git`
 
