@@ -34,6 +34,10 @@ For performance numbers, use the following rule of thumb:
 - **GC ms** is time reported by Scala Native's GC counters. It can be small even
   when heap allocation is high if the workload is CPU-bound or heap headroom is
   large.
+- **GC alloc calls / bytes / ms** are opt-in attribution counters enabled with
+  `SCALANATIVE_GC_ALLOC_STATS=1`. They measure ordinary heap allocation entry
+  points, not collection pauses. This mode times every heap allocation and uses
+  atomic counters, so use it for diagnosis rather than headline elapsed time.
 - **Rift op ms** is time spent in measured Rift runtime operations such as
   open/close/reset/slow allocation. It should stay much smaller than the
   application phase being optimized.
@@ -80,7 +84,7 @@ For performance numbers, use the following rule of thumb:
 | Phase 2: in-tree runtime/compiler path | Partially done | Partially validated | RiftRegionTest and integration status, no standalone perf table |
 | Phase 3: runtime-only evaluation | Done enough for current claim | Validated with caveats | Same-layout GCBench/ListOfLists runtime medians |
 | Phase 4: topology/layout decomposition | Done enough to move on | Validated/provisional mix | Layout, topology, targeted runtime follow-up, safety finding |
-| Phase 5: application evidence | In progress | Partially validated/provisional | DEBS correctness and single-run instrumented matrices |
+| Phase 5: application evidence | In progress | Bounded-sample medians plus diagnostic attribution | DEBS correctness, 100k/1M medians, and opt-in GC heap allocation attribution |
 | Phase 6: literature-aligned methodology evidence | Started | Validated methodology medians with caveats | Broom-style dataflow, StreamFlex-style latency/throughput, Yak-style control/data, Stancu-style transaction accounting |
 | Phase 6b: Broom / parallel collections API evidence | Open | Provisional surrogate only | amordo comparison and Rift raw-array surrogate |
 | Phase 7: capture-checked safe API | Started | Compiler-probe evidence, no benchmark data | 30 targeted checked-API compiler probes plus Phase 4 safety finding |
@@ -97,7 +101,7 @@ For performance numbers, use the following rule of thumb:
 | Phase 2 | Integrated Rift into Scala Native runtime/compiler paths. | Mostly enablement work; judged by smoke/tests more than standalone speed tables. |
 | Phase 3 | Reran same-layout runtime matrices. | Rift has credible allocator/runtime wins on allocation-heavy linked structures. |
 | Phase 4 | Split allocator effects from layout/topology effects. | Layout and reference topology can dominate allocator choice; mixed region/GC references require a safety story. |
-| Phase 5 | Built DEBS Q1/Q2 runners and progressively moved structured-lifetime state into regions. | Current DEBS evidence shows lower RSS and some elapsed wins, but Q2 CPU and output work still dominate; not final application proof. |
+| Phase 5 | Built DEBS Q1/Q2 runners and progressively moved structured-lifetime state into regions. | Current DEBS evidence shows bounded-sample elapsed/RSS wins and lower heap allocation pressure, but Q2 CPU/output work and missing controls keep it short of final application proof. |
 | Phase 6 | Built methodology harnesses for Broom/StreamFlex/Yak/Stancu comparison axes. | These support the broader research story but are not exact reproductions of closed or unavailable artifacts. |
 | Phase 7 | Added checked `scoped`/`streaming` API probes using Scala capture checking. | Source-level safety evidence is started; ergonomics and broader container patterns remain open. |
 | Phase 8 | Added explicit heap-root handles and conservative mixed-reference rejection. | Region memory is not GC-scanned, so region-to-heap references need roots or static rejection. |
@@ -382,7 +386,9 @@ Source: `evidence/DEBS_RESULTS.md`
 Global caveat:
 
 - These are application-harness results, not final Phase 5 headline numbers.
-- Most DEBS rows are single-run measurements, not medians.
+- Older DEBS rows are often single-run measurements; the latest top-cache rows
+  are 3-run medians and the allocation-attribution rows are single-run
+  diagnostics.
 - Heap and Rift outputs match after stripping only the measured latency column
   in the recorded matrix runs.
 - Raw monthly DEBS files are not monotonic by dropoff timestamp; bounded
@@ -503,7 +509,8 @@ accidental heap `Cell` and cell-id string allocation from the shared Q2 path.
 
 Source of truth: `evidence/DEBS_RESULTS.md`. The rollup below records the
 latest median-backed bounded-sample checkpoints after the reusable ranking,
-bounded table, taxi-id, output-snapshot, and Q2 incremental-median work.
+bounded table, taxi-id, output-snapshot, Q2 incremental-median, and Q2
+top-cache work.
 
 | Checkpoint | Mode | Elapsed ms | GC ms | Q1 process ms | Q2 process ms | Q2 output ms | Rift op ms | Region objects | Peak RSS bytes |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -531,6 +538,38 @@ bounded table, taxi-id, output-snapshot, and Q2 incremental-median work.
 | 1M Q2 top-10 cache medians | heap | 6192.692 | 70.762 | 1625.747 | 1608.462 | 444.281 | 0.000 | 0 | 304463872 |
 | 1M Q2 top-10 cache medians | Rift HPZone | 5697.948 | 36.231 | 1528.989 | 1427.353 | 388.500 | 18.824 | 5494563 | 116588544 |
 | 1M Q2 top-10 cache medians | Rift Streaming | 5657.424 | 36.288 | 1521.009 | 1409.247 | 400.798 | 21.925 | 5494563 | 96239616 |
+
+### GC Heap Allocation Attribution
+
+Source: `evidence/DEBS_RESULTS.md`.
+
+These rows come from `SCALANATIVE_GC_ALLOC_STATS=1`. They time every GC heap
+allocation call and use atomic counters, so they are diagnostic rather than
+headline elapsed benchmarks. Their purpose is to answer whether Rift is only
+reducing collection time or also reducing ordinary heap allocation work.
+
+| Input | Mode | Elapsed ms | GC collect ms | GC alloc calls | GC alloc bytes | GC alloc time ms | Rift objects | Rift op ms | RSS bytes |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| 100k | heap | 698.664 | 8.333 | 2790996 | 116791680 | 82.020 | 0 | 0.000 | 102350848 |
+| 100k | Rift HPZone | 655.328 | 4.955 | 2193091 | 69285392 | 57.251 | 602458 | 2.058 | 41467904 |
+| 100k | Rift Streaming | 654.947 | 4.980 | 2193109 | 69285776 | 57.495 | 602458 | 2.072 | 41484288 |
+| 1M | heap | 6495.025 | 68.739 | 19924383 | 679841024 | 582.629 | 0 | 0.000 | 305643520 |
+| 1M | Rift HPZone | 6373.794 | 37.610 | 14462042 | 455349920 | 385.807 | 5494563 | 20.131 | 116588544 |
+| 1M | Rift Streaming | 6169.514 | 37.617 | 14462060 | 455350304 | 384.031 | 5494563 | 18.424 | 116555776 |
+
+Interpretation:
+
+- At 1M, collection time drops by about `31 ms`, but measured GC allocation-call
+  time drops by about `197-199 ms`.
+- Rift removes about `5.46M` heap allocation calls and about `224 MB` of
+  rounded heap allocation requests at 1M by placing structured-lifetime data
+  and control objects in regions.
+- The result supports the current Phase 5 interpretation: the experimental
+  variable is allocation placement/lifetime policy over the same logical DEBS
+  program, not a Rift-specific alternative algorithm.
+- Remaining elapsed differences include application CPU work, locality, output,
+  ranking/control operations, and measurement noise; do not collapse them into
+  "GC pause time."
 
 Common Q2 incremental-median diagnostics at 1M:
 
@@ -804,10 +843,11 @@ Status:
 - Mixed GC-plus-region data is safety-sensitive because Rift regions are not
   scanned by the GC.
 - DEBS correctness is partially validated on bounded sorted real-data samples.
-- DEBS now has stronger bounded-sample evidence after Q2 incremental medians:
-  HPZone is faster than heap at 1M with much lower RSS, but this is still not
-  final application evidence without SafeZone/Commix, full-month scale, and
-  safe API controls.
+- DEBS now has stronger bounded-sample evidence after Q2 top-10 caching:
+  HPZone and Streaming are faster than heap at 1M with much lower RSS, and
+  allocation attribution shows materially lower heap allocation calls/bytes and
+  measured allocation-call time. This is still not final application evidence
+  without SafeZone/Commix, full-month scale, and safe API controls.
 - Latest DEBS phase breakdown shows Q2 rank/output work still dominates more
   than Rift bookkeeping alone.
 - The pipeline/parallel-collections story is still a surrogate until a fair

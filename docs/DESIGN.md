@@ -52,18 +52,24 @@ Current reliable evidence:
 - Phase 4 topology and layout studies are validated enough to move on, with the
   explicit caveat that several results use uncommitted runtime changes.
 - DEBS correctness on bounded sorted samples is partially validated.
-- DEBS performance is provisional and not yet a final application-level Rift
-  win. Current phase timers show Q2 processing is the dominant measured phase.
-  With the reusable ranking/result-array backend, Q2 bounded cell tables, Q1
-  primitive route table, Q1 indexed ranking, Q2 latest-empty taxi table, Q2
-  array-backed ranking index, Q2 taxi-id table, RunBoth output snapshots, and
-  Q2 incremental median heap arrays, Rift region-operation time is again a
-  small share of total elapsed time. The latest median-backed 1M checkpoint is
-  now the Q2 incremental-median step: heap at `5976.447 ms`, HPZone at
-  `5794.879 ms`, and Streaming at `5948.755 ms`. GC time drops from heap
-  `67.086 ms` to HPZone `59.658 ms` and Streaming `55.056 ms`, and peak RSS
-  drops from about `306 MB` to about `114 MB`. SafeZone/Commix/full-scale
-  comparisons and safe API boundaries remain open.
+- DEBS performance is now bounded-sample application evidence, but not a final
+  full-DEBS claim. Current phase timers show Q2 processing and output/ranking
+  work still matter. With the reusable ranking/result-array backend, Q2
+  bounded cell tables, Q1 primitive route table, Q1 indexed ranking, Q2
+  latest-empty taxi table, Q2 array-backed ranking index, Q2 taxi-id table,
+  RunBoth output snapshots, Q2 incremental median heap arrays, region-backed
+  latency buffers, and the shared Q2 top-10 cache, Rift region-operation time
+  is a small share of total elapsed time. The latest median-backed 1M
+  checkpoint is the Q2 top-10 cache step: heap at `6192.692 ms`, HPZone at
+  `5697.948 ms`, and Streaming at `5657.424 ms`. GC collection time drops from
+  heap `70.762 ms` to HPZone `36.231 ms` and Streaming `36.288 ms`; peak RSS
+  drops from `304463872` bytes to `116588544` bytes for HPZone and `96239616`
+  bytes for Streaming. An opt-in `SCALANATIVE_GC_ALLOC_STATS=1` attribution
+  run shows the 1M heap path doing `19,924,383` GC allocation calls and
+  `679,841,024` rounded bytes, versus about `14.46M` calls and `455 MB` in
+  Rift modes. This supports the claim that structured-lifetime Scala objects
+  are moving into regions. It does not close the SafeZone/Commix/full-scale or
+  safe API gaps.
 - Phase 7 checked API evidence has started. The targeted Scala-next compiler
   suite passed 29/29 for the current `Scoped`/`Streaming` API slice, including
   for-loop allocation, nested scoped regions, local higher-order consumers, and
@@ -99,10 +105,11 @@ framing:
   profit values, Q2 median scratch, the RunBoth input buffer, ranking/result
   objects, Q2 bounded cell tables, Q1 primitive route-table arrays, and Q2
   latest-empty taxi arrays, Q2 ranking-index arrays, and Q2 taxi-id table
-  entries/bytes in Rift modes. It still does not prove a final
-  application-level win because the dataset is bounded, SafeZone/Commix modes
-  are missing, and remaining Q1 control collections plus safety boundaries are
-  open.
+  entries/bytes, output snapshots, and latency buffers in Rift modes. The
+  latest bounded-sample medians show Rift elapsed wins and much lower RSS, and
+  allocation attribution shows fewer heap allocation calls/bytes. It still does
+  not prove a final application-level win because the dataset is bounded,
+  SafeZone/Commix modes are missing, and safe API boundaries are open.
 - The literature-review target is broader than local baselines: Rift must be
   compared against Broom, StreamFlex, Yak, Stancu-style hybrid static analysis,
   the MLKit typed-region lineage, and Reggio/Verona-style capabilities.
@@ -404,19 +411,39 @@ For DEBS 2015:
   split. Heap mode allocates Q1/Q2 snapshot arrays with `new`; Rift modes
   allocate the same arrays and Q2 `Snapshot` objects in a run-lifetime snapshot
   region. This is a placement checkpoint, not a dominant bottleneck fix.
-- Q2 still leaves latency arrays on the GC heap.
+- RunBoth latency collectors now use shared primitive buffers. Heap uses heap
+  arrays; Rift modes allocate backing arrays in the snapshot region and copy
+  final metrics arrays out before region close.
+- Q2 top-10 extraction now uses a shared conservative cache. Heap and Rift use
+  the same invalidation logic and still return top-k on every event; the cache
+  avoids recomputing the heap frontier when a rank update cannot affect the
+  cached top 10.
+- Opt-in GC allocation attribution now distinguishes collection time from heap
+  allocation-call cost. It records heap allocation calls, rounded heap bytes,
+  and measured time spent in GC allocation entry points when
+  `SCALANATIVE_GC_ALLOC_STATS=1`.
 
-Therefore current DEBS exercises more of the region-heavy application design,
-but it is still not Phase 5 success. The newest 1M 3-run median with
-Q2 incremental medians has HPZone at `5794.879 ms` and Streaming at
-`5948.755 ms` versus heap at `5976.447 ms`. Rift operation time remains about
-`11 ms`; GC time is lower but not dominant: heap is `67.086 ms`, HPZone is
-`59.658 ms`, and Streaming is `55.056 ms`. Rift modes reduce peak RSS from
-`305758208` bytes to about `114 MB` on the bounded sample. Q2 still remains the
-dominant phase, and the evidence is still bounded-sample. The remaining
-pressure is in latency arrays, Q2 rank/output work, SafeZone/Commix/full-scale
-comparisons, and the need for safe region-backed collections/control
-structures that preserve the heap logical program.
+Therefore current DEBS exercises more of the region-heavy application design
+and now has bounded-sample elapsed wins, but it is still not final Phase 5
+success. The newest 1M 3-run median with Q2 top-10 caching has HPZone at
+`5697.948 ms` and Streaming at `5657.424 ms` versus heap at `6192.692 ms`.
+Rift operation time remains small enough to avoid replacing GC as the
+bottleneck: HPZone is `18.824 ms`, Streaming is `21.925 ms`. GC collection time
+is lower but not the whole story: heap is `70.762 ms`, HPZone is `36.231 ms`,
+and Streaming is `36.288 ms`. Rift modes reduce peak RSS from `304463872`
+bytes to `116588544` bytes for HPZone and `96239616` bytes for Streaming on
+the bounded sample. The 1M allocation-attribution run shows that Rift removes
+about `5.46M` GC heap allocation calls and about `224 MB` of rounded heap
+allocation requests, while measured heap allocation-call time drops from
+`582.629 ms` in heap to about `384-386 ms` in Rift modes. That is the correct
+interpretation of the speedup: not only shorter collection pauses, but less
+ordinary heap allocation work because structured-lifetime Scala objects are
+placed in regions.
+
+The evidence is still bounded-sample. The remaining pressure is in Q2
+rank/output work, residual heap allocation/control metadata, SafeZone/Commix
+and full-scale comparisons, and the need for safe region-backed
+collections/control structures that preserve the heap logical program.
 
 For parallel collections:
 
@@ -497,15 +524,21 @@ DEBS status:
 | 1M after Q2 incremental medians, elapsed | 5976.447 ms | 5794.879 ms | 5948.755 ms | 3-run median, bounded sample |
 | 1M after Q2 incremental medians, GC time | 67.086 ms | 59.658 ms | 55.056 ms | 3-run median, bounded sample |
 | 1M after Q2 incremental medians, peak RSS bytes | 305758208 | 113950720 | 113934336 | 3-run median, bounded sample |
+| 1M after Q2 top-10 cache, elapsed | 6192.692 ms | 5697.948 ms | 5657.424 ms | 3-run median, bounded sample |
+| 1M after Q2 top-10 cache, GC time | 70.762 ms | 36.231 ms | 36.288 ms | 3-run median, bounded sample |
+| 1M after Q2 top-10 cache, peak RSS bytes | 304463872 | 116588544 | 96239616 | 3-run median, bounded sample |
+| 1M allocation attribution, GC alloc calls | 19924383 | 14462042 | 14462060 | Single-run diagnostic, instrumentation perturbs elapsed |
+| 1M allocation attribution, GC alloc bytes | 679841024 | 455349920 | 455350304 | Single-run diagnostic, instrumentation perturbs elapsed |
+| 1M allocation attribution, GC alloc time | 582.629 ms | 385.807 ms | 384.031 ms | Single-run diagnostic, instrumentation perturbs elapsed |
 
 Interpretation:
 
 - Rift has credible same-layout runtime wins on GCBench and linked ListOfLists.
 - Improved SafeZone is a serious baseline.
 - Layout changes can dominate allocator changes and must be separated.
-- Current DEBS now moves more application data operations into regions, but the
-  remaining GC and Q2-dominated elapsed time are still too large to prove the
-  final application claim.
+- Current DEBS now moves more application data operations into regions and has
+  bounded-sample elapsed/RSS wins, but SafeZone/Commix, full-month scale, and
+  safe API boundaries are still missing for the final application claim.
 - DEBS changes that merely hand-optimize the heap query implementation are not
   evidence. A change is Phase-5 relevant only if it preserves the same logical
   benchmark for heap and Rift while moving structured-lifetime data into region
@@ -516,8 +549,11 @@ Interpretation:
   table entries/bytes are region-backed in Rift modes. Q1 ranking now uses a
   shared indexed heap whose arrays and ordinary Scala ranking objects are
   region-backed in Rift modes. RunBoth output snapshots are also region-backed
-  in Rift modes. Latency arrays remain heap metadata. Primitive packed keys are
-  used in the shared logic to avoid accidental heap objects in the hot path.
+  in Rift modes. Latency backing arrays are region-backed in Rift modes and
+  final metrics arrays are copied out before region close. Primitive packed
+  keys are used in the shared logic to avoid accidental heap objects in the hot
+  path. Allocation attribution confirms this is reducing heap allocation
+  calls/bytes/time, not merely collection pause time.
 
 ## 11. Formal Model
 
@@ -557,7 +593,9 @@ Claims that are currently supported:
 
 Claims that are not yet supported:
 
-- Rift has a strong DEBS application-level speedup.
+- Rift has a final full-DEBS application-level speedup. It has bounded-sample
+  Q2 top-cache medians plus allocation-attribution evidence, but not
+  SafeZone/Commix/full-scale/safe-API controls.
 - Rift has a capture-checked safe API.
 - Rift beats Broom, StreamFlex, Yak, Stancu et al., or Reggio on their strongest
   axes.
