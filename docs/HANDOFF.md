@@ -9,8 +9,8 @@ Active implementation branch for this update:
 `feature/rift`
 
 Implementation commit at this update:
-`64b927b2299229be587271547e424271e243aeb3`
-(`Add GC allocation attribution counters`)
+`9459091d9e6a9f40187d70d3a63450ce024e9e2d`
+(`Add DEBS phase allocation attribution`)
 
 Status: active research fork. The Phase 5 input-boundary checkpoint, reusable
 ranking backend, Q2 bounded cell-table checkpoint, Q1 primitive route-table
@@ -60,6 +60,13 @@ On the 1M bounded DEBS sample, the attribution run shows heap at
 at `14,462,060` calls, `455,350,304` bytes, and `384.031 ms`. This is
 diagnostic evidence, not a headline throughput run, because attribution times
 every heap allocation and perturbs elapsed timings.
+The next diagnostic checkpoint refines this into C-side phase buckets. A
+Scala-side phase-counter attempt was rejected because reading counters in the
+hot loop allocated and polluted the data. The clean C-side 1M buckets show
+that Rift has nearly eliminated Q1/Q2 process and snapshot heap allocation
+(`3.28M` to `21.5k` Q1 process calls, `2.09M` to `46.9k` Q2 process calls,
+and snapshot heap allocation to zero), while Q1/Q2 output construction still
+accounts for about `14.39M` heap allocation calls in both heap and Rift modes.
 A Scala-next checked Rift-region API slice has been reviewed and
 merged into `feature/rift` at `79953ad8d`; its source branch was
 `codex/safe-region-api-checked-slice` at `e8c3b961d`. The Q2 incremental
@@ -1532,6 +1539,19 @@ Caveats:
   - This explains why elapsed speedup can be larger than the GC collection-time
     delta. The attribution mode itself perturbs elapsed time and should not be
     used as the headline throughput comparison.
+- The phase-level GC allocation-attribution checkpoint keeps the same opt-in
+  diagnostic mode but moves phase bucketing into the C allocation hook:
+  - A Scala-side phase-counter attempt was rejected and should not be used as
+    evidence because reading counters in the hot loop allocated and polluted
+    parse/change buckets.
+  - Clean 1M C-side buckets: heap Q1 process `3,284,649` calls and Q2 process
+    `2,088,994` calls; Rift HPZone/Streaming Q1 process `21,512` calls and Q2
+    process `46,869` calls.
+  - Snapshot heap allocation falls from heap `157,054` calls / `12,147,840`
+    bytes to zero in Rift modes.
+  - Q1/Q2 output remains the dominant heap churn: about `14.39M` allocation
+    calls at 1M in both heap and Rift modes. This points to shared output-row
+    scratch/formatting as the next fair DEBS target.
 
 ### Smoke Tests / Unit Tests / Compile Checks
 
@@ -1772,6 +1792,9 @@ DEBS:
   the memory-management story: at 1M, Rift removes about `5.46M` heap
   allocation calls and about `224 MB` of rounded heap allocation requests, and
   measured GC allocation-call time falls by about `197-199 ms`.
+- The clean phase-attribution run shows where that came from and what remains:
+  Q1/Q2 process and snapshot allocation mostly moved out of the GC heap in Rift
+  modes, while per-row output construction still allocates heavily on the heap.
 - Remaining app control state is still substantial, especially Q2 rank/output
   maintenance and any broader collection API work. The current Rift elapsed/RSS
   win is still bounded-sample evidence, so this is stronger evidence but still
@@ -2058,6 +2081,12 @@ Immediate next step:
    `14,462,060` / `455,350,304` / `384.031 ms`. This should guide the next
    DEBS target, but attribution-mode elapsed timings are not headline
    performance results.
+10. Phase-level GC heap allocation attribution now uses C-side thread-local
+    phase buckets. The clean 1M run shows Q1/Q2 processing and snapshot heap
+    allocation mostly moved into Rift regions, while Q1/Q2 output construction
+    still accounts for about `14.39M` heap allocation calls in both heap and
+    Rift modes. The earlier Scala-side phase-counter attempt polluted the
+    measurement and should not be used.
 
 Next technical milestone:
 
@@ -2067,9 +2096,10 @@ Next technical milestone:
    precise returned-closure support beyond the v1 rejection, and explicit
    HPZone/trusted labels for unsafe cases.
 2. Continue the DEBS "region-heavy" path with measurement first after the
-   literature sequence. The goal should be to reduce GC pressure in the actual
-   dominant data operations, not just window entries.
-3. Start DEBS with a narrow measurement-driven plan:
+   literature sequence. The next fair target is shared output-row
+   construction/formatting scratch because phase attribution shows output is
+   now the dominant remaining heap allocation source.
+3. Start DEBS output work with a narrow measurement-driven plan:
    - Treat the Q2 top-10 cache medians as the latest bounded-sample Phase 5
      checkpoint, not final full-DEBS evidence.
    - Treat the `SCALANATIVE_GC_ALLOC_STATS=1` result as diagnostic evidence
@@ -2077,9 +2107,9 @@ Next technical milestone:
      direct heap allocation calls/bytes/time also drop when structured-lifetime
      objects move into regions. Do not use attribution-mode elapsed timings as
      headline performance numbers.
-   - Use the Q2 attribution counters to decide whether any further rank
-     maintenance or output work is worth doing without changing heap/Rift
-     logical semantics.
+   - Use the phase allocation buckets to keep the work honest: the next change
+     should reduce Q1/Q2 output heap allocation without changing Q1/Q2 results
+     or giving Rift a different algorithm.
    - Treat the RunBoth byte parser and region-backed input buffer as
      implemented. It avoids per-row line strings; the Q2 taxi-id table now
      stores byte-backed IDs with a heap/Rift allocation-placement split.
@@ -2159,6 +2189,11 @@ What is stable enough:
 - Do not treat the packed `Grid.cellKeyOrZero` checkpoint as a Rift-specific
   win. It removes accidental temporary allocation from the shared heap/Rift
   logical program.
+- Do not use the abandoned Scala-side phase-counter outputs under
+  `/tmp/debs2015-runboth-phase-gc-alloc-100000` or
+  `/tmp/debs2015-runboth-phase-gc-alloc-1000000`; those runs are polluted by
+  counter reads that allocated in the hot path. Use the `*-fixed-*` C-side
+  phase-bucket directories instead.
 - Do not present the pipeline surrogate as a tracked-source reproduction of the old pipeline benchmark.
 - Do not treat single-run DEBS ordering as stable. A later current-binary single run showed Rift HPZone slightly faster than heap, while earlier single runs showed Rift slower.
 - Do not ignore macOS sandboxing. `sbt` needs access to `~/.sbt`, and `/usr/bin/time -l` needed escalation to read RSS correctly.
@@ -2187,11 +2222,11 @@ median-backed Q2 incremental-median checkpoint, JVM RunBoth comparison, Stancu
 boundary evidence, checked guard narrowing for trusted-vs-checked region
 allocation, region-backed RunBoth latency buffers, Q2 rank/output
 attribution, the shared Q2 top-10 cache checkpoint with 100k/1M medians, and
-opt-in GC allocation attribution counters. The safest next technical action is
-to use the new allocation counters plus existing phase timers to identify the
-next remaining heap allocation source without changing DEBS semantics, or to
-add safe API accept/reject probes for the region object patterns now used by
-DEBS and the literature harnesses.
+opt-in GC allocation attribution counters plus clean C-side phase buckets. The
+safest next technical action is to reduce shared Q1/Q2 output-row
+scratch/formatting allocation without changing DEBS semantics, or to add safe
+API accept/reject probes for the region object patterns now used by DEBS and
+the literature harnesses.
 
 ## Unsafe Assumptions To Avoid
 

@@ -571,6 +571,38 @@ Interpretation:
   ranking/control operations, and measurement noise; do not collapse them into
   "GC pause time."
 
+### Phase-Level GC Heap Allocation Attribution
+
+Source: `evidence/DEBS_RESULTS.md`.
+
+These rows also come from `SCALANATIVE_GC_ALLOC_STATS=1`, but use C-side
+thread-local phase bucketing inside the GC allocation hook. A rejected
+Scala-side version read allocation counters around every phase and polluted the
+measurement with fake tiny allocations; do not use the abandoned
+`/tmp/debs2015-runboth-phase-gc-alloc-*` directories as evidence. The clean
+directories are:
+
+- `/tmp/debs2015-runboth-phase-gc-alloc-fixed-100000`
+- `/tmp/debs2015-runboth-phase-gc-alloc-fixed-1000000`
+
+1M clean phase attribution:
+
+| Mode | Total GC alloc calls | Total GC alloc bytes | Total GC alloc ms | Q1 process calls / bytes / ms | Q2 process calls / bytes / ms | Q1 output calls / bytes / ms | Q2 output calls / bytes / ms | Snapshot calls / bytes / ms |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| heap | 19926437 | 679904992 | 537.038 | 3284649 / 105197520 / 86.237 | 2088994 / 84904608 / 55.307 | 6452447 / 206957216 / 149.152 | 7940120 / 246770352 / 238.504 | 157054 / 12147840 / 4.149 |
+| Rift HPZone | 14464093 | 455413840 | 350.305 | 21512 / 689088 / 0.460 | 46869 / 1439440 / 0.996 | 6452442 / 206449232 / 161.202 | 7940115 / 246262368 / 187.258 | 0 / 0 / 0.000 |
+| Rift Streaming | 14464112 | 455414144 | 352.571 | 21512 / 689088 / 0.515 | 46869 / 1439440 / 1.064 | 6452442 / 206449232 / 156.849 | 7940115 / 246262368 / 194.056 | 0 / 0 / 0.000 |
+
+Interpretation:
+
+- Rift has mostly removed GC heap allocation from Q1/Q2 processing and snapshot
+  state at this checkpoint.
+- The dominant remaining GC heap churn is output construction: Q1 and Q2 output
+  still account for about `14.39M` heap allocation calls at 1M in both heap and
+  Rift modes.
+- The next fair DEBS step is shared output-row construction/formatting that
+  exposes per-row scratch lifetimes without changing the Q1/Q2 algorithms.
+
 Common Q2 incremental-median diagnostics at 1M:
 
 | Q2 rank fixes | Median sort computes | Median values sorted | Median reads | Median heap adds | Median heap removes | Median rebalances |
