@@ -47,6 +47,18 @@ Result:
 Passed: Total 10, Failed 0, Errors 0, Passed 10
 ```
 
+Runtime smoke command run on 2026-04-26:
+
+```bash
+ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionTest scala.scalanative.memory.RiftRegionCheckedTest"
+```
+
+Result:
+
+```text
+Passed: Total 9, Failed 0, Errors 0, Passed 9
+```
+
 ## 2 — The three hard patterns
 
 ### 2.1 — Pattern (a): region value through a for-loop

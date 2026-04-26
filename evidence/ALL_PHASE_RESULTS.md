@@ -579,6 +579,18 @@ Result on 2026-04-26:
 Passed: Total 10, Failed 0, Errors 0, Passed 10
 ```
 
+Runtime smoke command:
+
+```bash
+ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionTest scala.scalanative.memory.RiftRegionCheckedTest"
+```
+
+Result on 2026-04-26:
+
+```text
+Passed: Total 9, Failed 0, Errors 0, Passed 9
+```
+
 Covered source-level patterns:
 
 | Pattern | Evidence |
