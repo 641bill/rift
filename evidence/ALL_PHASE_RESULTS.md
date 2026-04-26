@@ -462,6 +462,9 @@ bounded table, taxi-id, output-snapshot, and Q2 incremental-median work.
 | 100k latency-buffer validation | heap | 728.465 | 12.690 | 149.200 | 222.304 | 80.431 | 0.000 | 0 | n/a |
 | 100k latency-buffer validation | Rift HPZone | 651.938 | 5.190 | 144.700 | 200.772 | 49.300 | 2.370 | 602457 | n/a |
 | 100k latency-buffer validation | Rift Streaming | 633.442 | 5.318 | 136.581 | 185.881 | 55.154 | 1.874 | 602457 | n/a |
+| 100k Q2 attribution | heap | 643.082 | 11.408 | 136.841 | 200.551 | 47.617 | 0.000 | 0 | 97419264 |
+| 100k Q2 attribution | Rift HPZone | 663.542 | 4.977 | 133.112 | 187.618 | 47.133 | 1.435 | 602457 | 40353792 |
+| 100k Q2 attribution | Rift Streaming | 616.502 | 4.688 | 131.871 | 186.946 | 46.855 | 1.596 | 602457 | 40370176 |
 
 Common Q2 incremental-median diagnostics at 1M:
 
@@ -476,6 +479,12 @@ Interpretation:
 - The latency-buffer validation is a single run after moving RunBoth latency
   backing arrays into the Rift snapshot region. Heap/Rift outputs matched, but
   it should not replace the 3-run median checkpoint above.
+- The Q2 attribution rows are single-run validation rows for new counters and
+  timers. They show Q2 changed-output checks at about `18-19 ms`, Q2 snapshots
+  at about `0.7 ms`, and `4.45M` top-candidate comparisons out of `5.08M`
+  Q2 rank comparisons at 100k. A small binary top-candidate heap was tested
+  during the session and rejected because it increased comparisons to about
+  `5.39M`.
 - The improvement is shared algorithmic cleanup plus allocation placement:
   heap and Rift use the same two-heap median maintenance, while Rift allocates
   the median/control arrays and related ordinary Scala objects in regions.
