@@ -29,6 +29,9 @@ Scala-next capture checking supports the first Rift safe API slice:
 - explicit heap-root handles for region objects that need to refer to heap
   metadata. `RiftRegion.root(value)` returns a `HeapRoot[T]` retained through
   the live region object's GC-visible root list.
+- rejection of direct unrooted heap-object constructor arguments in checked
+  Rift allocation lowering. Ordinary region-to-region object graph references
+  still compile.
 
 Known gaps remain:
 
@@ -36,11 +39,12 @@ Known gaps remain:
   rejects direct function results even if a particular returned function is pure
   and does not capture region-local state. A future compiler/API extension
   should distinguish those cases.
-- The checker slice does not reject every direct unrooted region-to-GC
-  reference. A direct `RiftRegion.alloc(new Entry(heapValue))` shape still
-  compiled in a probe. The v1 safe policy is therefore: use `HeapRoot` for
-  region-to-heap metadata, and treat direct region-to-heap fields as a checker
-  limitation until a stricter allocation rule or compiler extension exists.
+- The new unrooted heap-reference rejection is still a conservative compiler
+  lowering guard, not full alias analysis. It covers direct constructor
+  arguments in checked Rift allocation and allows values known to be allocated
+  in the same region, primitives/null, and `HeapRoot` handles. Broader cases
+  such as selected fields, static immutable referents, and aliased containers
+  still need a more precise policy or compiler extension.
 - The tests validate source-level capture behavior and allocation lowering.
   They do not yet prove safe close/reset mechanically.
 
@@ -53,7 +57,7 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.Rif
 Result:
 
 ```text
-Passed: Total 12, Failed 0, Errors 0, Passed 12
+Passed: Total 13, Failed 0, Errors 0, Passed 13
 ```
 
 Runtime smoke command run on 2026-04-26:
@@ -166,13 +170,14 @@ Current checked compiler probes:
 | `closureCapturingScopedValueCannotEscapeByReturn` | closure returned from scoped region while capturing region-local value | fails | Rejected by the v1 `CanReturnFromRegion` function-result guard. |
 | `heapObjectCannotRetainScopedValue` | heap singleton retains scoped value | fails | Covers GC-to-region retention through heap state. |
 | `rootedHeapValueCanBeStoredInScopedObject` | region object stores explicit `HeapRoot` for heap metadata | compiles | Covers the v1 explicit-root policy for region-to-GC references. |
+| `directHeapValueCannotBeStoredInScopedObject` | region object constructor receives a direct unrooted heap object | fails | Covers the v1 lowering guard for the simplest unsafe region-to-GC ownership shape. |
 | `streamingResetValueCannotEscapeEpoch` | value allocated inside reset epoch used after reset | fails | Covers reset boundary at source level. |
 
 Still missing:
 
-- static rejection for direct unrooted region-to-GC ownership. A probe of that
-  shape compiled before the explicit-root API was added;
 - more tests with expected diagnostic text pinned to capture-specific wording;
+- broader mixed-reference tests for aliases, field selections, static immutable
+  heap values, and container shapes;
 - precise support for pure returned closures that provably do not capture
   region-local state.
 
@@ -207,13 +212,14 @@ Do not yet claim:
 - precise support for returned closures; v1 rejects direct function results
   conservatively;
 - complete mixed GC/region safety. `HeapRoot` gives an explicit safe path for
-  region-to-GC metadata, but direct unrooted fields are not yet statically
-  rejected;
+  region-to-GC metadata, and direct unrooted constructor arguments are now
+  rejected in checked Rift allocation lowering, but aliases, field selections,
+  and static immutable referents are not fully modeled yet;
 - automatic allocation inference;
 - a mechanized proof.
 
-The next Phase 8 design decision is how strict the allocation rule should be
-after adding `HeapRoot`: either reject direct unrooted region-to-GC fields at
-compile time, or require safe benchmark code to use `HeapRoot` and label any
-direct heap fields as trusted. The Phase 4 checksum mismatch is the concrete
-reason this cannot be left implicit.
+The next Phase 8 design decision is how far to extend the allocation rule after
+the first `HeapRoot` and direct-constructor-argument guard: aliases, field
+selections, static immutable referents, and container values need either a
+checked policy or trusted-only labeling. The Phase 4 checksum mismatch is the
+concrete reason this cannot be left implicit.
