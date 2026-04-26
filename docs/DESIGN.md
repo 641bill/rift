@@ -71,7 +71,7 @@ Current reliable evidence:
   are moving into regions. It does not close the SafeZone/Commix/full-scale or
   safe API gaps.
 - Phase 7 checked API evidence has started. The targeted Scala-next compiler
-  suite passed 35/35 for the current `Scoped`/`Streaming` API slice, including
+  suite passed 37/37 for the current `Scoped`/`Streaming` API slice, including
   for-loop allocation, nested scoped regions, local higher-order consumers, and
   direct escape/reset rejection. Returned function values are now rejected
   conservatively because returned closures can hide region-local captures.
@@ -87,7 +87,10 @@ Current reliable evidence:
   array while rejecting direct heap and cross-region stores. The latest probes
   cover reset-epoch record arrays, top-word-style rooted metadata buffers,
   GraphChi-style rooted heap metadata, and rejection of reset-epoch values
-  stored into outer streaming buffers.
+  stored into outer streaming buffers. Mutable linked-list builders are now
+  supported when a local head's observed assignments are `null`, direct Rift
+  allocations, or already-known region values; heap-object assignment drops
+  that provenance and is rejected when later stored into region memory.
 - The raw-array pipeline is a surrogate and must not be presented as a
   replacement for Broom-style or `ZoneParVector` collection evidence.
 
@@ -323,10 +326,10 @@ explicit-owner rather than method-style, for example
 could not prove `buffer.append(value)` had the same region owner. Direct heap
 stores are rejected by Rift lowering, and cross-region stores are rejected by
 the explicit owner-token type. Checked streaming can express subinterval or
-epoch data with region-owned arrays and `ObjectBuffer`; mutable linked lists
-constructed by reassigning a local head are still an ergonomics gap in the
-checked API and should remain trusted-only or be rewritten to checked
-containers for now.
+epoch data with region-owned arrays, `ObjectBuffer`, and local linked-list
+heads whose assignments preserve region-owned provenance. This rule is still a
+local provenance check, not a full dataflow analysis for arbitrary mutable
+containers.
 
 Minimum Phase 6 evidence:
 

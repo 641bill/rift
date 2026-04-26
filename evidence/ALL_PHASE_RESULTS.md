@@ -87,8 +87,8 @@ For performance numbers, use the following rule of thumb:
 | Phase 5: application evidence | In progress | Bounded-sample medians plus diagnostic attribution | DEBS correctness, 100k/1M medians, and opt-in GC heap allocation attribution |
 | Phase 6: literature-aligned methodology evidence | Started | Validated methodology medians with caveats | Broom-style dataflow, StreamFlex-style latency/throughput, Yak-style control/data plus grouped sort, top-word/filter, GraphChi-style subintervals, and runtime promotion proxy, Stancu-style transaction accounting |
 | Phase 6b: Broom / parallel collections API evidence | Open | Provisional surrogate only | amordo comparison and Rift raw-array surrogate |
-| Phase 7: capture-checked safe API | Started | Compiler-probe and runtime-smoke evidence, no benchmark data | 35 targeted checked-API compiler probes, 14 runtime tests, plus Phase 4 safety finding |
-| Phase 8: native GC/region integration hardening | Started | Runtime/API smoke evidence, no benchmark data | Explicit `HeapRoot` path plus direct unrooted heap-constructor/alias/field-selection/array-store rejection and explicit `{region}` constructor-field/array reuse |
+| Phase 7: capture-checked safe API | Started | Compiler-probe and runtime-smoke evidence, no benchmark data | 37 targeted checked-API compiler probes, 15 runtime tests, plus Phase 4 safety finding |
+| Phase 8: native GC/region integration hardening | Started | Runtime/API smoke evidence, no benchmark data | Explicit `HeapRoot` path plus direct unrooted heap-constructor/alias/field-selection/array-store rejection, mutable-head heap-retagging rejection, and explicit `{region}` constructor-field/array reuse |
 | Phase 9: Lean mechanization | Open | No data | None |
 | Phase 10: writing | Not started beyond notes | No data | None |
 
@@ -954,7 +954,7 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.Rif
 Result on 2026-04-26:
 
 ```text
-Passed: Total 29, Failed 0, Errors 0, Passed 29
+Passed: Total 37, Failed 0, Errors 0, Passed 37
 ```
 
 Runtime smoke command:
@@ -966,7 +966,7 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memor
 Result on 2026-04-26:
 
 ```text
-Passed: Total 12, Failed 0, Errors 0, Passed 12
+Passed: Total 15, Failed 0, Errors 0, Passed 15
 ```
 
 Covered source-level patterns:
@@ -1007,6 +1007,8 @@ Covered source-level patterns:
 | GraphChi-style subinterval stores unrooted durable heap vertex metadata | rejected by Rift allocation lowering guard |
 | reset epoch value stored into outer streaming buffer and read after reset | rejected |
 | trusted `RiftRegion.open` allocates linked benchmark objects | passes compiler probe |
+| mutable region linked-list builder with local head | passes compiler probe and native runtime smoke |
+| mutable region head retagged from heap object | rejected by Rift allocation lowering guard |
 | streaming reset value escaping epoch | rejected |
 
 Relevant evidence carried from Phase 4:
@@ -1034,14 +1036,14 @@ Open work:
   code while documenting low-level `RiftRegion.open` as trusted. Plain `T^`
   selected fields, static immutable heap referents, and ergonomic method-style
   containers still need a more complete mixed-reference policy or ergonomics
-  story.
+  story. Mutable local linked-list heads now work when assignments preserve
+  region provenance (`null`, direct Rift allocation, or known region value);
+  assigning a heap object drops that provenance and is rejected when the head is
+  later stored into region memory.
 - The new literature-shaped probes show the safe API can express record arrays,
   top-word-style buffers with rooted metadata, and GraphChi-style rooted
-  durable vertex metadata. A failed runtime-test draft also exposed a current
-  ergonomics gap: mutable linked lists built by reassigning a local head inside
-  checked regions are too conservative under the v1 lowering guard. Use
-  region-owned arrays or `ObjectBuffer` in checked code for now; trusted
-  benchmarks can still use linked lists through `RiftRegion.open`.
+  durable vertex metadata, and GraphChi-style linked update lists with checked
+  local-head provenance.
 - Most diagnostic strings are not pinned to capture-specific text yet.
 - Broader runtime tests and mixed-reference tests remain open.
 

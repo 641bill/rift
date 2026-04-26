@@ -58,6 +58,10 @@ Scala-next capture checking supports the first Rift safe API slice:
   `RiftRegion.ScopedRegion`/`RiftRegion.StreamingRegion` API surface.
   Low-level `RiftRegion.open(...)` remains a trusted benchmark/runtime API; a
   regression test confirms it can still allocate linked benchmark objects.
+- Mutable region-owned linked-list builders now work in checked code when the
+  mutable head is built from `null`, direct Rift allocations, or values already
+  known to be region-owned. Assigning a heap object to that head removes the
+  region-owned provenance and is rejected if later stored into region memory.
 
 Known gaps remain:
 
@@ -75,11 +79,9 @@ Known gaps remain:
   cases such as plain `T^` fields, static immutable referents, and ergonomic
   method-style collection/container abstractions still need a more precise
   policy or compiler extension.
-- Mutable linked-list construction through a reassigned local head inside
-  checked regions is still too conservative in the v1 lowering guard. The
-  supported checked shape for now is explicit region arrays or the
-  explicit-owner `ObjectBuffer`; trusted benchmarks can still use linked lists
-  through `RiftRegion.open`.
+- Mutable linked-list support is provenance-based rather than path-sensitive.
+  It tracks observed local assignments to mutable heads, but it is not a full
+  dataflow or alias analysis for arbitrary mutable containers.
 - The tests validate source-level capture behavior and allocation lowering.
   They do not yet prove safe close/reset mechanically.
 
@@ -92,7 +94,7 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.Rif
 Result:
 
 ```text
-Passed: Total 35, Failed 0, Errors 0, Passed 35
+Passed: Total 37, Failed 0, Errors 0, Passed 37
 ```
 
 Runtime smoke command run on 2026-04-26:
@@ -104,7 +106,7 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memor
 Result:
 
 ```text
-Passed: Total 14, Failed 0, Errors 0, Passed 14
+Passed: Total 15, Failed 0, Errors 0, Passed 15
 ```
 
 ## 2 — The three hard patterns
@@ -228,6 +230,8 @@ Current checked compiler probes:
 | `graphChiSubintervalCannotStoreUnrootedHeapVertex` | GraphChi-style subinterval record stores direct heap vertex metadata | fails | Confirms durable heap metadata still needs `HeapRoot`. |
 | `streamingResetValueCannotBeStoredInOuterBuffer` | reset epoch value is stored into an outer streaming buffer and read after reset | fails | Important epoch-boundary regression probe. |
 | `trustedOpenAllocationAllowsBenchmarkLinkedObjects` | trusted `RiftRegion.open(RiftRegion.HPZone)` allocates linked objects | compiles | Documents the intended split: `open` is trusted/unsafe; `scoped` and `streaming` are checked. |
+| `checkedMutableLinkedListBuilderCompiles` | mutable scoped linked-list head is initialized from `null` and updated only from Rift allocations | compiles | Covers ordinary linked region object builders without falling back to arrays. |
+| `mutableRegionHeadCannotBeRetaggedFromHeapObject` | mutable region head is assigned a heap object and then stored into a region object | fails | Confirms heap assignment drops region-owned provenance. |
 | `streamingResetValueCannotEscapeEpoch` | value allocated inside reset epoch used after reset | fails | Covers reset boundary at source level. |
 
 Still missing:
@@ -235,8 +239,7 @@ Still missing:
 - more tests with expected diagnostic text pinned to capture-specific wording;
 - broader mixed-reference tests for plain `T^` selected fields, static
   immutable heap values, and higher-level collection/container abstractions;
-- a better checked story for mutable linked structures built through a
-  reassigned local head;
+- richer mutable-shape tests beyond the local linked-list head case;
 - precise support for pure returned closures that provably do not capture
   region-local state.
 
@@ -264,7 +267,10 @@ Claim only the checked slice that is tested:
 
 - scoped ordinary object graphs can be allocated and used without escape;
 - streaming reset boundaries can reject direct epoch-value escape;
-- local higher-order consumers are expressible.
+- local higher-order consumers are expressible;
+- local mutable linked-list heads are supported when assignments are `null`,
+  Rift allocations, or known region values, and heap assignments drop the
+  tracked region provenance.
 
 Do not yet claim:
 
@@ -278,9 +284,8 @@ Do not yet claim:
   are not fully modeled yet. Region-owned arrays are supported only with
   explicit element captures such as `Array[Leaf^{region}]^{region}`.
   `ObjectBuffer` is supported only through the explicit owner-token API.
-- mutable linked-list construction inside checked regions remains an ergonomics
-  gap; use region arrays or `ObjectBuffer` in checked code until provenance for
-  reassigned local heads is modeled.
+- full dataflow analysis for arbitrary mutable structures; the current mutable
+  linked-list support is a local provenance rule only.
 - automatic allocation inference;
 - a mechanized proof.
 
