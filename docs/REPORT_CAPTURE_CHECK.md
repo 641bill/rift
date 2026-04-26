@@ -43,9 +43,11 @@ Scala-next capture checking supports the first Rift safe API slice:
   values are allowed.
 - `RiftRegion.ObjectBuffer` is the first checked higher-level container
   primitive. It region-allocates the backing object array and keeps only heap
-  control metadata. Operations use an explicit owner-token API, for example
-  `RiftRegion.append(region, buffer, value)`, so the current checker can reject
-  direct heap stores and inner-region values stored into an outer buffer.
+  control metadata. Operations use an owner-token API, either
+  `RiftRegion.append(region, buffer, value)` or the lighter
+  `region.append(buffer, value)` extension syntax, so the current checker can
+  reject direct heap stores and inner-region values stored into an outer
+  buffer.
 - The first literature-shaped safe API probes now compile: streaming reset
   epochs can process region-owned arrays of ordinary record objects, a
   top-word-style `ObjectBuffer` can store records that refer to heap metadata
@@ -75,9 +77,9 @@ Known gaps remain:
   in the same region, simple local aliases of those values, primitives/null,
   `HeapRoot` handles, and stable primary-constructor field selections whose
   source type is explicitly region-captured. It also checks stores into known
-  region arrays and the current explicit-owner `ObjectBuffer` API. Broader
-  cases such as plain `T^` fields, static immutable referents, and ergonomic
-  method-style collection/container abstractions still need a more precise
+  region arrays and the current owner-token `ObjectBuffer` API. Broader
+  cases such as plain `T^` fields, static immutable referents, and plain
+  receiver-style collection/container abstractions still need a more precise
   policy or compiler extension.
 - Mutable linked-list support is provenance-based rather than path-sensitive.
   It tracks observed local assignments to mutable heads, but it is not a full
@@ -94,7 +96,7 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.Rif
 Result:
 
 ```text
-Passed: Total 37, Failed 0, Errors 0, Passed 37
+Passed: Total 39, Failed 0, Errors 0, Passed 39
 ```
 
 Runtime smoke command run on 2026-04-26:
@@ -106,7 +108,7 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memor
 Result:
 
 ```text
-Passed: Total 15, Failed 0, Errors 0, Passed 15
+Passed: Total 16, Failed 0, Errors 0, Passed 16
 ```
 
 ## 2 — The three hard patterns
@@ -219,9 +221,11 @@ Current checked compiler probes:
 | `regionOwnedArrayCannotStoreHeapObject` | region-owned array stores an unrooted heap object | fails | Covers the new array-store guard. |
 | `heapArrayCannotBeStoredInScopedObject` | region object stores a heap array | fails | Prevents heap containers from becoming region-owned implicitly. |
 | `regionOwnedArrayCanStoreHeapRoot` | region-owned array stores explicit `HeapRoot` handles | compiles | Covers the safe heap-metadata container path. |
-| `objectBufferCanStoreRegionObjects` | explicit-owner `ObjectBuffer` stores region objects | compiles | First checked higher-level container primitive. |
-| `objectBufferCannotStoreHeapObject` | explicit-owner `ObjectBuffer` stores direct heap object | fails | Uses the Rift append lowering guard; heap metadata must use `HeapRoot`. |
-| `objectBufferCanStoreHeapRoot` | explicit-owner `ObjectBuffer` stores `HeapRoot` handles | compiles | Covers heap metadata through the checked buffer API. |
+| `objectBufferCanStoreRegionObjects` | companion owner-token `ObjectBuffer` append stores region objects | compiles | First checked higher-level container primitive. |
+| `objectBufferCannotStoreHeapObject` | companion owner-token `ObjectBuffer` append stores direct heap object | fails | Uses the Rift append lowering guard; heap metadata must use `HeapRoot`. |
+| `objectBufferOwnerMethodsCanStoreRegionObjects` | owner-token extension methods store/read region objects with `region.append/get/length` | compiles | Ergonomic method syntax over the same checked owner-token rule. |
+| `objectBufferOwnerMethodsCannotStoreHeapObject` | owner-token extension append stores direct heap object | fails | Confirms extension syntax is guarded like the companion function. |
+| `objectBufferCanStoreHeapRoot` | companion owner-token `ObjectBuffer` append stores `HeapRoot` handles | compiles | Covers heap metadata through the checked buffer API. |
 | `objectBufferCannotStoreInnerScopedValue` | outer buffer stores value allocated in inner region | fails | Explicit owner token lets capture checking reject cross-region storage. |
 | `objectBufferCannotEscapeScopedRegion` | checked buffer escapes owning region | fails | Covers the heap-control/region-data boundary. |
 | `streamingResetRegionArrayEpochCompiles` | reset epoch processes a region-owned array of ordinary records | compiles | Models sort/dataflow epoch records through the supported checked array shape. |
@@ -283,7 +287,8 @@ Do not yet claim:
   selected fields, static immutable referents, and general collection aliases
   are not fully modeled yet. Region-owned arrays are supported only with
   explicit element captures such as `Array[Leaf^{region}]^{region}`.
-  `ObjectBuffer` is supported only through the explicit owner-token API.
+  `ObjectBuffer` is supported only through owner-token APIs; both companion
+  functions and `region.append/get/length` extension methods are covered.
 - full dataflow analysis for arbitrary mutable structures; the current mutable
   linked-list support is a local provenance rule only.
 - automatic allocation inference;

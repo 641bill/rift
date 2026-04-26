@@ -87,8 +87,8 @@ For performance numbers, use the following rule of thumb:
 | Phase 5: application evidence | In progress | Bounded-sample medians plus diagnostic attribution | DEBS correctness, 100k/1M medians, and opt-in GC heap allocation attribution |
 | Phase 6: literature-aligned methodology evidence | Started | Validated methodology medians with caveats | Broom-style dataflow, StreamFlex-style latency/throughput, Yak-style control/data plus grouped sort, top-word/filter, GraphChi-style subintervals, and runtime promotion proxy, Stancu-style transaction accounting |
 | Phase 6b: Broom / parallel collections API evidence | Open | Provisional surrogate only | amordo comparison and Rift raw-array surrogate |
-| Phase 7: capture-checked safe API | Started | Compiler-probe and runtime-smoke evidence, no benchmark data | 37 targeted checked-API compiler probes, 15 runtime tests, plus Phase 4 safety finding |
-| Phase 8: native GC/region integration hardening | Started | Runtime/API smoke evidence, no benchmark data | Explicit `HeapRoot` path plus direct unrooted heap-constructor/alias/field-selection/array-store rejection, mutable-head heap-retagging rejection, and explicit `{region}` constructor-field/array reuse |
+| Phase 7: capture-checked safe API | Started | Compiler-probe and runtime-smoke evidence, no benchmark data | 39 targeted checked-API compiler probes, 16 runtime tests, plus Phase 4 safety finding |
+| Phase 8: native GC/region integration hardening | Started | Runtime/API smoke evidence, no benchmark data | Explicit `HeapRoot` path plus direct unrooted heap-constructor/alias/field-selection/array-store rejection, owner-token ObjectBuffer heap-store rejection, mutable-head heap-retagging rejection, and explicit `{region}` constructor-field/array reuse |
 | Phase 9: Lean mechanization | Open | No data | None |
 | Phase 10: writing | Not started beyond notes | No data | None |
 
@@ -954,7 +954,7 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.Rif
 Result on 2026-04-26:
 
 ```text
-Passed: Total 37, Failed 0, Errors 0, Passed 37
+Passed: Total 39, Failed 0, Errors 0, Passed 39
 ```
 
 Runtime smoke command:
@@ -966,7 +966,7 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memor
 Result on 2026-04-26:
 
 ```text
-Passed: Total 15, Failed 0, Errors 0, Passed 15
+Passed: Total 16, Failed 0, Errors 0, Passed 16
 ```
 
 Covered source-level patterns:
@@ -996,9 +996,11 @@ Covered source-level patterns:
 | region-owned array stores unrooted heap object | rejected by Rift array-store guard |
 | heap array stored through checked Rift allocation constructor | rejected |
 | region-owned array stores explicit `HeapRoot` handle | passes compiler probe and native runtime smoke |
-| explicit-owner `ObjectBuffer` stores region objects | passes compiler probe and native runtime smoke |
-| explicit-owner `ObjectBuffer` stores direct heap object | rejected by Rift append lowering guard |
-| explicit-owner `ObjectBuffer` stores `HeapRoot` handle | passes compiler probe and native runtime smoke |
+| companion owner-token `ObjectBuffer` stores region objects | passes compiler probe and native runtime smoke |
+| companion owner-token `ObjectBuffer` stores direct heap object | rejected by Rift append lowering guard |
+| companion owner-token `ObjectBuffer` stores `HeapRoot` handle | passes compiler probe and native runtime smoke |
+| owner-token `ObjectBuffer` methods store/read region objects | passes compiler probe and native runtime smoke |
+| owner-token `ObjectBuffer` method append stores direct heap object | rejected by Rift append lowering guard |
 | outer `ObjectBuffer` stores inner-region value | rejected by explicit owner-token type |
 | checked `ObjectBuffer` escapes owning region | rejected |
 | streaming reset epoch processes region-owned array of ordinary records | passes compiler probe and native runtime smoke |
@@ -1029,14 +1031,15 @@ Open work:
   fields explicitly captured by `{region}` are accepted. Region-owned arrays
   are accepted when reference elements are explicitly captured, and stores into
   known region arrays reject unrooted heap objects. `RiftRegion.ObjectBuffer`
-  is now a checked but explicit-owner first container primitive: it keeps heap
-  control metadata, region-allocates the backing object array, and requires
-  calls such as `RiftRegion.append(region, buffer, value)`. The latest guard
-  narrowing keeps this behavior for checked `ScopedRegion`/`StreamingRegion`
-  code while documenting low-level `RiftRegion.open` as trusted. Plain `T^`
-  selected fields, static immutable heap referents, and ergonomic method-style
-  containers still need a more complete mixed-reference policy or ergonomics
-  story. Mutable local linked-list heads now work when assignments preserve
+  is now a checked owner-token first container primitive: it keeps heap control
+  metadata, region-allocates the backing object array, and supports calls such
+  as `RiftRegion.append(region, buffer, value)` and
+  `region.append(buffer, value)`. The latest guard narrowing keeps this
+  behavior for checked `ScopedRegion`/`StreamingRegion` code while documenting
+  low-level `RiftRegion.open` as trusted. Plain `T^` selected fields, static
+  immutable heap referents, and plain receiver-style containers still need a
+  more complete mixed-reference policy or ergonomics story. Mutable local
+  linked-list heads now work when assignments preserve
   region provenance (`null`, direct Rift allocation, or known region value);
   assigning a heap object drops that provenance and is rejected when the head is
   later stored into region memory.
