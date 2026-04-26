@@ -525,6 +525,12 @@ bounded table, taxi-id, output-snapshot, and Q2 incremental-median work.
 | 1M Q2 top-10 cache | heap | 5367.670 | 68.932 | 1429.207 | 1321.860 | 372.546 | 0.000 | 0 | 305627136 |
 | 1M Q2 top-10 cache | Rift HPZone | 5149.720 | 35.475 | 1357.260 | 1210.340 | 371.787 | 11.813 | 5494563 | 116604928 |
 | 1M Q2 top-10 cache | Rift Streaming | 5191.038 | 35.887 | 1369.725 | 1220.904 | 370.809 | 12.376 | 5494563 | 116588544 |
+| 100k Q2 top-10 cache medians | heap | 607.176 | 9.254 | 153.854 | 142.477 | 49.822 | 0.000 | 0 | 102350848 |
+| 100k Q2 top-10 cache medians | Rift HPZone | 571.465 | 5.348 | 141.815 | 125.495 | 49.499 | 2.677 | 602458 | 41500672 |
+| 100k Q2 top-10 cache medians | Rift Streaming | 590.900 | 5.093 | 146.598 | 132.482 | 50.538 | 2.620 | 602458 | 41500672 |
+| 1M Q2 top-10 cache medians | heap | 6192.692 | 70.762 | 1625.747 | 1608.462 | 444.281 | 0.000 | 0 | 304463872 |
+| 1M Q2 top-10 cache medians | Rift HPZone | 5697.948 | 36.231 | 1528.989 | 1427.353 | 388.500 | 18.824 | 5494563 | 116588544 |
+| 1M Q2 top-10 cache medians | Rift Streaming | 5657.424 | 36.288 | 1521.009 | 1409.247 | 400.798 | 21.925 | 5494563 | 96239616 |
 
 Common Q2 incremental-median diagnostics at 1M:
 
@@ -545,12 +551,15 @@ Interpretation:
   Q2 rank comparisons at 100k. A small binary top-candidate heap was tested
   during the session and rejected because it increased comparisons to about
   `5.39M`.
-- The Q2 top-10 cache rows are single-run validation rows after caching the
-  top-k extraction. The cache keeps the same heap/Rift logical algorithm but
-  avoids recomputing the heap frontier when a rank update cannot affect the
+- The Q2 top-10 cache rows include the initial single-run validation and the
+  follow-up 3-run medians. The cache keeps the same heap/Rift logical algorithm
+  but avoids recomputing the heap frontier when a rank update cannot affect the
   current top 10. At 100k it reduced top-candidate comparisons from `4.45M` to
   `144949`; at 1M it recomputed top 10 only `29983` times out of `1000000`
-  logical calls. Treat the elapsed numbers as directional until median reruns.
+  logical calls. The 1M medians are heap `6192.692 ms`, HPZone `5697.948 ms`,
+  and Streaming `5657.424 ms`; GC drops from `70.762 ms` to about `36 ms`, and
+  Rift RSS is much lower. Keep this as bounded-sample evidence, not final full
+  DEBS proof.
 - The improvement is shared algorithmic cleanup plus allocation placement:
   heap and Rift use the same two-heap median maintenance, while Rift allocates
   the median/control arrays and related ordinary Scala objects in regions.

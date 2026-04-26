@@ -9,8 +9,8 @@ Active implementation branch for this update:
 `feature/rift`
 
 Implementation commit at this update:
-`1663befb3060232a157019a01a71c97f8a906bc8`
-(`Cache Q2 top ten extraction`)
+`2593b65745fab2212305fb7ce93108860ea003ca`
+(`Record Q2 top cache medians`)
 
 Status: active research fork. The Phase 5 input-boundary checkpoint, reusable
 ranking backend, Q2 bounded cell-table checkpoint, Q1 primitive route-table
@@ -48,7 +48,8 @@ phase timers: rank-heap comparisons/swaps, top-candidate comparisons,
 changed-output checks, and Q1/Q2 change/snapshot timings.
 The newest Phase 5 checkpoint adds a shared Q2 top-10 cache so the heap/Rift
 logical query still returns top-k on every event but only recomputes the heap
-frontier when a rank update can affect the cached top 10.
+frontier when a rank update can affect the cached top 10. The cache checkpoint
+now has 100k and 1M 3-run medians recorded.
 A Scala-next checked Rift-region API slice has been reviewed and
 merged into `feature/rift` at `79953ad8d`; its source branch was
 `codex/safe-region-api-checked-slice` at `e8c3b961d`. The Q2 incremental
@@ -67,7 +68,8 @@ guards were committed at `8800e0613`; the explicit-owner checked
 `ObjectBuffer` API was committed at `171431848`; checked guard narrowing plus
 RunBoth region-backed latency buffers were committed at `a7632c1be`; Q2
 rank/output attribution was committed at `84f3694a0`; Q2 cached top-10
-extraction was committed at `1663befb3`. The
+extraction was committed at `1663befb3`; Q2 top-cache medians were recorded at
+`2593b6574`. The
 checked API is not a
 complete compiler capture-checking implementation. The fork is ahead of
 `origin/feature/rift` unless pushed.
@@ -121,7 +123,7 @@ Use this worktree for this active Rift session:
 - `/Users/siyaoliu/rift/scala-native-rift`
 - branch: `feature/rift`
 - current implementation commit at this handoff update:
-  `1663befb3060232a157019a01a71c97f8a906bc8`
+  `2593b65745fab2212305fb7ce93108860ea003ca`
 - `origin`: `git@github.com:641bill/scala-native.git`
 - `upstream`: `https://github.com/scala-native/scala-native.git`
 
@@ -1734,7 +1736,7 @@ Roadmap source: `/Users/siyaoliu/rift/Claude_output/ROADMAP.md`
 | Phase 2 in-tree runtime | Partially done | In-tree `RiftRuntime.c/h`, Scala facade, compiler lowering, `RiftRegionTest`, benchmark use. | Make API/header complete, run broader tests, decide stats ABI, clean up untracked state. |
 | Phase 3 runtime-only benchmarks | Done enough for current story | GCBench and ListOfLists runtime medians recorded; pipeline surrogate recorded. | Commix is not included. Pipeline provenance remains surrogate. |
 | Phase 4 topology/layout | Done enough to move on | `PHASE4_LAYOUT.md`, `PHASE4_TOPOLOGY.md`, `PHASE4_EXIT.md`. | Chunked layout still not a Rift win vs improved SafeZone. Mixed GC/region safety story needs Phase 6 tests. |
-| Phase 5 streaming operators and DEBS | In progress | DEBS Q1/Q2 run simultaneously on real data; outputs match; instrumentation added; Q1 and Q2 window entries have shared heap/Rift backends; Q2 active profit values live in window entries; Q2 ranking uses primitive cell keys internally; RunBoth input bytes use a heap/Rift allocation-placement split; the reusable ranking backend region-allocates Q1/Q2 ranking objects and top-k result arrays; Q2 bounded per-cell tables, Q1 route-table arrays, Q1 ranking-index arrays, Q2 latest-empty taxi arrays, Q2 ranking-index arrays, Q2 taxi-id table entries/bytes, RunBoth output snapshots, Q2 incremental median heap arrays, and RunBoth latency buffers are region-backed in Rift modes. New `diag_*` counters identify remaining heap/control paths, and the shared `Grid.cellKeyOrZero` hot path removes temporary `Some(Cell)`/`Cell` allocation from both heap and Rift. Q2 rank/output attribution reports change-check time, snapshot time, rank comparisons/swaps, top-candidate comparisons, and changed-output element checks. Q2 top-10 extraction is now cached with conservative invalidation. | Current 1M Q2 incremental-median medians are heap `5976.447 ms`, HPZone `5794.879 ms`, and Streaming `5948.755 ms`; heap GC is `67.086 ms`, HPZone GC is `59.658 ms`, Streaming GC is `55.056 ms`; heap RSS is `305758208`, Rift RSS about `114 MB`. A later 1M single-run validation after Q2 top-10 caching matched heap/Rift outputs and measured heap `5367.670 ms`, HPZone `5149.720 ms`, Streaming `5191.038 ms`; top-10 recomputed `29983` times out of `1000000` logical calls. Need median reruns, Commix, SafeZone comparison, full-month input, remaining control/collection work, and safe API boundaries. |
+| Phase 5 streaming operators and DEBS | In progress | DEBS Q1/Q2 run simultaneously on real data; outputs match; instrumentation added; Q1 and Q2 window entries have shared heap/Rift backends; Q2 active profit values live in window entries; Q2 ranking uses primitive cell keys internally; RunBoth input bytes use a heap/Rift allocation-placement split; the reusable ranking backend region-allocates Q1/Q2 ranking objects and top-k result arrays; Q2 bounded per-cell tables, Q1 route-table arrays, Q1 ranking-index arrays, Q2 latest-empty taxi arrays, Q2 ranking-index arrays, Q2 taxi-id table entries/bytes, RunBoth output snapshots, Q2 incremental median heap arrays, and RunBoth latency buffers are region-backed in Rift modes. New `diag_*` counters identify remaining heap/control paths, and the shared `Grid.cellKeyOrZero` hot path removes temporary `Some(Cell)`/`Cell` allocation from both heap and Rift. Q2 rank/output attribution reports change-check time, snapshot time, rank comparisons/swaps, top-candidate comparisons, and changed-output element checks. Q2 top-10 extraction is now cached with conservative invalidation. | Current 1M Q2 top-cache medians are heap `6192.692 ms`, HPZone `5697.948 ms`, and Streaming `5657.424 ms`; heap GC is `70.762 ms`, HPZone GC is `36.231 ms`, Streaming GC is `36.288 ms`; heap RSS is `304463872`, HPZone RSS is `116588544`, and Streaming RSS is `96239616`. Top 10 recomputes `29983` times out of `1000000` logical calls. Need Commix, SafeZone comparison, full-month input, remaining control/collection work, and safe API boundaries. |
 | Phase 6 literature-benchmark evidence | Started | `docs/LITERATURE_BENCHMARK_CONTRACT.md` extracts the paper comparison contract. `DataflowRegionMatrix` now runs Broom-style SELECT/AGGREGATE/JOIN methodology workloads with ordinary Scala objects in heap, current SafeZone, improved SafeZone, Rift HPZone, and Rift Streaming modes. Native-only local medians include peak RSS, and a Broom-scale single run is recorded. `StreamFlexRegionMatrix` now runs stream throughput/latency methodology workloads with deadline-miss and latency-tail metrics. `YakRegionMatrix` now runs word-count and graph-step control/data split workloads. `StancuRegionMatrix` now runs transaction/accounting probes with batched transaction regions. The 2026-04-26 Stancu boundary sweep records per-transaction, 64-transaction, and 512-transaction region boundaries. | Keep improved SafeZone in all claims, and do not claim exact Naiad/Broom, exact StreamFlex/Ovm, exact Yak, or exact Stancu reproduction. The current sequence gives strong Broom/Dataflow HPZone evidence, strong StreamFlex-style throughput/latency evidence, Yak-style Rift-vs-heap and near-improved-SafeZone evidence, and Stancu-style Rift-vs-heap evidence after batching/fixed counters. The Stancu weak result is now specifically attributed to too-fine region boundaries. Next choices are safe API rejection probes or returning to DEBS with the literature findings in mind. Build a fair Rift collection/operator API before redoing parallel-collections claims. |
 | Phase 7 capture checking | Started | `RiftRegion.scoped`/`streaming` safe API slice exists. Targeted Scala-next compiler tests now pass for scoped object graphs, for-loop allocation, nested scoped regions, local higher-order consumers, non-escaping closures, return escape rejection, heap retention rejection, nested-region leak rejection, streaming reset escape rejection, conservative returned-function rejection, explicit `HeapRoot` metadata handles, direct unrooted heap-object constructor-argument rejection, region-local alias acceptance, heap-alias rejection, heap-field-selection rejection, explicit `{region}` constructor-field reuse, plain `T^` field-reuse rejection, region-owned array checks, the explicit-owner `ObjectBuffer` checked container, and the explicit split that `RiftRegion.open` is trusted while `ScopedRegion`/`StreamingRegion` allocations are checked. `docs/REPORT_CAPTURE_CHECK.md` records the current checker behavior. | More pinned diagnostics, broader runtime coverage, static-heap policy, richer collections, and a better ergonomics story for field/container provenance. |
 | Phase 8 native GC/region hardening | Started | `HeapRoot` handles give a GC-visible explicit-root path for heap metadata stored from region objects; direct unrooted heap-object constructor arguments, heap aliases, heap field selections, unsafe region-array stores, and unsafe `ObjectBuffer` heap stores are rejected in checked Rift lowering while region-to-region object graphs, simple region-local aliases, stable constructor fields explicitly captured by `{region}`, explicitly captured region arrays, and explicit-owner object buffers still compile. | Extend or deliberately limit the mixed-reference rule for static immutable heap referents and richer containers; decide whether plain `T^` field reuse and method-style container operations need a compiler extension or explicit owner-token APIs. |
@@ -1951,13 +1953,15 @@ Immediate next step:
 8. Q2 rank/output attribution is implemented, and the first follow-up fix is
    committed as a shared Q2 top-10 cache. The cache preserves the same heap/Rift
    logical query algorithm but avoids recomputing the top-10 frontier when a
-   rank update cannot affect the cached result. On the 100k single-run
-   validation, top-candidate comparisons fell from `4.45M` to `144949`; on the
-   1M single-run validation, top 10 recomputed `29983` times out of
-   `1000000` calls. The 1M single run measured heap `5367.670 ms`, HPZone
-   `5149.720 ms`, and Streaming `5191.038 ms`. These are directional until
-   median reruns. A small binary heap for top candidates was tested and
-   rejected before commit because it increased comparisons to about `5.39M`.
+   rank update cannot affect the cached result. On the 100k validation,
+   top-candidate comparisons fell from `4.45M` to `144949`; on the 1M
+   validation, top 10 recomputed `29983` times out of `1000000` calls. The
+   3-run medians are now recorded: at 1M, heap is `6192.692 ms`, HPZone is
+   `5697.948 ms`, and Streaming is `5657.424 ms`; GC drops from `70.762 ms`
+   to about `36 ms`, and RSS drops from `304463872` bytes to `116588544`
+   bytes for HPZone and `96239616` bytes for Streaming. A small binary heap
+   for top candidates was tested and rejected before commit because it
+   increased comparisons to about `5.39M`.
 
 Next technical milestone:
 
@@ -1970,8 +1974,8 @@ Next technical milestone:
    literature sequence. The goal should be to reduce GC pressure in the actual
    dominant data operations, not just window entries.
 3. Start DEBS with a narrow measurement-driven plan:
-   - Rerun the Q2 top-10 cache checkpoint as 100k and 1M instrumented medians
-     before treating the single-run improvement as a headline result.
+   - Treat the Q2 top-10 cache medians as the latest bounded-sample Phase 5
+     checkpoint, not final full-DEBS evidence.
    - Use the Q2 attribution counters to decide whether any further rank
      maintenance or output work is worth doing without changing heap/Rift
      logical semantics.
@@ -2019,7 +2023,6 @@ What should not be done yet:
 What needs remeasurement:
 
 - DEBS instrumented medians for heap, Rift HPZone, Rift Streaming.
-- DEBS medians for the current Q2 top-10 cache checkpoint.
 - DEBS after any further Q1/Q2 ranking/median/output region-heavy changes.
 - Commix comparisons where supported.
 - SafeZone or improved SafeZone DEBS modes if meaningful.
@@ -2077,11 +2080,10 @@ The implementation branch now contains the merged checked API slice,
 median-backed Q2 incremental-median checkpoint, JVM RunBoth comparison, Stancu
 boundary evidence, checked guard narrowing for trusted-vs-checked region
 allocation, region-backed RunBoth latency buffers, Q2 rank/output
-attribution, and the shared Q2 top-10 cache checkpoint. The safest next
-technical action is to rerun 100k and 1M instrumented medians for the top-10
-cache checkpoint, then either continue Q2 rank/output attribution work or
-switch to safe API accept/reject probes for the region object patterns now used
-by the literature harnesses.
+attribution, and the shared Q2 top-10 cache checkpoint with 100k/1M medians.
+The safest next technical action is either more Q2 rank/output attribution work
+or safe API accept/reject probes for the region object patterns now used by the
+literature harnesses.
 
 ## Unsafe Assumptions To Avoid
 
@@ -2095,8 +2097,9 @@ by the literature harnesses.
 - "Layout wins prove allocator wins." They are separate effects.
 - "The current bounded-sample medians prove a final DEBS win." They do not;
   SafeZone/Commix/full-month controls and safe API boundaries are still missing.
-- "The Q2 top-10 cache single runs are final evidence." They are not; they are
-  validated correctness/direction checks and need median reruns.
+- "The Q2 top-10 cache medians are final DEBS evidence." They are not; they are
+  bounded-sample evidence and still lack SafeZone/Commix/full-month controls
+  and safe API boundaries.
 - "A binary heap for Q2 top-candidate extraction is the obvious fix." It was
   tested during the Q2 attribution step and increased comparisons on the 100k
   sample.
