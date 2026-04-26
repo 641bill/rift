@@ -36,8 +36,9 @@ objects. The first checked collection primitive, `RiftRegion.ObjectBuffer`,
 region-owns its backing object array while keeping heap control metadata; its
 v1 operations take the owner region token explicitly and reject direct heap
 stores or inner-region values stored into an outer buffer in compiler probes.
-The StreamFlex-style throughput/latency, Yak-style epoch/control-data including
-runtime/promotion proxies, and Stancu-style transaction/accounting methodology
+The StreamFlex-style throughput/latency, Yak-style epoch/control/data including
+grouped sort and runtime/promotion proxies, and Stancu-style
+transaction/accounting methodology
 harnesses are also committed locally. The latest checkpoint narrows checked
 allocation guards to the
 `ScopedRegion`/`StreamingRegion` safe API surface, leaves low-level
@@ -565,8 +566,8 @@ Validation:
   It is methodology reproduction evidence, not exact StreamFlex/Ovm artifact
   reproduction.
 - The Yak matrix compiles and has smoke, default 3-run medians,
-  epoch-pressure 3-run medians, runtime-proxy medians, and promotion/escape
-  proxy medians in `sandbox/YAK_REGION_MATRIX.md`. It is methodology
+  epoch-pressure 3-run medians, grouped-sort medians, runtime-proxy medians,
+  and promotion/escape proxy medians in `sandbox/YAK_REGION_MATRIX.md`. It is methodology
   reproduction evidence, not exact Yak/Hyracks/Hadoop/GraphChi artifact
   reproduction.
 - The Stancu matrix compiles and has smoke, default 3-run medians, and one
@@ -1203,6 +1204,16 @@ YAK_OUTPUT_DIR=/tmp/yak-promotion-pressure \
   zsh sandbox/run_yak_region_instrumented_matrix.sh
 ```
 
+Grouped-sort pressure command:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+YAK_BUILD=0 YAK_WORKLOAD=sort YAK_BENCHMARK_RUNS=3 YAK_WARMUPS=1 \
+YAK_EPOCHS=10 YAK_SORT_RECORDS_PER_EPOCH=100000 \
+YAK_OUTPUT_DIR=/tmp/yak-sort-pressure \
+  zsh sandbox/run_yak_region_instrumented_matrix.sh
+```
+
 Default local median configuration:
 
 - `YAK_EPOCHS=20`
@@ -1254,6 +1265,31 @@ Interpretation:
   SafeZone claim.
 - Rift operation time is small: below `0.5 ms` even for ten million region
   objects per workload.
+
+Grouped-sort local median configuration:
+
+- `YAK_EPOCHS=10`
+- `YAK_SORT_RECORDS_PER_EPOCH=100000`
+- runs `3`, warmups `1`
+
+| Mode | Median elapsed ms | Median GC ms | Median Rift op ms | Rift objects | Peak RSS bytes |
+|---|---:|---:|---:|---:|---:|
+| heap | 237.354 | 3.463 | 0.000 | 0 | 22446080 |
+| current SafeZone | 234.644 | 0.000 | 0.000 | 0 | 24674304 |
+| improved SafeZone | 236.047 | 0.000 | 0.000 | 0 | 24674304 |
+| Rift HPZone | 227.393 | 0.283 | 0.047 | 1000000 | 24002560 |
+| Rift Streaming | 232.658 | 0.307 | 0.030 | 1000000 | 24002560 |
+| Yak-runtime proxy | 242.517 | 0.306 | 0.032 | 1000000 | 24002560 |
+
+Interpretation:
+
+- This adds an external-sort-shaped Yak methodology workload: durable group
+  totals stay on heap while ordinary per-epoch `SortRecord` objects move into
+  heap/SafeZone/Rift according to the selected memory policy.
+- Sorting dominates elapsed time, so heap GC is only `3.463 ms`; the local
+  HPZone win (`227.393 ms` vs heap `237.354 ms`) is real but modest.
+- The result is a fair same-program allocation-placement check, not a dramatic
+  Yak-scale GC-pressure result and not exact Hyracks evidence.
 
 Promotion/escape local median configuration:
 
@@ -1754,6 +1790,10 @@ Yak-style control/data split:
 - The runtime proxy is slower than raw Rift Streaming in that run, especially
   on graphstep (`234.914 ms` vs `214.947 ms`), which gives a concrete
   runtime-safety overhead baseline.
+- A grouped-sort workload now adds an external-sort-shaped operator. At 10 x
+  100k records, HPZone is `227.393 ms` vs heap `237.354 ms`, but heap GC is
+  only `3.463 ms`, so the signal is a modest allocation-placement win rather
+  than a Yak-scale GC-pressure reproduction.
 - A new `promotion` workload adds rare escaping data objects and
   memory-API-level barrier accounting. With 40 x 250k records and
   `YAK_ESCAPE_MODULO=1000`, Yak-runtime is `513.465 ms` vs heap `424.768 ms`,
@@ -1926,7 +1966,7 @@ Roadmap source: `/Users/siyaoliu/rift/Claude_output/ROADMAP.md`
 | Phase 3 runtime-only benchmarks | Done enough for current story | GCBench and ListOfLists runtime medians recorded; pipeline surrogate recorded. | Commix is not included. Pipeline provenance remains surrogate. |
 | Phase 4 topology/layout | Done enough to move on | `PHASE4_LAYOUT.md`, `PHASE4_TOPOLOGY.md`, `PHASE4_EXIT.md`. | Chunked layout still not a Rift win vs improved SafeZone. Mixed GC/region safety story needs Phase 6 tests. |
 | Phase 5 streaming operators and DEBS | In progress | DEBS Q1/Q2 run simultaneously on real data; outputs match; instrumentation added; Q1 and Q2 window entries have shared heap/Rift backends; Q2 active profit values live in window entries; Q2 ranking uses primitive cell keys internally; RunBoth input bytes use a heap/Rift allocation-placement split; the reusable ranking backend region-allocates Q1/Q2 ranking objects and top-k result arrays; Q2 bounded per-cell tables, Q1 route-table arrays, Q1 ranking-index arrays, Q2 latest-empty taxi arrays, Q2 ranking-index arrays, Q2 taxi-id table entries/bytes, RunBoth output snapshots, Q2 incremental median heap arrays, and RunBoth latency buffers are region-backed in Rift modes. New `diag_*` counters identify remaining heap/control paths, and the shared `Grid.cellKeyOrZero` hot path removes temporary `Some(Cell)`/`Cell` allocation from both heap and Rift. Q2 rank/output attribution reports change-check time, snapshot time, rank comparisons/swaps, top-candidate comparisons, and changed-output element checks. Q2 top-10 extraction is now cached with conservative invalidation. Opt-in GC heap allocation attribution now reports allocation calls, rounded bytes, allocation-call time, and C-side phase buckets. RunBoth byte output uses the same writer in heap/Rift modes while placing the reusable byte buffer in the region for Rift modes. | Latest 1M byte-output medians are heap `4640.593 ms`, HPZone `4524.706 ms`, and Streaming `4522.308 ms`; GC collection medians are heap `21.025 ms`, HPZone `0.685 ms`, and Streaming `0.635 ms`; heap RSS is `159907840`, HPZone/Streaming RSS is `116785152`. Top 10 recomputes `29983` times out of `1000000` logical calls. The latest 1M allocation-attribution run shows heap at `6,025,143` GC allocation calls, `235,159,552` bytes, and `171.868 ms` allocation-call time, versus about `0.56M` calls, `10.5 MB`, and `12.8-12.9 ms` in Rift modes. Need Commix, SafeZone comparison, full-month input, remaining control/collection work, and safe API boundaries. |
-| Phase 6 literature-benchmark evidence | Started | `docs/LITERATURE_BENCHMARK_CONTRACT.md` extracts the paper comparison contract. `DataflowRegionMatrix` now runs Broom-style SELECT/AGGREGATE/JOIN methodology workloads with ordinary Scala objects in heap, current SafeZone, improved SafeZone, Rift HPZone, and Rift Streaming modes. Native-only local medians include peak RSS, and a Broom-scale single run is recorded. `StreamFlexRegionMatrix` now runs stream throughput/latency methodology workloads with deadline-miss and latency-tail metrics. `YakRegionMatrix` now runs word-count, graph-step, runtime-proxy, and promotion/escape control-data split workloads. `StancuRegionMatrix` now runs transaction/accounting probes with batched transaction regions. The 2026-04-26 Stancu boundary sweep records per-transaction, 64-transaction, and 512-transaction region boundaries. | Keep improved SafeZone in all claims, and do not claim exact Naiad/Broom, exact StreamFlex/Ovm, exact Yak, or exact Stancu reproduction. The current sequence gives strong Broom/Dataflow HPZone evidence, strong StreamFlex-style throughput/latency evidence, Yak-style Rift-vs-heap and near-improved-SafeZone evidence for no-escape epochs, a negative memory-API-level dynamic-promotion result, and Stancu-style Rift-vs-heap evidence after batching/fixed counters. The Stancu weak result is now specifically attributed to too-fine region boundaries. Next choices are safe API rejection probes or returning to DEBS with the literature findings in mind. Build a fair Rift collection/operator API before redoing parallel-collections claims. |
+| Phase 6 literature-benchmark evidence | Started | `docs/LITERATURE_BENCHMARK_CONTRACT.md` extracts the paper comparison contract. `DataflowRegionMatrix` now runs Broom-style SELECT/AGGREGATE/JOIN methodology workloads with ordinary Scala objects in heap, current SafeZone, improved SafeZone, Rift HPZone, and Rift Streaming modes. Native-only local medians include peak RSS, and a Broom-scale single run is recorded. `StreamFlexRegionMatrix` now runs stream throughput/latency methodology workloads with deadline-miss and latency-tail metrics. `YakRegionMatrix` now runs word-count, graph-step, external-sort-shaped grouped sort, runtime-proxy, and promotion/escape control-data split workloads. `StancuRegionMatrix` now runs transaction/accounting probes with batched transaction regions. The 2026-04-26 Stancu boundary sweep records per-transaction, 64-transaction, and 512-transaction region boundaries. | Keep improved SafeZone in all claims, and do not claim exact Naiad/Broom, exact StreamFlex/Ovm, exact Yak, or exact Stancu reproduction. The current sequence gives strong Broom/Dataflow HPZone evidence, strong StreamFlex-style throughput/latency evidence, Yak-style Rift-vs-heap and near-improved-SafeZone evidence for no-escape epochs, a modest grouped-sort allocation-placement win, a negative memory-API-level dynamic-promotion result, and Stancu-style Rift-vs-heap evidence after batching/fixed counters. The Stancu weak result is now specifically attributed to too-fine region boundaries. Next choices are another Yak task-shape check, safe API rejection probes, or returning to DEBS with the literature findings in mind. Build a fair Rift collection/operator API before redoing parallel-collections claims. |
 | Phase 7 capture checking | Started | `RiftRegion.scoped`/`streaming` safe API slice exists. Targeted Scala-next compiler tests now pass for scoped object graphs, for-loop allocation, nested scoped regions, local higher-order consumers, non-escaping closures, return escape rejection, heap retention rejection, nested-region leak rejection, streaming reset escape rejection, conservative returned-function rejection, explicit `HeapRoot` metadata handles, direct unrooted heap-object constructor-argument rejection, region-local alias acceptance, heap-alias rejection, heap-field-selection rejection, explicit `{region}` constructor-field reuse, plain `T^` field-reuse rejection, region-owned array checks, the explicit-owner `ObjectBuffer` checked container, and the explicit split that `RiftRegion.open` is trusted while `ScopedRegion`/`StreamingRegion` allocations are checked. `docs/REPORT_CAPTURE_CHECK.md` records the current checker behavior. | More pinned diagnostics, broader runtime coverage, static-heap policy, richer collections, and a better ergonomics story for field/container provenance. |
 | Phase 8 native GC/region hardening | Started | `HeapRoot` handles give a GC-visible explicit-root path for heap metadata stored from region objects; direct unrooted heap-object constructor arguments, heap aliases, heap field selections, unsafe region-array stores, and unsafe `ObjectBuffer` heap stores are rejected in checked Rift lowering while region-to-region object graphs, simple region-local aliases, stable constructor fields explicitly captured by `{region}`, explicitly captured region arrays, and explicit-owner object buffers still compile. | Extend or deliberately limit the mixed-reference rule for static immutable heap referents and richer containers; decide whether plain `T^` field reuse and method-style container operations need a compiler extension or explicit owner-token APIs. |
 | Phase 9 Lean mechanization | Open | Design pack has Lean stubs/templates. | Port or start proof work; prove without `sorry`. |
@@ -2111,8 +2151,11 @@ Immediate next step:
    evidence. It supports the control/data split locally: Rift beats heap,
    Streaming is close to improved SafeZone under pressure, and the new
    `yak-runtime` proxy shows a pure runtime-managed epoch path can also beat
-   heap while costing more than raw Rift Streaming. The new `promotion`
-   workload adds a closer Yak model with rare escaping objects and
+   heap while costing more than raw Rift Streaming. The grouped-sort workload
+   adds an external-sort-shaped same-program allocation-placement check:
+   HPZone is `227.393 ms` vs heap `237.354 ms`, but heap GC is only
+   `3.463 ms`. The new `promotion` workload adds a closer Yak model with rare
+   escaping objects and
    `RiftRegion.RuntimeEpoch` barrier/remember/promote accounting. It removes
    measured heap GC but is slower than heap on elapsed time, so it should be
    used as motivation for static checked boundaries, not as a speedup claim.
@@ -2317,11 +2360,13 @@ boundary evidence, checked guard narrowing for trusted-vs-checked region
 allocation, region-backed RunBoth latency buffers, Q2 rank/output
 attribution, the shared Q2 top-10 cache checkpoint with 100k/1M medians, and
 opt-in GC allocation attribution counters plus clean C-side phase buckets. It
-also contains the shared byte-output RunBoth checkpoint with 100k/1M medians.
-The safest next technical action is either to add safe API accept/reject probes
-for the region object patterns now used by DEBS and the literature harnesses,
-or to run the missing DEBS controls: Commix, SafeZone/improved SafeZone if
-meaningful, and full-month sorted input.
+also contains the shared byte-output RunBoth checkpoint with 100k/1M medians
+and the Yak external-sort-shaped grouped-sort checkpoint. The safest next
+technical action is either to add the next Yak task-shape check
+(Hadoop-like top-word/filter or GraphChi-like subinterval update), add safe API
+accept/reject probes for the region object patterns now used by DEBS and the
+literature harnesses, or run the missing DEBS controls: Commix,
+SafeZone/improved SafeZone if meaningful, and full-month sorted input.
 
 ## Unsafe Assumptions To Avoid
 

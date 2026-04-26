@@ -85,7 +85,7 @@ For performance numbers, use the following rule of thumb:
 | Phase 3: runtime-only evaluation | Done enough for current claim | Validated with caveats | Same-layout GCBench/ListOfLists runtime medians |
 | Phase 4: topology/layout decomposition | Done enough to move on | Validated/provisional mix | Layout, topology, targeted runtime follow-up, safety finding |
 | Phase 5: application evidence | In progress | Bounded-sample medians plus diagnostic attribution | DEBS correctness, 100k/1M medians, and opt-in GC heap allocation attribution |
-| Phase 6: literature-aligned methodology evidence | Started | Validated methodology medians with caveats | Broom-style dataflow, StreamFlex-style latency/throughput, Yak-style control/data plus runtime promotion proxy, Stancu-style transaction accounting |
+| Phase 6: literature-aligned methodology evidence | Started | Validated methodology medians with caveats | Broom-style dataflow, StreamFlex-style latency/throughput, Yak-style control/data plus grouped sort and runtime promotion proxy, Stancu-style transaction accounting |
 | Phase 6b: Broom / parallel collections API evidence | Open | Provisional surrogate only | amordo comparison and Rift raw-array surrogate |
 | Phase 7: capture-checked safe API | Started | Compiler-probe evidence, no benchmark data | 30 targeted checked-API compiler probes plus Phase 4 safety finding |
 | Phase 8: native GC/region integration hardening | Started | Runtime/API smoke evidence, no benchmark data | Explicit `HeapRoot` path plus direct unrooted heap-constructor/alias/field-selection/array-store rejection and explicit `{region}` constructor-field/array reuse |
@@ -697,7 +697,7 @@ artifacts are available or reproduced.
 |---|---|---|---|
 | Broom dataflow vertices | SELECT/AGGREGATE/JOIN over ordinary epoch-local Scala objects | Post-counter-fix 10 x 100k medians show HPZone ahead of heap and improved SafeZone on SELECT, AGGREGATE, and JOIN; Broom-scale 40 x 500k is still single-run. | Methodology reproduction, not exact Naiad/Broom. |
 | StreamFlex stream latency | Throughput and per-event latency/deadline-miss workloads | Pressure rerun shows Rift throughput around `330 ms` vs heap `634 ms`; Streaming has zero deadline misses in that run. | Does not run StreamIt/Ovm kernels or model scheduler/queueing delay. |
-| Yak control/data split | Wordcount, graphstep, and promotion/escape epoch workloads with durable heap control state | No-escape pressure rerun shows raw Rift and `yak-runtime` both beat heap and remove measured heap GC. The corrected runtime-promotion proxy records 10M barrier checks, 10k remembered refs, and 20k promoted objects, but Yak-runtime is slower than heap: `513.465 ms` vs `424.768 ms`. | Not distributed Yak; promotion is a memory-API-level proxy with object-specific `RuntimePromoter`, not real JVM field barriers, stack scanning, STW coordination, or generic object movement. |
+| Yak control/data split | Wordcount, graphstep, grouped sort, and promotion/escape epoch workloads with durable heap control state | No-escape pressure rerun shows raw Rift and `yak-runtime` both beat heap and remove measured heap GC. Grouped sort gives a modest HPZone-vs-heap win (`227.393 ms` vs `237.354 ms`) with little heap GC. The corrected runtime-promotion proxy records 10M barrier checks, 10k remembered refs, and 20k promoted objects, but Yak-runtime is slower than heap: `513.465 ms` vs `424.768 ms`. | Not distributed Yak; sort is external-sort-shaped but not Hyracks, and promotion is a memory-API-level proxy with object-specific `RuntimePromoter`, not real JVM field barriers, stack scanning, STW coordination, or generic object movement. |
 | Stancu transaction accounting | Warehouse transaction-shaped object graph with durable heap state | Boundary sweep confirms a Rift-vs-heap win only when transaction regions are coarse enough: at 200k transactions, 64 tx/region gives Streaming `38.844 ms` vs heap `43.189 ms`. | Not SPECjbb2005 or static analysis; SafeZone remains faster. |
 
 ### Stancu Boundary Sweep, 2026-04-26
@@ -757,6 +757,40 @@ Interpretation:
   which gives a concrete baseline for future checked-Rift overhead claims.
 - Improved SafeZone remains a strong baseline, so this is not a Rift-over-
   SafeZone result.
+
+### Yak External-Sort-Shaped Grouped Sort, 2026-04-26
+
+Source: `evidence/YAK_REGION_MATRIX.md`.
+
+This workload was added to make the Yak harness closer to the Hyracks external
+sort shape without pretending to reproduce Hyracks. Durable grouped totals stay
+on the heap; each epoch allocates ordinary `SortRecord` objects, sorts them,
+folds grouped sums into the durable totals, and then releases the epoch data.
+
+Configuration:
+
+- `YAK_EPOCHS=10`
+- `YAK_SORT_RECORDS_PER_EPOCH=100000`
+- runs `3`, warmups `1`
+
+| Mode | Median elapsed ms | Median GC ms | Median Rift op ms | Rift objects | Opens/closes/resets | Peak RSS bytes |
+|---|---:|---:|---:|---:|---:|---:|
+| heap | 237.354 | 3.463 | 0.000 | 0 | 0 / 0 / 0 | 22446080 |
+| current SafeZone | 234.644 | 0.000 | 0.000 | 0 | 0 / 0 / 0 | 24674304 |
+| improved SafeZone | 236.047 | 0.000 | 0.000 | 0 | 0 / 0 / 0 | 24674304 |
+| Rift HPZone | 227.393 | 0.283 | 0.047 | 1000000 | 10 / 10 / 0 | 24002560 |
+| Rift Streaming | 232.658 | 0.307 | 0.030 | 1000000 | 1 / 1 / 9 | 24002560 |
+| Yak-runtime proxy | 242.517 | 0.306 | 0.032 | 1000000 | 1 / 1 / 10 | 24002560 |
+
+Interpretation:
+
+- This is a same-logical-program allocation-placement result: heap uses
+  ordinary `new`, while Rift allocates the same record class in epoch regions.
+- Sorting dominates elapsed time, so heap GC is only `3.463 ms`; this is not a
+  large GC-pressure result.
+- HPZone is fastest in the local median, but the win is modest. Yak-runtime is
+  slower than heap here, so dynamic runtime discipline is not free even when no
+  escape handling is needed.
 
 ### Yak Promotion/Escape Proxy, 2026-04-26
 
