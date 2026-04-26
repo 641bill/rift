@@ -697,7 +697,7 @@ artifacts are available or reproduced.
 |---|---|---|---|
 | Broom dataflow vertices | SELECT/AGGREGATE/JOIN over ordinary epoch-local Scala objects | Post-counter-fix 10 x 100k medians show HPZone ahead of heap and improved SafeZone on SELECT, AGGREGATE, and JOIN; Broom-scale 40 x 500k is still single-run. | Methodology reproduction, not exact Naiad/Broom. |
 | StreamFlex stream latency | Throughput and per-event latency/deadline-miss workloads | Pressure rerun shows Rift throughput around `330 ms` vs heap `634 ms`; Streaming has zero deadline misses in that run. | Does not run StreamIt/Ovm kernels or model scheduler/queueing delay. |
-| Yak control/data split | Wordcount and graphstep epoch-local data objects with durable heap control state | Pressure rerun shows Streaming near improved SafeZone and faster than heap: `199.156 ms` vs heap `243.522 ms` on wordcount, `209.528 ms` vs heap `240.890 ms` on graphstep. | Not distributed Yak and no dynamic promotion/write barrier. |
+| Yak control/data split | Wordcount and graphstep epoch-local data objects with durable heap control state | Pressure rerun shows raw Rift and a new `yak-runtime` proxy both beat heap and remove measured heap GC. The runtime proxy is `211.585 ms` vs heap `255.335 ms` on wordcount and `234.914 ms` vs heap `321.660 ms` on graphstep. | Not distributed Yak; `yak-runtime` has lifecycle checks but not full promotion/write barriers. |
 | Stancu transaction accounting | Warehouse transaction-shaped object graph with durable heap state | Boundary sweep confirms a Rift-vs-heap win only when transaction regions are coarse enough: at 200k transactions, 64 tx/region gives Streaming `38.844 ms` vs heap `43.189 ms`. | Not SPECjbb2005 or static analysis; SafeZone remains faster. |
 
 ### Stancu Boundary Sweep, 2026-04-26
@@ -720,6 +720,43 @@ The Stancu-style evidence should therefore be described as a coarse-boundary
 Rift-vs-heap accounting result. It is not evidence that a high
 region-candidate object fraction alone is enough, and it is not a static
 annotation/inference result.
+
+### Yak Runtime-Safety Proxy, 2026-04-26
+
+Source: `evidence/YAK_REGION_MATRIX.md`.
+
+The `yak-runtime` mode is a Scala Native runtime-safety proxy: durable control
+state stays on the heap, epoch-local data objects are allocated in a reusable
+Rift streaming region, and a dynamic epoch object checks lifecycle state and
+resets the region. It is intentionally not the checked Rift API and not exact
+Yak promotion/write-barrier machinery.
+
+Pressure configuration:
+
+- `YAK_EPOCHS=40`
+- `YAK_RECORDS_PER_EPOCH=250000`
+- `YAK_MESSAGES_PER_EPOCH=250000`
+- runs `3`, warmups `1`
+
+| Workload | Mode | Median elapsed ms | Median GC ms | Median Rift op ms | Rift objects | Opens/closes/resets | Peak RSS bytes |
+|---|---|---:|---:|---:|---:|---:|---:|
+| wordcount | heap | 255.335 | 51.043 | 0.000 | 0 | 0 / 0 / 0 | 75071488 |
+| wordcount | improved SafeZone | 196.523 | 0.000 | 0.000 | 0 | 0 / 0 / 0 | 83181568 |
+| wordcount | Rift Streaming | 206.291 | 0.000 | 0.330 | 10000000 | 1 / 1 / 39 | 83066880 |
+| wordcount | Yak-runtime proxy | 211.585 | 0.000 | 0.300 | 10000000 | 1 / 1 / 40 | 83066880 |
+| graphstep | heap | 321.660 | 55.830 | 0.000 | 0 | 0 / 0 / 0 | 75071488 |
+| graphstep | improved SafeZone | 212.354 | 0.000 | 0.000 | 0 | 0 / 0 / 0 | 83181568 |
+| graphstep | Rift Streaming | 214.947 | 0.000 | 0.404 | 10000000 | 1 / 1 / 39 | 83066880 |
+| graphstep | Yak-runtime proxy | 234.914 | 0.000 | 0.497 | 10000000 | 1 / 1 / 40 | 83066880 |
+
+Interpretation:
+
+- A Yak-style runtime epoch discipline is viable on Scala Native for these
+  local workloads: it removes measured heap GC and beats heap on elapsed time.
+- It costs more than raw Rift Streaming in this run, especially on graphstep,
+  which gives a concrete baseline for future checked-Rift overhead claims.
+- Improved SafeZone remains a strong baseline, so this is not a Rift-over-
+  SafeZone result.
 
 ## Phase 6b: Broom / Parallel Collections API Evidence
 

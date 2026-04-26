@@ -1707,12 +1707,20 @@ Yak-style control/data split:
   HPZone/Streaming remove measured heap GC and beat heap; Streaming is close
   to improved SafeZone (`199.156 ms` vs `194.933 ms` for wordcount and
   `209.528 ms` vs `203.729 ms` for graphstep).
+- A new `yak-runtime` mode adds a local runtime-safety proxy: epoch-local data
+  objects are allocated in a reusable Rift streaming region through a dynamic
+  epoch object with lifecycle checks. In the 2026-04-26 pressure run it beats
+  heap and removes measured heap GC: `211.585 ms` vs heap `255.335 ms` on
+  wordcount and `234.914 ms` vs heap `321.660 ms` on graphstep.
+- The runtime proxy is slower than raw Rift Streaming in that run, especially
+  on graphstep (`234.914 ms` vs `214.947 ms`), which gives a concrete
+  runtime-safety overhead baseline.
 - This supports the control/data split as a local methodology result, but it
   weakens any claim that Rift currently surpasses improved SafeZone on
   Yak-shaped epoch workloads.
 - The result is not exact Yak evidence: it lacks Hyracks/Hadoop/GraphChi,
-  distributed execution, Yak's dynamic escaping-object promotion, and
-  write-barrier/STW comparisons.
+  distributed execution, and full Yak dynamic escaping-object promotion /
+  write-barrier / STW comparisons.
 
 Stancu-style annotation/accounting:
 
@@ -2054,9 +2062,10 @@ Immediate next step:
    throughput around `330 ms` vs heap `634 ms`, and Streaming has zero deadline
    misses. It is still not exact StreamFlex/Ovm.
 4. Treat the `YakRegionMatrix` result as Phase 6/Yak-style methodology
-   evidence. It supports the control/data split locally: Rift beats heap and
-   Streaming is close to improved SafeZone under pressure, but this is not
-   exact Yak.
+   evidence. It supports the control/data split locally: Rift beats heap,
+   Streaming is close to improved SafeZone under pressure, and the new
+   `yak-runtime` proxy shows a pure runtime-managed epoch path can also beat
+   heap while costing more than raw Rift Streaming. This is not exact Yak.
 5. Treat the `StancuRegionMatrix` result as started Phase 6/Stancu-style
    accounting evidence. The initial per-transaction result was negative, but
    batched transaction regions plus the lower-overhead Rift counter path now

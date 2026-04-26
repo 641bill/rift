@@ -546,7 +546,8 @@ Current status:
 - `evidence/STREAMFLEX_REGION_MATRIX.md` records StreamFlex-style throughput
   and per-event latency/deadline-miss workloads.
 - `evidence/YAK_REGION_MATRIX.md` records Yak-style word-count and graph-step
-  epoch/control-data split workloads.
+  epoch/control-data split workloads. It now includes a `yak-runtime` proxy
+  for a pure runtime-managed epoch discipline on Scala Native.
 - `evidence/STANCU_REGION_MATRIX.md` records Stancu-style
   transaction/accounting workloads. A 2026-04-26 boundary sweep confirms that
   one transaction per region is too fine-grained, while 64 transactions per
