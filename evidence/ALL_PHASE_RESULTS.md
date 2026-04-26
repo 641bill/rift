@@ -87,8 +87,8 @@ For performance numbers, use the following rule of thumb:
 | Phase 5: application evidence | In progress | Bounded-sample medians plus diagnostic attribution | DEBS correctness, 100k/1M medians, and opt-in GC heap allocation attribution |
 | Phase 6: literature-aligned methodology evidence | Started | Validated methodology medians with caveats | Broom-style dataflow, StreamFlex-style latency/throughput, Yak-style control/data plus grouped sort, top-word/filter, GraphChi-style subintervals, and runtime promotion proxy, Stancu-style transaction accounting |
 | Phase 6b: Broom / parallel collections API evidence | Open | Provisional surrogate only | amordo comparison and Rift raw-array surrogate |
-| Phase 7: capture-checked safe API | Started | Compiler-probe and runtime-smoke evidence, no benchmark data | 39 targeted checked-API compiler probes, 16 runtime tests, plus Phase 4 safety finding |
-| Phase 8: native GC/region integration hardening | Started | Runtime/API smoke evidence, no benchmark data | Explicit `HeapRoot` path plus direct unrooted heap-constructor/alias/field-selection/array-store rejection, owner-token ObjectBuffer heap-store rejection, mutable-head heap-retagging rejection, and explicit `{region}` constructor-field/array reuse |
+| Phase 7: capture-checked safe API | Started | Compiler-probe and runtime-smoke evidence, no benchmark data | 42 targeted checked-API compiler probes, 17 runtime tests, plus Phase 4 safety finding |
+| Phase 8: native GC/region integration hardening | Started | Runtime/API smoke evidence, no benchmark data | Explicit `HeapRoot` path, static module/immutable-val path, direct unrooted heap-constructor/alias/field-selection/array-store rejection, owner-token ObjectBuffer heap-store rejection, mutable static-var rejection, mutable-head heap-retagging rejection, and explicit `{region}` constructor-field/array reuse |
 | Phase 9: Lean mechanization | Open | No data | None |
 | Phase 10: writing | Not started beyond notes | No data | None |
 
@@ -954,7 +954,7 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.Rif
 Result on 2026-04-26:
 
 ```text
-Passed: Total 39, Failed 0, Errors 0, Passed 39
+Passed: Total 42, Failed 0, Errors 0, Passed 42
 ```
 
 Runtime smoke command:
@@ -966,7 +966,7 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memor
 Result on 2026-04-26:
 
 ```text
-Passed: Total 16, Failed 0, Errors 0, Passed 16
+Passed: Total 17, Failed 0, Errors 0, Passed 17
 ```
 
 Covered source-level patterns:
@@ -984,6 +984,9 @@ Covered source-level patterns:
 | closure stored in heap state while capturing region handle | rejected |
 | closure returned from checked scoped region | rejected conservatively by direct function-result guard |
 | region object stores heap metadata via `HeapRoot` | passes compiler probe and native runtime smoke |
+| region object stores static module singleton | passes compiler probe |
+| region object stores immutable heap object from static module val | passes compiler probe and native runtime smoke |
+| region object stores heap object from mutable static module var | rejected by Rift allocation lowering guard |
 | direct unrooted heap object stored through checked Rift allocation constructor | rejected |
 | local alias of known region value stored through checked Rift allocation constructor | passes compiler probe |
 | local alias of heap object stored through checked Rift allocation constructor | rejected |
@@ -1028,17 +1031,19 @@ Open work:
 - Explicit `HeapRoot` handles now cover the safe region-to-GC metadata path.
   Direct unrooted heap-object constructor arguments are now rejected in checked
   Rift allocation lowering; simple region-local aliases are propagated, while
-  heap aliases and heap field selections are rejected. Stable constructor
-  fields explicitly captured by `{region}` are accepted. Region-owned arrays
-  are accepted when reference elements are explicitly captured, and stores into
-  known region arrays reject unrooted heap objects. `RiftRegion.ObjectBuffer`
+  heap aliases and heap field selections are rejected. Static module singletons
+  and immutable module vals are accepted as independently rooted metadata;
+  mutable static vars are rejected. Stable constructor fields explicitly
+  captured by `{region}` are accepted. Region-owned arrays are accepted when
+  reference elements are explicitly captured, and stores into known region
+  arrays reject unrooted heap objects. `RiftRegion.ObjectBuffer`
   is now a checked owner-token first container primitive: it keeps heap control
   metadata, region-allocates the backing object array, and supports calls such
   as `RiftRegion.append(region, buffer, value)` and
   `region.append(buffer, value)`. The latest guard narrowing keeps this
   behavior for checked `ScopedRegion`/`StreamingRegion` code while documenting
-  low-level `RiftRegion.open` as trusted. Plain `T^` selected fields, static
-  immutable heap referents, and plain receiver-style containers still need a
+  low-level `RiftRegion.open` as trusted. Plain `T^` selected fields, richer
+  static-field provenance, and plain receiver-style containers still need a
   more complete mixed-reference policy or ergonomics story. Mutable local
   linked-list heads now work when assignments preserve
   region provenance (`null`, direct Rift allocation, or known region value);
@@ -1048,7 +1053,8 @@ Open work:
   top-word-style buffers with rooted metadata, and GraphChi-style rooted
   durable vertex metadata, and GraphChi-style linked update lists with checked
   local-head provenance.
-- Most diagnostic strings are not pinned to capture-specific text yet.
+- Current negative compiler probes pin expected capture/safety diagnostic
+  substrings.
 - Broader runtime tests and mixed-reference tests remain open.
 
 ## Phase 8: Native GC/Region Integration Hardening
@@ -1065,12 +1071,14 @@ Known design constraint:
   on the live region object and cleared on reset/close.
 - Region-to-GC references need explicit roots, scanning, or rejection. The
   current checked lowering rejects direct unrooted heap-object constructor
-  arguments, simple heap aliases, and heap field selections, and it propagates
-  simple aliases of known region values. It allows stable constructor fields
-  whose source type is explicitly captured by `{region}`. It does not yet model
-  plain `T^` selected fields or static immutable referents. Region-owned arrays
-  require explicit element capture such as `Array[T^{region}]^{region}`; more
-  general container provenance remains open.
+  arguments, simple heap aliases, heap field selections, mutable static vars,
+  and unsafe owner-token `ObjectBuffer` heap stores, and it propagates simple
+  aliases of known region values. It allows static module singletons,
+  immutable module vals, and stable constructor fields whose source type is
+  explicitly captured by `{region}`. It does not yet model plain `T^` selected
+  fields or richer static-field provenance. Region-owned arrays require
+  explicit element capture such as `Array[T^{region}]^{region}`; more general
+  container provenance remains open.
 - The Phase 4 mixed-topology checksum mismatch is the current concrete
   evidence for this risk.
 

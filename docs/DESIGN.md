@@ -71,16 +71,17 @@ Current reliable evidence:
   are moving into regions. It does not close the SafeZone/Commix/full-scale or
   safe API gaps.
 - Phase 7 checked API evidence has started. The targeted Scala-next compiler
-  suite passed 39/39 for the current `Scoped`/`Streaming` API slice, including
+  suite passed 42/42 for the current `Scoped`/`Streaming` API slice, including
   for-loop allocation, nested scoped regions, local higher-order consumers, and
   direct escape/reset rejection. Returned function values are now rejected
   conservatively because returned closures can hide region-local captures.
   `RiftRegion.root` now provides an explicit `HeapRoot` path for region objects
   that need to refer to heap metadata. Checked allocation lowering now rejects
   direct unrooted heap-object constructor arguments while still allowing
-  ordinary region-to-region object graphs, simple region-local aliases, and
-  stable constructor fields whose source types are explicitly tied to
-  `{region}`. Region-owned arrays are supported as checked containers when the
+  ordinary region-to-region object graphs, simple region-local aliases, static
+  module singletons and immutable module vals, and stable constructor fields
+  whose source types are explicitly tied to `{region}`. Mutable static vars are
+  rejected. Region-owned arrays are supported as checked containers when the
   array object and reference element type are both explicitly region-captured.
   `RiftRegion.ObjectBuffer` adds a first checked higher-level container, using
   owner-token APIs to keep region data in a region-owned backing array while
@@ -166,7 +167,7 @@ Region modes:
 | Mode | Intended meaning | Current status |
 |---|---|---|
 | `HPZone` | Trusted fast region path for benchmarks and hot loops. No static escape guarantee. | Implemented as a runtime kind and exercised by benchmarks. |
-| `Scoped` | Lexically scoped, capture-checked region. | Runtime kind and checked API slice exist; direct function results are conservatively rejected; `HeapRoot` handles provide explicit region-to-GC metadata roots; direct unrooted heap-object constructor arguments are rejected in checked allocation lowering; simple region-local aliases are propagated; owner-token `ObjectBuffer` gives a first checked container primitive. |
+| `Scoped` | Lexically scoped, capture-checked region. | Runtime kind and checked API slice exist; direct function results are conservatively rejected; `HeapRoot` handles provide explicit region-to-GC metadata roots; direct unrooted heap-object constructor arguments are rejected in checked allocation lowering; simple region-local aliases are propagated; static module singletons and immutable module vals are allowed; owner-token `ObjectBuffer` gives a first checked container primitive. |
 | `Streaming` | Resettable streaming region with capture/use-after-reset constraints. | Runtime kind and checked reset wrapper exist; `HeapRoot` handles are cleared on reset/close; the same checked allocation guard applies inside reset epochs. |
 
 The important corrected invariant is about GC visibility:
@@ -184,9 +185,11 @@ The important corrected invariant is about GC visibility:
   `RiftRegion.HeapRoot[T]` and `RiftRegion.root(value)`. The live region object
   keeps these handles in a heap list, so the referent remains visible to the
   GC. Direct unrooted heap-object constructor arguments in checked Rift
-  allocation are rejected by the compiler lowering guard; safe code should use
-  `HeapRoot` for heap metadata until plain `T^` selected fields, static heap
-  referents, and higher-level container aliases have a more precise policy.
+  allocation are rejected by the compiler lowering guard; safe code can use
+  static module singletons and immutable module vals for independently rooted
+  metadata, but should use `HeapRoot` for ordinary heap metadata until plain
+  `T^` selected fields and higher-level container aliases have a more precise
+  policy.
 - `HPZone` remains a trusted path. It may be used to measure runtime potential,
   but it is not the safety story.
 
@@ -198,8 +201,10 @@ mixed-reference safety. The intended v1 safe mixed-reference policy is:
 - `GC -> region`: allowed only when the heap object's type/capture set proves
   the heap object cannot outlive the region it points into.
 - `region -> GC`: allowed only for immutable/static referents or explicit
-  GC-visible root handles. A region object must not be the sole owner of a
-  collectible heap object because Scala Native's GC does not scan Rift slabs.
+  GC-visible root handles. The current checked implementation covers static
+  module singletons and immutable module vals, and rejects mutable static vars.
+  A region object must not be the sole owner of a collectible heap object
+  because Scala Native's GC does not scan Rift slabs.
 - No GC scanning of arbitrary region slabs in v1; that would complicate
   non-moving native-runtime assumptions and should be evaluated only after the
   explicit-root/static-capture design is tested.
@@ -343,7 +348,9 @@ Minimum Phase 6 evidence:
   unrooted heap-object constructor-argument rejection, including simple
   heap-alias and heap-field-selection variants. Explicitly region-captured
   constructor field reuse is covered positively; plain `T^` field reuse is
-  covered as a current negative. Region-owned array containers are covered with
+  covered as a current negative. Static module singletons and immutable module
+  vals are covered positively; mutable static vars are covered negatively.
+  Region-owned array containers are covered with
   positive region-value/`HeapRoot` stores and a negative unrooted heap store.
   `ObjectBuffer` is covered as the first checked higher-level container, with
   positive region-value/`HeapRoot` stores, owner-token extension method syntax,

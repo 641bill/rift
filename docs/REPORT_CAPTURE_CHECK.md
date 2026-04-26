@@ -29,6 +29,9 @@ Scala-next capture checking supports the first Rift safe API slice:
 - explicit heap-root handles for region objects that need to refer to heap
   metadata. `RiftRegion.root(value)` returns a `HeapRoot[T]` retained through
   the live region object's GC-visible root list.
+- static heap metadata has a narrow checked path: top-level/module singleton
+  references and immutable vals selected from those modules may be stored in
+  region objects, while mutable static vars are still rejected.
 - rejection of direct unrooted heap-object constructor arguments in checked
   Rift allocation lowering. Ordinary region-to-region object graph references
   still compile, and simple local aliases of known region values are propagated.
@@ -75,12 +78,13 @@ Known gaps remain:
   lowering guard, not full alias analysis. It covers direct constructor
   arguments in checked Rift allocation and allows values known to be allocated
   in the same region, simple local aliases of those values, primitives/null,
-  `HeapRoot` handles, and stable primary-constructor field selections whose
-  source type is explicitly region-captured. It also checks stores into known
-  region arrays and the current owner-token `ObjectBuffer` API. Broader
-  cases such as plain `T^` fields, static immutable referents, and plain
-  receiver-style collection/container abstractions still need a more precise
-  policy or compiler extension.
+  `HeapRoot` handles, static module singletons, immutable static/module vals,
+  and stable primary-constructor field selections whose source type is
+  explicitly region-captured. It also checks stores into known region arrays
+  and the current owner-token `ObjectBuffer` API. Broader cases such as plain
+  `T^` fields, richer static-field provenance, and plain receiver-style
+  collection/container abstractions still need a more precise policy or
+  compiler extension.
 - Mutable linked-list support is provenance-based rather than path-sensitive.
   It tracks observed local assignments to mutable heads, but it is not a full
   dataflow or alias analysis for arbitrary mutable containers.
@@ -96,7 +100,7 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.Rif
 Result:
 
 ```text
-Passed: Total 39, Failed 0, Errors 0, Passed 39
+Passed: Total 42, Failed 0, Errors 0, Passed 42
 ```
 
 Runtime smoke command run on 2026-04-26:
@@ -108,7 +112,7 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memor
 Result:
 
 ```text
-Passed: Total 16, Failed 0, Errors 0, Passed 16
+Passed: Total 17, Failed 0, Errors 0, Passed 17
 ```
 
 ## 2 — The three hard patterns
@@ -203,12 +207,15 @@ Current checked compiler probes:
 
 | Test | Expected failure | Result | Notes |
 |---|---|---|---|
-| `scopedValueCannotEscapeByReturn` | scoped value returned from `RiftRegion.scoped` | fails | Error text is not pinned yet; test only requires a compiler diagnostic. |
+| `scopedValueCannotEscapeByReturn` | scoped value returned from `RiftRegion.scoped` | fails | Pins the expected scope-leak diagnostic. |
 | `innerScopedValueCannotEscapeOuterScope` | inner scoped value returned through outer scope | fails | Covers nested-region leakage. |
 | `closureCapturingScopedValueCannotEscape` | closure stored in heap state while capturing region handle | fails | Does not cover the harder closure-local-value-only escape gap. |
 | `closureCapturingScopedValueCannotEscapeByReturn` | closure returned from scoped region while capturing region-local value | fails | Rejected by the v1 `CanReturnFromRegion` function-result guard. |
 | `heapObjectCannotRetainScopedValue` | heap singleton retains scoped value | fails | Covers GC-to-region retention through heap state. |
 | `rootedHeapValueCanBeStoredInScopedObject` | region object stores explicit `HeapRoot` for heap metadata | compiles | Covers the v1 explicit-root policy for region-to-GC references. |
+| `staticModuleCanBeStoredInScopedObject` | region object stores a static module singleton | compiles | Covers independently rooted static metadata. |
+| `staticValCanBeStoredInScopedObject` | region object stores an immutable heap object selected from a static module val | compiles | Covers immutable module-held heap metadata. |
+| `staticVarCannotBeStoredInScopedObject` | region object stores a heap object read from a mutable static module var | fails | A mutable static var can stop rooting the object later, so it still requires `HeapRoot`. |
 | `directHeapValueCannotBeStoredInScopedObject` | region object constructor receives a direct unrooted heap object | fails | Covers the v1 lowering guard for the simplest unsafe region-to-GC ownership shape. |
 | `regionAllocatedAliasCanBeStoredInScopedObject` | region object constructor receives a local alias of a known region value | compiles | Keeps normal local aliasing usable for ordinary region object graphs. |
 | `heapAliasCannotBeStoredInScopedObject` | region object constructor receives a local alias of a heap object | fails | Prevents simple aliasing from bypassing the direct heap-reference guard. |
@@ -283,10 +290,12 @@ Do not yet claim:
   conservatively;
 - complete mixed GC/region safety. `HeapRoot` gives an explicit safe path for
   region-to-GC metadata, and direct unrooted constructor arguments are now
-  rejected in checked Rift allocation lowering. Stable constructor fields whose
-  source types are explicitly tied to `{region}` are supported, but plain `T^`
-  selected fields, static immutable referents, and general collection aliases
-  are not fully modeled yet. Region-owned arrays are supported only with
+  rejected in checked Rift allocation lowering. Static module singletons and
+  immutable static/module vals are supported, while mutable static vars are
+  rejected. Stable constructor fields whose source types are explicitly tied to
+  `{region}` are supported, but plain `T^` selected fields, richer static-field
+  provenance, and general collection aliases are not fully modeled yet.
+  Region-owned arrays are supported only with
   explicit element captures such as `Array[Leaf^{region}]^{region}`.
   `ObjectBuffer` is supported only through owner-token APIs; both companion
   functions and `region.append/get/length` extension methods are covered.
@@ -296,9 +305,10 @@ Do not yet claim:
 - a mechanized proof.
 
 The next Phase 8 design decision is how far to extend the allocation rule after
-the first `HeapRoot` and direct-constructor-argument guard: aliases, field
-selections, static immutable referents, and container values need either a
-checked policy or trusted-only labeling. Simple region-local aliases are
-currently propagated; heap aliases and heap field selections are rejected;
-explicitly region-captured constructor fields and arrays are accepted. The
-Phase 4 checksum mismatch is the concrete reason this cannot be left implicit.
+the first `HeapRoot`, direct-constructor-argument guard, and static-root path:
+aliases, field selections, richer static-field provenance, and container values
+need either a checked policy or trusted-only labeling. Simple region-local
+aliases are currently propagated; heap aliases and heap field selections are
+rejected; explicitly region-captured constructor fields and arrays are
+accepted. The Phase 4 checksum mismatch is the concrete reason this cannot be
+left implicit.
