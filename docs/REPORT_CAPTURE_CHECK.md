@@ -32,6 +32,10 @@ Scala-next capture checking supports the first Rift safe API slice:
 - rejection of direct unrooted heap-object constructor arguments in checked
   Rift allocation lowering. Ordinary region-to-region object graph references
   still compile, and simple local aliases of known region values are propagated.
+- selected stable constructor fields can be reused when their field type is
+  explicitly tied to the region capability, for example a local
+  `Pair(val leaf: Leaf^{region})`. Plain `Leaf^` fields remain rejected by
+  Scala capture checking when the result is required to be `Leaf^{region}`.
 
 Known gaps remain:
 
@@ -43,10 +47,10 @@ Known gaps remain:
   lowering guard, not full alias analysis. It covers direct constructor
   arguments in checked Rift allocation and allows values known to be allocated
   in the same region, simple local aliases of those values, primitives/null,
-  and `HeapRoot` handles. Broader cases such as distinguishing region-local
-  field selections from heap-owned field selections, static immutable
-  referents, and aliased containers still need a more precise policy or
-  compiler extension.
+  `HeapRoot` handles, and stable primary-constructor field selections whose
+  source type is explicitly region-captured. Broader cases such as plain `T^`
+  fields, static immutable referents, and aliased containers still need a more
+  precise policy or compiler extension.
 - The tests validate source-level capture behavior and allocation lowering.
   They do not yet prove safe close/reset mechanically.
 
@@ -59,7 +63,7 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.Rif
 Result:
 
 ```text
-Passed: Total 16, Failed 0, Errors 0, Passed 16
+Passed: Total 19, Failed 0, Errors 0, Passed 19
 ```
 
 Runtime smoke command run on 2026-04-26:
@@ -176,13 +180,16 @@ Current checked compiler probes:
 | `regionAllocatedAliasCanBeStoredInScopedObject` | region object constructor receives a local alias of a known region value | compiles | Keeps normal local aliasing usable for ordinary region object graphs. |
 | `heapAliasCannotBeStoredInScopedObject` | region object constructor receives a local alias of a heap object | fails | Prevents simple aliasing from bypassing the direct heap-reference guard. |
 | `heapFieldSelectionCannotBeStoredInScopedObject` | region object constructor receives a field selected from a heap object | fails | Prevents heap field selection from bypassing the direct heap-reference guard. |
+| `explicitRegionParamFieldCanBeStoredInScopedObject` | stable constructor field with type `Leaf^{region}` is reused in another region object | compiles | Covers the supported selected-field path. |
+| `explicitRegionParamFieldAliasCanBeStoredInScopedObject` | alias of a stable constructor field with type `Leaf^{region}` is reused | compiles | Covers selected-field alias propagation after the source checker proves the region capture. |
+| `plainRegionOwnerParamFieldCannotBeStoredAsRegionValue` | plain `Leaf^` field from a region-local owner is reused where `Leaf^{region}` is required | fails | Current Scala capture checking gives the field its own capability; this is a real ergonomics limitation. |
 | `streamingResetValueCannotEscapeEpoch` | value allocated inside reset epoch used after reset | fails | Covers reset boundary at source level. |
 
 Still missing:
 
 - more tests with expected diagnostic text pinned to capture-specific wording;
-- broader mixed-reference tests for selected fields from region-local owners,
-  static immutable heap values, and container shapes;
+- broader mixed-reference tests for plain `T^` selected fields, static
+  immutable heap values, and container shapes;
 - precise support for pure returned closures that provably do not capture
   region-local state.
 
@@ -218,8 +225,10 @@ Do not yet claim:
   conservatively;
 - complete mixed GC/region safety. `HeapRoot` gives an explicit safe path for
   region-to-GC metadata, and direct unrooted constructor arguments are now
-  rejected in checked Rift allocation lowering, but selected-field provenance,
-  static immutable referents, and container aliases are not fully modeled yet;
+  rejected in checked Rift allocation lowering. Stable constructor fields whose
+  source types are explicitly tied to `{region}` are supported, but plain `T^`
+  selected fields, static immutable referents, and container aliases are not
+  fully modeled yet;
 - automatic allocation inference;
 - a mechanized proof.
 
@@ -227,5 +236,6 @@ The next Phase 8 design decision is how far to extend the allocation rule after
 the first `HeapRoot` and direct-constructor-argument guard: aliases, field
 selections, static immutable referents, and container values need either a
 checked policy or trusted-only labeling. Simple region-local aliases are
-currently propagated; heap aliases and heap field selections are rejected. The
-Phase 4 checksum mismatch is the concrete reason this cannot be left implicit.
+currently propagated; heap aliases and heap field selections are rejected;
+explicitly region-captured constructor fields are accepted. The Phase 4
+checksum mismatch is the concrete reason this cannot be left implicit.

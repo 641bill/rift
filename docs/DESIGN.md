@@ -65,14 +65,16 @@ Current reliable evidence:
   drops from about `306 MB` to about `114 MB`. SafeZone/Commix/full-scale
   comparisons and safe API boundaries remain open.
 - Phase 7 checked API evidence has started. The targeted Scala-next compiler
-  suite passed 16/16 for the current `Scoped`/`Streaming` API slice, including
+  suite passed 19/19 for the current `Scoped`/`Streaming` API slice, including
   for-loop allocation, nested scoped regions, local higher-order consumers, and
   direct escape/reset rejection. Returned function values are now rejected
   conservatively because returned closures can hide region-local captures.
   `RiftRegion.root` now provides an explicit `HeapRoot` path for region objects
   that need to refer to heap metadata. Checked allocation lowering now rejects
   direct unrooted heap-object constructor arguments while still allowing
-  ordinary region-to-region object graphs and simple region-local aliases.
+  ordinary region-to-region object graphs, simple region-local aliases, and
+  stable constructor fields whose source types are explicitly tied to
+  `{region}`.
 - The raw-array pipeline is a surrogate and must not be presented as a
   replacement for Broom-style or `ZoneParVector` collection evidence.
 
@@ -164,7 +166,7 @@ The important corrected invariant is about GC visibility:
   keeps these handles in a heap list, so the referent remains visible to the
   GC. Direct unrooted heap-object constructor arguments in checked Rift
   allocation are rejected by the compiler lowering guard; safe code should use
-  `HeapRoot` for heap metadata until selected-field provenance, static heap
+  `HeapRoot` for heap metadata until plain `T^` selected fields, static heap
   referents, and container aliases have a more precise policy.
 - `HPZone` remains a trusted path. It may be used to measure runtime potential,
   but it is not the safety story.
@@ -292,7 +294,9 @@ returned closure can hide region-local captures. Direct unrooted heap-object
 constructor arguments are now rejected in checked allocation lowering, but this
 is not yet a full mixed-reference alias analysis. Simple local aliases of known
 region values are propagated; heap aliases and heap field selections are
-rejected.
+rejected. Stable constructor fields whose source types are explicitly tied to
+`{region}` are accepted; plain `T^` field reuse remains rejected by Scala
+capture checking because the selected field gets its own capability.
 
 Minimum Phase 6 evidence:
 
@@ -302,7 +306,9 @@ Minimum Phase 6 evidence:
   leakage, use-after-reset, and unrooted region-to-GC ownership. Initial probes
   cover the escape/reset cases, the explicit `HeapRoot` path, and direct
   unrooted heap-object constructor-argument rejection, including simple
-  heap-alias and heap-field-selection variants.
+  heap-alias and heap-field-selection variants. Explicitly region-captured
+  constructor field reuse is covered positively; plain `T^` field reuse is
+  covered as a current negative.
 - A report stating exactly what current Scala capture checking can express and
   what requires compiler or API changes. The first slice is recorded in
   `docs/REPORT_CAPTURE_CHECK.md`.
