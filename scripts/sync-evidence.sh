@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="/Users/siyaoliu/rift"
-FORK="$ROOT/scala-native-rift"
-DEST="$ROOT/evidence"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="${RIFT_ROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"
+FORK="${RIFT_FORK:-$ROOT/scala-native-rift}"
+DEST="${RIFT_EVIDENCE:-$ROOT/evidence}"
 
 mkdir -p "$DEST"
 

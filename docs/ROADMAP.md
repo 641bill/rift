@@ -36,7 +36,7 @@ Reggio/Verona capabilities.
 | Phase 3: runtime-only evaluation | Done enough for current claim | GCBench and ListOfLists medians show Rift wins over heap and improved SafeZone. | Add Commix where relevant; avoid overclaiming pipeline. |
 | Phase 4: topology/layout decomposition | Done enough to move on | `PHASE4_LAYOUT.md`, `PHASE4_TOPOLOGY.md`, `PHASE4_EXIT.md`. | Carry safety finding into Phase 6; chunked layout still not clear Rift win vs improved SafeZone. |
 | Phase 5: application evidence | In progress, not complete | DEBS Q1/Q2 scaffold runs and outputs match on bounded real-data samples; RunBoth uses a shared byte parser and region-backed input buffer; Rift modes now region-allocate Q1/Q2 window entries, Q2 median scratch, ranking objects, reusable top-k result arrays, Q2 bounded cell tables, Q1 primitive route-table arrays, Q1 ranking-index arrays, Q2 latest-empty taxi arrays, Q2 ranking-index arrays, Q2 taxi-id table entries/bytes, and RunBoth output snapshots. The current 1M 3-run median after the output-snapshot placement step is heap `8983.464 ms`, HPZone `8815.087 ms`, and Streaming `8836.488 ms`; GC time is not materially improved, and Rift RSS is around `120 MB`. | Latency arrays, SafeZone/Commix modes, full-month scale, safe API boundaries, Q2 median/rank bottleneck. |
-| Phase 6: Broom/parallel-collections API evidence | Open | Only raw-array surrogate and amordo comparison note exist. | Build fair Rift-backed collection/operator API. |
+| Phase 6: literature-aligned methodology evidence | Started | `DATAFLOW_REGION_MATRIX.md`, `STREAMFLEX_REGION_MATRIX.md`, `YAK_REGION_MATRIX.md`, and `STANCU_REGION_MATRIX.md` now cover Broom-style dataflow, StreamFlex-style latency/throughput, Yak-style control/data epochs, and Stancu-style transaction accounting. | Keep these labeled as methodology reproductions, not exact paper artifacts. Build fair Rift-backed collection/operator API before claiming a Broom/parallel-collections API comparison. |
 | Phase 7: capture-checked safe API | Open | Runtime kind constants exist; safety tests not implemented. | Positive/negative capture tests, safe `Scoped`/`Streaming` API, report gaps. |
 | Phase 8: native GC/region integration hardening | Open | Safety bug found for unrooted region-to-GC references. | Decide reject/root/scan strategy; test mixed references. |
 | Phase 9: Lean mechanization | Open | Design target only; older proof pack is not active in fork. | Core calculus and proofs without `sorry`. |
@@ -464,31 +464,50 @@ Exit criteria:
 
 Do not claim Phase 5 success until these criteria are met.
 
-## 9. Phase 6: Broom And Parallel-Collections API Evidence
+## 9. Phase 6: Literature-Aligned Methodology And API Evidence
 
-Goal: compare Rift against dataflow/parallel-collection systems at the API
-level, not only as raw arrays.
+Goal: compare Rift against literature-shaped workloads while preserving the
+separation between runtime-only effects, topology/layout effects, and
+static-safety ambitions. These are local methodology reproductions unless an
+original artifact is available.
 
 Current status:
 
+- `evidence/DATAFLOW_REGION_MATRIX.md` records Broom-style
+  SELECT/AGGREGATE/JOIN methodology workloads over ordinary Scala objects.
+- `evidence/STREAMFLEX_REGION_MATRIX.md` records StreamFlex-style throughput
+  and per-event latency/deadline-miss workloads.
+- `evidence/YAK_REGION_MATRIX.md` records Yak-style word-count and graph-step
+  epoch/control-data split workloads.
+- `evidence/STANCU_REGION_MATRIX.md` records Stancu-style
+  transaction/accounting workloads. A 2026-04-26 boundary sweep confirms that
+  one transaction per region is too fine-grained, while 64 transactions per
+  region gives a Rift-vs-heap win; SafeZone remains faster.
 - `sandbox/PIPELINE_PARCOLL_COMPARISON.md` records the amordo
   `ZoneParVector` benchmark and the Rift raw-array surrogate.
 - The comparison is explicitly not apples-to-apples.
 
 Required work:
 
+- Keep the Broom/Yak/StreamFlex/Stancu harnesses clearly labeled as
+  methodology reproductions and avoid comparing absolute speedups to paper
+  systems with unavailable artifacts.
 - Build a `RiftParVector`, region-backed stage buffer, or equivalent
   collection/operator API.
 - Reproduce the amordo pipeline shape using the Rift API, not raw arrays.
 - Compare heap `ParVector`, amordo `ZoneParVector`, SafeZone, and Rift under the
   same logical API.
-- Track annotation burden and release/reset ergonomics.
+- Track annotation burden, release/reset ergonomics, and any capture-checking
+  rejection/fallback cases.
 
 Exit criteria:
 
-- Rift has a fair Broom/parallel-collections comparison.
-- Results state whether wins come from allocator runtime, region release, or
-  lower-level array loops.
+- Literature-shaped benchmark notes include commands, run counts, data sizes,
+  medians, GC/Rift operation metrics, RSS where collected, and caveats.
+- Rift has a fair Broom/parallel-collections API comparison, not only a raw
+  array surrogate.
+- Results state whether wins come from allocator runtime, topology/lifetime
+  boundaries, data layout, or lower-level array loops.
 
 ## 10. Phase 7: Capture-Checked Safe API
 

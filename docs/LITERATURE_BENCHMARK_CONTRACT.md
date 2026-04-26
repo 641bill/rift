@@ -92,7 +92,13 @@ per region plus lower-overhead Rift allocation counters fixes the Rift-vs-heap
 direction. At one million transactions, heap is `223.611 ms`, Rift HPZone is
 `201.447 ms`, and Rift Streaming is `199.438 ms`; improved SafeZone is still
 faster at `174.620 ms`. This is not SPECjbb2005 or Stancu et al.'s static
-analysis.
+analysis. A 2026-04-26 boundary sweep at 200k transactions confirms the
+boundary attribution: with one transaction per region, HPZone is `63.257 ms`
+and Streaming is `50.487 ms` versus heap `44.592 ms`; with 64 transactions per
+region, HPZone is `39.522 ms` and Streaming is `38.844 ms` versus heap
+`43.189 ms`; with 512 transactions per region, Streaming is `39.717 ms` versus
+heap `45.315 ms`. Treat the Stancu evidence as a coarse-lifetime accounting
+result, not a claim that region-candidate fraction alone predicts performance.
 
 ## Metrics Required For Reproduction Claims
 

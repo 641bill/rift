@@ -29,6 +29,12 @@ merged into `feature/rift` at `79953ad8d`; its source branch was
 compiler capture-checking implementation. The fork is ahead of
 `origin/feature/rift` unless pushed.
 
+2026-04-26 update: benchmark-note work was done in the Codex memory-layer
+worktree `/Users/siyaoliu/.codex/worktrees/ba3c/rift`. A local ignored clone of
+the implementation repo was created under that worktree for validation:
+`/Users/siyaoliu/.codex/worktrees/ba3c/rift/scala-native-rift`, at
+implementation commit `4be6f0a63`.
+
 ## 1. Project Objective
 
 Rift is now a fork-first hybrid region-GC memory system for Scala Native. The target is not a standalone arena library beside Scala Native. The target is an in-tree Scala Native runtime/compiler experiment that combines:
@@ -385,7 +391,9 @@ Validation:
 - The Stancu matrix compiles and has smoke, default 3-run medians, and one
   transaction-pressure 3-run median in `sandbox/STANCU_REGION_MATRIX.md`. It is
   methodology/accounting evidence, not exact SPECjbb2005 or Stancu static
-  analysis reproduction.
+  analysis reproduction. A 2026-04-26 boundary-sensitivity rerun at 200k
+  transactions now records `STANCU_TX_PER_REGION=1`, `64`, and `512`, confirming
+  that the weak per-transaction result was a boundary-granularity problem.
 
 ### 4.9 DEBS 2015 Work
 
@@ -1159,6 +1167,13 @@ Interpretation:
 - The fixed result batches `64` transactions per region and flushes Rift
   allocation stats at reset/close. Rift now beats heap and removes measured
   heap GC, but SafeZone remains faster on this small transaction probe.
+- The 2026-04-26 boundary sweep makes that attribution explicit at 200k
+  transactions: with one transaction per region, HPZone is `63.257 ms` and
+  Streaming is `50.487 ms` versus heap `44.592 ms`; with 64 transactions per
+  region, HPZone is `39.522 ms` and Streaming is `38.844 ms` versus heap
+  `43.189 ms`; with 512 transactions per region, Streaming is `39.717 ms`
+  versus heap `45.315 ms`. The 64-transaction boundary is the best measured
+  point in this local sweep.
 - This means "region-candidate fraction" is not sufficient as a research claim.
   The lifetime boundary must be coarse enough and the runtime statistics path
   must stay out of hot per-object allocation.
@@ -1594,7 +1609,7 @@ Roadmap source: `/Users/siyaoliu/rift/Claude_output/ROADMAP.md`
 | Phase 3 runtime-only benchmarks | Done enough for current story | GCBench and ListOfLists runtime medians recorded; pipeline surrogate recorded. | Commix is not included. Pipeline provenance remains surrogate. |
 | Phase 4 topology/layout | Done enough to move on | `PHASE4_LAYOUT.md`, `PHASE4_TOPOLOGY.md`, `PHASE4_EXIT.md`. | Chunked layout still not a Rift win vs improved SafeZone. Mixed GC/region safety story needs Phase 6 tests. |
 | Phase 5 streaming operators and DEBS | In progress | DEBS Q1/Q2 run simultaneously on real data; outputs match; instrumentation added; Q1 and Q2 window entries have shared heap/Rift backends; Q2 active profit values live in window entries; Q2 ranking uses primitive cell keys internally; RunBoth input bytes use a heap/Rift allocation-placement split; the reusable ranking backend region-allocates Q1/Q2 ranking objects and top-k result arrays; Q2 bounded per-cell tables, Q1 route-table arrays, Q1 ranking-index arrays, Q2 latest-empty taxi arrays, Q2 ranking-index arrays, Q2 taxi-id table entries/bytes, RunBoth output snapshots, and Q2 incremental median heap arrays are region-backed in Rift modes. New `diag_*` counters identify remaining heap/control paths, and the shared `Grid.cellKeyOrZero` hot path removes temporary `Some(Cell)`/`Cell` allocation from both heap and Rift. | Current 1M output-snapshot medians are faster than heap with much lower RSS (`8983.464 ms` heap, `8815.087 ms` HPZone, `8836.488 ms` Streaming; heap RSS `431652864`, Rift RSS about `120 MB`), but GC time is not materially lower and the bounded-sample result is not final application evidence. The newer Q2 incremental median checkpoint eliminates dirty median sorting in single-run diagnostics, but still needs 100k/1M medians. Need Commix, SafeZone comparison, full-month input, Q2 rank/output work, remaining control/collection work, and safe API boundaries. |
-| Phase 6 literature-benchmark evidence | Started | `docs/LITERATURE_BENCHMARK_CONTRACT.md` extracts the paper comparison contract. `DataflowRegionMatrix` now runs Broom-style SELECT/AGGREGATE/JOIN methodology workloads with ordinary Scala objects in heap, current SafeZone, improved SafeZone, Rift HPZone, and Rift Streaming modes. Native-only local medians include peak RSS, and a Broom-scale single run is recorded. `StreamFlexRegionMatrix` now runs stream throughput/latency methodology workloads with deadline-miss and latency-tail metrics. `YakRegionMatrix` now runs word-count and graph-step control/data split workloads. `StancuRegionMatrix` now runs transaction/accounting probes with batched transaction regions. | Keep improved SafeZone in all claims, and do not claim exact Naiad/Broom, exact StreamFlex/Ovm, exact Yak, or exact Stancu reproduction. The current sequence gives strong Broom/Dataflow HPZone evidence, strong StreamFlex-style throughput/latency evidence, Yak-style Rift-vs-heap and near-improved-SafeZone evidence, and Stancu-style Rift-vs-heap evidence after batching/fixed counters. Next choices are safe API rejection probes or returning to DEBS with the literature findings in mind. Build a fair Rift collection/operator API before redoing parallel-collections claims. |
+| Phase 6 literature-benchmark evidence | Started | `docs/LITERATURE_BENCHMARK_CONTRACT.md` extracts the paper comparison contract. `DataflowRegionMatrix` now runs Broom-style SELECT/AGGREGATE/JOIN methodology workloads with ordinary Scala objects in heap, current SafeZone, improved SafeZone, Rift HPZone, and Rift Streaming modes. Native-only local medians include peak RSS, and a Broom-scale single run is recorded. `StreamFlexRegionMatrix` now runs stream throughput/latency methodology workloads with deadline-miss and latency-tail metrics. `YakRegionMatrix` now runs word-count and graph-step control/data split workloads. `StancuRegionMatrix` now runs transaction/accounting probes with batched transaction regions. The 2026-04-26 Stancu boundary sweep records per-transaction, 64-transaction, and 512-transaction region boundaries. | Keep improved SafeZone in all claims, and do not claim exact Naiad/Broom, exact StreamFlex/Ovm, exact Yak, or exact Stancu reproduction. The current sequence gives strong Broom/Dataflow HPZone evidence, strong StreamFlex-style throughput/latency evidence, Yak-style Rift-vs-heap and near-improved-SafeZone evidence, and Stancu-style Rift-vs-heap evidence after batching/fixed counters. The Stancu weak result is now specifically attributed to too-fine region boundaries. Next choices are safe API rejection probes or returning to DEBS with the literature findings in mind. Build a fair Rift collection/operator API before redoing parallel-collections claims. |
 | Phase 7 capture checking | Open | Only design templates and early Rift API surface exist. | Implement positive/negative capture tests and fill `REPORT_CAPTURE_CHECK.md`. |
 | Phase 8 Lean mechanization | Open | Design pack has Lean stubs/templates. | Port or start proof work; prove without `sorry`. |
 | Phase 9 writing | Not started beyond notes | Result packs and this handoff exist. | Thesis/paper narrative after evidence stabilizes. |
@@ -1780,8 +1795,11 @@ Immediate next step:
 5. Treat the `StancuRegionMatrix` result as started Phase 6/Stancu-style
    accounting evidence. The initial per-transaction result was negative, but
    batched transaction regions plus the lower-overhead Rift counter path now
-   give a Rift-vs-heap win. It is not a Rift-vs-SafeZone win and not a compiler
-   annotation result.
+   give a Rift-vs-heap win. The 2026-04-26 boundary sweep confirms the causal
+   shape: one transaction per region loses, 64 transactions per region is best
+   in the local sweep, and 512 transactions per region is still a Rift-vs-heap
+   win but not faster than 64. It is not a Rift-vs-SafeZone win and not a
+   compiler annotation result.
 6. The next choice is either safe API accept/reject probes for the region object
    patterns now used by the literature harnesses, or returning to DEBS with the
    literature findings in mind.
