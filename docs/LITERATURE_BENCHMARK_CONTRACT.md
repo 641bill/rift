@@ -30,9 +30,9 @@ The standard for new benchmarks is:
 | Broom | List-of-lists allocator microbenchmark | Allocate/free 40 list-of-lists; each structure has `n` lists of `n` objects, `n=500..3000`. | Region runtime reduced time by about 59%. | Already covered locally by ListOfLists same-layout matrix; keep current/improved SafeZone and Rift HPZone baselines. |
 | Broom | Emulated Naiad SELECT, AGGREGATE, JOIN vertices | Synthetic per-epoch inputs: documents receive 500k-600k new entries per epoch; authors receive 10-20 new entries per epoch; run after 40 epochs. | SELECT about 13%, AGGREGATE about 20%, JOIN about 36% runtime reduction. | Add a Broom-style dataflow matrix with ordinary Scala message/value objects allocated either on heap or in an epoch region. Label it methodology reproduction, not exact Naiad reproduction. |
 | Broom | Naiad workflows and incremental SCC motivation | Naiad v0.4 on Mono; examples include TPC-H Q17, shopper workflow, and SCC over 15M vertices / 80M edges. | GC often accounts for 20%-40% of runtime and can create synchronization delays. | Use as motivation and future comparison. Exact artifact is unavailable, so do not claim exact reproduction. |
-| Yak | Hyracks external sort, word count, distributed grep | 11-node cluster; YahooWebmap 72GB; data/control split with epochs at operator open/close. | Overall normalized runtime 0.14-0.64 vs Parallel Scavenge; GC time 0.02-0.11. | Started locally with word-count-style durable control metadata, external-sort-shaped grouped sort, Hadoop-like top-word/filter, epoch-local data records, and a runtime-epoch promotion/escape proxy with barrier checks and promoted copies owned by the Rift memory API. Still not Hyracks/Hadoop or distributed Yak. |
+| Yak | Hyracks external sort, word count, distributed grep | 11-node cluster; YahooWebmap 72GB; data/control split with epochs at operator open/close. | Overall normalized runtime 0.14-0.64 vs Parallel Scavenge; GC time 0.02-0.11. | Started locally with word-count-style durable control metadata, external-sort-shaped grouped sort, Hadoop-like top-word/filter, GraphChi-like subinterval updates, epoch-local data records, and a runtime-epoch promotion/escape proxy with barrier checks and promoted copies owned by the Rift memory API. Still not Hyracks/Hadoop/GraphChi or distributed Yak. |
 | Yak | Hadoop in-map combiner, top-word selector, distributed word filter | 11-node cluster; StackOverflow 37GB; epochs around map/reduce tasks. | Overall normalized runtime 0.73-0.89; GC time 0.17-0.26; app time sometimes higher. | Future: reproduce map/reduce task-shape locally only after the dataflow operator harness is stable. |
-| Yak | GraphChi connected components, community detection, PageRank | One node; Sampletwitter-2010, 100M edges, 62M vertices; epochs around sub-intervals. | Overall normalized runtime 0.70-0.86; GC time 0.15-0.56. | Future: graph-processing benchmark with explicit sub-interval regions and a control/data split. |
+| Yak | GraphChi connected components, community detection, PageRank | One node; Sampletwitter-2010, 100M edges, 62M vertices; epochs around sub-intervals. | Overall normalized runtime 0.70-0.86; GC time 0.15-0.56. | Started locally with a subinterval edge-update workload: durable vertex values stay on heap and per-subinterval edge-update objects live in regions. |
 | StreamFlex | StreamIt BeamFormer and FilterBank | Ovm and HotSpot Java baselines; 10,000 iterations. | StreamFlex reported substantially lower run time than Java baselines on those stream kernels. | Started locally with a StreamFlex-style throughput/latency matrix over ordinary Scala packet/event objects. Still not exact BeamFormer/FilterBank. |
 | StreamFlex | IDS and event-correlation latency | Periodic stream processing; deadline miss and per-item latency measurements. | StreamFlex avoids large GC-induced deadline misses in the reported event-correlation case. | Started locally: collect per-event latency distributions, max-pause proxies, and deadline misses for heap/SafeZone/Rift modes. |
 | Stancu et al. | SPECjbb2005 transaction regions | 7 annotations; each warehouse 100k iterations; young gen varied 1MB-256MB. | About 77%-78% memory region-freed; up to 22% speedup at small young gen; fewer young collections. | Started locally with a transaction-shaped accounting probe. Initial per-transaction regions lost; batching 64 transactions per region plus lower-overhead Rift counters gives a Rift-vs-heap win, but SafeZone remains faster. |
@@ -73,7 +73,8 @@ Streaming has zero. This is not an exact StreamFlex/Ovm reproduction.
 
 Step 5 is started in
 `scala-native-rift/sandbox/src/main/scala-next/YakRegionMatrix.scala`. It
-records default, epoch-pressure, grouped-sort, top-word/filter, and promotion-pressure
+records default, epoch-pressure, grouped-sort, top-word/filter,
+GraphChi-style subinterval, and promotion-pressure
 native-only medians in
 `scala-native-rift/sandbox/YAK_REGION_MATRIX.md`, synced to
 `evidence/YAK_REGION_MATRIX.md`. After the Rift allocation-counter fix, the
@@ -87,7 +88,10 @@ adds a closer external-sort-shaped operator: HPZone is `227.393 ms` vs heap
 allocation-placement win rather than a Yak-scale GC-pressure result. A
 Hadoop-like top-word/filter pressure run is stronger: Rift Streaming is
 `262.980 ms` vs heap `311.527 ms` and improved SafeZone `271.273 ms`, with
-heap at `44.949 ms` measured GC. A follow-up runtime-epoch
+heap at `44.949 ms` measured GC. A GraphChi-like subinterval pressure run
+shows Rift Streaming at `236.388 ms` vs heap `302.599 ms`, with heap at
+`58.498 ms` measured GC, but improved SafeZone remains faster at `228.252 ms`.
+A follow-up runtime-epoch
 promotion proxy adds rare escaping data objects and memory-API-level barrier
 accounting: with 40 x 250k records and `YAK_ESCAPE_MODULO=1000`, Yak-runtime
 is `513.465 ms` vs heap `424.768 ms`, records 10M barrier checks, 10k
