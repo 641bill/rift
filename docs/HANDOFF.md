@@ -9,8 +9,8 @@ Active implementation branch for this update:
 `feature/rift`
 
 Implementation commit at this update:
-`183469749f7cad356b02dc1631a9ba400e6dd1ee`
-(`Reject returned functions from checked Rift regions`)
+`b748895cf4e2370708644cecf3d41b710c5e8efd`
+(`Add explicit heap roots for checked Rift regions`)
 
 Status: active research fork. The Phase 5 input-boundary checkpoint, reusable
 ranking backend, Q2 bounded cell-table checkpoint, Q1 primitive route-table
@@ -23,7 +23,9 @@ incremental median heap checkpoint are merged into `feature/rift`.
 The first Phase 7 checked-region hard-pattern probe slice is also committed:
 for-loop scoped allocation, nested scoped regions, local higher-order
 consumers, nested-region escape rejection, and conservative returned-function
-rejection now have compiler-test coverage.
+rejection now have compiler-test coverage. The next Phase 8 slice adds the
+explicit `RiftRegion.HeapRoot` path for checked region-to-GC metadata handles;
+it is committed at `b748895cf`.
 The StreamFlex-style throughput/latency, Yak-style epoch/control-data, and
 Stancu-style transaction/accounting methodology harnesses are also committed
 locally. A Scala-next checked Rift-region API slice has been reviewed and
@@ -35,9 +37,9 @@ at `ff37eecba`, and the fair JVM RunBoth cross-check was cherry-picked onto
 current `feature/rift` at `346a5bd6e`. The Q2 incremental-median checkpoint
 now has 100k and 1M 3-run medians recorded at `accf7a5f`; the Phase 7
 hard-pattern compiler probes were then committed at `9e2a451d9`, followed by
-the returned-function guard at `183469749`. The checked API is not a complete
-compiler capture-checking implementation. The fork is ahead of
-`origin/feature/rift` unless pushed.
+the returned-function guard at `183469749`, then the explicit `HeapRoot` handle
+at `b748895cf`. The checked API is not a complete compiler capture-checking
+implementation. The fork is ahead of `origin/feature/rift` unless pushed.
 
 Parent repo state for this update:
 
@@ -299,6 +301,10 @@ merged into `feature/rift` at `79953ad8d`:
 - Added `RiftRegion.reset { region ?=> ... }` for streaming epochs. The region
   is reset in `finally` after the body succeeds or throws, and checked uses
   cannot return region-local values from the reset block.
+- Added `RiftRegion.HeapRoot[T]` and `RiftRegion.root(value)` as the v1
+  explicit root-handle path for safe region-to-GC metadata references. The live
+  region object keeps heap roots in a GC-visible list and clears them on
+  reset/close.
 - In Scala-next, `RiftRegion.alloc(new T(...))` returns `T^{region}` for the
   implicit region, and inherited `region.alloc(new T(...))` returns `T^{this}`.
   `RiftRegion` overrides `allocImpl`, so the inherited checked member allocation
@@ -317,7 +323,11 @@ Tests added:
   escape, closure-retains-region-handle-in-heap, heap-retains-region-value, and
   reset-epoch escape cases. The 2026-04-26 hard-pattern update added compiler
   probes for scoped for-loop allocation, nested scoped regions returning a pure
-  value, a local higher-order consumer, and inner-region escape rejection.
+  value, a local higher-order consumer, inner-region escape rejection, returned
+  function rejection, and the explicit `HeapRoot` region-to-GC metadata path.
+- `unit-tests/native/src/test/scala-next/scala/scala/scalanative/memory/RiftRegionCheckedTest.scala`
+  now includes a runtime smoke case for a region object containing an explicit
+  `HeapRoot` handle.
 - `unit-tests/native/src/test/scala-next/scala/scala/scalanative/memory/RiftRegionTest.scala`
   is a Scala-next replacement of the existing Rift runtime test with
   `captureChecking` enabled, so the old HPZone/runtime tests still run under the
@@ -327,8 +337,8 @@ Tests added:
 Validation:
 
 - `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project nativelib3_next" compile` passed.
-- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"` passed `11/11` after the returned-closure guard update.
-- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionTest scala.scalanative.memory.RiftRegionCheckedTest"` passed `9/9` again after the returned-closure guard update.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"` passed `12/12` after the `HeapRoot` update.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionTest scala.scalanative.memory.RiftRegionCheckedTest"` passed `10/10` after the `HeapRoot` update.
 
 Exact current safety boundary:
 
@@ -338,15 +348,17 @@ Exact current safety boundary:
   storing a closure that captures the region handle in ordinary heap state; and
   returning region-local values from a reset epoch. Direct function results
   from checked boundaries are rejected conservatively because returned closures
-  may hide region-local captures.
+  may hide region-local captures. Region objects may refer to heap metadata
+  through explicit `HeapRoot` handles retained by the live region object.
 - Trusted/unsafe: `HPZone`, `open`/`trustedOpen`, raw pointer allocation,
   direct `region.reset()`, benchmark APIs, and all existing DEBS/dataflow
   harnesses using manual `RiftRegion.open`.
 - Still open: direct returned functions are rejected even when they are pure;
   precise returned-closure support would require stronger capture evidence. The
-  safe API also does not yet enforce the full mixed-reference policy for
-  region-to-GC immutable/static handles or explicit GC root handles. There is
-  no broad compiler capture-checking extension in this slice.
+  safe API does not yet statically reject direct unrooted region-to-GC fields;
+  a direct `RiftRegion.alloc(new Entry(heapValue))` shape compiled in a probe.
+  Safe checked code should use `HeapRoot` for heap metadata until a stricter
+  allocation rule or compiler extension exists.
 
 ### 4.7 Build-System Fix
 
@@ -1659,9 +1671,10 @@ Roadmap source: `/Users/siyaoliu/rift/Claude_output/ROADMAP.md`
 | Phase 4 topology/layout | Done enough to move on | `PHASE4_LAYOUT.md`, `PHASE4_TOPOLOGY.md`, `PHASE4_EXIT.md`. | Chunked layout still not a Rift win vs improved SafeZone. Mixed GC/region safety story needs Phase 6 tests. |
 | Phase 5 streaming operators and DEBS | In progress | DEBS Q1/Q2 run simultaneously on real data; outputs match; instrumentation added; Q1 and Q2 window entries have shared heap/Rift backends; Q2 active profit values live in window entries; Q2 ranking uses primitive cell keys internally; RunBoth input bytes use a heap/Rift allocation-placement split; the reusable ranking backend region-allocates Q1/Q2 ranking objects and top-k result arrays; Q2 bounded per-cell tables, Q1 route-table arrays, Q1 ranking-index arrays, Q2 latest-empty taxi arrays, Q2 ranking-index arrays, Q2 taxi-id table entries/bytes, RunBoth output snapshots, and Q2 incremental median heap arrays are region-backed in Rift modes. New `diag_*` counters identify remaining heap/control paths, and the shared `Grid.cellKeyOrZero` hot path removes temporary `Some(Cell)`/`Cell` allocation from both heap and Rift. | Current 1M Q2 incremental-median medians are heap `5976.447 ms`, HPZone `5794.879 ms`, and Streaming `5948.755 ms`; heap GC is `67.086 ms`, HPZone GC is `59.658 ms`, Streaming GC is `55.056 ms`; heap RSS is `305758208`, Rift RSS about `114 MB`. This is stronger bounded-sample evidence, but still not final application evidence. Need Commix, SafeZone comparison, full-month input, Q2 rank/output work, remaining control/collection work, and safe API boundaries. |
 | Phase 6 literature-benchmark evidence | Started | `docs/LITERATURE_BENCHMARK_CONTRACT.md` extracts the paper comparison contract. `DataflowRegionMatrix` now runs Broom-style SELECT/AGGREGATE/JOIN methodology workloads with ordinary Scala objects in heap, current SafeZone, improved SafeZone, Rift HPZone, and Rift Streaming modes. Native-only local medians include peak RSS, and a Broom-scale single run is recorded. `StreamFlexRegionMatrix` now runs stream throughput/latency methodology workloads with deadline-miss and latency-tail metrics. `YakRegionMatrix` now runs word-count and graph-step control/data split workloads. `StancuRegionMatrix` now runs transaction/accounting probes with batched transaction regions. The 2026-04-26 Stancu boundary sweep records per-transaction, 64-transaction, and 512-transaction region boundaries. | Keep improved SafeZone in all claims, and do not claim exact Naiad/Broom, exact StreamFlex/Ovm, exact Yak, or exact Stancu reproduction. The current sequence gives strong Broom/Dataflow HPZone evidence, strong StreamFlex-style throughput/latency evidence, Yak-style Rift-vs-heap and near-improved-SafeZone evidence, and Stancu-style Rift-vs-heap evidence after batching/fixed counters. The Stancu weak result is now specifically attributed to too-fine region boundaries. Next choices are safe API rejection probes or returning to DEBS with the literature findings in mind. Build a fair Rift collection/operator API before redoing parallel-collections claims. |
-| Phase 7 capture checking | Started | `RiftRegion.scoped`/`streaming` safe API slice exists. Targeted Scala-next compiler tests now pass for scoped object graphs, for-loop allocation, nested scoped regions, local higher-order consumers, non-escaping closures, return escape rejection, heap retention rejection, nested-region leak rejection, streaming reset escape rejection, and conservative returned-function rejection. `docs/REPORT_CAPTURE_CHECK.md` records the current checker behavior. | Unrooted region-to-GC ownership, more pinned diagnostics, broader runtime coverage, and mixed-reference policy. |
-| Phase 8 Lean mechanization | Open | Design pack has Lean stubs/templates. | Port or start proof work; prove without `sorry`. |
-| Phase 9 writing | Not started beyond notes | Result packs and this handoff exist. | Thesis/paper narrative after evidence stabilizes. |
+| Phase 7 capture checking | Started | `RiftRegion.scoped`/`streaming` safe API slice exists. Targeted Scala-next compiler tests now pass for scoped object graphs, for-loop allocation, nested scoped regions, local higher-order consumers, non-escaping closures, return escape rejection, heap retention rejection, nested-region leak rejection, streaming reset escape rejection, conservative returned-function rejection, and explicit `HeapRoot` metadata handles. `docs/REPORT_CAPTURE_CHECK.md` records the current checker behavior. | Direct unrooted region-to-GC rejection, more pinned diagnostics, broader runtime coverage, and mixed-reference policy. |
+| Phase 8 native GC/region hardening | Started | `HeapRoot` handles give a GC-visible explicit-root path for heap metadata stored from region objects; direct unrooted region-to-GC fields remain a checker gap. | Decide static rejection vs trusted-only labeling for direct unrooted fields; broaden mixed-reference tests. |
+| Phase 9 Lean mechanization | Open | Design pack has Lean stubs/templates. | Port or start proof work; prove without `sorry`. |
+| Phase 10 writing | Not started beyond notes | Result packs and this handoff exist. | Thesis/paper narrative after evidence stabilizes. |
 
 Is Phase 0 actually complete?
 
@@ -1848,10 +1861,11 @@ Immediate next step:
    in the local sweep, and 512 transactions per region is still a Rift-vs-heap
    win but not faster than 64. It is not a Rift-vs-SafeZone win and not a
    compiler annotation result.
-6. The first safe API accept/reject probe slice is now done and passed 11/11 in
-   the targeted Scala-next compiler test. Returned closures are rejected
-   conservatively through direct function-result rejection. The remaining safe
-   API risks are unrooted region-to-GC ownership and more pinned diagnostics.
+6. The first safe API accept/reject probe slice now passes 12/12 in the
+   targeted Scala-next compiler test. Returned closures are rejected
+   conservatively through direct function-result rejection. Region-to-GC
+   metadata has an explicit `HeapRoot` path, but direct unrooted fields still
+   need static rejection or trusted-only labeling.
 7. The next DEBS implementation target should be Q2 rank-maintenance/output
    variance or the safe region-backed collection/control API, not parser/input
    work. The design must preserve the same logical query for heap and Rift;
@@ -1861,7 +1875,7 @@ Immediate next step:
 Next technical milestone:
 
 1. Finish the remaining capture/safety guardrails before broadening mixed
-   object graphs: unrooted region-retains-heap ownership, pinned capture
+   object graphs: direct unrooted region-retains-heap rejection, pinned capture
    diagnostics, precise returned-closure support beyond the v1 rejection, and
    explicit HPZone/trusted labels for unsafe cases.
 2. Continue the DEBS "region-heavy" path with measurement first after the

@@ -26,6 +26,9 @@ Scala-next capture checking supports the first Rift safe API slice:
   `scoped`, `streaming`, and `reset` boundaries. This closes the previously
   observed returned-closure escape in the v1 API by rejecting that whole result
   shape for now.
+- explicit heap-root handles for region objects that need to refer to heap
+  metadata. `RiftRegion.root(value)` returns a `HeapRoot[T]` retained through
+  the live region object's GC-visible root list.
 
 Known gaps remain:
 
@@ -33,9 +36,11 @@ Known gaps remain:
   rejects direct function results even if a particular returned function is pure
   and does not capture region-local state. A future compiler/API extension
   should distinguish those cases.
-- The checker slice does not enforce the full mixed-reference policy. In
-  particular, unrooted region-to-GC ownership still needs either static
-  rejection, explicit root handles, or GC-visible region metadata.
+- The checker slice does not reject every direct unrooted region-to-GC
+  reference. A direct `RiftRegion.alloc(new Entry(heapValue))` shape still
+  compiled in a probe. The v1 safe policy is therefore: use `HeapRoot` for
+  region-to-heap metadata, and treat direct region-to-heap fields as a checker
+  limitation until a stricter allocation rule or compiler extension exists.
 - The tests validate source-level capture behavior and allocation lowering.
   They do not yet prove safe close/reset mechanically.
 
@@ -48,7 +53,7 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.Rif
 Result:
 
 ```text
-Passed: Total 11, Failed 0, Errors 0, Passed 11
+Passed: Total 12, Failed 0, Errors 0, Passed 12
 ```
 
 Runtime smoke command run on 2026-04-26:
@@ -60,7 +65,7 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memor
 Result:
 
 ```text
-Passed: Total 9, Failed 0, Errors 0, Passed 9
+Passed: Total 10, Failed 0, Errors 0, Passed 10
 ```
 
 ## 2 — The three hard patterns
@@ -160,11 +165,13 @@ Current checked compiler probes:
 | `closureCapturingScopedValueCannotEscape` | closure stored in heap state while capturing region handle | fails | Does not cover the harder closure-local-value-only escape gap. |
 | `closureCapturingScopedValueCannotEscapeByReturn` | closure returned from scoped region while capturing region-local value | fails | Rejected by the v1 `CanReturnFromRegion` function-result guard. |
 | `heapObjectCannotRetainScopedValue` | heap singleton retains scoped value | fails | Covers GC-to-region retention through heap state. |
+| `rootedHeapValueCanBeStoredInScopedObject` | region object stores explicit `HeapRoot` for heap metadata | compiles | Covers the v1 explicit-root policy for region-to-GC references. |
 | `streamingResetValueCannotEscapeEpoch` | value allocated inside reset epoch used after reset | fails | Covers reset boundary at source level. |
 
 Still missing:
 
-- a negative test for unrooted region-to-GC ownership;
+- static rejection for direct unrooted region-to-GC ownership. A probe of that
+  shape compiled before the explicit-root API was added;
 - more tests with expected diagnostic text pinned to capture-specific wording;
 - precise support for pure returned closures that provably do not capture
   region-local state.
@@ -199,11 +206,14 @@ Do not yet claim:
 
 - precise support for returned closures; v1 rejects direct function results
   conservatively;
-- complete mixed GC/region safety;
+- complete mixed GC/region safety. `HeapRoot` gives an explicit safe path for
+  region-to-GC metadata, but direct unrooted fields are not yet statically
+  rejected;
 - automatic allocation inference;
 - a mechanized proof.
 
-The next Phase 8 design decision should be whether unrooted region-to-GC
-references are rejected statically in safe APIs or represented through explicit
-GC-visible root handles. The Phase 4 checksum mismatch is the concrete reason
-this cannot be left implicit.
+The next Phase 8 design decision is how strict the allocation rule should be
+after adding `HeapRoot`: either reject direct unrooted region-to-GC fields at
+compile time, or require safe benchmark code to use `HeapRoot` and label any
+direct heap fields as trusted. The Phase 4 checksum mismatch is the concrete
+reason this cannot be left implicit.

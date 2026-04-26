@@ -45,8 +45,8 @@ listed below for command provenance and detailed interpretation.
 | Phase 5: application evidence | In progress | Partially validated/provisional | DEBS correctness and single-run instrumented matrices |
 | Phase 6: literature-aligned methodology evidence | Started | Validated methodology medians with caveats | Broom-style dataflow, StreamFlex-style latency/throughput, Yak-style control/data, Stancu-style transaction accounting |
 | Phase 6b: Broom / parallel collections API evidence | Open | Provisional surrogate only | amordo comparison and Rift raw-array surrogate |
-| Phase 7: capture-checked safe API | Started | Compiler-probe evidence, no benchmark data | 11 targeted checked-API compiler probes plus Phase 4 safety finding |
-| Phase 8: native GC/region integration hardening | Open | No benchmark data | Safety finding only |
+| Phase 7: capture-checked safe API | Started | Compiler-probe evidence, no benchmark data | 12 targeted checked-API compiler probes plus Phase 4 safety finding |
+| Phase 8: native GC/region integration hardening | Started | Runtime/API smoke evidence, no benchmark data | Explicit `HeapRoot` path plus safety finding |
 | Phase 9: Lean mechanization | Open | No data | None |
 | Phase 10: writing | Not started beyond notes | No data | None |
 
@@ -576,7 +576,7 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.Rif
 Result on 2026-04-26:
 
 ```text
-Passed: Total 10, Failed 0, Errors 0, Passed 10
+Passed: Total 12, Failed 0, Errors 0, Passed 12
 ```
 
 Runtime smoke command:
@@ -588,7 +588,7 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memor
 Result on 2026-04-26:
 
 ```text
-Passed: Total 9, Failed 0, Errors 0, Passed 9
+Passed: Total 10, Failed 0, Errors 0, Passed 10
 ```
 
 Covered source-level patterns:
@@ -605,6 +605,7 @@ Covered source-level patterns:
 | heap singleton retaining scoped value | rejected |
 | closure stored in heap state while capturing region handle | rejected |
 | closure returned from checked scoped region | rejected conservatively by direct function-result guard |
+| region object stores heap metadata via `HeapRoot` | passes compiler probe and native runtime smoke |
 | streaming reset value escaping epoch | rejected |
 
 Relevant evidence carried from Phase 4:
@@ -618,18 +619,22 @@ Open work:
 
 - Returned closures are rejected conservatively; precise support for pure
   returned functions remains open.
-- Unrooted region-to-GC ownership still needs static rejection or explicit root
-  handles.
+- Explicit `HeapRoot` handles now cover the safe region-to-GC metadata path.
+  Direct unrooted region-to-GC fields still need static rejection or
+  trusted-only labeling.
 - Most diagnostic strings are not pinned to capture-specific text yet.
 - Broader runtime tests and mixed-reference tests remain open.
 
 ## Phase 8: Native GC/Region Integration Hardening
 
-Numeric data: none yet.
+Numeric benchmark data: none yet. Runtime/API smoke evidence exists for the
+explicit-root path.
 
 Known design constraint:
 
 - Rift region memory is not GC-scanned.
+- `RiftRegion.root(value)` creates a `HeapRoot[T]` retained by a GC-visible list
+  on the live region object and cleared on reset/close.
 - Region-to-GC references need explicit roots, scanning, or rejection.
 - The Phase 4 mixed-topology checksum mismatch is the current concrete
   evidence for this risk.

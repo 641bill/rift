@@ -65,11 +65,13 @@ Current reliable evidence:
   drops from about `306 MB` to about `114 MB`. SafeZone/Commix/full-scale
   comparisons and safe API boundaries remain open.
 - Phase 7 checked API evidence has started. The targeted Scala-next compiler
-  suite passed 11/11 for the first `Scoped`/`Streaming` API slice, including
+  suite passed 12/12 for the first `Scoped`/`Streaming` API slice, including
   for-loop allocation, nested scoped regions, local higher-order consumers, and
   direct escape/reset rejection. Returned function values are now rejected
   conservatively because returned closures can hide region-local captures.
-  Mixed references remain open.
+  `RiftRegion.root` now provides an explicit `HeapRoot` path for region objects
+  that need to refer to heap metadata. Direct unrooted region-to-GC fields still
+  need stricter static rejection or trusted labeling.
 - The raw-array pipeline is a surrogate and must not be presented as a
   replacement for Broom-style or `ZoneParVector` collection evidence.
 
@@ -142,8 +144,8 @@ Region modes:
 | Mode | Intended meaning | Current status |
 |---|---|---|
 | `HPZone` | Trusted fast region path for benchmarks and hot loops. No static escape guarantee. | Implemented as a runtime kind and exercised by benchmarks. |
-| `Scoped` | Lexically scoped, capture-checked region. | Runtime kind and first checked API slice exist; direct function results are conservatively rejected; mixed references remain open. |
-| `Streaming` | Resettable streaming region with capture/use-after-reset constraints. | Runtime kind and checked reset wrapper exist; not complete for mixed references. |
+| `Scoped` | Lexically scoped, capture-checked region. | Runtime kind and first checked API slice exist; direct function results are conservatively rejected; `HeapRoot` handles provide explicit region-to-GC metadata roots. |
+| `Streaming` | Resettable streaming region with capture/use-after-reset constraints. | Runtime kind and checked reset wrapper exist; `HeapRoot` handles are cleared on reset/close. |
 
 The important corrected invariant is about GC visibility:
 
@@ -156,6 +158,12 @@ The important corrected invariant is about GC visibility:
   region-to-GC references statically, register/scavenge region metadata with
   the GC, or require another GC-visible root/handle for every heap object
   referenced from a region.
+- The current v1 API implements the explicit-root option through
+  `RiftRegion.HeapRoot[T]` and `RiftRegion.root(value)`. The live region object
+  keeps these handles in a heap list, so the referent remains visible to the
+  GC. Direct unrooted fields from region objects to heap objects are still a
+  checker limitation; safe code should use `HeapRoot` until a stricter
+  allocation rule exists.
 - `HPZone` remains a trusted path. It may be used to measure runtime potential,
   but it is not the safety story.
 
@@ -275,10 +283,11 @@ Scala-next checked API slice now passes compiler probes for scoped object
 graphs, for-loop allocation, nested scoped regions returning pure values, local
 higher-order consumers, non-escaping closures, direct return escape rejection,
 heap retention rejection, nested-region leak rejection, streaming reset escape
-rejection, and returned-closure rejection. This is useful evidence, but it is
-not a complete closure story: the v1 API rejects direct function results from
-checked region boundaries because a returned closure can hide region-local
-captures that the current checker does not expose in the result type.
+rejection, returned-closure rejection, and explicit heap-root handles. This is
+useful evidence, but it is not a complete closure or mixed-reference story: the
+v1 API rejects direct function results from checked region boundaries because a
+returned closure can hide region-local captures, and direct unrooted
+region-to-GC fields still compile in at least one probe.
 
 Minimum Phase 6 evidence:
 
@@ -286,7 +295,8 @@ Minimum Phase 6 evidence:
   Initial compiler probes now exist for this slice.
 - Negative cases for return escape, closure capture escape, cross-region
   leakage, use-after-reset, and unrooted region-to-GC ownership. Initial probes
-  cover all except unrooted region-to-GC ownership.
+  cover the escape/reset cases and the explicit `HeapRoot` path; direct
+  unrooted region-to-GC rejection is still open.
 - A report stating exactly what current Scala capture checking can express and
   what requires compiler or API changes. The first slice is recorded in
   `docs/REPORT_CAPTURE_CHECK.md`.

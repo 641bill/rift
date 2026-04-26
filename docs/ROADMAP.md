@@ -38,8 +38,8 @@ Reggio/Verona capabilities.
 | Phase 4: topology/layout decomposition | Done enough to move on | `PHASE4_LAYOUT.md`, `PHASE4_TOPOLOGY.md`, `PHASE4_EXIT.md`. | Carry safety finding into Phase 6; chunked layout still not clear Rift win vs improved SafeZone. |
 | Phase 5: application evidence | In progress, not complete | DEBS Q1/Q2 scaffold runs and outputs match on bounded real-data samples; RunBoth uses a shared byte parser and region-backed input buffer; Rift modes now region-allocate Q1/Q2 window entries, Q2 median scratch, ranking objects, reusable top-k result arrays, Q2 bounded cell tables, Q1 primitive route-table arrays, Q1 ranking-index arrays, Q2 latest-empty taxi arrays, Q2 ranking-index arrays, Q2 taxi-id table entries/bytes, RunBoth output snapshots, and Q2 incremental median heap arrays. The current 1M 3-run median after Q2 incremental medians is heap `5976.447 ms`, HPZone `5794.879 ms`, and Streaming `5948.755 ms`; GC drops from heap `67.086 ms` to HPZone `59.658 ms` and Streaming `55.056 ms`, and Rift RSS is around `114 MB` vs heap `306 MB`. | Latency arrays, SafeZone/Commix modes, full-month scale, safe API boundaries, and Q2 rank/output bottleneck. |
 | Phase 6: literature-aligned methodology evidence | Started | `DATAFLOW_REGION_MATRIX.md`, `STREAMFLEX_REGION_MATRIX.md`, `YAK_REGION_MATRIX.md`, and `STANCU_REGION_MATRIX.md` now cover Broom-style dataflow, StreamFlex-style latency/throughput, Yak-style control/data epochs, and Stancu-style transaction accounting. | Keep these labeled as methodology reproductions, not exact paper artifacts. Build fair Rift-backed collection/operator API before claiming a Broom/parallel-collections API comparison. |
-| Phase 7: capture-checked safe API | Started | `RiftRegion.scoped`/`streaming` APIs exist; compiler probes now pass for scoped object graphs, for-loop allocation, nested scoped regions, local higher-order consumers, non-escaping closures, return escape rejection, heap retention rejection, nested-region leak rejection, streaming reset escape rejection, and conservative returned-function rejection. `docs/REPORT_CAPTURE_CHECK.md` records the slice. | Unrooted region-to-GC ownership, more pinned diagnostics, runtime coverage beyond the existing smoke tests, and mixed-reference policy. |
-| Phase 8: native GC/region integration hardening | Open | Safety bug found for unrooted region-to-GC references. | Decide reject/root/scan strategy; test mixed references. |
+| Phase 7: capture-checked safe API | Started | `RiftRegion.scoped`/`streaming` APIs exist; compiler probes now pass for scoped object graphs, for-loop allocation, nested scoped regions, local higher-order consumers, non-escaping closures, return escape rejection, heap retention rejection, nested-region leak rejection, streaming reset escape rejection, conservative returned-function rejection, and explicit `HeapRoot` region-to-GC metadata handles. `docs/REPORT_CAPTURE_CHECK.md` records the slice. | Direct unrooted region-to-GC rejection, more pinned diagnostics, runtime coverage beyond the existing smoke tests, and mixed-reference policy. |
+| Phase 8: native GC/region integration hardening | Started | Safety bug found for unrooted region-to-GC references; v1 explicit `HeapRoot` handles now retain heap metadata through a GC-visible list on the live region object. | Decide whether to statically reject direct unrooted region-to-GC fields or keep them trusted-only; test mixed references more broadly. |
 | Phase 9: Lean mechanization | Open | Design target only; older proof pack is not active in fork. | Core calculus and proofs without `sorry`. |
 | Phase 10: writing | Not started beyond notes | Handoff and result packs exist. | Paper/thesis narrative after evidence stabilizes. |
 
@@ -542,7 +542,8 @@ Required work:
   cross-region leakage, use-after-reset, GC-to-region fields, and unrooted
   region-to-GC ownership. Current probes cover return escape, a heap singleton
   retaining a scoped value, a closure that captures the region handle, nested
-  inner-region leakage, streaming reset escape, and returned function values.
+  inner-region leakage, streaming reset escape, returned function values, and
+  the positive explicit-root path for region-to-GC metadata.
 - Create or update `REPORT_CAPTURE_CHECK.md` with exact checker behavior. The
   first report slice is filled in from the 2026-04-26 targeted compiler run.
 - Decide whether current Scala 3 capture checking is enough or whether the fork
@@ -554,7 +555,7 @@ Exit criteria:
 - Negative cases fail for capture/safety reasons, not incidental type errors.
 - Any checker limitation is documented and reflected in the design. Current
   documented limitations are conservative rejection of direct function results,
-  unrooted region-to-GC ownership, and mostly unpinned diagnostic text.
+  direct unrooted region-to-GC ownership, and mostly unpinned diagnostic text.
 
 Comparison obligation:
 
@@ -571,6 +572,8 @@ Required decisions:
 
 - Should safe regions forbid owning region-to-GC references?
 - Should Rift expose explicit GC-root handles for heap values stored in regions?
+  First v1 answer: yes, through `RiftRegion.HeapRoot[T]` and
+  `RiftRegion.root(value)`.
 - Should region metadata be scanned by the GC?
 - Should typed-region metadata eventually support BIBOP-style layout or
   tag-free scanning?
@@ -578,7 +581,8 @@ Required decisions:
 Required tests:
 
 - Region-to-GC reference retained only by region memory must fail statically or
-  be kept alive by explicit root/scan machinery.
+  be kept alive by explicit root/scan machinery. The explicit-root path now has
+  compiler and runtime smoke coverage.
 - GC-to-region references through heap fields must fail for safe regions.
 - HPZone versions of these cases must be labeled unsafe/trusted.
 
