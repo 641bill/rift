@@ -46,6 +46,14 @@ Scala-next capture checking supports the first Rift safe API slice:
   control metadata. Operations use an explicit owner-token API, for example
   `RiftRegion.append(region, buffer, value)`, so the current checker can reject
   direct heap stores and inner-region values stored into an outer buffer.
+- The first literature-shaped safe API probes now compile: streaming reset
+  epochs can process region-owned arrays of ordinary record objects, a
+  top-word-style `ObjectBuffer` can store records that refer to heap metadata
+  through explicitly rooted handles, and a GraphChi-style subinterval update
+  can use rooted durable heap vertex metadata.
+- The reset boundary now has an explicit negative probe for a subtle epoch
+  escape: a value allocated inside `RiftRegion.reset` cannot be stored into an
+  outer streaming-region `ObjectBuffer` and then read after reset.
 - The checked mixed-reference guard is intentionally limited to the checked
   `RiftRegion.ScopedRegion`/`RiftRegion.StreamingRegion` API surface.
   Low-level `RiftRegion.open(...)` remains a trusted benchmark/runtime API; a
@@ -67,6 +75,11 @@ Known gaps remain:
   cases such as plain `T^` fields, static immutable referents, and ergonomic
   method-style collection/container abstractions still need a more precise
   policy or compiler extension.
+- Mutable linked-list construction through a reassigned local head inside
+  checked regions is still too conservative in the v1 lowering guard. The
+  supported checked shape for now is explicit region arrays or the
+  explicit-owner `ObjectBuffer`; trusted benchmarks can still use linked lists
+  through `RiftRegion.open`.
 - The tests validate source-level capture behavior and allocation lowering.
   They do not yet prove safe close/reset mechanically.
 
@@ -79,7 +92,7 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.Rif
 Result:
 
 ```text
-Passed: Total 30, Failed 0, Errors 0, Passed 30
+Passed: Total 35, Failed 0, Errors 0, Passed 35
 ```
 
 Runtime smoke command run on 2026-04-26:
@@ -91,7 +104,7 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memor
 Result:
 
 ```text
-Passed: Total 12, Failed 0, Errors 0, Passed 12
+Passed: Total 14, Failed 0, Errors 0, Passed 14
 ```
 
 ## 2 — The three hard patterns
@@ -209,6 +222,11 @@ Current checked compiler probes:
 | `objectBufferCanStoreHeapRoot` | explicit-owner `ObjectBuffer` stores `HeapRoot` handles | compiles | Covers heap metadata through the checked buffer API. |
 | `objectBufferCannotStoreInnerScopedValue` | outer buffer stores value allocated in inner region | fails | Explicit owner token lets capture checking reject cross-region storage. |
 | `objectBufferCannotEscapeScopedRegion` | checked buffer escapes owning region | fails | Covers the heap-control/region-data boundary. |
+| `streamingResetRegionArrayEpochCompiles` | reset epoch processes a region-owned array of ordinary records | compiles | Models sort/dataflow epoch records through the supported checked array shape. |
+| `topwordBufferCanStoreRecordsWithRootedMetadata` | top-word-style buffer stores records that carry rooted heap metadata | compiles | Covers durable heap metadata via `HeapRoot` inside a higher-level checked buffer. |
+| `graphChiSubintervalCanUseRootedHeapVertexMetadata` | GraphChi-style subinterval record refers to durable heap vertex metadata through `HeapRoot` | compiles | Covers the safe data/control split for graph updates. |
+| `graphChiSubintervalCannotStoreUnrootedHeapVertex` | GraphChi-style subinterval record stores direct heap vertex metadata | fails | Confirms durable heap metadata still needs `HeapRoot`. |
+| `streamingResetValueCannotBeStoredInOuterBuffer` | reset epoch value is stored into an outer streaming buffer and read after reset | fails | Important epoch-boundary regression probe. |
 | `trustedOpenAllocationAllowsBenchmarkLinkedObjects` | trusted `RiftRegion.open(RiftRegion.HPZone)` allocates linked objects | compiles | Documents the intended split: `open` is trusted/unsafe; `scoped` and `streaming` are checked. |
 | `streamingResetValueCannotEscapeEpoch` | value allocated inside reset epoch used after reset | fails | Covers reset boundary at source level. |
 
@@ -217,6 +235,8 @@ Still missing:
 - more tests with expected diagnostic text pinned to capture-specific wording;
 - broader mixed-reference tests for plain `T^` selected fields, static
   immutable heap values, and higher-level collection/container abstractions;
+- a better checked story for mutable linked structures built through a
+  reassigned local head;
 - precise support for pure returned closures that provably do not capture
   region-local state.
 
@@ -258,6 +278,9 @@ Do not yet claim:
   are not fully modeled yet. Region-owned arrays are supported only with
   explicit element captures such as `Array[Leaf^{region}]^{region}`.
   `ObjectBuffer` is supported only through the explicit owner-token API.
+- mutable linked-list construction inside checked regions remains an ergonomics
+  gap; use region arrays or `ObjectBuffer` in checked code until provenance for
+  reassigned local heads is modeled.
 - automatic allocation inference;
 - a mechanized proof.
 

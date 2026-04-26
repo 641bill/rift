@@ -71,7 +71,7 @@ Current reliable evidence:
   are moving into regions. It does not close the SafeZone/Commix/full-scale or
   safe API gaps.
 - Phase 7 checked API evidence has started. The targeted Scala-next compiler
-  suite passed 29/29 for the current `Scoped`/`Streaming` API slice, including
+  suite passed 35/35 for the current `Scoped`/`Streaming` API slice, including
   for-loop allocation, nested scoped regions, local higher-order consumers, and
   direct escape/reset rejection. Returned function values are now rejected
   conservatively because returned closures can hide region-local captures.
@@ -84,7 +84,10 @@ Current reliable evidence:
   array object and reference element type are both explicitly region-captured.
   `RiftRegion.ObjectBuffer` adds a first checked higher-level container, using
   an explicit owner-token API to keep region data in a region-owned backing
-  array while rejecting direct heap and cross-region stores.
+  array while rejecting direct heap and cross-region stores. The latest probes
+  cover reset-epoch record arrays, top-word-style rooted metadata buffers,
+  GraphChi-style rooted heap metadata, and rejection of reset-epoch values
+  stored into outer streaming buffers.
 - The raw-array pipeline is a surrogate and must not be presented as a
   replacement for Broom-style or `ZoneParVector` collection evidence.
 
@@ -319,7 +322,11 @@ explicit-owner rather than method-style, for example
 `RiftRegion.append(region, buffer, value)`, because the current capture checker
 could not prove `buffer.append(value)` had the same region owner. Direct heap
 stores are rejected by Rift lowering, and cross-region stores are rejected by
-the explicit owner-token type.
+the explicit owner-token type. Checked streaming can express subinterval or
+epoch data with region-owned arrays and `ObjectBuffer`; mutable linked lists
+constructed by reassigning a local head are still an ergonomics gap in the
+checked API and should remain trusted-only or be rewritten to checked
+containers for now.
 
 Minimum Phase 6 evidence:
 
@@ -335,7 +342,9 @@ Minimum Phase 6 evidence:
   positive region-value/`HeapRoot` stores and a negative unrooted heap store.
   `ObjectBuffer` is covered as the first checked higher-level container, with
   positive region-value/`HeapRoot` stores and negative direct-heap,
-  cross-region, and escape probes.
+  cross-region, and escape probes. Literature-shaped probes now cover
+  top-word-style rooted metadata records, GraphChi-style rooted/unrooted heap
+  metadata, and reset-epoch values stored into outer streaming buffers.
 - A report stating exactly what current Scala capture checking can express and
   what requires compiler or API changes. The first slice is recorded in
   `docs/REPORT_CAPTURE_CHECK.md`.

@@ -87,7 +87,7 @@ For performance numbers, use the following rule of thumb:
 | Phase 5: application evidence | In progress | Bounded-sample medians plus diagnostic attribution | DEBS correctness, 100k/1M medians, and opt-in GC heap allocation attribution |
 | Phase 6: literature-aligned methodology evidence | Started | Validated methodology medians with caveats | Broom-style dataflow, StreamFlex-style latency/throughput, Yak-style control/data plus grouped sort, top-word/filter, GraphChi-style subintervals, and runtime promotion proxy, Stancu-style transaction accounting |
 | Phase 6b: Broom / parallel collections API evidence | Open | Provisional surrogate only | amordo comparison and Rift raw-array surrogate |
-| Phase 7: capture-checked safe API | Started | Compiler-probe evidence, no benchmark data | 30 targeted checked-API compiler probes plus Phase 4 safety finding |
+| Phase 7: capture-checked safe API | Started | Compiler-probe and runtime-smoke evidence, no benchmark data | 35 targeted checked-API compiler probes, 14 runtime tests, plus Phase 4 safety finding |
 | Phase 8: native GC/region integration hardening | Started | Runtime/API smoke evidence, no benchmark data | Explicit `HeapRoot` path plus direct unrooted heap-constructor/alias/field-selection/array-store rejection and explicit `{region}` constructor-field/array reuse |
 | Phase 9: Lean mechanization | Open | No data | None |
 | Phase 10: writing | Not started beyond notes | No data | None |
@@ -1001,6 +1001,11 @@ Covered source-level patterns:
 | explicit-owner `ObjectBuffer` stores `HeapRoot` handle | passes compiler probe and native runtime smoke |
 | outer `ObjectBuffer` stores inner-region value | rejected by explicit owner-token type |
 | checked `ObjectBuffer` escapes owning region | rejected |
+| streaming reset epoch processes region-owned array of ordinary records | passes compiler probe and native runtime smoke |
+| top-word-style `ObjectBuffer` stores records with rooted heap metadata | passes compiler probe and native runtime smoke |
+| GraphChi-style subinterval uses rooted durable heap vertex metadata | passes compiler probe |
+| GraphChi-style subinterval stores unrooted durable heap vertex metadata | rejected by Rift allocation lowering guard |
+| reset epoch value stored into outer streaming buffer and read after reset | rejected |
 | trusted `RiftRegion.open` allocates linked benchmark objects | passes compiler probe |
 | streaming reset value escaping epoch | rejected |
 
@@ -1030,6 +1035,13 @@ Open work:
   selected fields, static immutable heap referents, and ergonomic method-style
   containers still need a more complete mixed-reference policy or ergonomics
   story.
+- The new literature-shaped probes show the safe API can express record arrays,
+  top-word-style buffers with rooted metadata, and GraphChi-style rooted
+  durable vertex metadata. A failed runtime-test draft also exposed a current
+  ergonomics gap: mutable linked lists built by reassigning a local head inside
+  checked regions are too conservative under the v1 lowering guard. Use
+  region-owned arrays or `ObjectBuffer` in checked code for now; trusted
+  benchmarks can still use linked lists through `RiftRegion.open`.
 - Most diagnostic strings are not pinned to capture-specific text yet.
 - Broader runtime tests and mixed-reference tests remain open.
 
