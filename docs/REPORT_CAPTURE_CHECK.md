@@ -41,6 +41,11 @@ Scala-next capture checking supports the first Rift safe API slice:
   `Array[Leaf^{region}]^{region}`. Stores into known region arrays are checked
   so unrooted heap objects cannot be retained by region memory; `HeapRoot`
   values are allowed.
+- `RiftRegion.ObjectBuffer` is the first checked higher-level container
+  primitive. It region-allocates the backing object array and keeps only heap
+  control metadata. Operations use an explicit owner-token API, for example
+  `RiftRegion.append(region, buffer, value)`, so the current checker can reject
+  direct heap stores and inner-region values stored into an outer buffer.
 
 Known gaps remain:
 
@@ -54,9 +59,10 @@ Known gaps remain:
   in the same region, simple local aliases of those values, primitives/null,
   `HeapRoot` handles, and stable primary-constructor field selections whose
   source type is explicitly region-captured. It also checks stores into known
-  region arrays. Broader cases such as plain `T^` fields, static immutable
-  referents, and general collection/container abstractions still need a more
-  precise policy or compiler extension.
+  region arrays and the current explicit-owner `ObjectBuffer` API. Broader
+  cases such as plain `T^` fields, static immutable referents, and ergonomic
+  method-style collection/container abstractions still need a more precise
+  policy or compiler extension.
 - The tests validate source-level capture behavior and allocation lowering.
   They do not yet prove safe close/reset mechanically.
 
@@ -69,7 +75,7 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.Rif
 Result:
 
 ```text
-Passed: Total 24, Failed 0, Errors 0, Passed 24
+Passed: Total 29, Failed 0, Errors 0, Passed 29
 ```
 
 Runtime smoke command run on 2026-04-26:
@@ -81,7 +87,7 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memor
 Result:
 
 ```text
-Passed: Total 11, Failed 0, Errors 0, Passed 11
+Passed: Total 12, Failed 0, Errors 0, Passed 12
 ```
 
 ## 2 — The three hard patterns
@@ -194,6 +200,11 @@ Current checked compiler probes:
 | `regionOwnedArrayCannotStoreHeapObject` | region-owned array stores an unrooted heap object | fails | Covers the new array-store guard. |
 | `heapArrayCannotBeStoredInScopedObject` | region object stores a heap array | fails | Prevents heap containers from becoming region-owned implicitly. |
 | `regionOwnedArrayCanStoreHeapRoot` | region-owned array stores explicit `HeapRoot` handles | compiles | Covers the safe heap-metadata container path. |
+| `objectBufferCanStoreRegionObjects` | explicit-owner `ObjectBuffer` stores region objects | compiles | First checked higher-level container primitive. |
+| `objectBufferCannotStoreHeapObject` | explicit-owner `ObjectBuffer` stores direct heap object | fails | Uses the Rift append lowering guard; heap metadata must use `HeapRoot`. |
+| `objectBufferCanStoreHeapRoot` | explicit-owner `ObjectBuffer` stores `HeapRoot` handles | compiles | Covers heap metadata through the checked buffer API. |
+| `objectBufferCannotStoreInnerScopedValue` | outer buffer stores value allocated in inner region | fails | Explicit owner token lets capture checking reject cross-region storage. |
+| `objectBufferCannotEscapeScopedRegion` | checked buffer escapes owning region | fails | Covers the heap-control/region-data boundary. |
 | `streamingResetValueCannotEscapeEpoch` | value allocated inside reset epoch used after reset | fails | Covers reset boundary at source level. |
 
 Still missing:
@@ -240,7 +251,8 @@ Do not yet claim:
   source types are explicitly tied to `{region}` are supported, but plain `T^`
   selected fields, static immutable referents, and general collection aliases
   are not fully modeled yet. Region-owned arrays are supported only with
-  explicit element captures such as `Array[Leaf^{region}]^{region}`;
+  explicit element captures such as `Array[Leaf^{region}]^{region}`.
+  `ObjectBuffer` is supported only through the explicit owner-token API.
 - automatic allocation inference;
 - a mechanized proof.
 

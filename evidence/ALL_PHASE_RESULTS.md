@@ -576,7 +576,7 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.Rif
 Result on 2026-04-26:
 
 ```text
-Passed: Total 24, Failed 0, Errors 0, Passed 24
+Passed: Total 29, Failed 0, Errors 0, Passed 29
 ```
 
 Runtime smoke command:
@@ -588,7 +588,7 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memor
 Result on 2026-04-26:
 
 ```text
-Passed: Total 11, Failed 0, Errors 0, Passed 11
+Passed: Total 12, Failed 0, Errors 0, Passed 12
 ```
 
 Covered source-level patterns:
@@ -618,6 +618,11 @@ Covered source-level patterns:
 | region-owned array stores unrooted heap object | rejected by Rift array-store guard |
 | heap array stored through checked Rift allocation constructor | rejected |
 | region-owned array stores explicit `HeapRoot` handle | passes compiler probe and native runtime smoke |
+| explicit-owner `ObjectBuffer` stores region objects | passes compiler probe and native runtime smoke |
+| explicit-owner `ObjectBuffer` stores direct heap object | rejected by Rift append lowering guard |
+| explicit-owner `ObjectBuffer` stores `HeapRoot` handle | passes compiler probe and native runtime smoke |
+| outer `ObjectBuffer` stores inner-region value | rejected by explicit owner-token type |
+| checked `ObjectBuffer` escapes owning region | rejected |
 | streaming reset value escaping epoch | rejected |
 
 Relevant evidence carried from Phase 4:
@@ -637,9 +642,13 @@ Open work:
   heap aliases and heap field selections are rejected. Stable constructor
   fields explicitly captured by `{region}` are accepted. Region-owned arrays
   are accepted when reference elements are explicitly captured, and stores into
-  known region arrays reject unrooted heap objects. Plain `T^` selected fields,
-  static immutable heap referents, and higher-level containers still need a
-  more complete mixed-reference policy or ergonomics story.
+  known region arrays reject unrooted heap objects. `RiftRegion.ObjectBuffer`
+  is now a checked but explicit-owner first container primitive: it keeps heap
+  control metadata, region-allocates the backing object array, and requires
+  calls such as `RiftRegion.append(region, buffer, value)`. Plain `T^`
+  selected fields, static immutable heap referents, and ergonomic method-style
+  containers still need a more complete mixed-reference policy or ergonomics
+  story.
 - Most diagnostic strings are not pinned to capture-specific text yet.
 - Broader runtime tests and mixed-reference tests remain open.
 

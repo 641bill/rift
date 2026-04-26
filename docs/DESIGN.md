@@ -65,7 +65,7 @@ Current reliable evidence:
   drops from about `306 MB` to about `114 MB`. SafeZone/Commix/full-scale
   comparisons and safe API boundaries remain open.
 - Phase 7 checked API evidence has started. The targeted Scala-next compiler
-  suite passed 24/24 for the current `Scoped`/`Streaming` API slice, including
+  suite passed 29/29 for the current `Scoped`/`Streaming` API slice, including
   for-loop allocation, nested scoped regions, local higher-order consumers, and
   direct escape/reset rejection. Returned function values are now rejected
   conservatively because returned closures can hide region-local captures.
@@ -76,6 +76,9 @@ Current reliable evidence:
   stable constructor fields whose source types are explicitly tied to
   `{region}`. Region-owned arrays are supported as checked containers when the
   array object and reference element type are both explicitly region-captured.
+  `RiftRegion.ObjectBuffer` adds a first checked higher-level container, using
+  an explicit owner-token API to keep region data in a region-owned backing
+  array while rejecting direct heap and cross-region stores.
 - The raw-array pipeline is a surrogate and must not be presented as a
   replacement for Broom-style or `ZoneParVector` collection evidence.
 
@@ -148,7 +151,7 @@ Region modes:
 | Mode | Intended meaning | Current status |
 |---|---|---|
 | `HPZone` | Trusted fast region path for benchmarks and hot loops. No static escape guarantee. | Implemented as a runtime kind and exercised by benchmarks. |
-| `Scoped` | Lexically scoped, capture-checked region. | Runtime kind and checked API slice exist; direct function results are conservatively rejected; `HeapRoot` handles provide explicit region-to-GC metadata roots; direct unrooted heap-object constructor arguments are rejected in checked allocation lowering; simple region-local aliases are propagated. |
+| `Scoped` | Lexically scoped, capture-checked region. | Runtime kind and checked API slice exist; direct function results are conservatively rejected; `HeapRoot` handles provide explicit region-to-GC metadata roots; direct unrooted heap-object constructor arguments are rejected in checked allocation lowering; simple region-local aliases are propagated; explicit-owner `ObjectBuffer` gives a first checked container primitive. |
 | `Streaming` | Resettable streaming region with capture/use-after-reset constraints. | Runtime kind and checked reset wrapper exist; `HeapRoot` handles are cleared on reset/close; the same checked allocation guard applies inside reset epochs. |
 
 The important corrected invariant is about GC visibility:
@@ -301,6 +304,13 @@ capture checking because the selected field gets its own capability.
 Region-owned arrays require explicit element capture such as
 `Array[Leaf^{region}]^{region}`; stores into known region arrays reject
 unrooted heap objects and accept region-local values or `HeapRoot` handles.
+`RiftRegion.ObjectBuffer` is the first checked higher-level container: it uses
+heap control metadata plus a region-owned backing object array. Its v1 API is
+explicit-owner rather than method-style, for example
+`RiftRegion.append(region, buffer, value)`, because the current capture checker
+could not prove `buffer.append(value)` had the same region owner. Direct heap
+stores are rejected by Rift lowering, and cross-region stores are rejected by
+the explicit owner-token type.
 
 Minimum Phase 6 evidence:
 
@@ -314,6 +324,9 @@ Minimum Phase 6 evidence:
   constructor field reuse is covered positively; plain `T^` field reuse is
   covered as a current negative. Region-owned array containers are covered with
   positive region-value/`HeapRoot` stores and a negative unrooted heap store.
+  `ObjectBuffer` is covered as the first checked higher-level container, with
+  positive region-value/`HeapRoot` stores and negative direct-heap,
+  cross-region, and escape probes.
 - A report stating exactly what current Scala capture checking can express and
   what requires compiler or API changes. The first slice is recorded in
   `docs/REPORT_CAPTURE_CHECK.md`.
