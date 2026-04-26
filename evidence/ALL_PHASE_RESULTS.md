@@ -6,6 +6,44 @@ This file gathers the current numeric and validation evidence across all
 roadmap phases. It is a rollup, not the primary raw log. Prefer the source files
 listed below for command provenance and detailed interpretation.
 
+## How To Read This File
+
+Rift has several different kinds of evidence. They should not be collapsed into
+one "Rift is faster/slower" statement.
+
+- **Runtime-only evidence** asks whether the Rift allocator/region close path is
+  competitive when the object graph shape is held mostly fixed. GCBench and
+  linked ListOfLists are the main examples.
+- **Topology/layout evidence** asks whether region-friendly layouts matter more
+  than allocator choice. Phase 4 shows they do: linked, chunked, flat, and
+  mixed GC/region topologies have different behavior.
+- **Application evidence** asks whether a real-ish streaming workload benefits
+  when structured-lifetime data moves into regions while heap remains the
+  fallback for durable/control data. DEBS is the main Phase 5 workload.
+- **Literature-methodology evidence** asks whether Rift can reproduce the
+  performance regimes targeted by prior systems such as Broom, StreamFlex, Yak,
+  and Stancu-style RegionScope work. These are local methodology harnesses, not
+  exact artifact reproductions.
+- **Safety evidence** asks whether ordinary Scala region object graphs and
+  mixed heap/region references can be checked. Phase 7/8 compiler probes are
+  separate from performance claims.
+
+For performance numbers, use the following rule of thumb:
+
+- **Elapsed ms** is end-to-end wall-clock time for the benchmark or phase.
+- **GC ms** is time reported by Scala Native's GC counters. It can be small even
+  when heap allocation is high if the workload is CPU-bound or heap headroom is
+  large.
+- **Rift op ms** is time spent in measured Rift runtime operations such as
+  open/close/reset/slow allocation. It should stay much smaller than the
+  application phase being optimized.
+- **RSS bytes** is peak resident memory from `/usr/bin/time`; it is often where
+  Rift's DEBS effect is clearest so far.
+- **Region objects** counts objects allocated through the Rift allocator, not
+  all logical data values in the application.
+- **Single-run rows** are direction checks. Treat only explicit median rows as
+  headline performance evidence.
+
 ## Source Files
 
 | Area | Source |
@@ -45,10 +83,26 @@ listed below for command provenance and detailed interpretation.
 | Phase 5: application evidence | In progress | Partially validated/provisional | DEBS correctness and single-run instrumented matrices |
 | Phase 6: literature-aligned methodology evidence | Started | Validated methodology medians with caveats | Broom-style dataflow, StreamFlex-style latency/throughput, Yak-style control/data, Stancu-style transaction accounting |
 | Phase 6b: Broom / parallel collections API evidence | Open | Provisional surrogate only | amordo comparison and Rift raw-array surrogate |
-| Phase 7: capture-checked safe API | Started | Compiler-probe evidence, no benchmark data | 24 targeted checked-API compiler probes plus Phase 4 safety finding |
+| Phase 7: capture-checked safe API | Started | Compiler-probe evidence, no benchmark data | 30 targeted checked-API compiler probes plus Phase 4 safety finding |
 | Phase 8: native GC/region integration hardening | Started | Runtime/API smoke evidence, no benchmark data | Explicit `HeapRoot` path plus direct unrooted heap-constructor/alias/field-selection/array-store rejection and explicit `{region}` constructor-field/array reuse |
 | Phase 9: Lean mechanization | Open | No data | None |
 | Phase 10: writing | Not started beyond notes | No data | None |
+
+## Phase Guide
+
+| Phase | What We Did | What The Numbers Mean |
+|---|---|---|
+| Phase 0 | Rebuilt the baseline story around heap, current SafeZone, improved SafeZone, and Rift. | Improved SafeZone must be treated as a real baseline; old "SafeZone is always terrible" claims are too broad. |
+| Phase 1 | Built the original standalone C slab/bump allocator in `rift-bootstrap`. | Useful allocator provenance only; active architecture moved into the Scala Native fork. |
+| Phase 2 | Integrated Rift into Scala Native runtime/compiler paths. | Mostly enablement work; judged by smoke/tests more than standalone speed tables. |
+| Phase 3 | Reran same-layout runtime matrices. | Rift has credible allocator/runtime wins on allocation-heavy linked structures. |
+| Phase 4 | Split allocator effects from layout/topology effects. | Layout and reference topology can dominate allocator choice; mixed region/GC references require a safety story. |
+| Phase 5 | Built DEBS Q1/Q2 runners and progressively moved structured-lifetime state into regions. | Current DEBS evidence shows lower RSS and some elapsed wins, but Q2 CPU and output work still dominate; not final application proof. |
+| Phase 6 | Built methodology harnesses for Broom/StreamFlex/Yak/Stancu comparison axes. | These support the broader research story but are not exact reproductions of closed or unavailable artifacts. |
+| Phase 7 | Added checked `scoped`/`streaming` API probes using Scala capture checking. | Source-level safety evidence is started; ergonomics and broader container patterns remain open. |
+| Phase 8 | Added explicit heap-root handles and conservative mixed-reference rejection. | Region memory is not GC-scanned, so region-to-heap references need roots or static rejection. |
+| Phase 9 | Reserved for Lean mechanization. | No proof result yet. |
+| Phase 10 | Reserved for writing and claim assembly. | Should wait for stronger Phase 5/7/9 evidence. |
 
 ## Phase 0: Baselines
 
@@ -465,6 +519,12 @@ bounded table, taxi-id, output-snapshot, and Q2 incremental-median work.
 | 100k Q2 attribution | heap | 643.082 | 11.408 | 136.841 | 200.551 | 47.617 | 0.000 | 0 | 97419264 |
 | 100k Q2 attribution | Rift HPZone | 663.542 | 4.977 | 133.112 | 187.618 | 47.133 | 1.435 | 602457 | 40353792 |
 | 100k Q2 attribution | Rift Streaming | 616.502 | 4.688 | 131.871 | 186.946 | 46.855 | 1.596 | 602457 | 40370176 |
+| 100k Q2 top-10 cache | heap | 628.690 | 9.825 | 146.959 | 127.308 | 80.264 | 0.000 | 0 | 102367232 |
+| 100k Q2 top-10 cache | Rift HPZone | 550.082 | 5.314 | 134.550 | 114.019 | 47.548 | 1.605 | 602458 | 41500672 |
+| 100k Q2 top-10 cache | Rift Streaming | 553.841 | 5.371 | 136.203 | 115.732 | 47.588 | 1.735 | 602458 | 41484288 |
+| 1M Q2 top-10 cache | heap | 5367.670 | 68.932 | 1429.207 | 1321.860 | 372.546 | 0.000 | 0 | 305627136 |
+| 1M Q2 top-10 cache | Rift HPZone | 5149.720 | 35.475 | 1357.260 | 1210.340 | 371.787 | 11.813 | 5494563 | 116604928 |
+| 1M Q2 top-10 cache | Rift Streaming | 5191.038 | 35.887 | 1369.725 | 1220.904 | 370.809 | 12.376 | 5494563 | 116588544 |
 
 Common Q2 incremental-median diagnostics at 1M:
 
@@ -485,6 +545,12 @@ Interpretation:
   Q2 rank comparisons at 100k. A small binary top-candidate heap was tested
   during the session and rejected because it increased comparisons to about
   `5.39M`.
+- The Q2 top-10 cache rows are single-run validation rows after caching the
+  top-k extraction. The cache keeps the same heap/Rift logical algorithm but
+  avoids recomputing the heap frontier when a rank update cannot affect the
+  current top 10. At 100k it reduced top-candidate comparisons from `4.45M` to
+  `144949`; at 1M it recomputed top 10 only `29983` times out of `1000000`
+  logical calls. Treat the elapsed numbers as directional until median reruns.
 - The improvement is shared algorithmic cleanup plus allocation placement:
   heap and Rift use the same two-heap median maintenance, while Rift allocates
   the median/control arrays and related ordinary Scala objects in regions.

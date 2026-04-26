@@ -36,7 +36,7 @@ Reggio/Verona capabilities.
 | Phase 2: in-tree runtime/compiler path | Partially done | `RiftRuntime.c/h`, `RiftRegion`, plugin lowering, `RiftRegionTest`. | Header/API cleanup, broader tests, commit boundary, stats ABI decision. |
 | Phase 3: runtime-only evaluation | Done enough for current claim | GCBench and ListOfLists medians show Rift wins over heap and improved SafeZone. | Add Commix where relevant; avoid overclaiming pipeline. |
 | Phase 4: topology/layout decomposition | Done enough to move on | `PHASE4_LAYOUT.md`, `PHASE4_TOPOLOGY.md`, `PHASE4_EXIT.md`. | Carry safety finding into Phase 6; chunked layout still not clear Rift win vs improved SafeZone. |
-| Phase 5: application evidence | In progress, not complete | DEBS Q1/Q2 scaffold runs and outputs match on bounded real-data samples; RunBoth uses a shared byte parser and region-backed input buffer; Rift modes now region-allocate Q1/Q2 window entries, Q2 median scratch, ranking objects, reusable top-k result arrays, Q2 bounded cell tables, Q1 primitive route-table arrays, Q1 ranking-index arrays, Q2 latest-empty taxi arrays, Q2 ranking-index arrays, Q2 taxi-id table entries/bytes, RunBoth output snapshots, Q2 incremental median heap arrays, and RunBoth latency buffers. The current 1M 3-run median after Q2 incremental medians is heap `5976.447 ms`, HPZone `5794.879 ms`, and Streaming `5948.755 ms`; GC drops from heap `67.086 ms` to HPZone `59.658 ms` and Streaming `55.056 ms`, and Rift RSS is around `114 MB` vs heap `306 MB`. A later 100k attribution run shows Q2 snapshots are tiny, changed-output checks are visible, and top-candidate extraction accounts for most Q2 rank comparisons. | SafeZone/Commix modes, full-month scale, safe API boundaries, and a better Q2 rank/top-10 strategy. |
+| Phase 5: application evidence | In progress, not complete | DEBS Q1/Q2 scaffold runs and outputs match on bounded real-data samples; RunBoth uses a shared byte parser and region-backed input buffer; Rift modes now region-allocate Q1/Q2 window entries, Q2 median scratch, ranking objects, reusable top-k result arrays, Q2 bounded cell tables, Q1 primitive route-table arrays, Q1 ranking-index arrays, Q2 latest-empty taxi arrays, Q2 ranking-index arrays, Q2 taxi-id table entries/bytes, RunBoth output snapshots, Q2 incremental median heap arrays, and RunBoth latency buffers. The current 1M 3-run median after Q2 incremental medians is heap `5976.447 ms`, HPZone `5794.879 ms`, and Streaming `5948.755 ms`; GC drops from heap `67.086 ms` to HPZone `59.658 ms` and Streaming `55.056 ms`, and Rift RSS is around `114 MB` vs heap `306 MB`. A later single-run Q2 top-10 cache validation keeps heap/Rift on the same logical algorithm, reduces 100k top-candidate comparisons from `4.45M` to `144949`, and measures 1M elapsed heap `5367.670 ms`, HPZone `5149.720 ms`, Streaming `5191.038 ms`. | Median reruns for the Q2 top-10 cache checkpoint, SafeZone/Commix modes, full-month scale, and safe API boundaries. |
 | Phase 6: literature-aligned methodology evidence | Started | `DATAFLOW_REGION_MATRIX.md`, `STREAMFLEX_REGION_MATRIX.md`, `YAK_REGION_MATRIX.md`, and `STANCU_REGION_MATRIX.md` now cover Broom-style dataflow, StreamFlex-style latency/throughput, Yak-style control/data epochs, and Stancu-style transaction accounting. | Keep these labeled as methodology reproductions, not exact paper artifacts. Build fair Rift-backed collection/operator API before claiming a Broom/parallel-collections API comparison. |
 | Phase 7: capture-checked safe API | Started | `RiftRegion.scoped`/`streaming` APIs exist; compiler probes now pass for scoped object graphs, for-loop allocation, nested scoped regions, local higher-order consumers, non-escaping closures, return escape rejection, heap retention rejection, nested-region leak rejection, streaming reset escape rejection, conservative returned-function rejection, explicit `HeapRoot` region-to-GC metadata handles, direct unrooted heap-object constructor-argument rejection, region-local alias acceptance, heap-alias rejection, heap-field-selection rejection, explicitly region-captured constructor-field reuse, plain `T^` field-reuse rejection, region-owned array checks, and the explicit-owner `ObjectBuffer` checked container. `docs/REPORT_CAPTURE_CHECK.md` records the slice. | More pinned diagnostics, broader runtime coverage, static-heap policy, richer containers, and a better ergonomics story for field/container provenance. |
 | Phase 8: native GC/region integration hardening | Started | Safety bug found for unrooted region-to-GC references; v1 explicit `HeapRoot` handles now retain heap metadata through a GC-visible list on the live region object, and checked lowering rejects direct unrooted heap-object constructor arguments, unsafe region-array stores, and unsafe `ObjectBuffer` heap stores while allowing region-to-region object graphs, simple region-local aliases, stable constructor fields explicitly captured by `{region}`, region arrays with explicitly captured element types, and explicit-owner object buffers. | Extend or deliberately limit the mixed-reference rule for static immutable heap referents and richer containers; decide whether plain `T^` field reuse and method-style container operations need a compiler extension or explicit owner-token APIs. |
@@ -250,6 +250,9 @@ Current limitation:
   avoids hot per-row `StringBuilder.toString` and Q2 `f""` formatting.
 - Q2 median scratch arrays are region-backed in Rift modes and reused with
   capacity growth. Q2 ranking uses packed primitive cell keys internally.
+- Q2 top-10 extraction now uses a shared conservative cache. Heap and Rift use
+  the same invalidation logic; Rift's difference remains allocation placement
+  for the region-managed ranking/control state.
 - Therefore current DEBS does not yet establish that Rift is faster at the
   application level.
 
@@ -350,6 +353,14 @@ Current provisional evidence:
 | 1M 3-run median after Q2 incremental medians, GC time | 67.086 ms | 59.658 ms | 55.056 ms |
 | 1M 3-run median after Q2 incremental medians, Rift op time | 0.000 ms | 10.737 ms | 11.172 ms |
 | 1M 3-run median after Q2 incremental medians, peak RSS | 305758208 | 113950720 | 113934336 |
+| 100k single after Q2 top-10 cache, elapsed | 628.690 ms | 550.082 ms | 553.841 ms |
+| 100k single after Q2 top-10 cache, top-10 recomputes | 4189 | 4189 | 4189 |
+| 100k single after Q2 top-10 cache, top-candidate comparisons | 144949 | 144949 | 144949 |
+| 1M single after Q2 top-10 cache, elapsed | 5367.670 ms | 5149.720 ms | 5191.038 ms |
+| 1M single after Q2 top-10 cache, GC time | 68.932 ms | 35.475 ms | 35.887 ms |
+| 1M single after Q2 top-10 cache, Rift op time | 0.000 ms | 11.813 ms | 12.376 ms |
+| 1M single after Q2 top-10 cache, peak RSS | 305627136 | 116604928 | 116588544 |
+| 1M single after Q2 top-10 cache, top-10 recomputes | 29983 | 29983 | 29983 |
 
 Immediate next step:
 
@@ -419,6 +430,14 @@ Immediate next step:
   top-candidate extraction accounts for about `4.45M` of `5.08M` Q2 rank
   comparisons. A small binary top-candidate heap was tried and rejected before
   commit because it increased comparisons.
+- The Q2 top-10 cache step is the first fix based on those attribution
+  counters. It keeps heap and Rift on the same logical query algorithm and
+  avoids recomputing the top-10 frontier when the rank update cannot affect the
+  cached result. The 100k single-run validation reduced top-candidate
+  comparisons from `4.45M` to `144949`; the 1M single-run validation recomputed
+  top 10 `29983` times out of `1000000` calls and measured heap
+  `5367.670 ms`, HPZone `5149.720 ms`, and Streaming `5191.038 ms`. Treat
+  these elapsed numbers as directional until median reruns.
 - Next, continue moving dominant heap control/collection state only where the
   heap and Rift paths remain the same logical program and the lifetime boundary
   is explicit.
@@ -663,16 +682,17 @@ evidence.
 
 After these docs, the safest technical next action is:
 
-1. Preserve the current Q2 incremental-median medians as the latest bounded
-   Phase 5 evidence.
-2. Choose one narrow next implementation target: a better shared Q2
-   rank/top-10 strategy using the new attribution counters, or
-   Phase 7 safe API accept/reject probes for the region object patterns already
-   used by DEBS and the literature harnesses.
+1. Preserve the current Q2 incremental-median medians as the latest
+   median-backed bounded Phase 5 evidence, and preserve the Q2 top-10 cache as
+   a single-run checkpoint that must be rerun before headline claims.
+2. Rerun the Q2 top-10 cache checkpoint as 100k and 1M instrumented medians,
+   then decide whether the next DEBS target is rank maintenance/output
+   attribution or Phase 7 safe API probes for the region object patterns
+   already used by DEBS and the literature harnesses.
 3. If continuing DEBS, keep the fair-backend rule: same logical query
    algorithm, heap backend with `new`, Rift backend with `region.alloc` and
    region close/reset at the same lifetime boundary.
-4. Rerun 100k and 1M instrumented medians after the next DEBS change.
+4. Rerun 100k and 1M instrumented medians after every further DEBS change.
 
 Do not move straight to new runtime micro-optimizations unless the DEBS
 diagnosis points there.
