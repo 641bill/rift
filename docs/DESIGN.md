@@ -90,7 +90,11 @@ Current reliable evidence:
   allocated in the owner region. The focused `CheckedRegionBufferMatrix`
   harness now validates this as a benchmark-shaped safe API path: default local
   medians were heap `33.825 ms` with `7.611 ms` GC versus checked Rift
-  `28.654 ms` with `0.301 ms` Rift op time and no measured GC. Both
+  `28.654 ms` with `0.301 ms` Rift op time and no measured GC. Dataflow
+  SELECT now has a checked `rift-checked` mode using the same safe API; local
+  medians were heap `27.671 ms`, improved SafeZone `23.403 ms`, trusted HPZone
+  `20.186 ms`, trusted Streaming `20.760 ms`, and checked Rift `18.472 ms`.
+  Aggregate/join are not yet ported to checked containers. Both
   `RiftRegion.append(region, buffer, value)` and `region.append(buffer, value)`
   are covered. The latest probes
   cover reset-epoch record arrays, top-word-style rooted metadata buffers,
