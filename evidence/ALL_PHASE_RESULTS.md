@@ -87,7 +87,7 @@ For performance numbers, use the following rule of thumb:
 | Phase 5: application evidence | In progress | Bounded-sample medians plus diagnostic attribution and safe-API probes | DEBS correctness, 100k/1M trusted medians, opt-in GC heap allocation attribution, Q1 checked-output output-equivalence, Q1 checked-processing output-equivalence, Q2 checked-processing output-equivalence, checked RunBoth 100k/1M medians plus attribution, and 3-run Commix control |
 | Phase 6: literature-aligned methodology evidence | Started | Validated methodology medians with caveats | Broom-style dataflow including checked SELECT/AGGREGATE/JOIN modes, StreamFlex-style latency/throughput, Yak-style control/data plus grouped sort, top-word/filter, GraphChi-style subintervals, and runtime promotion proxy, Stancu-style transaction accounting |
 | Phase 6b: Broom / parallel collections API evidence | Open | Provisional surrogate only | amordo comparison and Rift raw-array surrogate |
-| Phase 7: capture-checked safe API | Started | Compiler-probe, runtime-smoke, focused checked-container benchmark, checked dataflow evidence, and DEBS-shaped checked probes | 52 targeted checked-API compiler probes, checked child-window close-through-cleanup runtime probe, `CheckedRegionBufferMatrix`, Dataflow SELECT/AGGREGATE/JOIN `rift-checked`, Q1 checked-output, Q1 checked-processing, Q2 checked-processing, checked RunBoth `rift-checked` medians, plus Phase 4 safety finding |
+| Phase 7: capture-checked safe API | Started | Compiler-probe, runtime-smoke, focused checked-container benchmark, checked dataflow evidence, and DEBS-shaped checked probes | 54 targeted checked-API compiler probes, checked child-window and child-bucket close-through-cleanup runtime probes, `CheckedRegionBufferMatrix`, Dataflow SELECT/AGGREGATE/JOIN `rift-checked`, Q1 checked-output, Q1 checked-processing, Q2 checked-processing, checked RunBoth `rift-checked` medians, plus Phase 4 safety finding |
 | Phase 8: native GC/region integration hardening | Started | Runtime/API smoke evidence, no benchmark data | Explicit `HeapRoot` path, static module/immutable-val path, direct unrooted heap-constructor/alias/field-selection/array-store rejection, owner-token ObjectBuffer/RegionBuffer heap-store rejection, mutable static-var rejection, mutable-head heap-retagging rejection, and explicit `{region}` constructor-field/array reuse |
 | Phase 9: Lean mechanization | Open | No data | None |
 | Phase 10: writing | Not started beyond notes | No data | None |
@@ -836,11 +836,13 @@ Checked child-window close discipline and Commix control:
 | 1M | Commix rift-checked | 4745.291 | 1.137 | 125698048 | 1409.319 | 1251.375 | 11.444 | 3-run median |
 
 - `RiftRegion.closeChildWindow(parent, window) { cleanup }` is now the checked
-  child-window close boundary used by Q1/Q2 checked processing. Direct user
-  `window.close()` is rejected by the compiler probe, and reuse after close is
-  rejected at runtime.
-- The focused validations passed: sandbox compile, `52/52`
-  `RiftRegionCheckedCompilerTest`, `14/14` `RiftRegionCheckedTest`, and sample
+  child-window close boundary. `RiftRegion.ChildBucket` wraps that pattern for
+  stream buckets; Q1/Q2 checked processing now uses `childBucketRegion` and
+  `closeChildBucket` rather than raw `ChildWindow` fields. Direct user
+  `window.close()` and raw `child.window` access are rejected by compiler
+  probes, and reuse after close is rejected at runtime.
+- The focused validations passed: sandbox compile, `54/54`
+  `RiftRegionCheckedCompilerTest`, `15/15` `RiftRegionCheckedTest`, and sample
   RunBoth heap-vs-checked output matching.
 - Commix matches the Immix direction in this bounded control: checked Rift is
   faster, lower-GC, and lower-RSS at both 100k and 1M. The elapsed delta is
@@ -1197,7 +1199,7 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.Rif
 Result on 2026-04-27:
 
 ```text
-Passed: Total 52, Failed 0, Errors 0, Passed 52
+Passed: Total 54, Failed 0, Errors 0, Passed 54
 ```
 
 Runtime smoke command:
@@ -1209,7 +1211,7 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memor
 Result on 2026-04-27:
 
 ```text
-Passed: Total 14, Failed 0, Errors 0, Passed 14
+Passed: Total 15, Failed 0, Errors 0, Passed 15
 ```
 
 Covered source-level patterns:
@@ -1263,6 +1265,10 @@ Covered source-level patterns:
 | direct user `ChildWindow.close()` | rejected |
 | `closeChildWindow(parent, window) { cleanup }` close boundary | passes compiler probe and native runtime smoke |
 | `childRegion(parent, window)` after close | rejected at runtime |
+| reusable `ChildBucket` event graph | passes compiler probe |
+| raw `child.window` access from user code | rejected |
+| `closeChildBucket(parent, bucket) { cleanup }` close boundary | passes compiler probe and native runtime smoke |
+| `childBucketRegion(parent, bucket)` after close | rejected at runtime |
 | reset epoch value stored into outer streaming buffer and read after reset | rejected |
 | trusted `RiftRegion.open` allocates linked benchmark objects | passes compiler probe |
 | mutable region linked-list builder with local head | passes compiler probe and native runtime smoke |

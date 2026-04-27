@@ -2658,6 +2658,43 @@ Interpretation:
   does not have a fair closeable SafeZone-window backend equivalent to Rift
   child-window eviction.
 
+## Latest Update: Reusable Checked ChildBucket
+
+Date: 2026-04-27
+
+What changed:
+
+- Added `RiftRegion.ChildBucket`, a reusable checked wrapper for stream buckets
+  that own a child window.
+- Added owner-token helpers:
+  `RiftRegion.childBucket`, `RiftRegion.childBucketRegion(parent, bucket)`,
+  and `RiftRegion.closeChildBucket(parent, bucket) { cleanup }`.
+- Migrated Q1 checked-processing buckets and Q2 profit/empty buckets from raw
+  `ChildWindow` fields to `ChildBucket`.
+- Added compiler probes for child-bucket event graphs and rejection of raw
+  `child.window` access.
+- Added a runtime smoke for close-through-cleanup and reuse-after-close through
+  `ChildBucket`.
+
+Validation:
+
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile`
+  passed.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"`
+  passed `54/54`.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionCheckedTest"`
+  passed `15/15`.
+- Sample RunBoth `heap` vs `rift-checked` matched after stripping latency in
+  `/tmp/debs2015-runboth-childbucket-sample`.
+
+Interpretation:
+
+- This is a safety/API milestone, not a new performance claim.
+- `ChildBucket` centralizes the checked child-lifetime shape for stream
+  operators and removes raw child-window fields from Q1/Q2 checked processing.
+- It still does not prove affine close. The next safe-API target is a typed
+  cleanup/unlink obligation, or compiler support for a linear close token.
+
 ## Unsafe Assumptions To Avoid
 
 - "Rift already has final DEBS application proof." It does not. The current

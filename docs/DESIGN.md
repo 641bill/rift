@@ -98,7 +98,10 @@ Current reliable evidence:
   deliberate child-to-parent widening explicit. `closeChildWindow(parent,
   window) { cleanup }` adds the first structured close boundary: direct user
   `window.close()` is rejected and child-region reuse after close throws at
-  runtime. This is not a full affine close proof yet. The Q1
+  runtime. `RiftRegion.ChildBucket` is now the reusable wrapper for that
+  pattern; Q1/Q2 checked processors use `childBucketRegion` and
+  `closeChildBucket` instead of carrying raw `ChildWindow` fields. This is not
+  a full affine close proof yet. The Q1
   checked-processing probe uses path-dependent bucket event nodes to keep
   child-owned values local before closing the child region at bucket eviction.
   The focused `CheckedRegionBufferMatrix`
@@ -365,14 +368,16 @@ preferred `childWindow` wrapper prove that a child region handle cannot escape
 its parent stream. The `childRegion(parent, window)` accessor is intentionally
 explicit for the case where parent-lived control metadata retains child-window
 records until eviction. `closeChildWindow(parent, window) { cleanup }` is the
-current close boundary: caller cleanup runs while the parent owner token and
+primitive close boundary: caller cleanup runs while the parent owner token and
 window are both in scope, then the child region closes; direct user
-`window.close()` is not public. This is still not a full affine lifetime
-system, because the checker does not prove all parent-visible child references
-were cleared before close. Child-value widening into parent-lived containers
-still needs a reusable checked bucket/window abstraction or stronger static
-close proof. Direct heap stores are rejected by Rift lowering, and cross-region
-stores are rejected by the owner-token type.
+`window.close()` is not public. `ChildBucket` packages that pattern for stream
+operators so code uses `childBucketRegion(parent, bucket)` and
+`closeChildBucket(parent, bucket) { cleanup }` instead of exposing the raw
+window. This is still not a full affine lifetime system, because the checker
+does not prove all parent-visible child references were cleared before close.
+The next step is a stronger typed cleanup obligation or static close proof.
+Direct heap stores are rejected by Rift lowering, and cross-region stores are
+rejected by the owner-token type.
 Checked streaming can express subinterval or epoch data with region-owned
 arrays, fixed/growable checked buffers, and local linked-list heads whose
 assignments preserve region-owned provenance. This rule is still a local

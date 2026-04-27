@@ -78,6 +78,11 @@ Scala-next capture checking supports the first Rift safe API slice:
   `RiftRegion.closeChildWindow(parent, window) { cleanup }`; direct
   `window.close()` is not public user API and is rejected by the compiler
   probe. Reusing a child window after close is rejected at runtime.
+- `RiftRegion.ChildBucket` adds a reusable checked stream-bucket wrapper over
+  the child-window pattern. User code allocates with `childBucket`, obtains the
+  owner-token child region with `childBucketRegion(parent, bucket)`, and closes
+  with `closeChildBucket(parent, bucket) { cleanup }`. Direct raw-window access
+  through `bucket.window` is rejected.
 
 Known gaps remain:
 
@@ -112,7 +117,7 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.Rif
 Result:
 
 ```text
-Passed: Total 52, Failed 0, Errors 0, Passed 52
+Passed: Total 54, Failed 0, Errors 0, Passed 54
 ```
 
 Runtime smoke command run on 2026-04-27:
@@ -124,7 +129,7 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memor
 Result:
 
 ```text
-Passed: Total 14, Failed 0, Errors 0, Passed 14
+Passed: Total 15, Failed 0, Errors 0, Passed 15
 ```
 
 ## 2 — The three hard patterns
