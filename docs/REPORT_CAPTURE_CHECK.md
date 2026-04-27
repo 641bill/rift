@@ -74,6 +74,10 @@ Scala-next capture checking supports the first Rift safe API slice:
   mutable head is built from `null`, direct Rift allocations, or values already
   known to be region-owned. Assigning a heap object to that head removes the
   region-owned provenance and is rejected if later stored into region memory.
+- `RiftRegion.childWindow` now has a structured close boundary. User code calls
+  `RiftRegion.closeChildWindow(parent, window) { cleanup }`; direct
+  `window.close()` is not public user API and is rejected by the compiler
+  probe. Reusing a child window after close is rejected at runtime.
 
 Known gaps remain:
 
@@ -95,10 +99,11 @@ Known gaps remain:
 - Mutable linked-list support is provenance-based rather than path-sensitive.
   It tracks observed local assignments to mutable heads, but it is not a full
   dataflow or alias analysis for arbitrary mutable containers.
-- The tests validate source-level capture behavior and allocation lowering.
-  They do not yet prove safe close/reset mechanically.
+- The tests validate source-level capture behavior, allocation lowering, and
+  the current child-window close boundary. They do not yet prove full
+  affine/linear safe close/reset mechanically.
 
-Targeted command run on 2026-04-26:
+Targeted command run on 2026-04-27:
 
 ```bash
 ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"
@@ -107,10 +112,10 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.Rif
 Result:
 
 ```text
-Passed: Total 42, Failed 0, Errors 0, Passed 42
+Passed: Total 52, Failed 0, Errors 0, Passed 52
 ```
 
-Runtime smoke command run on 2026-04-26:
+Runtime smoke command run on 2026-04-27:
 
 ```bash
 ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionTest scala.scalanative.memory.RiftRegionCheckedTest"
@@ -119,7 +124,7 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memor
 Result:
 
 ```text
-Passed: Total 17, Failed 0, Errors 0, Passed 17
+Passed: Total 14, Failed 0, Errors 0, Passed 14
 ```
 
 ## 2 — The three hard patterns

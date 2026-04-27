@@ -59,19 +59,23 @@ Current reliable evidence:
   latest-empty taxi table, Q2 array-backed ranking index, Q2 taxi-id table,
   RunBoth output snapshots, Q2 incremental median heap arrays, region-backed
   latency buffers, and the shared Q2 top-10 cache, Rift region-operation time
-  is a small share of total elapsed time. The latest median-backed 1M
-  checkpoint is the Q2 top-10 cache step: heap at `6192.692 ms`, HPZone at
-  `5697.948 ms`, and Streaming at `5657.424 ms`. GC collection time drops from
-  heap `70.762 ms` to HPZone `36.231 ms` and Streaming `36.288 ms`; peak RSS
-  drops from `304463872` bytes to `116588544` bytes for HPZone and `96239616`
-  bytes for Streaming. An opt-in `SCALANATIVE_GC_ALLOC_STATS=1` attribution
-  run shows the 1M heap path doing `19,924,383` GC allocation calls and
-  `679,841,024` rounded bytes, versus about `14.46M` calls and `455 MB` in
-  Rift modes. This supports the claim that structured-lifetime Scala objects
-  are moving into regions. It does not close the SafeZone/Commix/full-scale or
-  safe API gaps.
+  is a small share of total elapsed time. The latest trusted 1M byte-output
+  medians are heap `4640.593 ms`, HPZone `4524.706 ms`, and Streaming
+  `4522.308 ms`; GC collection time drops from heap `21.025 ms` to below
+  `1 ms` in both trusted Rift modes. Checked RunBoth now has its own 100k/1M
+  median matrix: at 1M, heap is `5363.257 ms`, trusted HPZone is
+  `5224.005 ms`, trusted Streaming is `5209.104 ms`, and checked is
+  `5043.240 ms`. Opt-in `SCALANATIVE_GC_ALLOC_STATS=1` attribution runs show
+  the 1M trusted byte-output path dropping from `6,025,143` heap allocation
+  calls and `235,159,552` rounded bytes to about `0.56M` calls and `10.5 MB`
+  in trusted Rift modes; checked RunBoth drops the same heap baseline to
+  `752,568` calls and `28,785,632` bytes. This supports the claim that
+  structured-lifetime Scala objects are moving into regions. It does not close
+  the SafeZone/full-scale and safe API gaps. A 3-run Commix DEBS control now
+  also exists: checked Rift wins elapsed time and RSS at 100k and 1M, while
+  reducing measured GC collection time.
 - Phase 7 checked API evidence has started. The targeted Scala-next compiler
-  suite passed 46/46 for the current `Scoped`/`Streaming` API slice, including
+  suite passed 52/52 for the current `Scoped`/`Streaming` API slice, including
   for-loop allocation, nested scoped regions, local higher-order consumers, and
   direct escape/reset rejection. Returned function values are now rejected
   conservatively because returned closures can hide region-local captures.
@@ -87,14 +91,27 @@ Current reliable evidence:
   owner-token APIs to keep region data in a region-owned backing array while
   rejecting direct heap and cross-region stores. `RiftRegion.RegionBuffer`
   extends the same rule to a growable checked buffer whose growth arrays are
-  allocated in the owner region. The focused `CheckedRegionBufferMatrix`
+  allocated in the owner region. Raw `RiftRegion.childStreaming` plus the
+  preferred `RiftRegion.childWindow` wrapper are now first checked
+  multi-region building blocks: a child streaming-region handle cannot escape
+  its parent stream, and `RiftRegion.childRegion(parent, window)` makes
+  deliberate child-to-parent widening explicit. `closeChildWindow(parent,
+  window) { cleanup }` adds the first structured close boundary: direct user
+  `window.close()` is rejected and child-region reuse after close throws at
+  runtime. This is not a full affine close proof yet. The Q1
+  checked-processing probe uses path-dependent bucket event nodes to keep
+  child-owned values local before closing the child region at bucket eviction.
+  The focused `CheckedRegionBufferMatrix`
   harness now validates this as a benchmark-shaped safe API path: default local
   medians were heap `33.825 ms` with `7.611 ms` GC versus checked Rift
   `28.654 ms` with `0.301 ms` Rift op time and no measured GC. Dataflow
   SELECT, AGGREGATE, and JOIN now have checked `rift-checked` modes using the
   same safe API; local checked medians are SELECT `18.865 ms`, AGGREGATE
   `36.003 ms`, and JOIN `18.736 ms`, faster than heap, improved SafeZone, and
-  trusted Rift in the same run. Both
+  trusted Rift in the same run. Checked DEBS RunBoth now also has bounded
+  100k/1M medians; at 1M it is fastest in the local matrix while preserving
+  heap-equivalent output, but it still uses trusted helpers for byte-reader and
+  output/latency scratch buffers. Both
   `RiftRegion.append(region, buffer, value)` and `region.append(buffer, value)`
   are covered. The latest probes
   cover reset-epoch record arrays, top-word-style rooted metadata buffers,
@@ -127,7 +144,8 @@ framing:
   latest bounded-sample medians show Rift elapsed wins and much lower RSS, and
   allocation attribution shows fewer heap allocation calls/bytes. It still does
   not prove a final application-level win because the dataset is bounded,
-  SafeZone/Commix modes are missing, and safe API boundaries are open.
+  SafeZone DEBS is missing, full-month controls are missing, and safe API
+  boundaries are still incomplete.
 - The literature-review target is broader than local baselines: Rift must be
   compared against Broom, StreamFlex, Yak, Stancu-style hybrid static analysis,
   the MLKit typed-region lineage, and Reggio/Verona-style capabilities.
@@ -177,7 +195,7 @@ Region modes:
 |---|---|---|
 | `HPZone` | Trusted fast region path for benchmarks and hot loops. No static escape guarantee. | Implemented as a runtime kind and exercised by benchmarks. |
 | `Scoped` | Lexically scoped, capture-checked region. | Runtime kind and checked API slice exist; direct function results are conservatively rejected; `HeapRoot` handles provide explicit region-to-GC metadata roots; direct unrooted heap-object constructor arguments are rejected in checked allocation lowering; simple region-local aliases are propagated; static module singletons and immutable module vals are allowed; owner-token `ObjectBuffer` and growable `RegionBuffer` give first checked container primitives. |
-| `Streaming` | Resettable streaming region with capture/use-after-reset constraints. | Runtime kind and checked reset wrapper exist; `HeapRoot` handles are cleared on reset/close; the same checked allocation guard applies inside reset epochs. |
+| `Streaming` | Resettable streaming region with capture/use-after-reset constraints. | Runtime kind and checked reset wrapper exist; `HeapRoot` handles are cleared on reset/close; the same checked allocation guard applies inside reset epochs; raw `childStreaming` can open a child streaming region whose handle cannot escape the parent stream; `childWindow` is the preferred stream-window wrapper; `childRegion(parent, window)` is an explicit owner-token accessor for deliberate parent-visible child records; child close ordering remains explicit. |
 
 The important corrected invariant is about GC visibility:
 
@@ -342,8 +360,19 @@ the lighter `region.append(buffer, value)` extension method. `RegionBuffer`
 uses the same owner-token rule but permits growth by allocating larger backing
 arrays in the owner region and leaving old arrays for batch reclamation. The
 current checker still needs the owner token; a plain `buffer.append(value)`
-method does not prove the same-region relation. Direct heap stores are rejected
-by Rift lowering, and cross-region stores are rejected by the owner-token type.
+method does not prove the same-region relation. Raw `childStreaming` and the
+preferred `childWindow` wrapper prove that a child region handle cannot escape
+its parent stream. The `childRegion(parent, window)` accessor is intentionally
+explicit for the case where parent-lived control metadata retains child-window
+records until eviction. `closeChildWindow(parent, window) { cleanup }` is the
+current close boundary: caller cleanup runs while the parent owner token and
+window are both in scope, then the child region closes; direct user
+`window.close()` is not public. This is still not a full affine lifetime
+system, because the checker does not prove all parent-visible child references
+were cleared before close. Child-value widening into parent-lived containers
+still needs a reusable checked bucket/window abstraction or stronger static
+close proof. Direct heap stores are rejected by Rift lowering, and cross-region
+stores are rejected by the owner-token type.
 Checked streaming can express subinterval or epoch data with region-owned
 arrays, fixed/growable checked buffers, and local linked-list heads whose
 assignments preserve region-owned provenance. This rule is still a local
@@ -418,6 +447,27 @@ For DEBS 2015:
   and `Cell` objects, in the run-lifetime ranking/control region. Returned
   top-k arrays are cached by exact size and reused, rather than allocated in a
   resettable per-event snapshot region.
+- The checked Q1 processing probe validates a source-level safe-API shape for
+  ordinary Scala Q1 objects: route events live in per-bucket `childWindow`
+  regions and close at bucket eviction, while route/rank arrays and rank
+  objects remain in the parent streaming region. This is not yet the production
+  RunBoth backend and not a full affine close guarantee.
+- The checked Q2 processing probe validates the same direction for a richer
+  stream-processing object graph: profit/empty window entries live in
+  `childWindow` regions, median heap arrays and ranking objects live in the
+  parent streaming region, taxi-id entries/bytes are region-backed, and only
+  `ProfitStats` remains heap control metadata captured by the stream. Q2 uses
+  `childRegion(parent, window)` where parent-lived metadata intentionally
+  retains child-window entries until eviction. This is standalone Q2 evidence,
+  not RunBoth integration.
+- RunBoth now has a checked integration mode, `q1_mode=rift-checked`. It runs
+  checked Q1 and checked Q2 processors together in the shared byte-parser loop
+  and matched heap Q1/Q2 output on sample, 100k, and 1M sorted inputs. The
+  follow-up 100k/1M median matrix includes `heap`, `rift-hp`,
+  `rift-streaming`, and `rift-checked`; at 1M, checked is fastest in that local
+  matrix. The checked processors use the safe API; the byte-reader buffer and
+  output/latency scratch buffers still use existing trusted runtime helpers,
+  and previous output snapshots remain primitive heap control metadata.
 - Q2 window queues now hold primitive-key entries in heap or Rift memory, and
   active profit values are stored in those entries rather than duplicated in a
   heap `ArrayBuffer`.
@@ -462,24 +512,29 @@ For DEBS 2015:
 
 Therefore current DEBS exercises more of the region-heavy application design
 and now has bounded-sample elapsed wins, but it is still not final Phase 5
-success. The newest 1M 3-run median with Q2 top-10 caching has HPZone at
-`5697.948 ms` and Streaming at `5657.424 ms` versus heap at `6192.692 ms`.
-Rift operation time remains small enough to avoid replacing GC as the
-bottleneck: HPZone is `18.824 ms`, Streaming is `21.925 ms`. GC collection time
-is lower but not the whole story: heap is `70.762 ms`, HPZone is `36.231 ms`,
-and Streaming is `36.288 ms`. Rift modes reduce peak RSS from `304463872`
-bytes to `116588544` bytes for HPZone and `96239616` bytes for Streaming on
-the bounded sample. The 1M allocation-attribution run shows that Rift removes
-about `5.46M` GC heap allocation calls and about `224 MB` of rounded heap
-allocation requests, while measured heap allocation-call time drops from
-`582.629 ms` in heap to about `384-386 ms` in Rift modes. That is the correct
-interpretation of the speedup: not only shorter collection pauses, but less
-ordinary heap allocation work because structured-lifetime Scala objects are
-placed in regions.
+success. The latest trusted 1M byte-output medians are heap `4640.593 ms`,
+HPZone `4524.706 ms`, and Streaming `4522.308 ms`; trusted Rift GC collection
+time is below `1 ms`, and RSS drops from about `160 MB` to about `117 MB`.
+The latest checked 1M RunBoth medians are heap `5363.257 ms`, HPZone
+`5224.005 ms`, Streaming `5209.104 ms`, and checked `5043.240 ms`. Rift
+operation time remains small enough to avoid replacing GC as the bottleneck:
+checked is `16.128 ms` at 1M. GC collection time is lower but not the whole
+story: heap-to-checked elapsed drops by about `320 ms`, while measured GC
+collection time drops by about `18.8 ms`. After byte output, the 1M
+allocation-attribution run shows that trusted Rift removes about `5.46M` GC
+heap allocation calls and about `224 MB` of rounded heap allocation requests,
+while measured heap allocation-call time drops from `171.868 ms` in heap to
+about `12.8-12.9 ms` in trusted Rift modes. The checked attribution run shows
+the same direction: at 1M, total heap allocation calls drop from `6025149` to
+`752568`, rounded heap bytes drop from `235159840` to `28785632`, and measured
+heap allocation-call time drops from `173.578 ms` to `20.514 ms`. That is the
+correct interpretation of the speedup: not only shorter collection pauses, but
+less ordinary heap allocation work because structured-lifetime Scala objects
+are placed in regions.
 
 The evidence is still bounded-sample. The remaining pressure is in Q2
-rank/output work, residual heap allocation/control metadata, SafeZone/Commix
-and full-scale comparisons, and the need for safe region-backed
+rank/output work, residual heap allocation/control metadata, SafeZone, Commix
+median if needed, and full-scale comparisons, and the need for safe region-backed
 collections/control structures that preserve the heap logical program.
 
 For parallel collections:
@@ -568,14 +623,44 @@ DEBS status:
 | 1M allocation attribution, GC alloc bytes | 679841024 | 455349920 | 455350304 | Single-run diagnostic, instrumentation perturbs elapsed |
 | 1M allocation attribution, GC alloc time | 582.629 ms | 385.807 ms | 384.031 ms | Single-run diagnostic, instrumentation perturbs elapsed |
 
+Checked RunBoth median addendum:
+
+| Run | Heap | Rift HPZone | Rift Streaming | Rift checked | Evidence level |
+|---|---:|---:|---:|---:|---|
+| 100k checked RunBoth median, elapsed | 553.059 ms | 529.613 ms | 512.808 ms | 508.056 ms | 3-run median, bounded sample |
+| 100k checked RunBoth median, GC time | 9.541 ms | 0.000 ms | 0.000 ms | 0.077 ms | 3-run median, bounded sample |
+| 100k checked RunBoth median, peak RSS bytes | 55459840 | 38895616 | 38912000 | 39878656 | 3-run median, bounded sample |
+| 1M checked RunBoth median, elapsed | 5363.257 ms | 5224.005 ms | 5209.104 ms | 5043.240 ms | 3-run median, bounded sample |
+| 1M checked RunBoth median, GC time | 21.226 ms | 0.834 ms | 0.862 ms | 2.473 ms | 3-run median, bounded sample |
+| 1M checked RunBoth median, peak RSS bytes | 159989760 | 116867072 | 116850688 | 123977728 | 3-run median, bounded sample |
+| 1M checked allocation attribution, GC alloc calls | 6025149 | n/a | n/a | 752568 | Single-run diagnostic, instrumentation perturbs elapsed |
+| 1M checked allocation attribution, GC alloc bytes | 235159840 | n/a | n/a | 28785632 | Single-run diagnostic, instrumentation perturbs elapsed |
+| 1M checked allocation attribution, GC alloc time | 173.578 ms | n/a | n/a | 20.514 ms | Single-run diagnostic, instrumentation perturbs elapsed |
+
+Commix control addendum:
+
+| Run | Commix heap | Commix Rift checked | Evidence level |
+|---|---:|---:|---|
+| 100k elapsed | 492.372 ms | 472.477 ms | 3-run median, bounded sample |
+| 100k GC time | 4.942 ms | 0.092 ms | 3-run median, bounded sample |
+| 100k peak RSS bytes | 56885248 | 39534592 | 3-run median, bounded sample |
+| 1M elapsed | 4968.773 ms | 4745.291 ms | 3-run median, bounded sample |
+| 1M GC time | 8.206 ms | 1.137 ms | 3-run median, bounded sample |
+| 1M peak RSS bytes | 158924800 | 125698048 | 3-run median, bounded sample |
+
 Interpretation:
 
 - Rift has credible same-layout runtime wins on GCBench and linked ListOfLists.
 - Improved SafeZone is a serious baseline.
 - Layout changes can dominate allocator changes and must be separated.
 - Current DEBS now moves more application data operations into regions and has
-  bounded-sample elapsed/RSS wins, but SafeZone/Commix, full-month scale, and
-  safe API boundaries are still missing for the final application claim.
+  bounded-sample elapsed/RSS wins under Immix and Commix. SafeZone,
+  full-month scale, and stronger safe API boundaries are still missing for the
+  final application claim.
+- Checked RunBoth is now median-backed on bounded 100k/1M samples. It is
+  encouraging Phase 5/7 evidence, but not an apples-to-apples proof that the
+  checked API is always faster than the trusted API because the trusted and
+  checked paths still differ in implementation shape.
 - DEBS changes that merely hand-optimize the heap query implementation are not
   evidence. A change is Phase-5 relevant only if it preserves the same logical
   benchmark for heap and Rift while moving structured-lifetime data into region
@@ -631,8 +716,9 @@ Claims that are currently supported:
 Claims that are not yet supported:
 
 - Rift has a final full-DEBS application-level speedup. It has bounded-sample
-  Q2 top-cache medians plus allocation-attribution evidence, but not
-  SafeZone/Commix/full-scale/safe-API controls.
+  Q2 top-cache and checked RunBoth medians plus allocation-attribution evidence,
+  including a 3-run Commix control, but not SafeZone/full-scale/safe-API
+  controls.
 - Rift has a capture-checked safe API.
 - Rift beats Broom, StreamFlex, Yak, Stancu et al., or Reggio on their strongest
   axes.
