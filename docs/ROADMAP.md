@@ -36,7 +36,7 @@ Reggio/Verona capabilities.
 | Phase 2: in-tree runtime/compiler path | Partially done | `RiftRuntime.c/h`, `RiftRegion`, plugin lowering, `RiftRegionTest`. | Header/API cleanup, broader tests, commit boundary, stats ABI decision. |
 | Phase 3: runtime-only evaluation | Done enough for current claim | GCBench and ListOfLists medians show Rift wins over heap and improved SafeZone. | Add Commix where relevant; avoid overclaiming pipeline. |
 | Phase 4: topology/layout decomposition | Done enough to move on | `PHASE4_LAYOUT.md`, `PHASE4_TOPOLOGY.md`, `PHASE4_EXIT.md`. | Carry safety finding into Phase 6; chunked layout still not clear Rift win vs improved SafeZone. |
-| Phase 5: application evidence | In progress, not complete | DEBS Q1/Q2 scaffold runs and outputs match on bounded real-data samples; RunBoth uses a shared byte parser and region-backed input buffer; Rift modes now region-allocate Q1/Q2 window entries, Q2 median scratch, ranking objects, reusable top-k result arrays, Q2 bounded cell tables, Q1 primitive route-table arrays, Q1 ranking-index arrays, Q2 latest-empty taxi arrays, Q2 ranking-index arrays, Q2 taxi-id table entries/bytes, RunBoth output snapshots, Q2 incremental median heap arrays, and RunBoth latency buffers. The current trusted 1M byte-output 3-run medians are heap `4640.593 ms`, HPZone `4524.706 ms`, and Streaming `4522.308 ms`; GC collection medians are heap `21.025 ms`, HPZone `0.685 ms`, and Streaming `0.635 ms`; heap RSS is `159907840` bytes vs `116785152` bytes for HPZone/Streaming. A 1M allocation-attribution run shows heap at `6,025,143` GC allocation calls, `235,159,552` rounded bytes, and `171.868 ms` allocation-call time, versus about `0.56M` calls, `10.5 MB`, and `12.8-12.9 ms` in Rift modes. Q1 checked-output, Q1 checked-processing, and Q2 checked-processing probes now match heap output on bounded sorted samples; checked Q1 closes live event-node `childWindow` regions at bucket eviction, and checked Q2 region-manages profit/empty entries, median heaps, rank objects, taxi-id entries/bytes, and top-k storage using `childWindow` plus explicit `childRegion(parent, window)` owner-token widening where parent metadata retains child entries. RunBoth `rift-checked` now has 100k/1M 3-run medians. At 1M, heap is `5363.257 ms`, trusted HPZone is `5224.005 ms`, trusted Streaming is `5209.104 ms`, and checked is `5043.240 ms`; GC medians are heap `21.226 ms`, HPZone `0.834 ms`, Streaming `0.862 ms`, and checked `2.473 ms`. Checked allocation attribution at 1M drops heap allocation calls from `6025149` to `752568`, rounded bytes from `235159840` to `28785632`, and measured allocation-call time from `173.578 ms` to `20.514 ms`. A 3-run Commix DEBS control now also has checked Rift faster and lower-RSS: at 1M, Commix heap is `4968.773 ms` and `158924800` bytes RSS, versus checked Rift `4745.291 ms` and `125698048` bytes RSS. | SafeZone DEBS mode, full-month scale, and stronger reusable bucket/window safety beyond the current structured close helper. |
+| Phase 5: application evidence | In progress, not complete | DEBS Q1/Q2 scaffold runs and outputs match on bounded real-data samples; RunBoth uses a shared byte parser and region-backed input buffer; Rift modes now region-allocate Q1/Q2 window entries, Q2 median scratch, ranking objects, reusable top-k result arrays, Q2 bounded cell tables, Q1 primitive route-table arrays, Q1 ranking-index arrays, Q2 latest-empty taxi arrays, Q2 ranking-index arrays, Q2 taxi-id table entries/bytes, RunBoth output snapshots, Q2 incremental median heap arrays, and RunBoth latency buffers. The current trusted 1M byte-output 3-run medians are heap `4640.593 ms`, HPZone `4524.706 ms`, and Streaming `4522.308 ms`; GC collection medians are heap `21.025 ms`, HPZone `0.685 ms`, and Streaming `0.635 ms`; heap RSS is `159907840` bytes vs `116785152` bytes for HPZone/Streaming. A 1M allocation-attribution run shows heap at `6,025,143` GC allocation calls, `235,159,552` rounded bytes, and `171.868 ms` allocation-call time, versus about `0.56M` calls, `10.5 MB`, and `12.8-12.9 ms` in Rift modes. Q1 checked-output, Q1 checked-processing, and Q2 checked-processing probes now match heap output on bounded sorted samples; checked Q1 closes live event-node `childWindow` regions at bucket eviction, and checked Q2 region-manages profit/empty entries, median heaps, rank objects, taxi-id entries/bytes, and top-k storage using `childWindow` plus explicit `childRegion(parent, window)` owner-token widening where parent metadata retains child entries. RunBoth `rift-checked` now has 100k/1M 3-run medians. At 1M, heap is `5363.257 ms`, trusted HPZone is `5224.005 ms`, trusted Streaming is `5209.104 ms`, and checked is `5043.240 ms`; GC medians are heap `21.226 ms`, HPZone `0.834 ms`, Streaming `0.862 ms`, and checked `2.473 ms`. Checked allocation attribution at 1M drops heap allocation calls from `6025149` to `752568`, rounded bytes from `235159840` to `28785632`, and measured allocation-call time from `173.578 ms` to `20.514 ms`. A 3-run Commix DEBS control now also has checked Rift faster and lower-RSS: at 1M, Commix heap is `4968.773 ms` and `158924800` bytes RSS, versus checked Rift `4745.291 ms` and `125698048` bytes RSS. A first full-month checked RunBoth control now matches heap output, but its checked wall-clock row is invalid as performance evidence because external user+sys time was about `64 s` while real time was about `1259 s`. | SafeZone DEBS mode, repeated controlled full-month runs, and stronger reusable bucket/window safety beyond the current structured close helper. |
 | Phase 6: literature-aligned methodology evidence | Started | `DATAFLOW_REGION_MATRIX.md`, `STREAMFLEX_REGION_MATRIX.md`, `YAK_REGION_MATRIX.md`, and `STANCU_REGION_MATRIX.md` now cover Broom-style dataflow, StreamFlex-style latency/throughput, Yak-style control/data epochs including grouped sort, top-word/filter, and GraphChi-like subinterval updates plus runtime and memory-API-level promotion/escape proxies, and Stancu-style transaction accounting. Dataflow now includes checked SELECT/AGGREGATE/JOIN modes. | Keep these labeled as methodology reproductions, not exact paper artifacts. The checked Dataflow result is strong local Broom-style safe-API evidence, but still not exact Broom/Naiad. The Yak top-word/filter result is a strong local Rift-vs-heap and modest Rift-vs-improved-SafeZone result; GraphChi-like subintervals show Rift-vs-heap but not Rift-vs-improved-SafeZone; grouped sort is a modest same-program allocation-placement win; runtime promotion is negative on elapsed time and motivates static checked boundaries. |
 | Phase 7: capture-checked safe API | Started | `RiftRegion.scoped`/`streaming` APIs exist; compiler probes now pass for scoped object graphs, for-loop allocation, nested scoped regions, local higher-order consumers, non-escaping closures, return escape rejection, heap retention rejection, nested-region leak rejection, streaming reset escape rejection, conservative returned-function rejection, explicit `HeapRoot` region-to-GC metadata handles, static module singleton and immutable module-val metadata, direct unrooted heap-object constructor-argument rejection, region-local alias acceptance, heap-alias rejection, heap-field-selection rejection, explicitly region-captured constructor-field reuse, plain `T^` field-reuse rejection, region-owned array checks, the owner-token `ObjectBuffer` checked container including `region.append/get/length`, growable owner-token `RegionBuffer`, reset epoch arrays, raw `childStreaming` handles that cannot escape their parent stream, the preferred `childWindow` stream-window wrapper, explicit `childRegion(parent, window)` owner-token child-entry widening, reusable `ChildBucket` wrapper plus `childBucketRegion`/`closeChildBucket`, top-word-style rooted metadata buffers, GraphChi-style rooted heap metadata, rejection of reset-epoch values stored into an outer streaming buffer, mutable local linked-list heads with provenance-preserving assignments, pinned diagnostic substrings for every current negative compiler probe, a focused `CheckedRegionBufferMatrix` where checked Rift beats the heap growable-buffer path on the default 1M-record local median, checked Dataflow SELECT/AGGREGATE/JOIN modes where checked Rift is fastest among heap, SafeZone, trusted Rift, and checked Rift in the local median, Q1 checked-output on real DEBS rows, Q1 checked-processing using checked event/rank objects plus per-bucket `ChildBucket` event regions, Q2 checked-processing using checked window entries, median heaps, rank objects, taxi-id entries/bytes, and result storage, first checked RunBoth integration through `q1_mode=rift-checked`, and a stronger structured close boundary that rejects direct user `window.close()` and runtime reuse after close. `docs/REPORT_CAPTURE_CHECK.md` records the checker slice. | Broader collection/operator APIs, broader static-field provenance, full affine/linear close guarantees beyond the current close helper, and a better ergonomics story for field/container provenance beyond local linked-list heads. |
 | Phase 8: native GC/region integration hardening | Started | Safety bug found for unrooted region-to-GC references; v1 explicit `HeapRoot` handles now retain heap metadata through a GC-visible list on the live region object, and checked lowering rejects direct unrooted heap-object constructor arguments, unsafe region-array stores, unsafe owner-token `ObjectBuffer`/`RegionBuffer` heap stores, mutable static vars, and mutable-head retagging from heap values while allowing region-to-region object graphs, simple region-local aliases, static module singletons, immutable module vals, stable constructor fields explicitly captured by `{region}`, region arrays with explicitly captured element types, owner-token object buffers, growable region buffers, and provenance-preserving mutable linked-list heads. | Extend or deliberately limit the mixed-reference rule for richer containers; decide whether plain `T^` field reuse and plain receiver-style container operations need a compiler extension or owner-token APIs. |
@@ -408,6 +408,27 @@ in the local 100k/1M medians. The elapsed delta remains much larger than the
 GC collection-time delta, so the interpretation is allocation-placement and
 object-churn reduction, not only shorter GC pauses.
 
+Full-month control addendum:
+
+| Run | Heap | Rift checked |
+|---|---:|---:|
+| month 1 full parsed rows | 14776529 | 14776529 |
+| month 1 full invalid rows | 86 | 86 |
+| month 1 full elapsed | 69.754 s | 1258.714 s |
+| month 1 full external real time | 69.78 s | 1258.76 s |
+| month 1 full external user+sys time | 69.64 s | 63.97 s |
+| month 1 full GC time | 0.288 s | 0.143 s |
+| month 1 full peak RSS | 624902144 bytes | 1029373952 bytes |
+| month 1 full region objects | 0 | 68834523 |
+| month 1 full opens/closes | 0 / 0 | 6890164 / 6890164 |
+
+This is a single-run full-month correctness and scale diagnostic, not a
+performance result. Heap and checked Rift outputs matched after stripping
+latency, but the checked process reported only about `64 s` user+sys CPU time
+for about `1259 s` real time. Future full-month controls must use the new
+external `time_real_s`, `time_user_s`, and `time_sys_s` summary columns and run
+under controlled load before making speed claims.
+
 Immediate next step:
 
 - Preserve benchmark fairness before adding more region code. Heap and Rift
@@ -421,7 +442,7 @@ Immediate next step:
 - The follow-up reusable ranking-array backend removed that reset churn and made
   Rift region-operation time small again. The current 1M 3-run median has Rift
   HPZone faster than heap, but this remains bounded-sample evidence with an RSS
-  tradeoff and missing SafeZone plus broader Commix controls.
+  tradeoff and missing SafeZone plus broader controls.
 - The Q2 cell-table step replaced boxed per-cell maps with a shared bounded
   array layout. It improves both heap and Rift, and Rift modes place those
   arrays and `ProfitStats` in a region. The 1M HPZone median is only slightly
@@ -783,7 +804,9 @@ After these docs, the safest technical next action is:
 
 1. Preserve the checked RunBoth medians as the latest bounded Phase 5/7
    evidence. They are stronger than the prior checked single-run checkpoint but
-   still not final full-DEBS evidence.
+   still not final full-DEBS evidence. The first full-month run validates
+   output equivalence but not wall-clock performance because the checked row was
+   descheduled.
 2. Use the selective checked allocation-attribution rows to choose the next
    narrow implementation target. They show Q1/Q2 processing allocation mostly
    moved out of the GC heap; remaining visible heap churn is output and
@@ -812,8 +835,9 @@ diagnosis points there.
 ## 15. Unsafe Assumptions To Avoid
 
 - Rift already has final DEBS application proof. The bounded-sample top-cache
-  and checked RunBoth medians are encouraging application evidence, but SafeZone,
-  full-month scale, and safe API controls are still missing.
+  and checked RunBoth medians are encouraging application evidence, and the
+  first full-month checked run matched output, but SafeZone, controlled
+  full-month performance, and safe API controls are still missing.
 - `gc_time_ns` captures all memory-management cost. It captures collection
   time only; heap allocation-call cost now has its own opt-in diagnostic
   counters.

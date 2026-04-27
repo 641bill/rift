@@ -241,7 +241,7 @@ Baseline story changed:
 - Rift has runtime-only wins on linked allocation-heavy structures, but not every cleaned/surrogate benchmark is a Rift win.
 - Current DEBS evidence now includes bounded-sample elapsed/RSS wins and
   allocation-attribution diagnostics, but not a final application claim:
-  SafeZone, Commix medians/control breadth, full-month scale, safe API boundaries, and broader
+  SafeZone, controlled full-month performance, safe API boundaries, and broader
   provenance controls are still open.
 
 ## 4. Work Completed In This Session
@@ -695,8 +695,8 @@ Current limitation:
   arrays/entries in Rift modes.
 - Latency backing arrays are now region-backed in Rift modes, with final
   metrics arrays copied out before region close. SafeZone modes, broader Commix controls,
-  full-month scale, Q2 rank-maintenance cost, output-phase variance, and safe
-  API boundaries remain open.
+  controlled full-month performance, Q2 rank-maintenance cost,
+  output-phase variance, and safe API boundaries remain open.
 - Therefore Rift DEBS still depends on GC and does not provide final
   application-level evidence, but the latest bounded-sample rows include Q2
   top-cache medians plus allocation-attribution diagnostics that show lower
@@ -1706,8 +1706,8 @@ Caveats:
   - 1M Rift HPZone median elapsed `9676.525 ms`, GC `358.127 ms`, Rift op `13.216 ms`, RSS `169312256`.
   - 1M Rift Streaming median elapsed `9667.365 ms`, GC `270.482 ms`, Rift op `13.915 ms`, RSS `169295872`.
   - This was the strongest bounded-sample DEBS result before the Q1
-    indexed-ranking checkpoint, but it still lacks SafeZone/full-month controls
-    and safe API enforcement.
+    indexed-ranking checkpoint, but it still lacks SafeZone controls,
+    controlled full-month performance, and safe API enforcement.
 - The Q1 indexed-ranking checkpoint replaced the remaining Q1 heap `TreeSet`
   ranking nodes with a shared indexed heap over ordinary `RankedRoute`
   objects. Heap allocates ranking arrays with `new`; Rift modes allocate those
@@ -2120,7 +2120,7 @@ Roadmap source: `/Users/siyaoliu/rift/Claude_output/ROADMAP.md`
 | Phase 2 in-tree runtime | Partially done | In-tree `RiftRuntime.c/h`, Scala facade, compiler lowering, `RiftRegionTest`, benchmark use. | Make API/header complete, run broader tests, decide stats ABI, clean up untracked state. |
 | Phase 3 runtime-only benchmarks | Done enough for current story | GCBench and ListOfLists runtime medians recorded; pipeline surrogate recorded. | Commix is not included. Pipeline provenance remains surrogate. |
 | Phase 4 topology/layout | Done enough to move on | `PHASE4_LAYOUT.md`, `PHASE4_TOPOLOGY.md`, `PHASE4_EXIT.md`. | Chunked layout still not a Rift win vs improved SafeZone. Mixed GC/region safety story needs Phase 6 tests. |
-| Phase 5 streaming operators and DEBS | In progress | DEBS Q1/Q2 run simultaneously on real data; outputs match; instrumentation added; Q1 and Q2 window entries have shared heap/Rift backends; Q2 active profit values live in window entries; Q2 ranking uses primitive cell keys internally; RunBoth input bytes use a heap/Rift allocation-placement split; the reusable ranking backend region-allocates Q1/Q2 ranking objects and top-k result arrays; Q2 bounded per-cell tables, Q1 route-table arrays, Q1 ranking-index arrays, Q2 latest-empty taxi arrays, Q2 ranking-index arrays, Q2 taxi-id table entries/bytes, RunBoth output snapshots, Q2 incremental median heap arrays, and RunBoth latency buffers are region-backed in Rift modes. New `diag_*` counters identify remaining heap/control paths, and the shared `Grid.cellKeyOrZero` hot path removes temporary `Some(Cell)`/`Cell` allocation from both heap and Rift. Q2 rank/output attribution reports change-check time, snapshot time, rank comparisons/swaps, top-candidate comparisons, and changed-output element checks. Q2 top-10 extraction is now cached with conservative invalidation. Opt-in GC heap allocation attribution now reports allocation calls, rounded bytes, allocation-call time, and C-side phase buckets. RunBoth byte output uses the same writer in heap/Rift modes while placing the reusable byte buffer in the region for Rift modes; `rift-checked` now integrates checked Q1/Q2 processors in the same RunBoth loop. | Latest trusted 1M byte-output medians are heap `4640.593 ms`, HPZone `4524.706 ms`, and Streaming `4522.308 ms`; GC collection medians are heap `21.025 ms`, HPZone `0.685 ms`, and Streaming `0.635 ms`; heap RSS is `159907840`, HPZone/Streaming RSS is `116785152`. Checked RunBoth 1M medians are heap `5363.257 ms`, HPZone `5224.005 ms`, Streaming `5209.104 ms`, and checked `5043.240 ms`; GC medians are heap `21.226 ms`, HPZone `0.834 ms`, Streaming `0.862 ms`, and checked `2.473 ms`. The latest trusted 1M allocation-attribution run shows heap at `6,025,143` GC allocation calls, `235,159,552` bytes, and `171.868 ms` allocation-call time, versus about `0.56M` calls, `10.5 MB`, and `12.8-12.9 ms` in trusted Rift modes. Checked allocation attribution drops the heap baseline to `752568` calls, `28785632` bytes, and `20.514 ms` allocation-call time. Need Commix, SafeZone comparison, full-month input, remaining control/collection work, and stronger safe API boundaries. |
+| Phase 5 streaming operators and DEBS | In progress | DEBS Q1/Q2 run simultaneously on real data; outputs match; instrumentation added; Q1 and Q2 window entries have shared heap/Rift backends; Q2 active profit values live in window entries; Q2 ranking uses primitive cell keys internally; RunBoth input bytes use a heap/Rift allocation-placement split; the reusable ranking backend region-allocates Q1/Q2 ranking objects and top-k result arrays; Q2 bounded per-cell tables, Q1 route-table arrays, Q1 ranking-index arrays, Q2 latest-empty taxi arrays, Q2 ranking-index arrays, Q2 taxi-id table entries/bytes, RunBoth output snapshots, Q2 incremental median heap arrays, and RunBoth latency buffers are region-backed in Rift modes. New `diag_*` counters identify remaining heap/control paths, and the shared `Grid.cellKeyOrZero` hot path removes temporary `Some(Cell)`/`Cell` allocation from both heap and Rift. Q2 rank/output attribution reports change-check time, snapshot time, rank comparisons/swaps, top-candidate comparisons, and changed-output element checks. Q2 top-10 extraction is now cached with conservative invalidation. Opt-in GC heap allocation attribution now reports allocation calls, rounded bytes, allocation-call time, and C-side phase buckets. RunBoth byte output uses the same writer in heap/Rift modes while placing the reusable byte buffer in the region for Rift modes; `rift-checked` now integrates checked Q1/Q2 processors in the same RunBoth loop. | Latest trusted 1M byte-output medians are heap `4640.593 ms`, HPZone `4524.706 ms`, and Streaming `4522.308 ms`; GC collection medians are heap `21.025 ms`, HPZone `0.685 ms`, and Streaming `0.635 ms`; heap RSS is `159907840`, HPZone/Streaming RSS is `116785152`. Checked RunBoth 1M medians are heap `5363.257 ms`, HPZone `5224.005 ms`, Streaming `5209.104 ms`, and checked `5043.240 ms`; GC medians are heap `21.226 ms`, HPZone `0.834 ms`, Streaming `0.862 ms`, and checked `2.473 ms`. The latest trusted 1M allocation-attribution run shows heap at `6,025,143` GC allocation calls, `235,159,552` bytes, and `171.868 ms` allocation-call time, versus about `0.56M` calls, `10.5 MB`, and `12.8-12.9 ms` in trusted Rift modes. Checked allocation attribution drops the heap baseline to `752568` calls, `28785632` bytes, and `20.514 ms` allocation-call time. The first full-month checked RunBoth control matched heap output but has invalid checked wall-clock timing due descheduling. Need SafeZone comparison, controlled full-month performance, remaining control/collection work, and stronger safe API boundaries. |
 | Phase 6 literature-benchmark evidence | Started | `docs/LITERATURE_BENCHMARK_CONTRACT.md` extracts the paper comparison contract. `DataflowRegionMatrix` now runs Broom-style SELECT/AGGREGATE/JOIN methodology workloads with ordinary Scala objects in heap, current SafeZone, improved SafeZone, Rift HPZone, and Rift Streaming modes. Native-only local medians include peak RSS, and a Broom-scale single run is recorded. `StreamFlexRegionMatrix` now runs stream throughput/latency methodology workloads with deadline-miss and latency-tail metrics. `YakRegionMatrix` now runs word-count, graph-step, external-sort-shaped grouped sort, top-word/filter, GraphChi-like subintervals, runtime-proxy, and promotion/escape control-data split workloads. `StancuRegionMatrix` now runs transaction/accounting probes with batched transaction regions. The 2026-04-26 Stancu boundary sweep records per-transaction, 64-transaction, and 512-transaction region boundaries. | Keep improved SafeZone in all claims, and do not claim exact Naiad/Broom, exact StreamFlex/Ovm, exact Yak, or exact Stancu reproduction. The current sequence gives strong Broom/Dataflow HPZone evidence, strong StreamFlex-style throughput/latency evidence, Yak-style Rift-vs-heap and near-improved-SafeZone evidence for no-escape epochs, a modest grouped-sort allocation-placement win, a stronger top-word/filter result, a GraphChi-like Rift-vs-heap but not Rift-vs-improved-SafeZone result, a negative memory-API-level dynamic-promotion result, and Stancu-style Rift-vs-heap evidence after batching/fixed counters. The Stancu weak result is now specifically attributed to too-fine region boundaries. Next choices are safe API rejection probes or returning to DEBS with the literature findings in mind. Build a fair Rift collection/operator API before redoing parallel-collections claims. |
 | Phase 7 capture checking | Started | `RiftRegion.scoped`/`streaming` safe API slice exists. Targeted Scala-next compiler tests now pass for scoped object graphs, for-loop allocation, nested scoped regions, local higher-order consumers, non-escaping closures, return escape rejection, heap retention rejection, nested-region leak rejection, streaming reset escape rejection, conservative returned-function rejection, explicit `HeapRoot` metadata handles, static module singleton and immutable module-val metadata, direct unrooted heap-object constructor-argument rejection, region-local alias acceptance, heap-alias rejection, heap-field-selection rejection, explicit `{region}` constructor-field reuse, plain `T^` field-reuse rejection, region-owned array checks, owner-token `ObjectBuffer`, growable owner-token `RegionBuffer`, reset epoch arrays, top-word rooted metadata buffers, GraphChi rooted/unrooted heap metadata, reset-epoch values stored into outer buffers, mutable local linked-list heads with provenance-preserving assignments, pinned diagnostic substrings for every current negative compiler probe, and the explicit split that `RiftRegion.open` is trusted while `ScopedRegion`/`StreamingRegion` allocations are checked. `docs/REPORT_CAPTURE_CHECK.md` records the current checker behavior. | Broader collection/operator APIs, broader static-field provenance, and a better ergonomics story for field/container provenance beyond local linked-list heads. |
 | Phase 8 native GC/region hardening | Started | `HeapRoot` handles give a GC-visible explicit-root path for heap metadata stored from region objects; direct unrooted heap-object constructor arguments, heap aliases, heap field selections, unsafe region-array stores, unsafe owner-token `ObjectBuffer`/`RegionBuffer` heap stores, mutable static vars, and mutable-head heap retagging are rejected in checked Rift lowering while region-to-region object graphs, simple region-local aliases, static module singletons, immutable module vals, stable constructor fields explicitly captured by `{region}`, explicitly captured region arrays, owner-token object buffers, growable region buffers, and provenance-preserving mutable local linked-list heads still compile. | Extend or deliberately limit the mixed-reference rule for richer containers; decide whether plain `T^` field reuse and plain receiver-style container operations need a compiler extension or owner-token APIs. |
@@ -2237,7 +2237,8 @@ Benchmarking uncertainties:
 
 - Current DEBS checkpoint rows have 100k and 1M three-run medians, but older
   DEBS rows in the same result history are still single-run diagnostics.
-- DEBS currently uses bounded sorted January samples, not full-month or full-challenge scale.
+- DEBS now has bounded sorted January medians and a first full-month output
+  equivalence run. Controlled full-month wall-clock performance remains open.
 - Commix now has focused 3-run DEBS medians for heap vs `rift-checked`, but not
   broader matrices.
 - Improved SafeZone comparison is not yet present for DEBS because DEBS currently compares heap vs Q1 Rift modes, not SafeZone modes.
@@ -2264,7 +2265,7 @@ Benchmarking uncertainties:
   input-boundary, ranking/result, Q2 cell-table, Q1 route-table, Q2 taxi-table,
   and Q2 array-ranking experiments now have local commit boundaries once this
   update is committed, but public claims still need pushed provenance and the
-  missing SafeZone/full-scale controls.
+  missing SafeZone/controlled-full-scale controls.
 
 Provenance risks:
 
@@ -2432,8 +2433,9 @@ Next technical milestone:
      measured Q1 indexed-ranking checkpoint in this handoff.
 4. For the next DEBS change, rerun 100k and 1M instrumented medians before
    making any headline throughput claim. The most useful controls now are
-   Commix/SafeZone DEBS modes, full-month sorted input, and stronger safe API
-   coverage for the child-window object patterns already used in the benchmark.
+   Commix/SafeZone DEBS modes, controlled full-month reruns, and stronger safe
+   API coverage for the child-window object patterns already used in the
+   benchmark.
 5. Extend the literature methodology harnesses only as needed:
    - Upgrade the 40-epoch, 500k-document-per-epoch single run to a median run
      only if we need a headline Broom-style methodology table.
@@ -2448,7 +2450,8 @@ What should not be done yet:
 - Do not claim Rift has final DEBS application-level evidence. The current
   bounded-sample checked RunBoth medians, trusted byte-output medians, and
   allocation-attribution result are stronger than earlier checkpoints, but
-  still need SafeZone, full-month scale, and stronger safe API controls.
+  still need SafeZone, controlled full-month performance, and stronger safe API
+  controls.
 - Do not move to Phase 6/7 as if Phase 5 is complete.
 - Do not treat the literature sequence as proving final application evidence.
   It produced strong Broom/StreamFlex signals, mixed-but-good Yak evidence, and
@@ -2463,7 +2466,7 @@ What needs remeasurement:
 - DEBS after any further Q1/Q2 ranking/median/output region-heavy changes.
 - Commix comparisons where supported.
 - SafeZone or improved SafeZone DEBS modes if meaningful.
-- Full-month sorted DEBS input.
+- Controlled full-month DEBS reruns with external real/user/sys time.
 - Pipeline if a real Rift-backed collection API is added.
 
 What is stable enough:
@@ -2570,13 +2573,13 @@ The follow-up 100k/1M median matrix over `heap`, `rift-hp`,
 This is still not final DEBS proof: the byte-reader/output scratch buffers
 still use trusted runtime helpers, previous-output snapshots are heap primitive
 control metadata, child close discipline is structured but not affine-proved,
-SafeZone DEBS is missing and full-month controls are missing.
+SafeZone DEBS is missing and controlled full-month performance is missing.
 
 With checked RunBoth medians and attribution in place, the safest next
 technical action is either a reusable checked bucket/window abstraction with a
 stronger static close proof, or the remaining DEBS controls. The missing
 controls still include SafeZone/improved SafeZone if a fair closeable backend
-is implemented and full-month sorted input.
+is implemented and controlled full-month reruns.
 
 Latest validation for this step:
 
@@ -2695,11 +2698,54 @@ Interpretation:
 - It still does not prove affine close. The next safe-API target is a typed
   cleanup/unlink obligation, or compiler support for a linear close token.
 
+## Latest Update: Full-Month DEBS Control And External Time Columns
+
+Date: 2026-04-27
+
+What changed:
+
+- Generated a full January joined/sorted DEBS input with
+  `DEBS2015_LIMIT=0`, producing `/tmp/debs2015-month1-full.csv`.
+- Ran a first full-month RunBoth control for `heap` and `rift-checked`.
+- Updated `bench/debs2015/run_both_instrumented_matrix.sh` so `summary.tsv`
+  records external `/usr/bin/time` fields:
+  `time_real_s`, `time_user_s`, and `time_sys_s`.
+- Verified the harness change on `bench/debs2015/sample_both.csv`; heap and
+  checked outputs still matched after stripping latency.
+
+Validation:
+
+- Full-month input rows: `14776615`.
+- Full-month RunBoth parsed rows: `14776529`; invalid rows: `86`.
+- Q1/Q2 outputs matched between heap and `rift-checked` after stripping only
+  latency.
+- Output counts: Q1 `274667`, Q2 `180215`.
+
+First full-month single-run rows:
+
+| Mode | Elapsed s | External real s | User+sys s | GC s | RSS MiB | Region objects | Opens/closes |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| heap | 69.754 | 69.78 | 69.64 | 0.288 | 596.0 | 0 | 0 / 0 |
+| rift-checked | 1258.714 | 1258.76 | 63.97 | 0.143 | 981.7 | 68834523 | 6890164 / 6890164 |
+
+Interpretation:
+
+- This is a full-month correctness and scale checkpoint, not a wall-clock
+  performance result.
+- The checked row was descheduled or otherwise waited externally: wall time was
+  about `1259 s`, but user+sys CPU time was only about `64 s`. Do not cite the
+  checked `1258.714 s` elapsed value as a Rift performance result.
+- The scale counters point to the next technical pressure: checked RunBoth
+  creates about `6.89M` child buckets and retains enough slab memory to reach
+  about `982 MiB` RSS on this run. The next full-scale work should reduce
+  bucket churn / slab retention, then rerun controlled full-month comparisons
+  with external time columns.
+
 ## Unsafe Assumptions To Avoid
 
 - "Rift already has final DEBS application proof." It does not. The current
   bounded-sample medians are encouraging application evidence, but the
-  SafeZone/full-month/safe-API controls are still missing.
+  SafeZone/controlled-full-month/safe-API controls are still missing.
 - "GC time should disappear because Q1/Q2 windows and input bytes use Rift."
   `gc_time_ns` is collection time only. Some former heap-heavy paths have
   moved, including taxi-id bytes/entries and latency backing arrays, and the
@@ -2713,10 +2759,11 @@ Interpretation:
 - "SafeZone is solved." Improved SafeZone is much better on some workloads, but current SafeZone pathologies and workload sensitivity still matter.
 - "Layout wins prove allocator wins." They are separate effects.
 - "The current bounded-sample medians prove a final DEBS win." They do not;
-  SafeZone/full-month controls and safe API boundaries are still missing.
+  SafeZone/controlled-full-month controls and safe API boundaries are still
+  missing.
 - "The Q2 top-10 cache medians are final DEBS evidence." They are not; they are
-  bounded-sample evidence and still lack SafeZone/full-month controls and safe
-  API boundaries.
+  bounded-sample evidence and still lack SafeZone/controlled-full-month
+  controls and safe API boundaries.
 - "The Q1 checked-output probe proves checked DEBS processing." It does not.
   It only checks transient output/ranking materialization; the Q1 window and
   rank maintenance engine is still heap in both probe modes.
@@ -2728,7 +2775,7 @@ Interpretation:
 - "The Q2 checked-processing probe is final checked DEBS." It is not. It is
   now integrated into RunBoth, but still uses heap control metadata for
   `ProfitStats`, relies on structured rather than affine-proved child-window
-  close, and lacks SafeZone/full-month controls.
+  close, and lacks SafeZone/controlled-full-month controls.
 - "A binary heap for Q2 top-candidate extraction is the obvious fix." It was
   tested during the Q2 attribution step and increased comparisons on the 100k
   sample.

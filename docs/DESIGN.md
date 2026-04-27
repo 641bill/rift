@@ -73,7 +73,10 @@ Current reliable evidence:
   structured-lifetime Scala objects are moving into regions. It does not close
   the SafeZone/full-scale and safe API gaps. A 3-run Commix DEBS control now
   also exists: checked Rift wins elapsed time and RSS at 100k and 1M, while
-  reducing measured GC collection time.
+  reducing measured GC collection time. A first full-month checked RunBoth
+  control matches heap output, but its checked wall-clock row is invalid as
+  performance evidence because external user+sys time was only about `64 s`
+  while real time was about `1259 s`.
 - Phase 7 checked API evidence has started. The targeted Scala-next compiler
   suite passed 52/52 for the current `Scoped`/`Streaming` API slice, including
   for-loop allocation, nested scoped regions, local higher-order consumers, and
@@ -146,9 +149,10 @@ framing:
   entries/bytes, output snapshots, and latency buffers in Rift modes. The
   latest bounded-sample medians show Rift elapsed wins and much lower RSS, and
   allocation attribution shows fewer heap allocation calls/bytes. It still does
-  not prove a final application-level win because the dataset is bounded,
-  SafeZone DEBS is missing, full-month controls are missing, and safe API
-  boundaries are still incomplete.
+  not prove a final application-level win because the strongest speed rows are
+  bounded samples, SafeZone DEBS is missing, the first full-month run is only
+  output-equivalence plus scale diagnosis, and safe API boundaries are still
+  incomplete.
 - The literature-review target is broader than local baselines: Rift must be
   compared against Broom, StreamFlex, Yak, Stancu-style hybrid static analysis,
   the MLKit typed-region lineage, and Reggio/Verona-style capabilities.
@@ -537,10 +541,11 @@ correct interpretation of the speedup: not only shorter collection pauses, but
 less ordinary heap allocation work because structured-lifetime Scala objects
 are placed in regions.
 
-The evidence is still bounded-sample. The remaining pressure is in Q2
-rank/output work, residual heap allocation/control metadata, SafeZone, Commix
-median if needed, and full-scale comparisons, and the need for safe region-backed
-collections/control structures that preserve the heap logical program.
+The strongest performance evidence is still bounded-sample. The remaining
+pressure is in Q2 rank/output work, residual heap allocation/control metadata,
+SafeZone, controlled full-scale comparisons, and the need for safe
+region-backed collections/control structures that preserve the heap logical
+program.
 
 For parallel collections:
 
@@ -653,15 +658,29 @@ Commix control addendum:
 | 1M GC time | 8.206 ms | 1.137 ms | 3-run median, bounded sample |
 | 1M peak RSS bytes | 158924800 | 125698048 | 3-run median, bounded sample |
 
+Full-month control addendum:
+
+| Run | Heap | Rift checked | Evidence level |
+|---|---:|---:|---|
+| month 1 full parsed rows | 14776529 | 14776529 | single run, output matched |
+| month 1 full invalid rows | 86 | 86 | single run, output matched |
+| month 1 full elapsed | 69.754 s | 1258.714 s | checked wall-clock invalid |
+| month 1 full external user+sys time | 69.64 s | 63.97 s | external `/usr/bin/time -l` |
+| month 1 full GC time | 0.288 s | 0.143 s | single run |
+| month 1 full peak RSS bytes | 624902144 | 1029373952 | single run |
+| month 1 full region objects | 0 | 68834523 | single run |
+
 Interpretation:
 
 - Rift has credible same-layout runtime wins on GCBench and linked ListOfLists.
 - Improved SafeZone is a serious baseline.
 - Layout changes can dominate allocator changes and must be separated.
 - Current DEBS now moves more application data operations into regions and has
-  bounded-sample elapsed/RSS wins under Immix and Commix. SafeZone,
-  full-month scale, and stronger safe API boundaries are still missing for the
-  final application claim.
+  bounded-sample elapsed/RSS wins under Immix and Commix. The first full-month
+  checked run matched heap output but does not provide usable wall-clock
+  performance evidence. SafeZone, controlled full-month performance, and
+  stronger safe API boundaries are still missing for the final application
+  claim.
 - Checked RunBoth is now median-backed on bounded 100k/1M samples. It is
   encouraging Phase 5/7 evidence, but not an apples-to-apples proof that the
   checked API is always faster than the trusted API because the trusted and
@@ -722,8 +741,8 @@ Claims that are not yet supported:
 
 - Rift has a final full-DEBS application-level speedup. It has bounded-sample
   Q2 top-cache and checked RunBoth medians plus allocation-attribution evidence,
-  including a 3-run Commix control, but not SafeZone/full-scale/safe-API
-  controls.
+  including a 3-run Commix control and one full-month output-equivalence run,
+  but not SafeZone/controlled-full-scale/safe-API controls.
 - Rift has a capture-checked safe API.
 - Rift beats Broom, StreamFlex, Yak, Stancu et al., or Reggio on their strongest
   axes.

@@ -641,7 +641,7 @@ Interpretation:
   calls and `10.5 MB`, and GC collection time is below `1 ms`.
 - The remaining gap to a final Phase 5 claim is no longer "move obvious output
   strings/builders into regions"; it is controls and scope: Commix/SafeZone,
-  full-month input, and safe API coverage.
+  controlled full-month performance, and safe API coverage.
 
 ### Q1 Checked-Output Safe-API Probe
 
@@ -824,7 +824,7 @@ Interpretation:
 - This is still not final DEBS proof. It remains a bounded 100k/1M result, the
   byte-reader/output scratch paths still use trusted helpers, previous-output
   snapshots remain primitive heap control metadata, SafeZone DEBS is missing,
-  and full-month controls are missing.
+  and controlled full-month performance is missing.
 
 Checked child-window close discipline and Commix control:
 
@@ -850,6 +850,31 @@ Checked child-window close discipline and Commix control:
   shorter-GC-pause result.
 - SafeZone DEBS remains missing because the current RunBoth harness has no fair
   closeable SafeZone-window backend equivalent to Rift child-window eviction.
+
+Full-month first control:
+
+| Input | Mode | Parsed | Invalid | Elapsed s | External real s | User+sys s | GC s | RSS MiB | Evidence |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---|
+| month 1 full | heap | 14776529 | 86 | 69.754 | 69.78 | 69.64 | 0.288 | 596.0 | single run, output matched |
+| month 1 full | rift-checked | 14776529 | 86 | 1258.714 | 1258.76 | 63.97 | 0.143 | 981.7 | single run, output matched, wall-clock invalid |
+
+| Mode | Read s | Parse s | Q1 process s | Q2 process s | Rift op s | Opens/closes | Region objects | Mmap MiB |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| heap | 5.786 | 15.503 | 20.039 | 21.149 | 0.000 | 0 / 0 | 0 | 0.0 |
+| rift-checked | 198.794 | 885.594 | 18.422 | 149.721 | 0.679 | 6890164 / 6890164 | 68834523 | 932.5 |
+
+- The full-month joined input was generated with `DEBS2015_LIMIT=0` and has
+  `14776615` rows in `/tmp/debs2015-month1-full.csv`.
+- Heap and `rift-checked` outputs matched after stripping only latency, so
+  full-month correctness for the current checked RunBoth path is partially
+  validated.
+- The checked wall-clock result is not a valid performance claim: external
+  `/usr/bin/time -l` reports only about `63.97 s` of user+sys CPU time while
+  real time is about `1258.76 s`.
+- The full-month run is still useful as a scale diagnostic. It shows about
+  `6.89M` child-bucket opens/closes, `68.8M` region object allocations, and
+  about `982 MiB` RSS in checked mode. The next full-scale work should reduce
+  bucket churn / slab retention and rerun under controlled load.
 
 Common Q2 incremental-median diagnostics at 1M:
 
@@ -883,8 +908,9 @@ Interpretation:
   heap and Rift use the same two-heap median maintenance, while Rift allocates
   the median/control arrays and related ordinary Scala objects in regions.
 - Rift still does not prove final DEBS success because SafeZone DEBS,
-  full-month scale, and stronger safe API boundaries remain open. The remaining
-  DEBS bottleneck is Q2 rank/output work rather than Rift allocator overhead.
+  controlled full-month performance, and stronger safe API boundaries remain
+  open. The remaining DEBS bottleneck is Q2 rank/output work rather than Rift
+  allocator overhead.
 
 ## Phase 6: Literature-Aligned Methodology Evidence
 
@@ -1411,8 +1437,8 @@ Status:
   byte-oriented output: HPZone and Streaming are faster than heap at 1M with
   lower RSS, and allocation attribution shows much lower heap allocation
   calls/bytes and measured allocation-call time. This is still not final
-  application evidence without SafeZone DEBS, full-month scale, and stronger
-  safe API controls.
+  application evidence without SafeZone DEBS, controlled full-month
+  performance, and stronger safe API controls.
 - Checked RunBoth now also has bounded 100k/1M 3-run medians. At 1M,
   `rift-checked` is fastest in the local matrix (`5043.240 ms` vs heap
   `5363.257 ms`, trusted HPZone `5224.005 ms`, and trusted Streaming
@@ -1425,6 +1451,10 @@ Status:
 - The Commix DEBS control now has 100k/1M medians, and checked Rift remains
   faster and lower-RSS there too. This strengthens the application evidence,
   but the remaining elapsed delta is still much larger than the GC-time delta.
+- A first full-month checked RunBoth control now has matching output, but the
+  checked wall-clock row is invalid as a performance result because external
+  user+sys time was only about `64 s` while real time was about `1259 s`.
+  Treat it as full-scale correctness plus memory/churn diagnosis.
 - Latest DEBS phase breakdown shows remaining cost is mostly Q1/Q2 CPU and
   file I/O rather than Rift bookkeeping or GC collection.
 - The pipeline/parallel-collections story is still a surrogate until a fair
