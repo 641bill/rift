@@ -84,7 +84,7 @@ For performance numbers, use the following rule of thumb:
 | Phase 2: in-tree runtime/compiler path | Partially done | Partially validated | RiftRegionTest and integration status, no standalone perf table |
 | Phase 3: runtime-only evaluation | Done enough for current claim | Validated with caveats | Same-layout GCBench/ListOfLists runtime medians |
 | Phase 4: topology/layout decomposition | Done enough to move on | Validated/provisional mix | Layout, topology, targeted runtime follow-up, safety finding |
-| Phase 5: application evidence | In progress | Bounded-sample medians plus diagnostic attribution, safe-API probes, and single-run full-month controls | DEBS correctness, 100k/1M trusted medians, opt-in GC heap allocation attribution, Q1 checked-output output-equivalence, Q1 checked-processing output-equivalence, Q2 checked-processing output-equivalence, checked RunBoth 100k/1M medians plus attribution, 3-run Commix control, first full-month output-equivalence control, and post-pool-cap checked full-month run |
+| Phase 5: application evidence | In progress | Bounded-sample medians plus diagnostic attribution, safe-API probes, and single-run full-month controls | DEBS correctness, 100k/1M trusted medians, opt-in GC heap allocation attribution, Q1 checked-output output-equivalence, Q1 checked-processing output-equivalence, Q2 checked-processing output-equivalence, checked RunBoth 100k/1M medians plus attribution, 3-run Commix control, first full-month output-equivalence control, post-pool-cap checked full-month run, and post-pool-cap same-run full-month heap/checked control |
 | Phase 6: literature-aligned methodology evidence | Started | Validated methodology medians with caveats | Broom-style dataflow including checked SELECT/AGGREGATE/JOIN modes, StreamFlex-style latency/throughput, Yak-style control/data plus grouped sort, top-word/filter, GraphChi-style subintervals, and runtime promotion proxy, Stancu-style transaction accounting |
 | Phase 6b: Broom / parallel collections API evidence | Open | Provisional surrogate only | amordo comparison and Rift raw-array surrogate |
 | Phase 7: capture-checked safe API | Started | Compiler-probe, runtime-smoke, focused checked-container benchmark, checked dataflow evidence, and DEBS-shaped checked probes | 54 targeted checked-API compiler probes, checked child-window and child-bucket close-through-cleanup runtime probes, `CheckedRegionBufferMatrix`, Dataflow SELECT/AGGREGATE/JOIN `rift-checked`, Q1 checked-output, Q1 checked-processing, Q2 checked-processing, checked RunBoth `rift-checked` medians, plus Phase 4 safety finding |
@@ -903,6 +903,24 @@ Streaming first-slab and pool-cap follow-up:
   heap/checked repeats and SafeZone/Commix controls before becoming a headline
   Phase 5 claim.
 
+Same-run full-month pool-cap control:
+
+| Input | Mode | Parsed | Elapsed s | External real s | User+sys s | GC s | RSS MiB | Rift op s | Pool MiB | Mmap MiB | Evidence |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| month 1 full | heap | 14776529 | 71.919 | 71.96 | 69.58 | 0.323 | 579.1 | 0.000 | 0.0 | 0.0 | single run, output matched |
+| month 1 full | rift-checked | 14776529 | 77.947 | 77.98 | 74.24 | 0.190 | 695.2 | 1.137 | 128.0 | 864.4 | single run, output matched |
+
+- This is the best current full-month control because both modes used the
+  same current binary, input, harness, and external timing/RSS path.
+- Checked Rift is slower by about `6.0 s` on this single full-month run, while
+  measured GC collection time is lower by about `0.13 s`.
+- The pool cap keeps checked peak RSS much closer to heap than the pre-cap
+  checked row, but checked still uses about `116 MiB` more RSS than heap.
+- Rift operation time is about `1.14 s` across `6.89M` opens/closes and
+  `68.8M` region object allocations, so the remaining full-month gap is mostly
+  Q1/Q2 processing/read/parse differences and full-scale memory locality rather
+  than raw region bookkeeping.
+
 Common Q2 incremental-median diagnostics at 1M:
 
 | Q2 rank fixes | Median sort computes | Median values sorted | Median reads | Median heap adds | Median heap removes | Median rebalances |
@@ -1481,9 +1499,9 @@ Status:
 - A first full-month checked RunBoth control has matching output, but the
   checked wall-clock row is invalid as a performance result because external
   user+sys time was only about `64 s` while real time was about `1259 s`.
-  The pool-cap follow-up gives a credible single checked full-month row:
-  `70.831 s` elapsed, `70.87 s` external real, `68.86 s` user+sys, `0.166 s`
-  GC, and `846.0 MiB` RSS. Treat it as full-scale checked evidence and
+  The pool-cap follow-up gives a credible same-run full-month control: heap
+  `71.919 s`, `0.323 s` GC, `579.1 MiB` RSS versus checked `77.947 s`,
+  `0.190 s` GC, `695.2 MiB` RSS. Treat it as full-scale evidence and
   memory/churn diagnosis, not as final repeated heap-vs-Rift evidence.
 - Latest DEBS phase breakdown shows remaining cost is mostly Q1/Q2 CPU and
   file I/O rather than Rift bookkeeping or GC collection.

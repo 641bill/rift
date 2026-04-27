@@ -75,11 +75,12 @@ Current reliable evidence:
   also exists: checked Rift wins elapsed time and RSS at 100k and 1M, while
   reducing measured GC collection time. The first full-month checked RunBoth
   control matched heap output but had invalid checked wall-clock timing. A
-  follow-up runtime pool-cap control gives a usable single checked full-month
-  row: `70.831 s` elapsed / `70.87 s` external real, `68.86 s` user+sys,
-  `0.166 s` GC, and `846.0 MiB` RSS. This is still not a final full-DEBS
-  claim because same-run heap controls, repeated medians, SafeZone controls,
-  and stronger safe API boundaries remain open.
+  runtime pool-cap control then made full-month checked runs practical. The
+  current same-run full-month control is heap `71.919 s`, `0.323 s` GC,
+  `579.1 MiB` RSS versus checked `77.947 s`, `0.190 s` GC, `695.2 MiB` RSS,
+  with matching output. This is still not a final full-DEBS claim because
+  repeated medians, SafeZone controls, and stronger safe API boundaries remain
+  open.
 - Phase 7 checked API evidence has started. The targeted Scala-next compiler
   suite passed 52/52 for the current `Scoped`/`Streaming` API slice, including
   for-loop allocation, nested scoped regions, local higher-order consumers, and
@@ -685,6 +686,17 @@ Streaming first-slab and pool-cap follow-up:
 | checked full-month cumulative Rift mmap | 932.5 MiB | 864.4 MiB | single run |
 | checked full-month Rift op time | 0.679 s | 0.998 s | single run |
 
+Same-run full-month pool-cap control:
+
+| Run | Heap | Rift checked | Evidence level |
+|---|---:|---:|---|
+| month 1 full elapsed | 71.919 s | 77.947 s | single run, output matched |
+| month 1 full external real time | 71.96 s | 77.98 s | single run |
+| month 1 full user+sys time | 69.58 s | 74.24 s | single run |
+| month 1 full GC time | 0.323 s | 0.190 s | single run |
+| month 1 full peak RSS bytes | 607240192 | 728940544 | single run |
+| month 1 full Rift op time | 0.000 s | 1.137 s | single run |
+
 Interpretation:
 
 - Rift has credible same-layout runtime wins on GCBench and linked ListOfLists.
@@ -694,10 +706,11 @@ Interpretation:
   bounded-sample elapsed/RSS wins under Immix and Commix. The first full-month
   checked run matched heap output but did not provide usable wall-clock
   performance evidence. The pool-cap follow-up fixes the closed-slab retention
-  problem enough to produce a credible single checked full-month timing row,
-  but peak RSS is still higher than the earlier heap full-month run. SafeZone,
-  repeated same-run full-month controls, and stronger safe API boundaries are
-  still missing for the final application claim.
+  problem enough to produce a credible same-run full-month control. In that
+  single run, checked is slower than heap by about `6.0 s`, while GC collection
+  time is lower and RSS is much closer to heap than before the cap. SafeZone,
+  repeated full-month medians, and stronger safe API boundaries are still
+  missing for the final application claim.
 - Checked RunBoth is now median-backed on bounded 100k/1M samples. It is
   encouraging Phase 5/7 evidence, but not an apples-to-apples proof that the
   checked API is always faster than the trusted API because the trusted and
@@ -759,8 +772,8 @@ Claims that are not yet supported:
 - Rift has a final full-DEBS application-level speedup. It has bounded-sample
   Q2 top-cache and checked RunBoth medians plus allocation-attribution evidence,
   including a 3-run Commix control, one full-month output-equivalence run, and
-  one post-pool-cap checked full-month timing row, but not SafeZone, repeated
-  same-run controlled full-scale, or complete safe-API controls.
+  one post-pool-cap same-run full-month timing row, but not SafeZone, repeated
+  controlled full-scale medians, or complete safe-API controls.
 - Rift has a capture-checked safe API.
 - Rift beats Broom, StreamFlex, Yak, Stancu et al., or Reggio on their strongest
   axes.
