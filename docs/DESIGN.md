@@ -73,10 +73,13 @@ Current reliable evidence:
   structured-lifetime Scala objects are moving into regions. It does not close
   the SafeZone/full-scale and safe API gaps. A 3-run Commix DEBS control now
   also exists: checked Rift wins elapsed time and RSS at 100k and 1M, while
-  reducing measured GC collection time. A first full-month checked RunBoth
-  control matches heap output, but its checked wall-clock row is invalid as
-  performance evidence because external user+sys time was only about `64 s`
-  while real time was about `1259 s`.
+  reducing measured GC collection time. The first full-month checked RunBoth
+  control matched heap output but had invalid checked wall-clock timing. A
+  follow-up runtime pool-cap control gives a usable single checked full-month
+  row: `70.831 s` elapsed / `70.87 s` external real, `68.86 s` user+sys,
+  `0.166 s` GC, and `846.0 MiB` RSS. This is still not a final full-DEBS
+  claim because same-run heap controls, repeated medians, SafeZone controls,
+  and stronger safe API boundaries remain open.
 - Phase 7 checked API evidence has started. The targeted Scala-next compiler
   suite passed 52/52 for the current `Scoped`/`Streaming` API slice, including
   for-loop allocation, nested scoped regions, local higher-order consumers, and
@@ -670,6 +673,18 @@ Full-month control addendum:
 | month 1 full peak RSS bytes | 624902144 | 1029373952 | single run |
 | month 1 full region objects | 0 | 68834523 | single run |
 
+Streaming first-slab and pool-cap follow-up:
+
+| Run | Before cap | After cap | Evidence level |
+|---|---:|---:|---|
+| checked full-month external real time | 1258.76 s | 70.87 s | single run |
+| checked full-month user+sys time | 63.97 s | 68.86 s | single run |
+| checked full-month GC time | 0.143 s | 0.166 s | single run |
+| checked full-month peak RSS bytes | 1029373952 | 887078912 | single run |
+| checked full-month closed-slab pool | 780.4 MiB | 128.0 MiB | single run |
+| checked full-month cumulative Rift mmap | 932.5 MiB | 864.4 MiB | single run |
+| checked full-month Rift op time | 0.679 s | 0.998 s | single run |
+
 Interpretation:
 
 - Rift has credible same-layout runtime wins on GCBench and linked ListOfLists.
@@ -677,10 +692,12 @@ Interpretation:
 - Layout changes can dominate allocator changes and must be separated.
 - Current DEBS now moves more application data operations into regions and has
   bounded-sample elapsed/RSS wins under Immix and Commix. The first full-month
-  checked run matched heap output but does not provide usable wall-clock
-  performance evidence. SafeZone, controlled full-month performance, and
-  stronger safe API boundaries are still missing for the final application
-  claim.
+  checked run matched heap output but did not provide usable wall-clock
+  performance evidence. The pool-cap follow-up fixes the closed-slab retention
+  problem enough to produce a credible single checked full-month timing row,
+  but peak RSS is still higher than the earlier heap full-month run. SafeZone,
+  repeated same-run full-month controls, and stronger safe API boundaries are
+  still missing for the final application claim.
 - Checked RunBoth is now median-backed on bounded 100k/1M samples. It is
   encouraging Phase 5/7 evidence, but not an apples-to-apples proof that the
   checked API is always faster than the trusted API because the trusted and
@@ -741,8 +758,9 @@ Claims that are not yet supported:
 
 - Rift has a final full-DEBS application-level speedup. It has bounded-sample
   Q2 top-cache and checked RunBoth medians plus allocation-attribution evidence,
-  including a 3-run Commix control and one full-month output-equivalence run,
-  but not SafeZone/controlled-full-scale/safe-API controls.
+  including a 3-run Commix control, one full-month output-equivalence run, and
+  one post-pool-cap checked full-month timing row, but not SafeZone, repeated
+  same-run controlled full-scale, or complete safe-API controls.
 - Rift has a capture-checked safe API.
 - Rift beats Broom, StreamFlex, Yak, Stancu et al., or Reggio on their strongest
   axes.

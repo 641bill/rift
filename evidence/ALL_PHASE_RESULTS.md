@@ -84,7 +84,7 @@ For performance numbers, use the following rule of thumb:
 | Phase 2: in-tree runtime/compiler path | Partially done | Partially validated | RiftRegionTest and integration status, no standalone perf table |
 | Phase 3: runtime-only evaluation | Done enough for current claim | Validated with caveats | Same-layout GCBench/ListOfLists runtime medians |
 | Phase 4: topology/layout decomposition | Done enough to move on | Validated/provisional mix | Layout, topology, targeted runtime follow-up, safety finding |
-| Phase 5: application evidence | In progress | Bounded-sample medians plus diagnostic attribution and safe-API probes | DEBS correctness, 100k/1M trusted medians, opt-in GC heap allocation attribution, Q1 checked-output output-equivalence, Q1 checked-processing output-equivalence, Q2 checked-processing output-equivalence, checked RunBoth 100k/1M medians plus attribution, and 3-run Commix control |
+| Phase 5: application evidence | In progress | Bounded-sample medians plus diagnostic attribution, safe-API probes, and single-run full-month controls | DEBS correctness, 100k/1M trusted medians, opt-in GC heap allocation attribution, Q1 checked-output output-equivalence, Q1 checked-processing output-equivalence, Q2 checked-processing output-equivalence, checked RunBoth 100k/1M medians plus attribution, 3-run Commix control, first full-month output-equivalence control, and post-pool-cap checked full-month run |
 | Phase 6: literature-aligned methodology evidence | Started | Validated methodology medians with caveats | Broom-style dataflow including checked SELECT/AGGREGATE/JOIN modes, StreamFlex-style latency/throughput, Yak-style control/data plus grouped sort, top-word/filter, GraphChi-style subintervals, and runtime promotion proxy, Stancu-style transaction accounting |
 | Phase 6b: Broom / parallel collections API evidence | Open | Provisional surrogate only | amordo comparison and Rift raw-array surrogate |
 | Phase 7: capture-checked safe API | Started | Compiler-probe, runtime-smoke, focused checked-container benchmark, checked dataflow evidence, and DEBS-shaped checked probes | 54 targeted checked-API compiler probes, checked child-window and child-bucket close-through-cleanup runtime probes, `CheckedRegionBufferMatrix`, Dataflow SELECT/AGGREGATE/JOIN `rift-checked`, Q1 checked-output, Q1 checked-processing, Q2 checked-processing, checked RunBoth `rift-checked` medians, plus Phase 4 safety finding |
@@ -641,7 +641,7 @@ Interpretation:
   calls and `10.5 MB`, and GC collection time is below `1 ms`.
 - The remaining gap to a final Phase 5 claim is no longer "move obvious output
   strings/builders into regions"; it is controls and scope: Commix/SafeZone,
-  controlled full-month performance, and safe API coverage.
+  repeated full-month performance, and safe API coverage.
 
 ### Q1 Checked-Output Safe-API Probe
 
@@ -824,7 +824,7 @@ Interpretation:
 - This is still not final DEBS proof. It remains a bounded 100k/1M result, the
   byte-reader/output scratch paths still use trusted helpers, previous-output
   snapshots remain primitive heap control metadata, SafeZone DEBS is missing,
-  and controlled full-month performance is missing.
+  and repeated full-month performance is missing.
 
 Checked child-window close discipline and Commix control:
 
@@ -876,6 +876,33 @@ Full-month first control:
   about `982 MiB` RSS in checked mode. The next full-scale work should reduce
   bucket churn / slab retention and rerun under controlled load.
 
+Streaming first-slab and pool-cap follow-up:
+
+| Input | Mode | Parsed | Elapsed s | External real s | User+sys s | GC s | RSS MiB | Rift op s | Pool MiB | Mmap MiB | Evidence |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| month 1 full | rift-checked | 14776529 | 70.831 | 70.87 | 68.86 | 0.166 | 846.0 | 0.998 | 128.0 | 864.4 | single checked run, output matched |
+
+| Metric | Before cap | After cap |
+|---|---:|---:|
+| checked full-month external real time | 1258.76 s | 70.87 s |
+| checked full-month user+sys time | 63.97 s | 68.86 s |
+| checked full-month peak RSS | 981.7 MiB | 846.0 MiB |
+| checked full-month closed-slab pool | 780.4 MiB | 128.0 MiB |
+| checked full-month cumulative Rift mmap | 932.5 MiB | 864.4 MiB |
+| checked full-month Rift op time | 0.679 s | 0.998 s |
+
+- The runtime change is backend-wide: streaming regions now start with a
+  page-sized first slab and the global closed-slab pool is capped at `128 MiB`.
+  Public Rift APIs and the DEBS Q1/Q2 logical program are unchanged.
+- The follow-up run has credible wall/user/sys alignment, so it replaces the
+  descheduled checked row as the first usable full-scale checked timing point.
+- Peak RSS improves materially but remains above the earlier heap full-month
+  run. Remaining pressure is likely active parent-stream tables, rank/taxi-id
+  metadata, and live windows rather than only closed-slab retention.
+- This is still single-run checked-only full-month evidence. It needs same-run
+  heap/checked repeats and SafeZone/Commix controls before becoming a headline
+  Phase 5 claim.
+
 Common Q2 incremental-median diagnostics at 1M:
 
 | Q2 rank fixes | Median sort computes | Median values sorted | Median reads | Median heap adds | Median heap removes | Median rebalances |
@@ -908,9 +935,9 @@ Interpretation:
   heap and Rift use the same two-heap median maintenance, while Rift allocates
   the median/control arrays and related ordinary Scala objects in regions.
 - Rift still does not prove final DEBS success because SafeZone DEBS,
-  controlled full-month performance, and stronger safe API boundaries remain
-  open. The remaining DEBS bottleneck is Q2 rank/output work rather than Rift
-  allocator overhead.
+  repeated full-month performance, and stronger safe API boundaries remain
+  open. The remaining DEBS bottleneck is Q2 rank/output work and full-scale
+  memory pressure rather than Rift allocator overhead.
 
 ## Phase 6: Literature-Aligned Methodology Evidence
 
@@ -1437,7 +1464,7 @@ Status:
   byte-oriented output: HPZone and Streaming are faster than heap at 1M with
   lower RSS, and allocation attribution shows much lower heap allocation
   calls/bytes and measured allocation-call time. This is still not final
-  application evidence without SafeZone DEBS, controlled full-month
+  application evidence without SafeZone DEBS, repeated controlled full-month
   performance, and stronger safe API controls.
 - Checked RunBoth now also has bounded 100k/1M 3-run medians. At 1M,
   `rift-checked` is fastest in the local matrix (`5043.240 ms` vs heap
@@ -1451,10 +1478,13 @@ Status:
 - The Commix DEBS control now has 100k/1M medians, and checked Rift remains
   faster and lower-RSS there too. This strengthens the application evidence,
   but the remaining elapsed delta is still much larger than the GC-time delta.
-- A first full-month checked RunBoth control now has matching output, but the
+- A first full-month checked RunBoth control has matching output, but the
   checked wall-clock row is invalid as a performance result because external
   user+sys time was only about `64 s` while real time was about `1259 s`.
-  Treat it as full-scale correctness plus memory/churn diagnosis.
+  The pool-cap follow-up gives a credible single checked full-month row:
+  `70.831 s` elapsed, `70.87 s` external real, `68.86 s` user+sys, `0.166 s`
+  GC, and `846.0 MiB` RSS. Treat it as full-scale checked evidence and
+  memory/churn diagnosis, not as final repeated heap-vs-Rift evidence.
 - Latest DEBS phase breakdown shows remaining cost is mostly Q1/Q2 CPU and
   file I/O rather than Rift bookkeeping or GC collection.
 - The pipeline/parallel-collections story is still a surrogate until a fair
