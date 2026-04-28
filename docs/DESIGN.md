@@ -113,7 +113,7 @@ Current reliable evidence:
   rank-object churn but opened one child region per active route, raising 100k
   checked RSS to `113721344` bytes.
 - Phase 7 checked API evidence has started. The targeted Scala-next compiler
-  suite passed 54/54 for the current `Scoped`/`Streaming` API slice, including
+  suite passed 65/65 for the current `Scoped`/`Streaming` API slice, including
   for-loop allocation, nested scoped regions, local higher-order consumers, and
   direct escape/reset rejection. Returned function values are now rejected
   conservatively because returned closures can hide region-local captures.
@@ -146,7 +146,10 @@ Current reliable evidence:
   runtime. `RiftRegion.ChildBucket` is now the reusable wrapper for that
   pattern; Q1/Q2 checked processors use `childBucketRegion` and
   `closeChildBucket` instead of carrying raw `ChildWindow` fields. This is not
-  a full affine close proof yet. The Q1
+  a full affine close proof yet. `RiftRegion.StreamBucketArena` now generalizes
+  the accepted "fine event buckets plus coarser rank/output arenas" lifetime
+  primitive; checked Q1 uses it for rank buckets, and sample plus 100k
+  heap/checked RunBoth controls match outputs after migration. The Q1
   checked-processing probe uses path-dependent bucket event nodes to keep
   child-owned values local before closing the child region at bucket eviction.
   The focused `CheckedRegionBufferMatrix`
@@ -204,8 +207,9 @@ framing:
   a near-tie on elapsed time with much better checked RSS than the earlier
   checked run. Closeable SafeZone DEBS controls also exist at 100k and 1M. This
   still does not prove a final application-level win because full-month
-  SafeZone controls, reusable rank/window APIs, checked Q2 same-operation
-  overhead explanation, and safe API boundaries are still incomplete.
+  SafeZone controls, higher-level rank/window collections, checked Q2
+  same-operation overhead explanation, and safe API boundaries are still
+  incomplete.
 - The literature-review target is broader than local baselines: Rift must be
   compared against Broom, StreamFlex, Yak, Stancu-style hybrid static analysis,
   the MLKit typed-region lineage, and Reggio/Verona-style capabilities.
@@ -805,9 +809,10 @@ Interpretation:
   window-rank arenas: checked Q1 keeps per-second event buckets for eviction,
   but stores ordinary Scala rank object graphs in arenas whose lifetime matches
   the Q1 window. This reduces checked rank churn and gives a full-month
-  single-run RSS win, but still leaves checked Q1/Q2 CPU overhead and needs a
-  reusable API plus stronger safe API boundaries before it can support a final
-  application claim.
+  single-run RSS win. `StreamBucketArena` now extracts the reusable bucket
+  lifetime primitive, but higher-level rank/window collections, checked Q1/Q2
+  CPU overhead work, and stronger safe API boundaries are still needed before
+  it can support a final application claim.
 - Checked RunBoth is now median-backed on bounded 100k/1M samples. It is
   encouraging Phase 5/7 evidence, but not an apples-to-apples proof that the
   checked API is always faster than the trusted API because the trusted and
@@ -872,8 +877,8 @@ Claims that are not yet supported:
   post-pool-cap same-run full-month timing row, one post-Q1-lifetime-fix
   heap/checked full-month 3-run median, a Q1 window-rank arena checkpoint, and
   bounded closeable SafeZone DEBS medians, but not SafeZone full-month
-  controls, Q1/Q2 CPU-overhead reduction, reusable checked rank/window APIs, or
-  complete safe-API controls.
+  controls, Q1/Q2 CPU-overhead reduction, higher-level checked rank/window
+  collections, or complete safe-API controls.
 - Rift has a capture-checked safe API.
 - Rift beats Broom, StreamFlex, Yak, Stancu et al., or Reggio on their strongest
   axes.

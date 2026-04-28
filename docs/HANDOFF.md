@@ -9,8 +9,8 @@ Active implementation branch for this update:
 `feature/rift`
 
 Implementation commit at this update:
-`088fe2a59`
-(`Add checked Q1 window rank arenas`)
+`cd9b86a0a`
+(`Add checked stream bucket arena API`)
 
 Status: active research fork. The Phase 5 input-boundary checkpoint, reusable
 ranking backend, Q2 bounded cell-table checkpoint, Q1 primitive route-table
@@ -223,6 +223,14 @@ single full-month scale check matched outputs and measured heap `72.445 s`,
 objects fall from the previous checked `14487771` per-refresh shape to
 `8842434`; heap creates `6195167`. Treat this as a successful lifetime/memory
 checkpoint and a reusable arena pattern, not as a final DEBS speed claim.
+The newest framework checkpoint lifts that pattern into
+`RiftRegion.StreamBucketArena` and migrates checked Q1 rank buckets onto the
+reusable owner-token API. `RiftRegion.streamBucketFor`,
+`streamBucketRegion`, `closeStreamBucketsBefore`, and `closeAllStreamBuckets`
+now provide the checked stream-bucket primitive. The focused compiler suite now
+passes `65/65`, the native checked runtime test passes `16/16`, and sample plus
+100k RunBoth `heap`/`rift-checked` controls matched outputs. Treat this as a
+Phase 7 API/correctness checkpoint, not a new DEBS median.
 A Scala-next checked Rift-region API slice has been reviewed and
 merged into `feature/rift` at `79953ad8d`; its source branch was
 `codex/safe-region-api-checked-slice` at `e8c3b961d`. The Q2 incremental
@@ -252,7 +260,8 @@ committed at `664c489e1`; the checked `RegionBuffer` matrix was committed at
 Dataflow AGGREGATE/JOIN was committed at `4ab5b898b`; checked
 `RegionPriorityQueue` was committed at `07ad90177`; checked
 `RegionIndexedPriorityQueue` was committed at `be42ea22c`; checked Q1
-window-rank arenas were committed at `088fe2a59`. The
+window-rank arenas were committed at `088fe2a59`; the reusable checked
+`StreamBucketArena` API was committed at `cd9b86a0a`. The
 checked API is not a
 complete compiler capture-checking implementation. The fork is ahead of
 `origin/feature/rift` unless pushed.
@@ -2389,8 +2398,8 @@ Benchmarking uncertainties:
   input-boundary, ranking/result, Q2 cell-table, Q1 route-table, Q2 taxi-table,
   Q2 array-ranking, and checked Q1 window-rank experiments now have local
   commit boundaries, but public claims still need pushed provenance, optional
-  full-month SafeZone context, reusable rank/window APIs, and checked Q2
-  overhead explanation.
+  full-month SafeZone context, higher-level rank/window collections, and
+  checked Q2 overhead explanation.
 
 Provenance risks:
 
@@ -2454,7 +2463,7 @@ Immediate next step:
    in the local sweep, and 512 transactions per region is still a Rift-vs-heap
    win but not faster than 64. It is not a Rift-vs-SafeZone win and not a
    compiler annotation result.
-6. The current safe API accept/reject probe slice now passes 54/54 in the
+6. The current safe API accept/reject probe slice now passes 65/65 in the
    targeted Scala-next compiler test. The latest regression test confirms that
    trusted `RiftRegion.open(...)` allocation can still build linked benchmark
    objects while checked `ScopedRegion`/`StreamingRegion` allocation keeps the
@@ -2473,7 +2482,9 @@ Immediate next step:
    objects and `HeapRoot` handles can be stored while direct heap stores and
    inner-region-to-outer-buffer stores are rejected. The growable checked
    `RegionBuffer` uses the same owner-token rule and region-backed array
-   growth. Plain `T^` selected
+   growth. `RegionPriorityQueue`, `RegionIndexedPriorityQueue`, `ChildBucket`,
+   and `StreamBucketArena` are now covered as reusable owner-token primitives.
+   Plain `T^` selected
    fields, richer static-field provenance, and plain receiver-style containers
    still need a checked policy or trusted-only labeling.
 7. RunBoth latency collectors now use shared primitive buffers: heap mode keeps
@@ -2510,22 +2521,29 @@ Immediate next step:
     `4522.308 ms`; Rift GC collection medians are now below `1 ms`. The
     remaining DEBS bottleneck is mostly query CPU/I/O and broader controls, not
     GC collection.
+12. `RiftRegion.StreamBucketArena` is implemented and checked Q1 now uses it
+    for the accepted window-rank arena pattern. This generalizes the bucket
+    lifetime primitive, but it is still below a full checked rank/window
+    collection API.
 
 Next technical milestone:
 
-1. Finish the remaining capture/safety guardrails before broadening mixed
+1. Build the next higher-level checked rank/window collection on top of
+   `StreamBucketArena`, so operators can reuse the same lifetime discipline
+   without hand-rolled bucket metadata.
+2. Continue the DEBS "region-heavy" path with measurement first after the
+   checked RunBoth median and attribution checkpoints. The next DEBS work
+   should be a safety abstraction or control run, not a blind region-allocation
+   pass: current evidence says GC heap churn is much lower and remaining
+   elapsed time is mostly Q1/Q2 CPU plus file I/O.
+3. Finish the remaining capture/safety guardrails before broadening mixed
    object graphs: static-heap/higher-level container mixed-reference policy,
    plain-field and array-element ergonomics, richer mutable-container
    provenance beyond local linked-list heads, plain receiver-style collection
    operations beyond owner-token methods, precise returned-closure support
    beyond the v1 rejection, and explicit HPZone/trusted labels for unsafe
    cases.
-2. Continue the DEBS "region-heavy" path with measurement first after the
-   checked RunBoth median and attribution checkpoints. The next DEBS work
-   should be a safety abstraction or control run, not a blind region-allocation
-   pass: current evidence says GC heap churn is much lower and remaining
-   elapsed time is mostly Q1/Q2 CPU plus file I/O.
-3. Start the next DEBS step with a narrow measurement-driven plan:
+4. Start the next DEBS step with a narrow measurement-driven plan:
    - Treat the checked RunBoth medians as the latest bounded-sample Phase 5/7
      checkpoint, not final full-DEBS evidence.
    - Treat the `SCALANATIVE_GC_ALLOC_STATS=1` result as diagnostic evidence
@@ -2556,12 +2574,12 @@ Next technical milestone:
      algorithm."
    - Treat the earlier uncommitted Q1 indexed-heap warning as superseded by the
      measured Q1 indexed-ranking checkpoint in this handoff.
-4. For the next DEBS change, rerun 100k and 1M instrumented medians before
+5. For the next DEBS change, rerun 100k and 1M instrumented medians before
    making any headline throughput claim. The most useful controls now are
    same-run full-month heap/checked repeats with the pool cap, Commix/SafeZone
    DEBS modes, and stronger safe API coverage for the child-window object
    patterns already used in the benchmark.
-5. Extend the literature methodology harnesses only as needed:
+6. Extend the literature methodology harnesses only as needed:
    - Upgrade the 40-epoch, 500k-document-per-epoch single run to a median run
      only if we need a headline Broom-style methodology table.
    - Add a short note comparing the local percentages against the Broom paper's
@@ -3221,6 +3239,62 @@ Interpretation:
   window/ranking API and add stronger static close-discipline tests. Checked Q2
   same-operation CPU overhead remains open.
 
+## Latest Update: Checked StreamBucketArena API
+
+Date: 2026-04-28
+
+What changed:
+
+- Added `RiftRegion.StreamBucket` and `RiftRegion.StreamBucketArena` in
+  `scala-native-rift/nativelib/src/main/scala-next/scala/scalanative/memory/RiftRegion.scala`.
+- Added owner-token helpers:
+  `streamBucketArena`, `streamBucketFor`, `streamBucketRegion`,
+  `closeStreamBucketsBefore`, `closeAllStreamBuckets`, and a stream-bucket
+  diagnostic tagging overload.
+- Migrated checked Q1 rank buckets in
+  `scala-native-rift/sandbox/src/main/scala-next/debs2015/Debs2015Q1CheckedProcessingRun.scala`
+  from a local `RankBucket` linked list to the reusable arena API.
+- Added compiler probes in
+  `scala-native-rift/nscplugin/src/test/scala-next/scala/RiftRegionCheckedCompilerTest.scala`
+  and native runtime coverage in
+  `scala-native-rift/unit-tests/native/src/test/scala-next/scala/scala/scalanative/memory/RiftRegionCheckedTest.scala`.
+
+Validation:
+
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile` passed.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"`
+  passed `65/65`.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionCheckedTest"`
+  passed `16/16`.
+- Sample RunBoth `heap`/`rift-checked` outputs matched in
+  `/tmp/debs2015-runboth-stream-bucket-api-sample`.
+- 100k RunBoth `heap`/`rift-checked` outputs matched in
+  `/tmp/debs2015-runboth-stream-bucket-api-100000`.
+
+100k single-run correctness control:
+
+| Mode | Elapsed ms | GC ms | Rift op ms | Q1 process ms | Q2 process ms | Q1 rank created |
+|---|---:|---:|---:|---:|---:|---:|
+| heap | 513.196 | 8.817 | 0.000 | 148.498 | 127.213 | 64672 |
+| rift-checked | 489.514 | 0.079 | 1.528 | 153.595 | 110.926 | 77974 |
+
+Interpretation:
+
+- This is a general framework change: the reusable stream-bucket arena is the
+  checked primitive behind the accepted "fine event buckets plus coarser
+  rank/output arenas" pattern.
+- It is not yet a complete rank/window collection API. The arena owns child
+  bucket lifetime and close sequencing; operators still own per-query cleanup,
+  indexes, ordering, and result semantics.
+- The implementation uses trusted private heap metadata internally, similar to
+  existing checked containers. Public operations reattach the parent owner
+  token before exposing buckets or child regions.
+- The 100k row is not a new median or final DEBS claim. It is a migration
+  correctness/control row after moving Q1 onto the reusable primitive.
+- Next useful work: build higher-level checked rank/window collections on this
+  primitive, then investigate checked Q2 overhead under identical operation
+  counts.
+
 ## Unsafe Assumptions To Avoid
 
 - "Rift already has final DEBS application proof." It does not. The current
@@ -3230,10 +3304,10 @@ Interpretation:
   issue, and the post-fix full-month control is now near-tie on elapsed with
   heap-scale RSS. The Q1 window-rank arena then reduced, but did not eliminate,
   the checked rank-refresh churn and produced a full-month single-run RSS win.
-  SafeZone 1M controls and checked process diagnostics now exist, but reusable
-  rank/window APIs, checked Q2 same-count overhead explanation, optional
-  full-month SafeZone comparison, and stronger safe-API controls are still
-  missing.
+  The reusable `StreamBucketArena` API now generalizes the bucket lifetime
+  primitive, but higher-level rank/window collections, checked Q2 same-count
+  overhead explanation, optional full-month SafeZone comparison, and stronger
+  safe-API controls are still missing.
 - "GC time should disappear because Q1/Q2 windows and input bytes use Rift."
   `gc_time_ns` is collection time only. Some former heap-heavy paths have
   moved, including taxi-id bytes/entries and latency backing arrays, and the
