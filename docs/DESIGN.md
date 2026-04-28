@@ -168,8 +168,13 @@ Current reliable evidence:
   and lower RSS. `CheckedRegionIndexedPriorityQueueMatrix` validates the next
   keyed-state step: default local medians were heap `100.254 ms` with
   `2.201 ms` GC versus checked Rift `103.052 ms` with no measured GC and
-  `0.406 ms` Rift op time. Treat these as API/safety evidence rather than speed
-  claims.
+  `0.406 ms` Rift op time. `CheckedStreamWindowRankMatrix` validates the next
+  stream-window shape: ordinary Scala records allocated in child bucket
+  regions are ranked through checked parent state and unlinked before close,
+  with matching heap/Rift checksums. Its default local median is a negative
+  speed signal, heap `199.762 ms` versus checked `254.050 ms`, although checked
+  uses less RSS and only `0.369 ms` measured Rift operation time. Treat these
+  as API/safety evidence and overhead diagnostics rather than speed claims.
   Dataflow
   SELECT, AGGREGATE, and JOIN now have checked `rift-checked` modes using the
   same safe API; local checked medians are SELECT `18.865 ms`, AGGREGATE
@@ -816,9 +821,12 @@ Interpretation:
   the Q1 window. This reduces checked rank churn and gives a full-month
   single-run RSS win. `StreamBucketArena` now extracts the reusable bucket
   lifetime primitive, and `StreamWindowIndexedRank` adds the first dense-key
-  rank/window collection. Richer comparator/hash-key collections, checked
-  Q1/Q2 CPU overhead work, and stronger safe API boundaries are still needed
-  before it can support a final application claim.
+  rank/window collection. The first focused `StreamWindowIndexedRank` matrix
+  validates the general bucket-region object pattern but is slower than heap,
+  so the next design pressure is lower-overhead/richer rank APIs rather than
+  direct application integration. Richer comparator/hash-key collections,
+  checked Q1/Q2 CPU overhead work, and stronger safe API boundaries are still
+  needed before it can support a final application claim.
 - Checked RunBoth is now median-backed on bounded 100k/1M samples. It is
   encouraging Phase 5/7 evidence, but not an apples-to-apples proof that the
   checked API is always faster than the trusted API because the trusted and

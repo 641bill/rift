@@ -9,8 +9,8 @@ Active implementation branch for this update:
 `feature/rift`
 
 Implementation commit at this update:
-`4f310d21f`
-(`Add checked stream window rank API`)
+`d6fb94cd3`
+(`Add checked stream window rank matrix`)
 
 Status: active research fork. The Phase 5 input-boundary checkpoint, reusable
 ranking backend, Q2 bounded cell-table checkpoint, Q1 primitive route-table
@@ -208,6 +208,16 @@ Treat this as API/safety evidence, not a speed claim: it validates the
 fetch/mutate/update state shape needed to reduce Q1/Q2 rank-refresh churn
 without inventing a DEBS-only algorithm. Remaining work is richer tie-breaking,
 hash/non-dense key support, and integration into real operators.
+The newest focused framework checkpoint adds `CheckedStreamWindowRankMatrix`.
+It exercises `StreamWindowIndexedRank` in a stream-window workload where
+ordinary Scala records live in checked child bucket regions while parent-owned
+rank state tracks dense keys. Heap and checked modes matched checksums. The
+default 1M-event median is a deliberate caution, not a speed claim: heap
+`199.762 ms`, checked `254.050 ms`, checked Rift op `0.369 ms`, heap RSS
+`145833984` bytes, and checked RSS `93585408` bytes. This validates the
+general bucket-region rank pattern and shows the next work should reduce
+checked container CPU overhead or add richer rank APIs before wholesale DEBS Q1
+integration.
 The latest Phase 5 checkpoint applies the same lifetime idea to real DEBS Q1:
 checked Q1 now separates per-second event buckets from coarser rank arenas
 whose lifetime matches the Q1 window. Routes refreshed inside the same rank
@@ -3350,6 +3360,52 @@ Interpretation:
   Q2 can use the shape more directly but still needs same-operation overhead
   investigation before integration.
 
+## Latest Update: Checked StreamWindowIndexedRank Matrix
+
+Date: 2026-04-28
+
+What changed:
+
+- Added
+  `scala-native-rift/sandbox/src/main/scala-next/CheckedStreamWindowRankMatrix.scala`.
+- Added
+  `scala-native-rift/sandbox/run_checked_stream_window_rank_matrix.sh`.
+- Added result pack
+  `scala-native-rift/sandbox/CHECKED_STREAM_WINDOW_RANK_MATRIX.md` and synced
+  it into `evidence/CHECKED_STREAM_WINDOW_RANK_MATRIX.md`.
+- Updated `scripts/sync-evidence.sh` so future evidence syncs include this
+  result pack.
+
+Validation:
+
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile` passed.
+- Smoke matrix native-linked `CheckedStreamWindowRankMatrix`.
+- Smoke heap and `rift-checked` modes matched checksum
+  `-3490531581377742567`.
+- Default local heap and `rift-checked` modes matched checksum
+  `6881312641757835670`.
+
+Default local median:
+
+| Mode | Median elapsed ms | GC ms | Rift op ms | Region objects | Opens / closes / resets | Peak RSS bytes |
+|---|---:|---:|---:|---:|---:|---:|
+| heap | 199.762 | 0.000 | 0.000 | 0 | 0 / 0 / 0 | 145833984 |
+| rift-checked | 254.050 | 7.876 | 0.369 | 826642 | 41 / 41 / 0 | 93585408 |
+
+Interpretation:
+
+- This is framework/API evidence, not a DEBS result.
+- The same logical stream-window ranking program runs on heap and checked
+  Rift. The checked path allocates ordinary Scala records in child bucket
+  regions, ranks them through parent-owned checked state, samples top records,
+  and removes parent-visible references before bucket close.
+- The first median is not a speed win. Checked Rift is slower despite low
+  measured Rift runtime cost and lower RSS. This points to CPU overhead in the
+  current checked window/rank container shape.
+- Next useful work: investigate checked Q2 same-operation overhead and/or add
+  a lower-overhead richer rank API with comparator/tie-breaker/hash-key support
+  before broad DEBS Q1 integration.
+
 ## Unsafe Assumptions To Avoid
 
 - "Rift already has final DEBS application proof." It does not. The current
@@ -3361,7 +3417,8 @@ Interpretation:
   the checked rank-refresh churn and produced a full-month single-run RSS win.
   The reusable `StreamBucketArena` API now generalizes the bucket lifetime
   primitive, and `StreamWindowIndexedRank` is the first dense-key rank/window
-  collection. Checked Q2 same-count overhead explanation, richer comparator or
+  collection. Its focused matrix now works but is slower than heap, so checked
+  Q2 same-count overhead explanation, lower-overhead richer comparator or
   hash-key rank collections, optional full-month SafeZone comparison, and
   stronger safe-API controls are still missing.
 - "GC time should disappear because Q1/Q2 windows and input bytes use Rift."

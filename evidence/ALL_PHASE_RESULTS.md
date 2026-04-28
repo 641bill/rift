@@ -1,6 +1,6 @@
 # Rift All-Phase Results Rollup
 
-Date: 2026-04-26
+Date: 2026-04-28
 
 This file gathers the current numeric and validation evidence across all
 roadmap phases. It is a rollup, not the primary raw log. Prefer the source files
@@ -63,6 +63,7 @@ For performance numbers, use the following rule of thumb:
 | Phase 6 Yak-style control/data split | `evidence/YAK_REGION_MATRIX.md` |
 | Phase 6 Stancu-style transaction accounting | `evidence/STANCU_REGION_MATRIX.md` |
 | Phase 6 pipeline / parallel collections | `evidence/PIPELINE_PARCOLL_COMPARISON.md` |
+| Phase 7 checked stream-window rank | `evidence/CHECKED_STREAM_WINDOW_RANK_MATRIX.md` |
 | Current roadmap status | `docs/ROADMAP.md` |
 | Handoff / caveats | `docs/HANDOFF.md` |
 
@@ -87,7 +88,7 @@ For performance numbers, use the following rule of thumb:
 | Phase 5: application evidence | In progress | Bounded-sample medians plus diagnostic attribution, safe-API probes, single-run full-month controls, full-month heap/checked medians, and SafeZone DEBS controls | DEBS correctness, 100k/1M trusted medians, opt-in GC heap allocation attribution, Q1 checked-output output-equivalence, Q1 checked-processing output-equivalence, Q2 checked-processing output-equivalence, checked RunBoth 100k/1M medians plus attribution, 3-run Commix control, first full-month output-equivalence control, post-pool-cap checked full-month run, post-pool-cap same-run full-month heap/checked control, trusted full-month Streaming control, checked `ChildBucket` same-order full-month 3-run median, active-memory diagnostics, region-family attribution, Q1 rank lifetime narrowing, post-fix full-month heap/checked median, checked Q1 window-rank arenas, reusable checked `StreamBucketArena` migration, checked `StreamWindowIndexedRank`, 100k SafeZone controls, and 1M current/improved SafeZone medians |
 | Phase 6: literature-aligned methodology evidence | Started | Validated methodology medians with caveats | Broom-style dataflow including checked SELECT/AGGREGATE/JOIN modes, StreamFlex-style latency/throughput, Yak-style control/data plus grouped sort, top-word/filter, GraphChi-style subintervals, and runtime promotion proxy, Stancu-style transaction accounting |
 | Phase 6b: Broom / parallel collections API evidence | Open | Provisional surrogate only | amordo comparison and Rift raw-array surrogate |
-| Phase 7: capture-checked safe API | Started | Compiler-probe, runtime-smoke, focused checked-container benchmark, checked dataflow evidence, and DEBS-shaped checked probes | 67 targeted checked-API compiler probes, checked child-window, child-bucket, stream-bucket-arena, and stream-window-rank runtime probes, `CheckedRegionBufferMatrix`, `CheckedRegionPriorityQueueMatrix`, `CheckedRegionIndexedPriorityQueueMatrix`, Dataflow SELECT/AGGREGATE/JOIN `rift-checked`, Q1 checked-output, Q1 checked-processing, Q2 checked-processing, checked RunBoth `rift-checked` medians, plus Phase 4 safety finding |
+| Phase 7: capture-checked safe API | Started | Compiler-probe, runtime-smoke, focused checked-container benchmark, checked dataflow evidence, and DEBS-shaped checked probes | 67 targeted checked-API compiler probes, checked child-window, child-bucket, stream-bucket-arena, and stream-window-rank runtime probes, `CheckedRegionBufferMatrix`, `CheckedRegionPriorityQueueMatrix`, `CheckedRegionIndexedPriorityQueueMatrix`, `CheckedStreamWindowRankMatrix`, Dataflow SELECT/AGGREGATE/JOIN `rift-checked`, Q1 checked-output, Q1 checked-processing, Q2 checked-processing, checked RunBoth `rift-checked` medians, plus Phase 4 safety finding |
 | Phase 8: native GC/region integration hardening | Started | Runtime/API smoke evidence, no benchmark data | Explicit `HeapRoot` path, static module/immutable-val path, direct unrooted heap-constructor/alias/field-selection/array-store rejection, owner-token ObjectBuffer/RegionBuffer heap-store rejection, mutable static-var rejection, mutable-head heap-retagging rejection, and explicit `{region}` constructor-field/array reuse |
 | Phase 9: Lean mechanization | Open | No data | None |
 | Phase 10: writing | Not started beyond notes | No data | None |
@@ -103,7 +104,7 @@ For performance numbers, use the following rule of thumb:
 | Phase 4 | Split allocator effects from layout/topology effects. | Layout and reference topology can dominate allocator choice; mixed region/GC references require a safety story. |
 | Phase 5 | Built DEBS Q1/Q2 runners and progressively moved structured-lifetime state into regions; added checked Q1 output/ranking, checked Q1 processing, checked Q2 processing probes, active-memory diagnostics, region-family attribution, Q1 window-rank arenas, reusable checked `StreamBucketArena`, checked `StreamWindowIndexedRank`, and a closeable SafeZone Q1/Q2 control mode. | Current DEBS evidence shows bounded-sample elapsed/RSS wins and much lower heap allocation pressure. Full-month heap/checked medians are now near-tied after fixing one wrong checked lifetime: Q1 rank object graphs were parent-lived instead of bucket-lived. The Q1 window-rank arena further reduces rank churn and gives a single-run full-month RSS win, `StreamBucketArena` generalizes the bucket lifetime primitive, and `StreamWindowIndexedRank` is the first dense-key rank/window collection. Q1/Q2 CPU overhead, I/O, optional SafeZone full-month controls, richer rank/window collections, and stronger checked boundaries still keep it short of final application proof. |
 | Phase 6 | Built methodology harnesses for Broom/StreamFlex/Yak/Stancu comparison axes. | These support the broader research story but are not exact reproductions of closed or unavailable artifacts. |
-| Phase 7 | Added checked `scoped`/`streaming` API probes using Scala capture checking. | Source-level safety evidence is started; ergonomics and broader container patterns remain open. |
+| Phase 7 | Added checked `scoped`/`streaming` API probes using Scala capture checking, then moved from buffers to ranking and stream-window ranking containers. | Source-level safety evidence is started. The new stream-window rank matrix validates the general bucket-region object pattern, but its first median is slower than heap, so container CPU overhead and richer rank APIs remain open. |
 | Phase 8 | Added explicit heap-root handles and conservative mixed-reference rejection. | Region memory is not GC-scanned, so region-to-heap references need roots or static rejection. |
 | Phase 9 | Reserved for Lean mechanization. | No proof result yet. |
 | Phase 10 | Reserved for writing and claim assembly. | Should wait for stronger Phase 5/7/9 evidence. |
@@ -1644,6 +1645,36 @@ Interpretation:
 - The checked path removes measured GC with low region-operation overhead but
   is slightly slower and higher-RSS in this focused run. Treat it as API/safety
   evidence, not as a speed claim.
+
+Focused checked stream-window rank benchmark:
+
+Sources:
+
+- `evidence/CHECKED_STREAM_WINDOW_RANK_MATRIX.md`
+- `sandbox/src/main/scala-next/CheckedStreamWindowRankMatrix.scala`
+- `sandbox/run_checked_stream_window_rank_matrix.sh`
+
+Default local median, 1000000 events, 25000 events per bucket, 8 live buckets,
+key capacity 65536, top 128:
+
+| Mode | Median elapsed ms | Median GC ms | Median Rift op ms | Region objects | Opens/closes/resets | Peak RSS bytes |
+|---|---:|---:|---:|---:|---:|---:|
+| heap | 199.762 | 0.000 | 0.000 | 0 | 0 / 0 / 0 | 145833984 |
+| rift-checked | 254.050 | 7.876 | 0.369 | 826642 | 41 / 41 / 0 | 93585408 |
+
+Interpretation:
+
+- This validates the next general stream-operator shape above
+  `StreamBucketArena`: ordinary Scala records are allocated in child bucket
+  regions, ranked through checked parent state, sampled during the stream, and
+  unlinked before bucket close.
+- It is not a speed win. Checked Rift is slower on elapsed time even though
+  Rift runtime operation time is low and RSS is lower. Treat this as API/safety
+  evidence plus a CPU-overhead warning before integrating the abstraction into
+  DEBS.
+- The harness uses dense keys and one `Long` priority. Richer comparator,
+  tie-breaker, and hash-key collection variants are still needed for a general
+  Q1-style API.
 
 Relevant evidence carried from Phase 4:
 
