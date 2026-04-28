@@ -44,7 +44,13 @@ extends that checked-container story to a growable owner-token buffer: growth
 allocates a new backing object array in the owning region, copies references,
 and leaves old backing arrays for region close/reset reclamation. Compiler and
 runtime probes cover growth, region objects, `HeapRoot` handles, direct heap
-store rejection, and inner-region-to-outer-buffer rejection. A focused
+store rejection, and inner-region-to-outer-buffer rejection.
+`RiftRegion.RegionPriorityQueue` adds a checked ranking/top-k container:
+values live in region-owned object arrays, priorities live in parallel
+region-owned `Long` arrays, and owner-token `push/peek/pop` APIs reject direct
+heap values unless they are explicitly rooted. Compiler probes cover region
+objects, direct heap rejection, `HeapRoot`, and inner-region rejection for the
+priority queue. A focused
 checked-container methodology harness, `CheckedRegionBufferMatrix`, now
 compares a heap growable object buffer against checked `RegionBuffer` under the
 same epoch-local record workload. The first literature-shaped checked operator
@@ -176,6 +182,15 @@ evidence, not headline throughput. The next implementation-facing work is to
 reduce Q1 rank-refresh churn without one child region per route and to explain
 the checked Q2 overhead with identical operation counts; full-month SafeZone
 controls are optional rather than blocking that CPU work.
+The newest general-framework checkpoint adds `RegionPriorityQueue` and
+`CheckedRegionPriorityQueueMatrix` as a reusable checked ranking/top-k
+primitive. The focused compiler suite now passes `58/58`; `sandbox3_next`
+compiles; small heap/Rift priority-queue smoke runs match checksum; and the
+default local matrix records heap `27.369 ms`, `2.160 ms` GC, `26.5 MB` RSS
+versus checked `28.621 ms`, `0.000 ms` GC, `0.279 ms` Rift op, and `17.0 MB`
+RSS. Treat this as API/safety evidence, not a speed claim: it generalizes the
+ranking-container direction, but Q1 still needs richer tie-breaking and durable
+indexed state.
 A Scala-next checked Rift-region API slice has been reviewed and
 merged into `feature/rift` at `79953ad8d`; its source branch was
 `codex/safe-region-api-checked-slice` at `e8c3b961d`. The Q2 incremental

@@ -58,6 +58,10 @@ Scala-next capture checking supports the first Rift safe API slice:
   objects, explicit `HeapRoot` handles, direct heap-store rejection, and
   inner-region-to-outer-buffer rejection; the native smoke covers actual
   growth.
+- `RiftRegion.RegionPriorityQueue` extends the owner-token checked-container
+  rule to ranking/top-k state. Values live in a region-owned object array,
+  priorities live in a parallel region-owned `Long` array, and `push` is
+  guarded so direct heap values are rejected unless wrapped in `HeapRoot`.
 - The first literature-shaped safe API probes now compile: streaming reset
   epochs can process region-owned arrays of ordinary record objects, a
   top-word-style `ObjectBuffer` can store records that refer to heap metadata
@@ -97,7 +101,8 @@ Known gaps remain:
   `HeapRoot` handles, static module singletons, immutable static/module vals,
   and stable primary-constructor field selections whose source type is
   explicitly region-captured. It also checks stores into known region arrays
-  and the current owner-token `ObjectBuffer`/`RegionBuffer` APIs. Broader
+  and the current owner-token `ObjectBuffer`/`RegionBuffer`/
+  `RegionPriorityQueue` APIs. Broader
   cases such as plain `T^` fields, richer static-field provenance, and plain
   receiver-style collection/container abstractions still need a more precise
   policy or compiler extension.
@@ -108,7 +113,7 @@ Known gaps remain:
   the current child-window close boundary. They do not yet prove full
   affine/linear safe close/reset mechanically.
 
-Targeted command run on 2026-04-27:
+Targeted command run on 2026-04-28:
 
 ```bash
 ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"
@@ -117,7 +122,7 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.Rif
 Result:
 
 ```text
-Passed: Total 54, Failed 0, Errors 0, Passed 54
+Passed: Total 58, Failed 0, Errors 0, Passed 58
 ```
 
 Runtime smoke command run on 2026-04-27:
@@ -256,6 +261,10 @@ Current checked compiler probes:
 | `regionBufferCannotStoreHeapObject` | growable `RegionBuffer` append stores direct heap object | fails | Confirms the append lowering guard covers growable buffers too. |
 | `regionBufferCanStoreHeapRoot` | growable `RegionBuffer` stores explicit `HeapRoot` handles | compiles | Covers durable heap metadata through a growable checked buffer. |
 | `regionBufferCannotStoreInnerScopedValue` | outer growable buffer stores value allocated in inner region | fails | Confirms owner tokens still prevent cross-region storage after growth support. |
+| `regionPriorityQueueCanStoreRegionObjects` | owner-token `RegionPriorityQueue` stores and pops region objects by priority | compiles | Adds the first checked ranking/top-k container primitive. |
+| `regionPriorityQueueCannotStoreHeapObject` | checked priority-queue push stores direct heap object | fails | Confirms the push lowering guard covers ranking containers. |
+| `regionPriorityQueueCanStoreHeapRoot` | checked priority queue stores explicit `HeapRoot` handles | compiles | Covers durable heap metadata through ranking/top-k containers. |
+| `regionPriorityQueueCannotStoreInnerScopedValue` | outer priority queue stores value allocated in inner region | fails | Confirms owner tokens still prevent cross-region storage for ranking state. |
 | `streamingResetRegionArrayEpochCompiles` | reset epoch processes a region-owned array of ordinary records | compiles | Models sort/dataflow epoch records through the supported checked array shape. |
 | `topwordBufferCanStoreRecordsWithRootedMetadata` | top-word-style buffer stores records that carry rooted heap metadata | compiles | Covers durable heap metadata via `HeapRoot` inside a higher-level checked buffer. |
 | `graphChiSubintervalCanUseRootedHeapVertexMetadata` | GraphChi-style subinterval record refers to durable heap vertex metadata through `HeapRoot` | compiles | Covers the safe data/control split for graph updates. |

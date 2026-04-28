@@ -87,7 +87,7 @@ For performance numbers, use the following rule of thumb:
 | Phase 5: application evidence | In progress | Bounded-sample medians plus diagnostic attribution, safe-API probes, single-run full-month controls, full-month heap/checked medians, and SafeZone DEBS controls | DEBS correctness, 100k/1M trusted medians, opt-in GC heap allocation attribution, Q1 checked-output output-equivalence, Q1 checked-processing output-equivalence, Q2 checked-processing output-equivalence, checked RunBoth 100k/1M medians plus attribution, 3-run Commix control, first full-month output-equivalence control, post-pool-cap checked full-month run, post-pool-cap same-run full-month heap/checked control, trusted full-month Streaming control, checked `ChildBucket` same-order full-month 3-run median, active-memory diagnostics, region-family attribution, Q1 rank lifetime narrowing, post-fix full-month heap/checked median, 100k SafeZone controls, and 1M current/improved SafeZone medians |
 | Phase 6: literature-aligned methodology evidence | Started | Validated methodology medians with caveats | Broom-style dataflow including checked SELECT/AGGREGATE/JOIN modes, StreamFlex-style latency/throughput, Yak-style control/data plus grouped sort, top-word/filter, GraphChi-style subintervals, and runtime promotion proxy, Stancu-style transaction accounting |
 | Phase 6b: Broom / parallel collections API evidence | Open | Provisional surrogate only | amordo comparison and Rift raw-array surrogate |
-| Phase 7: capture-checked safe API | Started | Compiler-probe, runtime-smoke, focused checked-container benchmark, checked dataflow evidence, and DEBS-shaped checked probes | 54 targeted checked-API compiler probes, checked child-window and child-bucket close-through-cleanup runtime probes, `CheckedRegionBufferMatrix`, Dataflow SELECT/AGGREGATE/JOIN `rift-checked`, Q1 checked-output, Q1 checked-processing, Q2 checked-processing, checked RunBoth `rift-checked` medians, plus Phase 4 safety finding |
+| Phase 7: capture-checked safe API | Started | Compiler-probe, runtime-smoke, focused checked-container benchmark, checked dataflow evidence, and DEBS-shaped checked probes | 58 targeted checked-API compiler probes, checked child-window and child-bucket close-through-cleanup runtime probes, `CheckedRegionBufferMatrix`, `CheckedRegionPriorityQueueMatrix`, Dataflow SELECT/AGGREGATE/JOIN `rift-checked`, Q1 checked-output, Q1 checked-processing, Q2 checked-processing, checked RunBoth `rift-checked` medians, plus Phase 4 safety finding |
 | Phase 8: native GC/region integration hardening | Started | Runtime/API smoke evidence, no benchmark data | Explicit `HeapRoot` path, static module/immutable-val path, direct unrooted heap-constructor/alias/field-selection/array-store rejection, owner-token ObjectBuffer/RegionBuffer heap-store rejection, mutable static-var rejection, mutable-head heap-retagging rejection, and explicit `{region}` constructor-field/array reuse |
 | Phase 9: Lean mechanization | Open | No data | None |
 | Phase 10: writing | Not started beyond notes | No data | None |
@@ -1426,10 +1426,10 @@ Targeted command:
 ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"
 ```
 
-Result on 2026-04-27:
+Result on 2026-04-28:
 
 ```text
-Passed: Total 54, Failed 0, Errors 0, Passed 54
+Passed: Total 58, Failed 0, Errors 0, Passed 58
 ```
 
 Runtime smoke command:
@@ -1485,6 +1485,10 @@ Covered source-level patterns:
 | growable owner-token `RegionBuffer` stores direct heap object | rejected by Rift append lowering guard |
 | growable owner-token `RegionBuffer` stores `HeapRoot` handle | passes compiler probe and native runtime smoke |
 | outer `RegionBuffer` stores inner-region value | rejected by explicit owner-token type |
+| owner-token `RegionPriorityQueue` stores region objects | passes compiler probe |
+| owner-token `RegionPriorityQueue` stores direct heap object | rejected by Rift push lowering guard |
+| owner-token `RegionPriorityQueue` stores `HeapRoot` handle | passes compiler probe |
+| outer `RegionPriorityQueue` stores inner-region value | rejected by explicit owner-token type |
 | streaming reset epoch processes region-owned array of ordinary records | passes compiler probe and native runtime smoke |
 | top-word-style `ObjectBuffer` stores records with rooted heap metadata | passes compiler probe and native runtime smoke |
 | GraphChi-style subinterval uses rooted durable heap vertex metadata | passes compiler probe |
@@ -1532,6 +1536,32 @@ Interpretation:
 - Peak RSS is higher for `rift-checked` because old growth arrays remain until
   reset. This is expected for region-backed growable buffers and must be
   monitored in larger operators.
+
+Focused checked priority-queue benchmark:
+
+Sources:
+
+- `evidence/CHECKED_REGION_PRIORITY_QUEUE_MATRIX.md`
+- `sandbox/src/main/scala-next/CheckedRegionPriorityQueueMatrix.scala`
+- `sandbox/run_checked_region_priority_queue_matrix.sh`
+
+Default local median, 10 epochs x 50000 records, top 64:
+
+| Mode | Median elapsed ms | Median GC ms | Median Rift op ms | Region objects | Resets | Peak RSS bytes |
+|---|---:|---:|---:|---:|---:|---:|
+| heap | 27.369 | 2.160 | 0.000 | 0 | 0 | 26476544 |
+| rift-checked | 28.621 | 0.000 | 0.279 | 500260 | 10 | 16957440 |
+
+Interpretation:
+
+- This validates a reusable checked ranking/top-k container rather than a
+  DEBS-specific heap-array implementation.
+- The checked path removes measured GC and lowers RSS in this focused run, but
+  elapsed time is slightly slower. Treat it as API/safety evidence, not as a
+  speed claim.
+- The queue ranks by one `Long` priority. Q1 still needs richer tie-breaking
+  and durable indexed-rank state before this can replace its local ranking
+  machinery.
 
 Relevant evidence carried from Phase 4:
 

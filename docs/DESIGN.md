@@ -129,7 +129,11 @@ Current reliable evidence:
   owner-token APIs to keep region data in a region-owned backing array while
   rejecting direct heap and cross-region stores. `RiftRegion.RegionBuffer`
   extends the same rule to a growable checked buffer whose growth arrays are
-  allocated in the owner region. Raw `RiftRegion.childStreaming` plus the
+  allocated in the owner region. `RiftRegion.RegionPriorityQueue` extends the
+  owner-token container family to ranking/top-k style state: values live in a
+  region-owned object array, priorities live in a parallel region-owned
+  primitive array, and heap values are rejected unless explicitly rooted. Raw
+  `RiftRegion.childStreaming` plus the
   preferred `RiftRegion.childWindow` wrapper are now first checked
   multi-region building blocks: a child streaming-region handle cannot escape
   its parent stream, and `RiftRegion.childRegion(parent, window)` makes
@@ -145,7 +149,12 @@ Current reliable evidence:
   The focused `CheckedRegionBufferMatrix`
   harness now validates this as a benchmark-shaped safe API path: default local
   medians were heap `33.825 ms` with `7.611 ms` GC versus checked Rift
-  `28.654 ms` with `0.301 ms` Rift op time and no measured GC. Dataflow
+  `28.654 ms` with `0.301 ms` Rift op time and no measured GC. The focused
+  `CheckedRegionPriorityQueueMatrix` validates the new checked ranking
+  primitive: default local medians were heap `27.369 ms` with `2.160 ms` GC
+  versus checked Rift `28.621 ms` with `0.279 ms` Rift op time, no measured GC,
+  and lower RSS. Treat this as API/safety evidence rather than a speed claim.
+  Dataflow
   SELECT, AGGREGATE, and JOIN now have checked `rift-checked` modes using the
   same safe API; local checked medians are SELECT `18.865 ms`, AGGREGATE
   `36.003 ms`, and JOIN `18.736 ms`, faster than heap, improved SafeZone, and
