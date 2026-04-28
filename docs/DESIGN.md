@@ -87,9 +87,13 @@ Current reliable evidence:
   peak active mapped bytes `904790016`, final active bytes `0`, and final
   mapped bytes `134479872` against the `128 MiB` pool cap. That means the
   remaining RSS regression is mostly live checked-region payload under current
-  lifetimes, not free-slab retention. This is still not a final full-DEBS claim
-  because SafeZone controls, per-region-family lifetime attribution, and
-  stronger safe API boundaries remain open.
+  lifetimes, not free-slab retention. Per-family attribution then found the
+  largest source: Q1 checked rank object graphs were parent-lived. Moving those
+  ordinary Scala rank objects into Q1 child bucket regions cuts full-month
+  checked active requested peak from `823153856` to `180948200` bytes and RSS
+  from `1086668800` to `613318656` bytes in a checked-only diagnostic. This is
+  still not a final full-DEBS claim because repeated full-month heap/checked
+  runs, SafeZone controls, and stronger safe API boundaries remain open.
 - Phase 7 checked API evidence has started. The targeted Scala-next compiler
   suite passed 54/54 for the current `Scoped`/`Streaming` API slice, including
   for-loop allocation, nested scoped regions, local higher-order consumers, and
@@ -749,8 +753,11 @@ Interpretation:
   RSS gets worse, so this is an elapsed/checker-overhead result, not a memory
   footprint win. The active-memory diagnostic shows that RSS is mostly live
   checked-region payload under current lifetimes, not capped free-slab
-  retention. SafeZone, per-region-family lifetime attribution, and stronger
-  safe API boundaries are still missing for the final application claim.
+  retention. The first per-family fix moves Q1 checked rank object graphs from
+  parent lifetime to child-bucket lifetime and brings the checked full-month
+  RSS diagnostic back to heap scale. SafeZone, repeated full-month medians, and
+  stronger safe API boundaries are still missing for the final application
+  claim.
 - Checked RunBoth is now median-backed on bounded 100k/1M samples. It is
   encouraging Phase 5/7 evidence, but not an apples-to-apples proof that the
   checked API is always faster than the trusted API because the trusted and
