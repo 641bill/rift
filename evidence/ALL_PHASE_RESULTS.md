@@ -87,7 +87,7 @@ For performance numbers, use the following rule of thumb:
 | Phase 5: application evidence | In progress | Bounded-sample medians plus diagnostic attribution, safe-API probes, single-run full-month controls, full-month heap/checked medians, and SafeZone DEBS controls | DEBS correctness, 100k/1M trusted medians, opt-in GC heap allocation attribution, Q1 checked-output output-equivalence, Q1 checked-processing output-equivalence, Q2 checked-processing output-equivalence, checked RunBoth 100k/1M medians plus attribution, 3-run Commix control, first full-month output-equivalence control, post-pool-cap checked full-month run, post-pool-cap same-run full-month heap/checked control, trusted full-month Streaming control, checked `ChildBucket` same-order full-month 3-run median, active-memory diagnostics, region-family attribution, Q1 rank lifetime narrowing, post-fix full-month heap/checked median, 100k SafeZone controls, and 1M current/improved SafeZone medians |
 | Phase 6: literature-aligned methodology evidence | Started | Validated methodology medians with caveats | Broom-style dataflow including checked SELECT/AGGREGATE/JOIN modes, StreamFlex-style latency/throughput, Yak-style control/data plus grouped sort, top-word/filter, GraphChi-style subintervals, and runtime promotion proxy, Stancu-style transaction accounting |
 | Phase 6b: Broom / parallel collections API evidence | Open | Provisional surrogate only | amordo comparison and Rift raw-array surrogate |
-| Phase 7: capture-checked safe API | Started | Compiler-probe, runtime-smoke, focused checked-container benchmark, checked dataflow evidence, and DEBS-shaped checked probes | 58 targeted checked-API compiler probes, checked child-window and child-bucket close-through-cleanup runtime probes, `CheckedRegionBufferMatrix`, `CheckedRegionPriorityQueueMatrix`, Dataflow SELECT/AGGREGATE/JOIN `rift-checked`, Q1 checked-output, Q1 checked-processing, Q2 checked-processing, checked RunBoth `rift-checked` medians, plus Phase 4 safety finding |
+| Phase 7: capture-checked safe API | Started | Compiler-probe, runtime-smoke, focused checked-container benchmark, checked dataflow evidence, and DEBS-shaped checked probes | 63 targeted checked-API compiler probes, checked child-window and child-bucket close-through-cleanup runtime probes, `CheckedRegionBufferMatrix`, `CheckedRegionPriorityQueueMatrix`, `CheckedRegionIndexedPriorityQueueMatrix`, Dataflow SELECT/AGGREGATE/JOIN `rift-checked`, Q1 checked-output, Q1 checked-processing, Q2 checked-processing, checked RunBoth `rift-checked` medians, plus Phase 4 safety finding |
 | Phase 8: native GC/region integration hardening | Started | Runtime/API smoke evidence, no benchmark data | Explicit `HeapRoot` path, static module/immutable-val path, direct unrooted heap-constructor/alias/field-selection/array-store rejection, owner-token ObjectBuffer/RegionBuffer heap-store rejection, mutable static-var rejection, mutable-head heap-retagging rejection, and explicit `{region}` constructor-field/array reuse |
 | Phase 9: Lean mechanization | Open | No data | None |
 | Phase 10: writing | Not started beyond notes | No data | None |
@@ -1489,6 +1489,11 @@ Covered source-level patterns:
 | owner-token `RegionPriorityQueue` stores direct heap object | rejected by Rift push lowering guard |
 | owner-token `RegionPriorityQueue` stores `HeapRoot` handle | passes compiler probe |
 | outer `RegionPriorityQueue` stores inner-region value | rejected by explicit owner-token type |
+| owner-token `RegionIndexedPriorityQueue` stores/fetches/mutates region objects and updates priority | passes compiler probe |
+| owner-token `RegionIndexedPriorityQueue` replaces the value for an existing key | passes compiler probe |
+| owner-token `RegionIndexedPriorityQueue` stores direct heap object | rejected by Rift put lowering guard |
+| owner-token `RegionIndexedPriorityQueue` stores `HeapRoot` handle | passes compiler probe |
+| outer `RegionIndexedPriorityQueue` stores inner-region value | rejected by explicit owner-token type |
 | streaming reset epoch processes region-owned array of ordinary records | passes compiler probe and native runtime smoke |
 | top-word-style `ObjectBuffer` stores records with rooted heap metadata | passes compiler probe and native runtime smoke |
 | GraphChi-style subinterval uses rooted durable heap vertex metadata | passes compiler probe |
@@ -1562,6 +1567,32 @@ Interpretation:
 - The queue ranks by one `Long` priority. Q1 still needs richer tie-breaking
   and durable indexed-rank state before this can replace its local ranking
   machinery.
+
+Focused checked indexed-priority-queue benchmark:
+
+Sources:
+
+- `evidence/CHECKED_REGION_INDEXED_PRIORITY_QUEUE_MATRIX.md`
+- `sandbox/src/main/scala-next/CheckedRegionIndexedPriorityQueueMatrix.scala`
+- `sandbox/run_checked_region_indexed_priority_queue_matrix.sh`
+
+Default local median, 8 epochs x 125000 events, key capacity 65536, top 128:
+
+| Mode | Median elapsed ms | Median GC ms | Median Rift op ms | Region objects | Resets | Peak RSS bytes |
+|---|---:|---:|---:|---:|---:|---:|
+| heap | 100.254 | 2.201 | 0.000 | 0 | 0 | 22085632 |
+| rift-checked | 103.052 | 0.000 | 0.406 | 451112 | 8 | 26279936 |
+
+Interpretation:
+
+- This validates durable dense-key ranking state, not a DEBS-specific
+  optimization.
+- Heap and checked Rift run the same fetch/mutate/update logical program:
+  ordinary record objects are created once per key per epoch, then looked up and
+  re-ranked on later events.
+- The checked path removes measured GC with low region-operation overhead but
+  is slightly slower and higher-RSS in this focused run. Treat it as API/safety
+  evidence, not as a speed claim.
 
 Relevant evidence carried from Phase 4:
 

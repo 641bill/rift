@@ -62,6 +62,11 @@ Scala-next capture checking supports the first Rift safe API slice:
   rule to ranking/top-k state. Values live in a region-owned object array,
   priorities live in a parallel region-owned `Long` array, and `push` is
   guarded so direct heap values are rejected unless wrapped in `HeapRoot`.
+- `RiftRegion.RegionIndexedPriorityQueue` extends the same rule to dense-key
+  mutable ranking state. `put` is guarded like `push`; `get`, `contains`,
+  `updatePriority`, `peek`, and `pop` let checked stream code fetch ordinary
+  region objects by key, mutate their fields, and update ranking priority
+  without allocating a new object every refresh.
 - The first literature-shaped safe API probes now compile: streaming reset
   epochs can process region-owned arrays of ordinary record objects, a
   top-word-style `ObjectBuffer` can store records that refer to heap metadata
@@ -102,7 +107,7 @@ Known gaps remain:
   and stable primary-constructor field selections whose source type is
   explicitly region-captured. It also checks stores into known region arrays
   and the current owner-token `ObjectBuffer`/`RegionBuffer`/
-  `RegionPriorityQueue` APIs. Broader
+  `RegionPriorityQueue`/`RegionIndexedPriorityQueue` APIs. Broader
   cases such as plain `T^` fields, richer static-field provenance, and plain
   receiver-style collection/container abstractions still need a more precise
   policy or compiler extension.
@@ -265,6 +270,11 @@ Current checked compiler probes:
 | `regionPriorityQueueCannotStoreHeapObject` | checked priority-queue push stores direct heap object | fails | Confirms the push lowering guard covers ranking containers. |
 | `regionPriorityQueueCanStoreHeapRoot` | checked priority queue stores explicit `HeapRoot` handles | compiles | Covers durable heap metadata through ranking/top-k containers. |
 | `regionPriorityQueueCannotStoreInnerScopedValue` | outer priority queue stores value allocated in inner region | fails | Confirms owner tokens still prevent cross-region storage for ranking state. |
+| `regionIndexedPriorityQueueCanUpdatePriority` | indexed priority queue stores region objects, fetches by key, and updates rank priority | compiles | Adds durable dense-key ranking state for mutable stream records. |
+| `regionIndexedPriorityQueueCanReplaceValueForKey` | indexed priority queue replaces the value for an existing key | compiles | Covers keyed replacement without growing logical queue length. |
+| `regionIndexedPriorityQueueCannotStoreHeapObject` | indexed priority-queue `put` stores direct heap object | fails | Confirms the `put` lowering guard covers indexed ranking containers. |
+| `regionIndexedPriorityQueueCanStoreHeapRoot` | indexed priority queue stores explicit `HeapRoot` handles | compiles | Covers durable heap metadata through keyed ranking containers. |
+| `regionIndexedPriorityQueueCannotStoreInnerScopedValue` | outer indexed priority queue stores value allocated in inner region | fails | Confirms owner tokens still prevent cross-region storage for keyed ranking state. |
 | `streamingResetRegionArrayEpochCompiles` | reset epoch processes a region-owned array of ordinary records | compiles | Models sort/dataflow epoch records through the supported checked array shape. |
 | `topwordBufferCanStoreRecordsWithRootedMetadata` | top-word-style buffer stores records that carry rooted heap metadata | compiles | Covers durable heap metadata via `HeapRoot` inside a higher-level checked buffer. |
 | `graphChiSubintervalCanUseRootedHeapVertexMetadata` | GraphChi-style subinterval record refers to durable heap vertex metadata through `HeapRoot` | compiles | Covers the safe data/control split for graph updates. |

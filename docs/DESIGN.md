@@ -132,7 +132,10 @@ Current reliable evidence:
   allocated in the owner region. `RiftRegion.RegionPriorityQueue` extends the
   owner-token container family to ranking/top-k style state: values live in a
   region-owned object array, priorities live in a parallel region-owned
-  primitive array, and heap values are rejected unless explicitly rooted. Raw
+  primitive array, and heap values are rejected unless explicitly rooted.
+  `RiftRegion.RegionIndexedPriorityQueue` adds durable dense-key ranking state:
+  one ordinary Scala object can be created per key, fetched, mutated, and
+  re-ranked without allocating a new rank object on every refresh. Raw
   `RiftRegion.childStreaming` plus the
   preferred `RiftRegion.childWindow` wrapper are now first checked
   multi-region building blocks: a child streaming-region handle cannot escape
@@ -153,7 +156,11 @@ Current reliable evidence:
   `CheckedRegionPriorityQueueMatrix` validates the new checked ranking
   primitive: default local medians were heap `27.369 ms` with `2.160 ms` GC
   versus checked Rift `28.621 ms` with `0.279 ms` Rift op time, no measured GC,
-  and lower RSS. Treat this as API/safety evidence rather than a speed claim.
+  and lower RSS. `CheckedRegionIndexedPriorityQueueMatrix` validates the next
+  keyed-state step: default local medians were heap `100.254 ms` with
+  `2.201 ms` GC versus checked Rift `103.052 ms` with no measured GC and
+  `0.406 ms` Rift op time. Treat these as API/safety evidence rather than speed
+  claims.
   Dataflow
   SELECT, AGGREGATE, and JOIN now have checked `rift-checked` modes using the
   same safe API; local checked medians are SELECT `18.865 ms`, AGGREGATE
@@ -413,6 +420,11 @@ owner-token based, for example `RiftRegion.append(region, buffer, value)` or
 the lighter `region.append(buffer, value)` extension method. `RegionBuffer`
 uses the same owner-token rule but permits growth by allocating larger backing
 arrays in the owner region and leaving old arrays for batch reclamation. The
+same owner-token pattern now covers `RegionPriorityQueue` for append/pop
+top-k state and `RegionIndexedPriorityQueue` for dense-key mutable ranking
+state. The indexed queue is important because it lets a stream operator keep an
+ordinary region object for a key, mutate that object's fields, and update the
+ranking priority without per-refresh object churn. The
 current checker still needs the owner token; a plain `buffer.append(value)`
 method does not prove the same-region relation. Raw `childStreaming` and the
 preferred `childWindow` wrapper prove that a child region handle cannot escape
