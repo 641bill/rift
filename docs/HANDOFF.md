@@ -137,14 +137,25 @@ prior checked `866.6 MiB` median. GC collection time drops from `0.285 s` heap
 to `0.117 s` checked, while checked pays `0.779 s` median Rift region-op time
 and is slower in Q1/Q2 process CPU phases. Treat this as full-month memory
 validation and near-tie throughput evidence, not a large application speedup.
-The next claim-level step is SafeZone full-month controls and CPU attribution
-for checked Q1/Q2 process overhead.
 One attempted Q1 CPU fix was rejected and documented: a route-lifetime
 child-bucket probe reduced 100k checked Q1 rank creation back to heap scale
 (`64672`) but opened `69220` child regions, raised RSS to `113721344` bytes,
 and did not improve elapsed time. Do not pursue one child region per active
 route; the next Q1 design needs shared arenas or output/rank snapshots without
 per-route regions.
+The latest checkpoint adds a closeable SafeZone DEBS control. `Q1SafeZone` and
+`Q2SafeZone` use the same Q1/Q2 bucket/ranking algorithms as heap and trusted
+Rift, but allocate Q1/Q2 data structures through explicit `SafeZone.open()` /
+`SafeZone.close(zone)` scopes. Single-run 100k and 1M controls matched heap
+output for current SafeZone (`SAFEZONE_ROOTS_MODE=0`) and improved SafeZone
+(`SAFEZONE_ROOTS_MODE=1`). At 1M, improved SafeZone was slower than heap
+(`4946.909 ms` versus `4308.667 ms`) and checked Rift (`4211.395 ms`) while
+using less RSS than heap (`103.1 MiB` versus `153.7 MiB`) but more than checked
+Rift (`63.6 MiB`). Treat this as provisional control evidence: SafeZone DEBS
+mode now exists, but it needs 3-run bounded medians and only then full-month
+controls if the bounded result is stable enough.
+The next claim-level step is 1M SafeZone median controls and CPU attribution
+for checked Q1/Q2 process overhead.
 A Scala-next checked Rift-region API slice has been reviewed and
 merged into `feature/rift` at `79953ad8d`; its source branch was
 `codex/safe-region-api-checked-slice` at `e8c3b961d`. The Q2 incremental
@@ -2619,8 +2630,9 @@ The follow-up 100k/1M median matrix over `heap`, `rift-hp`,
 `rift-streaming`, and `rift-checked` also completed with matching outputs.
 This is still not final DEBS proof: the byte-reader/output scratch buffers
 still use trusted runtime helpers, previous-output snapshots are heap primitive
-control metadata, child close discipline is structured but not affine-proved,
-and SafeZone DEBS is still missing.
+control metadata, and child close discipline is structured but not
+affine-proved. The SafeZone DEBS gap described here was later narrowed by the
+single-run closeable SafeZone control recorded at the top of this handoff.
 
 With checked RunBoth medians and attribution in place, the safest next
 technical action is either a reusable checked bucket/window abstraction with a
@@ -2704,9 +2716,9 @@ Interpretation:
   The 1M elapsed delta is much larger than the GC-time delta, so keep
   interpreting this as allocation-placement/object-churn evidence rather than
   only shorter GC pauses.
-- SafeZone DEBS is still not a completed control. The current RunBoth harness
-  does not have a fair closeable SafeZone-window backend equivalent to Rift
-  child-window eviction.
+- Superseded note: at this point SafeZone DEBS was still missing. A later
+  checkpoint added a closeable SafeZone Q1/Q2 control mode; it is still
+  single-run evidence and needs medians.
 
 ## Latest Update: Reusable Checked ChildBucket
 

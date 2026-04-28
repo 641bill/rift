@@ -84,7 +84,7 @@ For performance numbers, use the following rule of thumb:
 | Phase 2: in-tree runtime/compiler path | Partially done | Partially validated | RiftRegionTest and integration status, no standalone perf table |
 | Phase 3: runtime-only evaluation | Done enough for current claim | Validated with caveats | Same-layout GCBench/ListOfLists runtime medians |
 | Phase 4: topology/layout decomposition | Done enough to move on | Validated/provisional mix | Layout, topology, targeted runtime follow-up, safety finding |
-| Phase 5: application evidence | In progress | Bounded-sample medians plus diagnostic attribution, safe-API probes, single-run full-month controls, and full-month heap/checked medians | DEBS correctness, 100k/1M trusted medians, opt-in GC heap allocation attribution, Q1 checked-output output-equivalence, Q1 checked-processing output-equivalence, Q2 checked-processing output-equivalence, checked RunBoth 100k/1M medians plus attribution, 3-run Commix control, first full-month output-equivalence control, post-pool-cap checked full-month run, post-pool-cap same-run full-month heap/checked control, trusted full-month Streaming control, checked `ChildBucket` same-order full-month 3-run median, active-memory diagnostics, region-family attribution, Q1 rank lifetime narrowing, and post-fix full-month heap/checked median |
+| Phase 5: application evidence | In progress | Bounded-sample medians plus diagnostic attribution, safe-API probes, single-run full-month controls, full-month heap/checked medians, and first SafeZone DEBS controls | DEBS correctness, 100k/1M trusted medians, opt-in GC heap allocation attribution, Q1 checked-output output-equivalence, Q1 checked-processing output-equivalence, Q2 checked-processing output-equivalence, checked RunBoth 100k/1M medians plus attribution, 3-run Commix control, first full-month output-equivalence control, post-pool-cap checked full-month run, post-pool-cap same-run full-month heap/checked control, trusted full-month Streaming control, checked `ChildBucket` same-order full-month 3-run median, active-memory diagnostics, region-family attribution, Q1 rank lifetime narrowing, post-fix full-month heap/checked median, and single-run current/improved SafeZone 100k/1M controls |
 | Phase 6: literature-aligned methodology evidence | Started | Validated methodology medians with caveats | Broom-style dataflow including checked SELECT/AGGREGATE/JOIN modes, StreamFlex-style latency/throughput, Yak-style control/data plus grouped sort, top-word/filter, GraphChi-style subintervals, and runtime promotion proxy, Stancu-style transaction accounting |
 | Phase 6b: Broom / parallel collections API evidence | Open | Provisional surrogate only | amordo comparison and Rift raw-array surrogate |
 | Phase 7: capture-checked safe API | Started | Compiler-probe, runtime-smoke, focused checked-container benchmark, checked dataflow evidence, and DEBS-shaped checked probes | 54 targeted checked-API compiler probes, checked child-window and child-bucket close-through-cleanup runtime probes, `CheckedRegionBufferMatrix`, Dataflow SELECT/AGGREGATE/JOIN `rift-checked`, Q1 checked-output, Q1 checked-processing, Q2 checked-processing, checked RunBoth `rift-checked` medians, plus Phase 4 safety finding |
@@ -101,7 +101,7 @@ For performance numbers, use the following rule of thumb:
 | Phase 2 | Integrated Rift into Scala Native runtime/compiler paths. | Mostly enablement work; judged by smoke/tests more than standalone speed tables. |
 | Phase 3 | Reran same-layout runtime matrices. | Rift has credible allocator/runtime wins on allocation-heavy linked structures. |
 | Phase 4 | Split allocator effects from layout/topology effects. | Layout and reference topology can dominate allocator choice; mixed region/GC references require a safety story. |
-| Phase 5 | Built DEBS Q1/Q2 runners and progressively moved structured-lifetime state into regions; added checked Q1 output/ranking, checked Q1 processing, checked Q2 processing probes, active-memory diagnostics, and region-family attribution. | Current DEBS evidence shows bounded-sample elapsed/RSS wins and much lower heap allocation pressure. The latest full-month diagnostic found and fixed one wrong checked lifetime: Q1 rank object graphs were parent-lived instead of bucket-lived. Q1/Q2 CPU, I/O, production full-month medians, SafeZone controls, and stronger checked boundaries still keep it short of final application proof. |
+| Phase 5 | Built DEBS Q1/Q2 runners and progressively moved structured-lifetime state into regions; added checked Q1 output/ranking, checked Q1 processing, checked Q2 processing probes, active-memory diagnostics, region-family attribution, and a closeable SafeZone Q1/Q2 control mode. | Current DEBS evidence shows bounded-sample elapsed/RSS wins and much lower heap allocation pressure. The latest full-month diagnostic found and fixed one wrong checked lifetime: Q1 rank object graphs were parent-lived instead of bucket-lived. Q1/Q2 CPU, I/O, production full-month medians, SafeZone medians/full-month controls, and stronger checked boundaries still keep it short of final application proof. |
 | Phase 6 | Built methodology harnesses for Broom/StreamFlex/Yak/Stancu comparison axes. | These support the broader research story but are not exact reproductions of closed or unavailable artifacts. |
 | Phase 7 | Added checked `scoped`/`streaming` API probes using Scala capture checking. | Source-level safety evidence is started; ergonomics and broader container patterns remain open. |
 | Phase 8 | Added explicit heap-root handles and conservative mixed-reference rejection. | Region memory is not GC-scanned, so region-to-heap references need roots or static rejection. |
@@ -848,8 +848,9 @@ Checked child-window close discipline and Commix control:
   faster, lower-GC, and lower-RSS at both 100k and 1M. The elapsed delta is
   still much larger than the GC collection-time delta, so this is not only a
   shorter-GC-pause result.
-- SafeZone DEBS remains missing because the current RunBoth harness has no fair
-  closeable SafeZone-window backend equivalent to Rift child-window eviction.
+- Superseded note: SafeZone DEBS was missing at this checkpoint. A later
+  checkpoint added a closeable SafeZone Q1/Q2 control mode; it is still
+  single-run evidence and needs medians.
 
 Full-month first control:
 
@@ -1063,6 +1064,31 @@ Full-month heap/checked control after Q1 rank lifetime fix:
   `0.117 s` checked), but that delta is small compared with total elapsed time.
   The remaining issue is checked Q1/Q2 process CPU overhead plus file I/O, not
   runaway region retention.
+
+SafeZone DEBS control:
+
+| Input | SafeZone roots mode | Mode | Elapsed ms | Real s | GC ms | RSS MiB | Q1 process ms | Q2 process ms | Close ms | Rift op ms |
+|---|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| 100k | 0 | heap | 456.717 | 0.46 | 7.466 | 52.9 | 128.544 | 108.991 | 4.556 | 0.000 |
+| 100k | 0 | safezone | 471.189 | 0.47 | 6.388 | 40.4 | 142.277 | 116.189 | 6.672 | 0.000 |
+| 100k | 0 | rift-checked | 434.309 | 0.43 | 0.073 | 32.4 | 131.790 | 100.088 | 0.362 | 1.132 |
+| 100k | 1 | heap | 448.823 | 0.45 | 7.475 | 52.9 | 129.081 | 110.789 | 4.754 | 0.000 |
+| 100k | 1 | safezone | 455.314 | 0.45 | 6.257 | 40.4 | 137.516 | 109.453 | 5.498 | 0.000 |
+| 100k | 1 | rift-checked | 435.916 | 0.43 | 0.065 | 32.4 | 132.339 | 100.756 | 0.737 | 1.172 |
+| 1M | 0 | heap | 4394.733 | 4.40 | 18.960 | 153.7 | 1276.806 | 1091.211 | 6.738 | 0.000 |
+| 1M | 0 | safezone | 5078.097 | 5.08 | 53.805 | 103.1 | 1456.781 | 1476.210 | 113.514 | 0.000 |
+| 1M | 0 | rift-checked | 4264.676 | 4.26 | 2.066 | 63.6 | 1302.254 | 1037.664 | 1.457 | 5.913 |
+| 1M | 1 | heap | 4308.667 | 4.31 | 19.071 | 153.7 | 1269.144 | 1060.829 | 5.621 | 0.000 |
+| 1M | 1 | safezone | 4946.909 | 4.95 | 57.926 | 103.1 | 1423.601 | 1449.755 | 33.951 | 0.000 |
+| 1M | 1 | rift-checked | 4211.395 | 4.21 | 2.280 | 63.6 | 1278.963 | 1009.449 | 0.817 | 5.645 |
+
+- The new `safezone` RunBoth mode matched heap output at 100k and 1M for both
+  current and improved roots modes.
+- This is single-run control evidence. Do not treat it as a headline median.
+- Improved roots mode reduces SafeZone close time on 1M (`113.5 ms` to
+  `34.0 ms`) but SafeZone remains slower than heap and checked Rift in this
+  bounded control. The next step is 3-run 1M SafeZone medians before attempting
+  full-month SafeZone controls.
 
 Rejected Q1 route-lifetime child-bucket probe:
 
