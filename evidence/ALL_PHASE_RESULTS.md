@@ -84,7 +84,7 @@ For performance numbers, use the following rule of thumb:
 | Phase 2: in-tree runtime/compiler path | Partially done | Partially validated | RiftRegionTest and integration status, no standalone perf table |
 | Phase 3: runtime-only evaluation | Done enough for current claim | Validated with caveats | Same-layout GCBench/ListOfLists runtime medians |
 | Phase 4: topology/layout decomposition | Done enough to move on | Validated/provisional mix | Layout, topology, targeted runtime follow-up, safety finding |
-| Phase 5: application evidence | In progress | Bounded-sample medians plus diagnostic attribution, safe-API probes, single-run full-month controls, and one full-month checked median | DEBS correctness, 100k/1M trusted medians, opt-in GC heap allocation attribution, Q1 checked-output output-equivalence, Q1 checked-processing output-equivalence, Q2 checked-processing output-equivalence, checked RunBoth 100k/1M medians plus attribution, 3-run Commix control, first full-month output-equivalence control, post-pool-cap checked full-month run, post-pool-cap same-run full-month heap/checked control, trusted full-month Streaming control, checked `ChildBucket` same-order full-month 3-run median, active-memory diagnostics, region-family attribution, and Q1 rank lifetime narrowing |
+| Phase 5: application evidence | In progress | Bounded-sample medians plus diagnostic attribution, safe-API probes, single-run full-month controls, and full-month heap/checked medians | DEBS correctness, 100k/1M trusted medians, opt-in GC heap allocation attribution, Q1 checked-output output-equivalence, Q1 checked-processing output-equivalence, Q2 checked-processing output-equivalence, checked RunBoth 100k/1M medians plus attribution, 3-run Commix control, first full-month output-equivalence control, post-pool-cap checked full-month run, post-pool-cap same-run full-month heap/checked control, trusted full-month Streaming control, checked `ChildBucket` same-order full-month 3-run median, active-memory diagnostics, region-family attribution, Q1 rank lifetime narrowing, and post-fix full-month heap/checked median |
 | Phase 6: literature-aligned methodology evidence | Started | Validated methodology medians with caveats | Broom-style dataflow including checked SELECT/AGGREGATE/JOIN modes, StreamFlex-style latency/throughput, Yak-style control/data plus grouped sort, top-word/filter, GraphChi-style subintervals, and runtime promotion proxy, Stancu-style transaction accounting |
 | Phase 6b: Broom / parallel collections API evidence | Open | Provisional surrogate only | amordo comparison and Rift raw-array surrogate |
 | Phase 7: capture-checked safe API | Started | Compiler-probe, runtime-smoke, focused checked-container benchmark, checked dataflow evidence, and DEBS-shaped checked probes | 54 targeted checked-API compiler probes, checked child-window and child-bucket close-through-cleanup runtime probes, `CheckedRegionBufferMatrix`, Dataflow SELECT/AGGREGATE/JOIN `rift-checked`, Q1 checked-output, Q1 checked-processing, Q2 checked-processing, checked RunBoth `rift-checked` medians, plus Phase 4 safety finding |
@@ -640,8 +640,8 @@ Interpretation:
   fallback path: after byte output, Rift 1M heap allocation is about `0.56M`
   calls and `10.5 MB`, and GC collection time is below `1 ms`.
 - The remaining gap to a final Phase 5 claim is no longer "move obvious output
-  strings/builders into regions"; it is controls and scope: Commix/SafeZone,
-  repeated full-month performance, and safe API coverage.
+  strings/builders into regions"; it is controls and scope: SafeZone,
+  full-month CPU attribution, and safe API coverage.
 
 ### Q1 Checked-Output Safe-API Probe
 
@@ -823,8 +823,8 @@ Interpretation:
   allocation.
 - This is still not final DEBS proof. It remains a bounded 100k/1M result, the
   byte-reader/output scratch paths still use trusted helpers, previous-output
-  snapshots remain primitive heap control metadata, SafeZone DEBS is missing,
-  and repeated full-month performance is missing.
+  snapshots remain primitive heap control metadata, and SafeZone DEBS is
+  missing.
 
 Checked child-window close discipline and Commix control:
 
@@ -988,10 +988,10 @@ Interpretation:
 - The improvement is shared algorithmic cleanup plus allocation placement:
   heap and Rift use the same two-heap median maintenance, while Rift allocates
   the median/control arrays and related ordinary Scala objects in regions.
-- Rift still does not prove final DEBS success because SafeZone DEBS,
-  repeated full-month performance, and stronger safe API boundaries remain
-  open. The remaining DEBS bottleneck is Q2 rank/output work and full-scale
-  memory pressure rather than Rift allocator overhead.
+- Rift still does not prove final DEBS success because SafeZone DEBS, checked
+  Q1/Q2 process CPU attribution, and stronger safe API boundaries remain open.
+  The remaining DEBS bottleneck is query CPU and file I/O rather than Rift
+  allocator overhead.
 
 Active-memory diagnostic:
 
@@ -1033,9 +1033,36 @@ Region-family attribution and Q1 rank lifetime narrowing:
   full-month checked active requested peak drops from `823153856` to
   `180948200` bytes.
 - This is not a new headline median. It is a successful memory-lifetime
-  diagnostic and fix. The next Phase 5 evidence step is repeated full-month
-  heap/checked medians after the Q1 lifetime change, plus SafeZone full-month
-  controls.
+  diagnostic and fix.
+
+Full-month heap/checked control after Q1 rank lifetime fix:
+
+| Repeat | Mode | Elapsed s | Real s | User s | Sys s | GC s | RSS MiB | Rift op s | Active requested peak MiB | Q1 process s | Q2 process s |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| A | heap | 67.122 | 67.15 | 64.55 | 0.83 | 0.283 | 596.0 | 0.000 | 0.0 | 18.525 | 17.849 |
+| A | rift-checked | 66.558 | 66.60 | 66.04 | 0.39 | 0.117 | 613.3 | 0.779 | 172.6 | 20.305 | 18.607 |
+| B | heap | 64.879 | 64.91 | 64.40 | 0.40 | 0.285 | 595.9 | 0.000 | 0.0 | 18.537 | 17.735 |
+| B | rift-checked | 66.804 | 66.83 | 66.21 | 0.47 | 0.118 | 628.1 | 0.776 | 172.6 | 20.407 | 18.763 |
+| C | heap | 67.836 | 67.86 | 66.59 | 0.70 | 0.297 | 595.4 | 0.000 | 0.0 | 19.210 | 19.318 |
+| C | rift-checked | 66.843 | 66.87 | 66.16 | 0.52 | 0.115 | 546.1 | 0.790 | 172.6 | 20.413 | 18.954 |
+
+| Mode | Median elapsed s | Median real s | Median GC s | Median RSS MiB | Median Rift op s | Median active requested peak MiB | Median Q1 process s | Median Q2 process s |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| heap | 67.122 | 67.15 | 0.285 | 595.9 | 0.000 | 0.0 | 18.537 | 17.849 |
+| rift-checked | 66.804 | 66.83 | 0.117 | 613.3 | 0.779 | 172.6 | 20.407 | 18.763 |
+
+- All three repeats matched heap/checked Q1 and Q2 outputs after stripping
+  latency.
+- The Q1 rank lifetime fix removes the large checked RSS regression: checked
+  full-month median RSS is now `613.3 MiB`, close to heap `595.9 MiB` and much
+  lower than the prior checked `866.6 MiB` median.
+- Full-month throughput is a near-tie, not a strong speedup. Checked is
+  `0.318 s` faster at the median (`0.47%`), well within the level of noise
+  seen across full-month repeats.
+- Checked still reduces measured GC collection time (`0.285 s` heap to
+  `0.117 s` checked), but that delta is small compared with total elapsed time.
+  The remaining issue is checked Q1/Q2 process CPU overhead plus file I/O, not
+  runaway region retention.
 
 ## Phase 6: Literature-Aligned Methodology Evidence
 
@@ -1598,8 +1625,12 @@ Status:
   rank object graphs were parent-lived. Moving those ordinary Scala objects to
   Q1 child bucket regions reduces full-month checked active requested peak from
   `823153856` to `180948200` bytes and RSS from `1086668800` to `613318656`
-  bytes in checked-only diagnostics. The next memory work is repeated
-  full-month medians and SafeZone controls, not another pool cap tweak.
+  bytes in checked-only diagnostics.
+- The post-fix full-month heap/checked 3-run control matched outputs and
+  brings checked RSS close to heap (`613.3 MiB` median versus `595.9 MiB`), but
+  elapsed time is a near-tie (`66.804 s` checked versus `67.122 s` heap).
+  The next memory/performance work is SafeZone controls and checked Q1/Q2 CPU
+  attribution, not another pool cap tweak.
 - Latest DEBS phase breakdown shows remaining cost is mostly Q1/Q2 CPU and
   file I/O rather than Rift bookkeeping or GC collection.
 - The pipeline/parallel-collections story is still a surrogate until a fair

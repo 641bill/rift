@@ -91,9 +91,15 @@ Current reliable evidence:
   largest source: Q1 checked rank object graphs were parent-lived. Moving those
   ordinary Scala rank objects into Q1 child bucket regions cuts full-month
   checked active requested peak from `823153856` to `180948200` bytes and RSS
-  from `1086668800` to `613318656` bytes in a checked-only diagnostic. This is
-  still not a final full-DEBS claim because repeated full-month heap/checked
-  runs, SafeZone controls, and stronger safe API boundaries remain open.
+  from `1086668800` to `613318656` bytes in a checked-only diagnostic. A
+  follow-up full-month 3-run heap/checked control after this fix matched
+  outputs and gives a near-tie elapsed median: heap `67.122 s` versus checked
+  `66.804 s`. Checked median RSS is now `613.3 MiB`, close to heap
+  `595.9 MiB`; GC collection time drops from `0.285 s` to `0.117 s`, but
+  checked pays `0.779 s` median Rift region-operation time and has slower Q1/Q2
+  process CPU phases. This is still not a final full-DEBS claim because
+  SafeZone controls, CPU-overhead attribution, and stronger safe API boundaries
+  remain open.
 - Phase 7 checked API evidence has started. The targeted Scala-next compiler
   suite passed 54/54 for the current `Scoped`/`Streaming` API slice, including
   for-loop allocation, nested scoped regions, local higher-order consumers, and
@@ -755,7 +761,9 @@ Interpretation:
   checked-region payload under current lifetimes, not capped free-slab
   retention. The first per-family fix moves Q1 checked rank object graphs from
   parent lifetime to child-bucket lifetime and brings the checked full-month
-  RSS diagnostic back to heap scale. SafeZone, repeated full-month medians, and
+  RSS diagnostic back to heap scale. The post-fix full-month median is a
+  near-tie on elapsed time and much better on RSS than the pre-fix checked
+  median, but not a large speedup. SafeZone, CPU-overhead attribution, and
   stronger safe API boundaries are still missing for the final application
   claim.
 - Checked RunBoth is now median-backed on bounded 100k/1M samples. It is
