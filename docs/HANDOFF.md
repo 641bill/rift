@@ -9,8 +9,8 @@ Active implementation branch for this update:
 `feature/rift`
 
 Implementation commit at this update:
-`dc2191b37eee3d54325c9a8e6f90889e826fa607`
-(`Record full-month Q1 rank lifetime control`)
+`e5a52bf5629e1c5262d11e92fa2b16ec766cd2b2`
+(`Record rejected Q1 route bucket probe`)
 
 Status: active research fork. The Phase 5 input-boundary checkpoint, reusable
 ranking backend, Q2 bounded cell-table checkpoint, Q1 primitive route-table
@@ -139,6 +139,12 @@ and is slower in Q1/Q2 process CPU phases. Treat this as full-month memory
 validation and near-tie throughput evidence, not a large application speedup.
 The next claim-level step is SafeZone full-month controls and CPU attribution
 for checked Q1/Q2 process overhead.
+One attempted Q1 CPU fix was rejected and documented: a route-lifetime
+child-bucket probe reduced 100k checked Q1 rank creation back to heap scale
+(`64672`) but opened `69220` child regions, raised RSS to `113721344` bytes,
+and did not improve elapsed time. Do not pursue one child region per active
+route; the next Q1 design needs shared arenas or output/rank snapshots without
+per-route regions.
 A Scala-next checked Rift-region API slice has been reviewed and
 merged into `feature/rift` at `79953ad8d`; its source branch was
 `codex/safe-region-api-checked-slice` at `e8c3b961d`. The Q2 incremental

@@ -902,7 +902,9 @@ After these docs, the safest technical next action is:
 2. Treat the Q1 rank lifetime fix as a memory result, not a final headline. The
    next narrow evidence step is to add a DEBS SafeZone control if feasible and
    attribute why checked Q1/Q2 process phases are slower than heap despite much
-   lower heap allocation pressure.
+   lower heap allocation pressure. Do not use one child region per active Q1
+   route: a 100k probe reduced rank-object churn but opened `69220` regions and
+   raised RSS to `113721344` bytes.
 3. For literature-methodology hardening, Yak now has local Hyracks-, Hadoop-,
    and GraphChi-shaped probes. The next step should either add safety probes
    for these object patterns or return to DEBS controls, rather than adding

@@ -1064,6 +1064,18 @@ Full-month heap/checked control after Q1 rank lifetime fix:
   The remaining issue is checked Q1/Q2 process CPU overhead plus file I/O, not
   runaway region retention.
 
+Rejected Q1 route-lifetime child-bucket probe:
+
+| Input | Mode | Elapsed ms | Q1 process ms | GC ms | RSS bytes | Rift op ms | Rift opens | Active requested peak bytes | Q1 rank created |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| 100k | heap | 484.189 | 136.188 | 10.850 | 55492608 | 0.000 | 0 | 0 | 64672 |
+| 100k | route-bucket probe | 485.729 | 170.209 | 2.523 | 113721344 | 14.473 | 69220 | 23447464 | 64672 |
+
+- This source change was backed out and is not part of `feature/rift`.
+- It reduced Q1 rank creation to heap scale, but one child region per active
+  route made region count and RSS worse. Do not repeat this design; look for
+  shared arenas or rank/output snapshots without per-route regions.
+
 ## Phase 6: Literature-Aligned Methodology Evidence
 
 Sources:

@@ -99,7 +99,9 @@ Current reliable evidence:
   checked pays `0.779 s` median Rift region-operation time and has slower Q1/Q2
   process CPU phases. This is still not a final full-DEBS claim because
   SafeZone controls, CPU-overhead attribution, and stronger safe API boundaries
-  remain open.
+  remain open. A route-lifetime child-bucket probe was rejected: it reduced Q1
+  rank-object churn but opened one child region per active route, raising 100k
+  checked RSS to `113721344` bytes.
 - Phase 7 checked API evidence has started. The targeted Scala-next compiler
   suite passed 54/54 for the current `Scoped`/`Streaming` API slice, including
   for-loop allocation, nested scoped regions, local higher-order consumers, and
