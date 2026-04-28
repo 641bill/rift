@@ -993,6 +993,26 @@ Interpretation:
   open. The remaining DEBS bottleneck is Q2 rank/output work and full-scale
   memory pressure rather than Rift allocator overhead.
 
+Active-memory diagnostic:
+
+| Input | Mode | Elapsed | RSS bytes | Mmap peak bytes | Active mapped peak bytes | Active requested peak bytes | Final mapped bytes | Pool bytes | Evidence |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---|
+| 100k | rift-checked | 511.224 ms | 40239104 | 31817728 | 31670272 | 29575648 | 10010624 | 9748480 | output matched heap |
+| month 1 full | rift-checked | 73.457 s | 1086668800 | 906346496 | 904790016 | 823153856 | 134479872 | 134217728 | checked-only memory diagnostic |
+
+- The diagnostic adds runtime counters for mapped slabs, active region slabs,
+  and active requested allocation bytes. The 100k validation preserved
+  heap-equivalent output.
+- The full-month RSS regression is not mostly the capped free-slab pool: final
+  active bytes return to zero, and final mapped bytes are close to the `128 MiB`
+  pool cap.
+- Peak RSS tracks live region memory. At full-month scale, peak active
+  requested bytes are about `823 MB` and peak active mapped bytes are about
+  `905 MB`; slab/slack overhead is material but not the dominant effect.
+- The next Phase 5 memory step is per-operator or per-region-family lifetime
+  attribution, then shortening/compacting the largest live checked lifetimes
+  while preserving the same heap/Rift logical query.
+
 ## Phase 6: Literature-Aligned Methodology Evidence
 
 Sources:
@@ -1546,6 +1566,12 @@ Status:
   checked versus `73.029 s` heap, but RSS worsens to `866.6 MiB` median versus
   heap `586.4 MiB`. Treat this as checked-overhead evidence, not a final
   memory-footprint result.
+- The active-memory diagnostic explains most of that RSS problem: full-month
+  checked peak active requested bytes are `823153856`, peak active mapped bytes
+  are `904790016`, final active bytes are zero, and final mapped bytes are near
+  the `128 MiB` pool cap. The next memory work is lifetime attribution and
+  compaction of simultaneously live checked-region payload, not another pool
+  cap tweak.
 - Latest DEBS phase breakdown shows remaining cost is mostly Q1/Q2 CPU and
   file I/O rather than Rift bookkeeping or GC collection.
 - The pipeline/parallel-collections story is still a surrogate until a fair

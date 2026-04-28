@@ -9,8 +9,8 @@ Active implementation branch for this update:
 `feature/rift`
 
 Implementation commit at this update:
-`056a58b892d421fc1f9b73cd5e652a60769d057d`
-(`Record full-month checked DEBS median`)
+`c40bad70f90a3625e04c67d4ba48b54486eea3f7`
+(`Add Rift active memory diagnostics`)
 
 Status: active research fork. The Phase 5 input-boundary checkpoint, reusable
 ranking backend, Q2 bounded cell-table checkpoint, Q1 primitive route-table
@@ -104,6 +104,17 @@ checked path dropping heap allocation calls from `6025149` to `752568`, rounded
 heap bytes from `235159840` to `28785632`, and measured heap allocation-call
 time from `173.578 ms` to `20.514 ms` versus heap. This is diagnostic evidence
 only because the allocation counters perturb timing.
+The latest implementation checkpoint adds Rift mapped-memory, active-region,
+and active-requested-byte counters. A 100k heap/checked validation run matched
+outputs and reported checked peak mapped bytes `31817728`, peak active mapped
+bytes `31670272`, and peak active requested bytes `29575648`. A full-month
+checked-only diagnostic reported RSS `1086668800` bytes, peak mapped bytes
+`906346496`, peak active mapped bytes `904790016`, peak active requested bytes
+`823153856`, final active bytes `0`, and final mapped bytes `134479872`
+against a `128 MiB` pool cap. This means the full-month checked RSS regression
+is mostly live region payload under current lifetimes, not closed-slab pool
+retention or extreme slab fragmentation. Treat it as a single-run memory
+attribution diagnostic, not a new headline performance median.
 A Scala-next checked Rift-region API slice has been reviewed and
 merged into `feature/rift` at `79953ad8d`; its source branch was
 `codex/safe-region-api-checked-slice` at `e8c3b961d`. The Q2 incremental
@@ -2453,8 +2464,8 @@ What should not be done yet:
   bounded-sample checked RunBoth medians, trusted byte-output medians, and
   allocation-attribution result are stronger than earlier checkpoints, and the
   pool-cap/`ChildBucket` follow-up now gives a same-order full-month 3-run
-  median, but still need SafeZone full-month controls, RSS diagnosis, and
-  stronger safe API controls.
+  median, but still need SafeZone full-month controls, per-region-family
+  memory attribution, and stronger safe API controls.
 - Do not move to Phase 6/7 as if Phase 5 is complete.
 - Do not treat the literature sequence as proving final application evidence.
   It produced strong Broom/StreamFlex signals, mixed-but-good Yak evidence, and
@@ -2911,15 +2922,55 @@ Interpretation:
   heap `586.4 MiB`, and one checked repeat reaches `983.9 MiB`.
 - This is now median-backed full-month DEBS evidence, but still not final Phase
   5 proof. The next claim-level work is SafeZone full-month comparison and
-  memory-pressure diagnosis.
+  per-region-family memory attribution.
+
+## Latest Update: Rift Active-Memory Diagnostics
+
+Date: 2026-04-28
+
+What changed:
+
+- Added runtime counters for current/peak mapped slabs and bytes.
+- Added runtime counters for current/peak active-region slabs and bytes.
+- Added requested-allocation byte counters for total requested region bytes and
+  current/peak active requested bytes.
+- Exposed the counters through `RiftAllocator`, `Debs2015RunBoth`, and the
+  instrumented RunBoth TSV output.
+- Updated `bench/debs2015/RESULTS.md` and synced it into
+  `evidence/DEBS_RESULTS.md`.
+
+Validation:
+
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile` passed.
+- 100k heap-vs-checked RunBoth outputs matched after stripping latency.
+- Full-month checked-only RunBoth completed as a memory-attribution diagnostic.
+
+Key rows:
+
+| Input | Mode | Elapsed | RSS bytes | Peak mapped bytes | Peak active mapped bytes | Peak active requested bytes | Final mapped bytes | Pool bytes |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| 100k | rift-checked | 511.224 ms | 40239104 | 31817728 | 31670272 | 29575648 | 10010624 | 9748480 |
+| month 1 full | rift-checked | 73.457 s | 1086668800 | 906346496 | 904790016 | 823153856 | 134479872 | 134217728 |
+
+Interpretation:
+
+- The full-month RSS regression is not mostly closed-slab pool retention:
+  final active bytes return to zero, and final mapped bytes are near the
+  `128 MiB` pool cap.
+- Peak RSS tracks live region memory. Peak active requested bytes are about
+  `823 MB`; peak active mapped bytes are about `905 MB`. Slab/slack overhead
+  is real but not the dominant factor.
+- The next implementation step should attribute live checked-region payload by
+  operator/region family, then shorten or compact the largest live lifetimes
+  without changing the heap/Rift logical query.
 
 ## Unsafe Assumptions To Avoid
 
 - "Rift already has final DEBS application proof." It does not. The current
   bounded-sample medians are encouraging application evidence, and the
   pool-cap plus `ChildBucket` controls now include a same-order full-month
-  3-run median, but SafeZone full-month comparison, RSS diagnosis, and stronger
-  safe-API controls are still missing.
+  3-run median, but SafeZone full-month comparison, per-region-family memory
+  attribution, and stronger safe-API controls are still missing.
 - "GC time should disappear because Q1/Q2 windows and input bytes use Rift."
   `gc_time_ns` is collection time only. Some former heap-heavy paths have
   moved, including taxi-id bytes/entries and latency backing arrays, and the

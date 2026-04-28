@@ -82,8 +82,14 @@ Current reliable evidence:
   the same-order full-month 3-run median is heap `73.029 s` versus checked
   `67.670 s`, with GC `0.315 s` versus `0.086 s`; checked RSS regresses
   (`866.6 MiB` median versus heap `586.4 MiB`), and one checked repeat is
-  slower. This is still not a final full-DEBS claim because SafeZone controls,
-  RSS diagnosis, and stronger safe API boundaries remain open.
+  slower. The first active-memory diagnostic narrows the RSS issue: a
+  full-month checked-only run reports peak active requested bytes `823153856`,
+  peak active mapped bytes `904790016`, final active bytes `0`, and final
+  mapped bytes `134479872` against the `128 MiB` pool cap. That means the
+  remaining RSS regression is mostly live checked-region payload under current
+  lifetimes, not free-slab retention. This is still not a final full-DEBS claim
+  because SafeZone controls, per-region-family lifetime attribution, and
+  stronger safe API boundaries remain open.
 - Phase 7 checked API evidence has started. The targeted Scala-next compiler
   suite passed 54/54 for the current `Scoped`/`Streaming` API slice, including
   for-loop allocation, nested scoped regions, local higher-order consumers, and
@@ -741,8 +747,10 @@ Interpretation:
   removing one heap control object per checked bucket makes checked full-month
   elapsed faster on the same-order 3-run median. The improvement is noisy and
   RSS gets worse, so this is an elapsed/checker-overhead result, not a memory
-  footprint win. SafeZone, RSS diagnosis, and stronger safe API boundaries are
-  still missing for the final application claim.
+  footprint win. The active-memory diagnostic shows that RSS is mostly live
+  checked-region payload under current lifetimes, not capped free-slab
+  retention. SafeZone, per-region-family lifetime attribution, and stronger
+  safe API boundaries are still missing for the final application claim.
 - Checked RunBoth is now median-backed on bounded 100k/1M samples. It is
   encouraging Phase 5/7 evidence, but not an apples-to-apples proof that the
   checked API is always faster than the trusted API because the trusted and
