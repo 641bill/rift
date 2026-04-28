@@ -84,7 +84,7 @@ For performance numbers, use the following rule of thumb:
 | Phase 2: in-tree runtime/compiler path | Partially done | Partially validated | RiftRegionTest and integration status, no standalone perf table |
 | Phase 3: runtime-only evaluation | Done enough for current claim | Validated with caveats | Same-layout GCBench/ListOfLists runtime medians |
 | Phase 4: topology/layout decomposition | Done enough to move on | Validated/provisional mix | Layout, topology, targeted runtime follow-up, safety finding |
-| Phase 5: application evidence | In progress | Bounded-sample medians plus diagnostic attribution, safe-API probes, and single-run full-month controls | DEBS correctness, 100k/1M trusted medians, opt-in GC heap allocation attribution, Q1 checked-output output-equivalence, Q1 checked-processing output-equivalence, Q2 checked-processing output-equivalence, checked RunBoth 100k/1M medians plus attribution, 3-run Commix control, first full-month output-equivalence control, post-pool-cap checked full-month run, and post-pool-cap same-run full-month heap/checked control |
+| Phase 5: application evidence | In progress | Bounded-sample medians plus diagnostic attribution, safe-API probes, and single-run full-month controls | DEBS correctness, 100k/1M trusted medians, opt-in GC heap allocation attribution, Q1 checked-output output-equivalence, Q1 checked-processing output-equivalence, Q2 checked-processing output-equivalence, checked RunBoth 100k/1M medians plus attribution, 3-run Commix control, first full-month output-equivalence control, post-pool-cap checked full-month run, post-pool-cap same-run full-month heap/checked control, trusted full-month Streaming control, and checked `ChildBucket` single-control-object follow-up |
 | Phase 6: literature-aligned methodology evidence | Started | Validated methodology medians with caveats | Broom-style dataflow including checked SELECT/AGGREGATE/JOIN modes, StreamFlex-style latency/throughput, Yak-style control/data plus grouped sort, top-word/filter, GraphChi-style subintervals, and runtime promotion proxy, Stancu-style transaction accounting |
 | Phase 6b: Broom / parallel collections API evidence | Open | Provisional surrogate only | amordo comparison and Rift raw-array surrogate |
 | Phase 7: capture-checked safe API | Started | Compiler-probe, runtime-smoke, focused checked-container benchmark, checked dataflow evidence, and DEBS-shaped checked probes | 54 targeted checked-API compiler probes, checked child-window and child-bucket close-through-cleanup runtime probes, `CheckedRegionBufferMatrix`, Dataflow SELECT/AGGREGATE/JOIN `rift-checked`, Q1 checked-output, Q1 checked-processing, Q2 checked-processing, checked RunBoth `rift-checked` medians, plus Phase 4 safety finding |
@@ -910,16 +910,41 @@ Same-run full-month pool-cap control:
 | month 1 full | heap | 14776529 | 71.919 | 71.96 | 69.58 | 0.323 | 579.1 | 0.000 | 0.0 | 0.0 | single run, output matched |
 | month 1 full | rift-checked | 14776529 | 77.947 | 77.98 | 74.24 | 0.190 | 695.2 | 1.137 | 128.0 | 864.4 | single run, output matched |
 
-- This is the best current full-month control because both modes used the
-  same current binary, input, harness, and external timing/RSS path.
-- Checked Rift is slower by about `6.0 s` on this single full-month run, while
-  measured GC collection time is lower by about `0.13 s`.
+- This was the first same-binary full-month heap/checked pool-cap control using
+  the same input, harness, and external timing/RSS path.
+- Checked Rift was slower by about `6.0 s` on this single full-month run, while
+  measured GC collection time was lower by about `0.13 s`.
 - The pool cap keeps checked peak RSS much closer to heap than the pre-cap
   checked row, but checked still uses about `116 MiB` more RSS than heap.
 - Rift operation time is about `1.14 s` across `6.89M` opens/closes and
   `68.8M` region object allocations, so the remaining full-month gap is mostly
   Q1/Q2 processing/read/parse differences and full-scale memory locality rather
   than raw region bookkeeping.
+
+Trusted backend and checked `ChildBucket` follow-up:
+
+| Input | Mode | Elapsed s | External real s | User+sys s | GC s | RSS MiB | Rift op s | Evidence |
+|---|---|---:|---:|---:|---:|---:|---:|---|
+| month 1 full | heap | 73.888 | 73.92 | 70.90 | 0.360 | 595.7 | 0.000 | single run, output matched |
+| month 1 full | rift-streaming | 68.990 | 69.00 | 68.39 | 0.088 | 801.7 | 0.898 | single run, output matched |
+| 1M post-`ChildBucket` | heap | 4.810 | 5.16 | 4.76 | 0.020 | 152.6 | 0.000 | single run, output matched |
+| 1M post-`ChildBucket` | rift-checked | 4.678 | 4.68 | 4.58 | 0.002 | 119.9 | 0.017 | single run, output matched |
+| month 1 full post-`ChildBucket` | heap | 70.872 | 70.90 | 69.02 | 0.315 | 586.4 | 0.000 | single run, output matched |
+| month 1 full post-`ChildBucket` | rift-checked | 65.928 | 65.95 | 65.60 | 0.086 | 866.6 | 0.816 | single run, output matched |
+| month 1 full reverse post-`ChildBucket` | rift-checked | 68.435 | 68.46 | 66.95 | 0.086 | 910.7 | 0.893 | usable checked row |
+| month 1 full reverse post-`ChildBucket` | heap | 1871.373 | 1871.42 | 89.32 | 0.401 | 583.3 | 0.000 | invalid wall-clock row |
+
+- Trusted `rift-streaming` is faster than heap in the full-month single-run
+  control, so the post-pool-cap region backend is not the current blocker.
+- The checked API shape matters: changing `ChildBucket` from a
+  `ChildWindow`+`ChildBucket` wrapper pair to one control object removes a hot
+  checked-stream overhead and improves checked full-month elapsed in the usable
+  rows.
+- RSS does not improve. Checked full-month RSS is `866-911 MiB` after this
+  change, so the result should be cited as elapsed/checker-overhead evidence
+  only.
+- The reverse-order heap row is invalid because wall time was `1871.42 s` but
+  user+sys time was only about `89.32 s`.
 
 Common Q2 incremental-median diagnostics at 1M:
 
@@ -1503,6 +1528,12 @@ Status:
   `71.919 s`, `0.323 s` GC, `579.1 MiB` RSS versus checked `77.947 s`,
   `0.190 s` GC, `695.2 MiB` RSS. Treat it as full-scale evidence and
   memory/churn diagnosis, not as final repeated heap-vs-Rift evidence.
+- A trusted full-month Streaming control is faster than heap (`68.990 s` vs
+  `73.888 s`), which points the current full-month checked gap at safe-API
+  shape rather than the region backend. The `ChildBucket` single-control-object
+  follow-up then gives usable checked rows of `65.928 s` and `68.435 s`, but
+  RSS worsens to `866-911 MiB`. Treat this as checked-overhead evidence, not a
+  final memory-footprint result.
 - Latest DEBS phase breakdown shows remaining cost is mostly Q1/Q2 CPU and
   file I/O rather than Rift bookkeeping or GC collection.
 - The pipeline/parallel-collections story is still a surrogate until a fair

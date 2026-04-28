@@ -76,9 +76,12 @@ Current reliable evidence:
   reducing measured GC collection time. The first full-month checked RunBoth
   control matched heap output but had invalid checked wall-clock timing. A
   runtime pool-cap control then made full-month checked runs practical. The
-  current same-run full-month control is heap `71.919 s`, `0.323 s` GC,
+  first same-run full-month pool-cap control is heap `71.919 s`, `0.323 s` GC,
   `579.1 MiB` RSS versus checked `77.947 s`, `0.190 s` GC, `695.2 MiB` RSS,
-  with matching output. This is still not a final full-DEBS claim because
+  with matching output. The later `ChildBucket` single-control-object follow-up
+  shows checked full-month rows at `65.928 s` and `68.435 s`, but RSS rises to
+  about `866-911 MiB`; treat this as checked-API overhead evidence, not a
+  memory-footprint win. This is still not a final full-DEBS claim because
   repeated medians, SafeZone controls, and stronger safe API boundaries remain
   open.
 - Phase 7 checked API evidence has started. The targeted Scala-next compiler
@@ -697,6 +700,18 @@ Same-run full-month pool-cap control:
 | month 1 full peak RSS bytes | 607240192 | 728940544 | single run |
 | month 1 full Rift op time | 0.000 s | 1.137 s | single run |
 
+Checked `ChildBucket` single-control-object follow-up:
+
+| Run | Heap | Rift checked / streaming | Evidence level |
+|---|---:|---:|---|
+| full-month trusted Streaming elapsed | 73.888 s | 68.990 s | single run, output matched |
+| full-month trusted Streaming GC time | 0.360 s | 0.088 s | single run |
+| full-month trusted Streaming peak RSS bytes | 624623616 | 840646656 | single run |
+| 1M checked after `ChildBucket` change, elapsed | 4.810 s | 4.678 s | single run, output matched |
+| full-month checked after `ChildBucket` change, elapsed | 70.872 s | 65.928 s | single run, output matched |
+| full-month checked after `ChildBucket` change, GC time | 0.315 s | 0.086 s | single run |
+| full-month checked after `ChildBucket` change, peak RSS bytes | 614891520 | 908656640 | single run |
+
 Interpretation:
 
 - Rift has credible same-layout runtime wins on GCBench and linked ListOfLists.
@@ -708,7 +723,10 @@ Interpretation:
   performance evidence. The pool-cap follow-up fixes the closed-slab retention
   problem enough to produce a credible same-run full-month control. In that
   single run, checked is slower than heap by about `6.0 s`, while GC collection
-  time is lower and RSS is much closer to heap than before the cap. SafeZone,
+  time is lower and RSS is much closer to heap than before the cap. The
+  `ChildBucket` follow-up then shows the checked API shape itself matters:
+  removing one heap control object per checked bucket makes checked full-month
+  elapsed faster in two usable checked rows, but RSS gets worse. SafeZone,
   repeated full-month medians, and stronger safe API boundaries are still
   missing for the final application claim.
 - Checked RunBoth is now median-backed on bounded 100k/1M samples. It is
