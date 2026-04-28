@@ -9,8 +9,8 @@ Active implementation branch for this update:
 `feature/rift`
 
 Implementation commit at this update:
-`be42ea22c`
-(`Add checked indexed priority queue`)
+`088fe2a59`
+(`Add checked Q1 window rank arenas`)
 
 Status: active research fork. The Phase 5 input-boundary checkpoint, reusable
 ranking backend, Q2 bounded cell-table checkpoint, Q1 primitive route-table
@@ -184,9 +184,10 @@ fixes, median reads, rank comparisons, profit entries, and empty entries are
 identical between heap and checked, while Q1 checked rank creations rise from
 `6195167` to `14487771` because checked rank objects are refreshed into the
 current child-bucket lifetime. Treat these rows as perturbing attribution
-evidence, not headline throughput. The next implementation-facing work is to
-reduce Q1 rank-refresh churn without one child region per route and to explain
-the checked Q2 overhead with identical operation counts; full-month SafeZone
+evidence, not headline throughput. The follow-up Q1 window-rank arena reduces
+this churn without one child region per route. The next implementation-facing
+work is to generalize that pattern into reusable checked APIs and explain the
+checked Q2 overhead with identical operation counts; full-month SafeZone
 controls are optional rather than blocking that CPU work.
 The newest general-framework checkpoint adds `RegionPriorityQueue` and
 `CheckedRegionPriorityQueueMatrix` as a reusable checked ranking/top-k
@@ -207,6 +208,21 @@ Treat this as API/safety evidence, not a speed claim: it validates the
 fetch/mutate/update state shape needed to reduce Q1/Q2 rank-refresh churn
 without inventing a DEBS-only algorithm. Remaining work is richer tie-breaking,
 hash/non-dense key support, and integration into real operators.
+The latest Phase 5 checkpoint applies the same lifetime idea to real DEBS Q1:
+checked Q1 now separates per-second event buckets from coarser rank arenas
+whose lifetime matches the Q1 window. Routes refreshed inside the same rank
+arena mutate their existing ordinary Scala `CheckedRankedRoute` object graph;
+routes crossing an arena boundary allocate a new rank graph in the later arena.
+This preserves the heap/Rift logical query algorithm while changing allocation
+placement/lifetime. The 1M non-diagnostic heap/checked 3-run median is a
+near-tie: heap `4601.532 ms`, `20.335 ms` GC, `153.7 MiB` RSS versus checked
+`4610.413 ms`, `2.304 ms` GC, `63.9 MiB` RSS and `7.577 ms` Rift op time. A
+single full-month scale check matched outputs and measured heap `72.445 s`,
+`304.485 ms` GC, `594.4 MiB` RSS versus checked `72.556 s`, `86.404 ms` GC,
+`447.8 MiB` RSS and `949.899 ms` Rift op time. Full-month checked Q1 rank
+objects fall from the previous checked `14487771` per-refresh shape to
+`8842434`; heap creates `6195167`. Treat this as a successful lifetime/memory
+checkpoint and a reusable arena pattern, not as a final DEBS speed claim.
 A Scala-next checked Rift-region API slice has been reviewed and
 merged into `feature/rift` at `79953ad8d`; its source branch was
 `codex/safe-region-api-checked-slice` at `e8c3b961d`. The Q2 incremental
@@ -233,7 +249,10 @@ extraction was committed at `1663befb3`; Q2 top-cache medians were recorded at
 static heap metadata was committed at `bed92644`; checked `RegionBuffer` was
 committed at `664c489e1`; the checked `RegionBuffer` matrix was committed at
 `d86a68000`; checked Dataflow SELECT was committed at `69233e542`; checked
-Dataflow AGGREGATE/JOIN was committed at `4ab5b898b`. The
+Dataflow AGGREGATE/JOIN was committed at `4ab5b898b`; checked
+`RegionPriorityQueue` was committed at `07ad90177`; checked
+`RegionIndexedPriorityQueue` was committed at `be42ea22c`; checked Q1
+window-rank arenas were committed at `088fe2a59`. The
 checked API is not a
 complete compiler capture-checking implementation. The fork is ahead of
 `origin/feature/rift` unless pushed.
@@ -2368,10 +2387,10 @@ Benchmarking uncertainties:
   SafeZone or provide compiler-produced annotation/capture reports.
 - Older result packs were generated from then-uncommitted code. The current
   input-boundary, ranking/result, Q2 cell-table, Q1 route-table, Q2 taxi-table,
-  and Q2 array-ranking experiments now have local commit boundaries once this
-  update is committed, but public claims still need pushed provenance,
-  optional full-month SafeZone context, Q1 rank-refresh overhead reduction, and
-  checked Q2 overhead explanation.
+  Q2 array-ranking, and checked Q1 window-rank experiments now have local
+  commit boundaries, but public claims still need pushed provenance, optional
+  full-month SafeZone context, reusable rank/window APIs, and checked Q2
+  overhead explanation.
 
 Provenance risks:
 
@@ -2693,9 +2712,10 @@ single-run closeable SafeZone control recorded at the top of this handoff.
 With checked RunBoth medians and attribution in place, the safest next
 technical action is either a reusable checked bucket/window abstraction with a
 stronger static close proof, or the remaining DEBS CPU work. The remaining
-DEBS work is no longer basic SafeZone/control instrumentation: it is Q1
-rank-refresh overhead reduction without one child region per route, checked Q2
-same-count overhead explanation, and optional full-month SafeZone context.
+DEBS work is no longer basic SafeZone/control instrumentation: it is
+generalizing the accepted Q1 window-rank arena into a reusable checked
+rank/window API, checked Q2 same-count overhead explanation, and optional
+full-month SafeZone context.
 
 Latest validation for this step:
 
@@ -3137,9 +3157,69 @@ Interpretation:
 - Checked still reduces GC collection time, but that saves only about
   `0.168 s` at the median while checked pays about `0.779 s` in Rift
   operation timing and slower Q1/Q2 process phases.
-- The next useful DEBS work is Q1 rank-refresh overhead reduction without
-  one child region per route, plus checked Q2 overhead investigation under
-  identical operation counts.
+- The next useful DEBS work is generalizing the Q1 window-rank arena into a
+  reusable checked rank/window API, plus checked Q2 overhead investigation
+  under identical operation counts.
+
+## Latest Update: Checked Q1 Window Rank Arenas
+
+Date: 2026-04-28
+
+What changed:
+
+- Added separate Q1 rank buckets in
+  `scala-native-rift/sandbox/src/main/scala-next/debs2015/Debs2015Q1CheckedProcessingRun.scala`.
+- The existing per-second event buckets still hold `RouteEvent` nodes and drive
+  eviction. The new rank buckets hold ordinary Scala `CheckedCell`,
+  `CheckedRoute`, and `CheckedRankedRoute` object graphs.
+- Rank buckets use the Q1 window length (`30 min`). A rank bucket is closed
+  only after every event in the bucket interval has left the sliding window.
+- If a route is refreshed inside the same rank bucket, checked Q1 mutates the
+  existing region object graph and fixes the rank heap. If it crosses a rank
+  bucket boundary, checked Q1 allocates a new rank object graph in the later
+  bucket.
+
+Validation:
+
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile` passed.
+- Sample RunBoth `heap`/`rift-checked` outputs matched in
+  `/tmp/debs2015-runboth-q1-rankbucket-sample`.
+- 100k and 1M diagnostic heap/checked runs matched outputs.
+- 1M non-diagnostic 3-run heap/checked medians matched outputs.
+- One full-month heap/checked scale check matched outputs.
+
+1M non-diagnostic medians:
+
+| Mode | Elapsed ms | Real s | GC ms | RSS MiB | Rift op ms | Q1 process ms | Q2 process ms | Q1 rank created |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| heap | 4601.532 | 4.61 | 20.335 | 153.7 | 0.000 | 1406.251 | 1169.163 | 573523 |
+| rift-checked | 4610.413 | 4.61 | 2.304 | 63.9 | 7.577 | 1489.462 | 1175.684 | 725262 |
+
+Full-month single-run scale check:
+
+| Mode | Elapsed s | Real s | User+sys s | GC ms | RSS MiB | Rift op ms | Q1 process s | Q2 process s | Q1 rank created |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| heap | 72.445 | 72.48 | 70.65 | 304.485 | 594.4 | 0.000 | 20.726 | 20.853 | 6195167 |
+| rift-checked | 72.556 | 72.58 | 72.05 | 86.404 | 447.8 | 949.899 | 22.368 | 21.915 | 8842434 |
+
+Interpretation:
+
+- This is a general streaming-lifetime pattern, not a DEBS-only algorithm
+  change: event records can live in fine buckets while rank/output snapshots
+  live in coarser arenas whose close point follows the query window.
+- It cuts checked Q1 rank churn without the rejected one-child-region-per-route
+  design. At full-month scale, checked rank objects fall from the previous
+  `14487771` per-refresh count to `8842434`.
+- It does not fully match heap's durable-rank count because routes that remain
+  active across a rank-window boundary must receive a new region object graph
+  in the later arena.
+- The bounded 1M result is an elapsed near-tie, while the full-month single
+  row is mainly a memory/lifetime success: checked RSS is lower than heap in
+  this row. It needs repeated full-month medians before becoming a throughput
+  claim.
+- The next framework work should expose this as a reusable checked
+  window/ranking API and add stronger static close-discipline tests. Checked Q2
+  same-operation CPU overhead remains open.
 
 ## Unsafe Assumptions To Avoid
 
@@ -3148,10 +3228,12 @@ Interpretation:
   pool-cap plus `ChildBucket` controls now include a same-order full-month
   3-run median. Per-family attribution found and fixed the Q1 rank lifetime
   issue, and the post-fix full-month control is now near-tie on elapsed with
-  heap-scale RSS. SafeZone 1M controls and checked process diagnostics now
-  exist, but Q1 rank-refresh overhead reduction, checked Q2 same-count overhead
-  explanation, optional full-month SafeZone comparison, and stronger safe-API
-  controls are still missing.
+  heap-scale RSS. The Q1 window-rank arena then reduced, but did not eliminate,
+  the checked rank-refresh churn and produced a full-month single-run RSS win.
+  SafeZone 1M controls and checked process diagnostics now exist, but reusable
+  rank/window APIs, checked Q2 same-count overhead explanation, optional
+  full-month SafeZone comparison, and stronger safe-API controls are still
+  missing.
 - "GC time should disappear because Q1/Q2 windows and input bytes use Rift."
   `gc_time_ns` is collection time only. Some former heap-heavy paths have
   moved, including taxi-id bytes/entries and latency backing arrays, and the
@@ -3165,9 +3247,9 @@ Interpretation:
 - "SafeZone is solved." Improved SafeZone is much better on some workloads, but current SafeZone pathologies and workload sensitivity still matter.
 - "Layout wins prove allocator wins." They are separate effects.
 - "The current bounded-sample medians prove a final DEBS win." They do not;
-  Q1 rank-refresh overhead reduction, checked Q2 overhead explanation,
-  optional full-month SafeZone controls, and safe API boundaries are still
-  missing.
+  Q1 rank-refresh overhead is reduced but not fully generalized, checked Q2
+  overhead explanation, optional full-month SafeZone controls, and safe API
+  boundaries are still missing.
 - "Same-second checked Q1 rank reuse will reduce rank churn." It did not on the
   100k diagnostic: checked still created `98005` rank objects for `98005` rank
   refreshes, so the hot-path branch was backed out.

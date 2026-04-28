@@ -204,9 +204,8 @@ framing:
   a near-tie on elapsed time with much better checked RSS than the earlier
   checked run. Closeable SafeZone DEBS controls also exist at 100k and 1M. This
   still does not prove a final application-level win because full-month
-  SafeZone controls, Q1 rank-refresh overhead reduction, checked Q2
-  same-operation overhead explanation, and safe API boundaries are still
-  incomplete.
+  SafeZone controls, reusable rank/window APIs, checked Q2 same-operation
+  overhead explanation, and safe API boundaries are still incomplete.
 - The literature-review target is broader than local baselines: Rift must be
   compared against Broom, StreamFlex, Yak, Stancu-style hybrid static analysis,
   the MLKit typed-region lineage, and Reggio/Verona-style capabilities.
@@ -802,10 +801,13 @@ Interpretation:
   median, but not a large speedup. The closeable SafeZone DEBS controls now
   have 1M medians: SafeZone is lower-RSS than heap but slower than heap and
   checked Rift. Opt-in process diagnostics show Q2 has identical operation
-  counts between heap and checked; the remaining checked CPU work is now Q1
-  rank-refresh churn and checked-region overhead with the same Q2 algorithm.
-  Stronger safe API boundaries are still missing for the final application
-  claim.
+  counts between heap and checked. The next Q1 fix introduces coarser
+  window-rank arenas: checked Q1 keeps per-second event buckets for eviction,
+  but stores ordinary Scala rank object graphs in arenas whose lifetime matches
+  the Q1 window. This reduces checked rank churn and gives a full-month
+  single-run RSS win, but still leaves checked Q1/Q2 CPU overhead and needs a
+  reusable API plus stronger safe API boundaries before it can support a final
+  application claim.
 - Checked RunBoth is now median-backed on bounded 100k/1M samples. It is
   encouraging Phase 5/7 evidence, but not an apples-to-apples proof that the
   checked API is always faster than the trusted API because the trusted and
@@ -868,9 +870,10 @@ Claims that are not yet supported:
   Q2 top-cache and checked RunBoth medians plus allocation-attribution evidence,
   including a 3-run Commix control, one full-month output-equivalence run, one
   post-pool-cap same-run full-month timing row, one post-Q1-lifetime-fix
-  heap/checked full-month 3-run median, and bounded closeable SafeZone DEBS
-  medians, but not SafeZone full-month controls, Q1/Q2 CPU-overhead reduction,
-  or complete safe-API controls.
+  heap/checked full-month 3-run median, a Q1 window-rank arena checkpoint, and
+  bounded closeable SafeZone DEBS medians, but not SafeZone full-month
+  controls, Q1/Q2 CPU-overhead reduction, reusable checked rank/window APIs, or
+  complete safe-API controls.
 - Rift has a capture-checked safe API.
 - Rift beats Broom, StreamFlex, Yak, Stancu et al., or Reggio on their strongest
   axes.

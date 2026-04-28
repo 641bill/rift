@@ -84,7 +84,7 @@ For performance numbers, use the following rule of thumb:
 | Phase 2: in-tree runtime/compiler path | Partially done | Partially validated | RiftRegionTest and integration status, no standalone perf table |
 | Phase 3: runtime-only evaluation | Done enough for current claim | Validated with caveats | Same-layout GCBench/ListOfLists runtime medians |
 | Phase 4: topology/layout decomposition | Done enough to move on | Validated/provisional mix | Layout, topology, targeted runtime follow-up, safety finding |
-| Phase 5: application evidence | In progress | Bounded-sample medians plus diagnostic attribution, safe-API probes, single-run full-month controls, full-month heap/checked medians, and SafeZone DEBS controls | DEBS correctness, 100k/1M trusted medians, opt-in GC heap allocation attribution, Q1 checked-output output-equivalence, Q1 checked-processing output-equivalence, Q2 checked-processing output-equivalence, checked RunBoth 100k/1M medians plus attribution, 3-run Commix control, first full-month output-equivalence control, post-pool-cap checked full-month run, post-pool-cap same-run full-month heap/checked control, trusted full-month Streaming control, checked `ChildBucket` same-order full-month 3-run median, active-memory diagnostics, region-family attribution, Q1 rank lifetime narrowing, post-fix full-month heap/checked median, 100k SafeZone controls, and 1M current/improved SafeZone medians |
+| Phase 5: application evidence | In progress | Bounded-sample medians plus diagnostic attribution, safe-API probes, single-run full-month controls, full-month heap/checked medians, and SafeZone DEBS controls | DEBS correctness, 100k/1M trusted medians, opt-in GC heap allocation attribution, Q1 checked-output output-equivalence, Q1 checked-processing output-equivalence, Q2 checked-processing output-equivalence, checked RunBoth 100k/1M medians plus attribution, 3-run Commix control, first full-month output-equivalence control, post-pool-cap checked full-month run, post-pool-cap same-run full-month heap/checked control, trusted full-month Streaming control, checked `ChildBucket` same-order full-month 3-run median, active-memory diagnostics, region-family attribution, Q1 rank lifetime narrowing, post-fix full-month heap/checked median, checked Q1 window-rank arenas, 100k SafeZone controls, and 1M current/improved SafeZone medians |
 | Phase 6: literature-aligned methodology evidence | Started | Validated methodology medians with caveats | Broom-style dataflow including checked SELECT/AGGREGATE/JOIN modes, StreamFlex-style latency/throughput, Yak-style control/data plus grouped sort, top-word/filter, GraphChi-style subintervals, and runtime promotion proxy, Stancu-style transaction accounting |
 | Phase 6b: Broom / parallel collections API evidence | Open | Provisional surrogate only | amordo comparison and Rift raw-array surrogate |
 | Phase 7: capture-checked safe API | Started | Compiler-probe, runtime-smoke, focused checked-container benchmark, checked dataflow evidence, and DEBS-shaped checked probes | 63 targeted checked-API compiler probes, checked child-window and child-bucket close-through-cleanup runtime probes, `CheckedRegionBufferMatrix`, `CheckedRegionPriorityQueueMatrix`, `CheckedRegionIndexedPriorityQueueMatrix`, Dataflow SELECT/AGGREGATE/JOIN `rift-checked`, Q1 checked-output, Q1 checked-processing, Q2 checked-processing, checked RunBoth `rift-checked` medians, plus Phase 4 safety finding |
@@ -101,7 +101,7 @@ For performance numbers, use the following rule of thumb:
 | Phase 2 | Integrated Rift into Scala Native runtime/compiler paths. | Mostly enablement work; judged by smoke/tests more than standalone speed tables. |
 | Phase 3 | Reran same-layout runtime matrices. | Rift has credible allocator/runtime wins on allocation-heavy linked structures. |
 | Phase 4 | Split allocator effects from layout/topology effects. | Layout and reference topology can dominate allocator choice; mixed region/GC references require a safety story. |
-| Phase 5 | Built DEBS Q1/Q2 runners and progressively moved structured-lifetime state into regions; added checked Q1 output/ranking, checked Q1 processing, checked Q2 processing probes, active-memory diagnostics, region-family attribution, and a closeable SafeZone Q1/Q2 control mode. | Current DEBS evidence shows bounded-sample elapsed/RSS wins and much lower heap allocation pressure. Full-month heap/checked medians are now near-tied after fixing one wrong checked lifetime: Q1 rank object graphs were parent-lived instead of bucket-lived. Q1/Q2 CPU overhead, I/O, optional SafeZone full-month controls, and stronger checked boundaries still keep it short of final application proof. |
+| Phase 5 | Built DEBS Q1/Q2 runners and progressively moved structured-lifetime state into regions; added checked Q1 output/ranking, checked Q1 processing, checked Q2 processing probes, active-memory diagnostics, region-family attribution, Q1 window-rank arenas, and a closeable SafeZone Q1/Q2 control mode. | Current DEBS evidence shows bounded-sample elapsed/RSS wins and much lower heap allocation pressure. Full-month heap/checked medians are now near-tied after fixing one wrong checked lifetime: Q1 rank object graphs were parent-lived instead of bucket-lived. The Q1 window-rank arena further reduces rank churn and gives a single-run full-month RSS win, but Q1/Q2 CPU overhead, I/O, optional SafeZone full-month controls, reusable rank/window APIs, and stronger checked boundaries still keep it short of final application proof. |
 | Phase 6 | Built methodology harnesses for Broom/StreamFlex/Yak/Stancu comparison axes. | These support the broader research story but are not exact reproductions of closed or unavailable artifacts. |
 | Phase 7 | Added checked `scoped`/`streaming` API probes using Scala capture checking. | Source-level safety evidence is started; ergonomics and broader container patterns remain open. |
 | Phase 8 | Added explicit heap-root handles and conservative mixed-reference rejection. | Region memory is not GC-scanned, so region-to-heap references need roots or static rejection. |
@@ -1116,6 +1116,26 @@ Rejected Q1 route-lifetime child-bucket probe:
   route made region count and RSS worse. Do not repeat this design; look for
   shared arenas or rank/output snapshots without per-route regions.
 
+Checked Q1 window-rank arenas:
+
+| Input | Mode | Elapsed | GC | RSS MiB | Rift op | Q1 process | Q2 process | Q1 rank created | Evidence |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---|
+| 1M median | heap | 4601.532 ms | 20.335 ms | 153.7 | 0.000 ms | 1406.251 ms | 1169.163 ms | 573523 | 3-run median, output matched |
+| 1M median | rift-checked | 4610.413 ms | 2.304 ms | 63.9 | 7.577 ms | 1489.462 ms | 1175.684 ms | 725262 | 3-run median, output matched |
+| month 1 full | heap | 72.445 s | 304.485 ms | 594.4 | 0.000 ms | 20.726 s | 20.853 s | 6195167 | single run, output matched |
+| month 1 full | rift-checked | 72.556 s | 86.404 ms | 447.8 | 949.899 ms | 22.368 s | 21.915 s | 8842434 | single run, output matched |
+
+- This is the accepted shared-arena alternative to one child region per route.
+  Checked Q1 keeps per-second event buckets for eviction but stores ordinary
+  Scala rank object graphs in coarser arenas whose lifetime is the Q1 window.
+- It reduces checked Q1 rank creation from the old per-refresh shape
+  (`979699` at 1M and `14487771` full-month) to `725262` at 1M and `8842434`
+  full-month. It does not fully match heap because active routes crossing a
+  rank-window boundary need a new region object graph.
+- The 1M median is an elapsed near-tie; the full-month row is a single-run
+  memory/lifetime success, not a throughput claim. The next step is a reusable
+  checked rank/window API and stronger static close discipline.
+
 ## Phase 6: Literature-Aligned Methodology Evidence
 
 Sources:
@@ -1746,9 +1766,13 @@ Status:
   operation counts are identical between heap and checked on the full-month
   input, while Q1 checked rank creations rise from `6195167` to `14487771`
   because checked rank objects are refreshed into child-bucket lifetimes. The
-  next memory/performance work is reducing Q1 rank-refresh churn without one
-  child region per route and explaining checked Q2 overhead with identical
-  counts, not another pool cap tweak.
+  window-rank arena checkpoint reduces that full-month checked count to
+  `8842434` without one child region per route and records a single full-month
+  RSS win (`447.8 MiB` checked versus `594.4 MiB` heap), but the 1M elapsed
+  median is a near-tie and full-month timing is single-run. The next work is
+  reusable checked rank/window APIs, stronger close-discipline tests, and
+  explaining checked Q2 overhead with identical counts, not another pool cap
+  tweak.
 - Latest DEBS phase breakdown shows remaining cost is mostly Q1/Q2 CPU and
   file I/O rather than Rift bookkeeping or GC collection.
 - The pipeline/parallel-collections story is still a surrogate until a fair
