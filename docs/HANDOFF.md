@@ -143,6 +143,12 @@ child-bucket probe reduced 100k checked Q1 rank creation back to heap scale
 and did not improve elapsed time. Do not pursue one child region per active
 route; the next Q1 design needs shared arenas or output/rank snapshots without
 per-route regions.
+Another narrower Q1 same-second reuse probe was also rejected. The idea was to
+mutate an existing checked rank object when a route was refreshed within the
+same dropoff-second bucket, because that object would already have the right
+child lifetime. A 100k diagnostic compile/run showed no useful effect:
+`rift-checked` still created `98005` Q1 rank objects for `98005` rank refreshes.
+The code change was backed out to avoid carrying an extra hot-path branch.
 The latest checkpoint adds a closeable SafeZone DEBS control. `Q1SafeZone` and
 `Q2SafeZone` use the same Q1/Q2 bucket/ranking algorithms as heap and trusted
 Rift, but allocate Q1/Q2 data structures through explicit `SafeZone.open()` /
@@ -3131,6 +3137,9 @@ Interpretation:
   Q1 rank-refresh overhead reduction, checked Q2 overhead explanation,
   optional full-month SafeZone controls, and safe API boundaries are still
   missing.
+- "Same-second checked Q1 rank reuse will reduce rank churn." It did not on the
+  100k diagnostic: checked still created `98005` rank objects for `98005` rank
+  refreshes, so the hot-path branch was backed out.
 - "The Q2 top-10 cache medians are final DEBS evidence." They are not; they are
   bounded-sample evidence and still lack SafeZone controls and safe API
   boundaries.
