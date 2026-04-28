@@ -9,8 +9,8 @@ Active implementation branch for this update:
 `feature/rift`
 
 Implementation commit at this update:
-`cd9b86a0a`
-(`Add checked stream bucket arena API`)
+`4f310d21f`
+(`Add checked stream window rank API`)
 
 Status: active research fork. The Phase 5 input-boundary checkpoint, reusable
 ranking backend, Q2 bounded cell-table checkpoint, Q1 primitive route-table
@@ -231,6 +231,14 @@ now provide the checked stream-bucket primitive. The focused compiler suite now
 passes `65/65`, the native checked runtime test passes `16/16`, and sample plus
 100k RunBoth `heap`/`rift-checked` controls matched outputs. Treat this as a
 Phase 7 API/correctness checkpoint, not a new DEBS median.
+The latest framework checkpoint adds `RiftRegion.StreamWindowIndexedRank`,
+which composes `StreamBucketArena` with the checked
+`RegionIndexedPriorityQueue`. It gives stream operators a reusable dense-key
+rank collection whose values can be ordinary Scala objects allocated in
+child-window regions and widened through the parent stream owner token. The
+operator still owns semantic cleanup: keys whose values live in a closing
+bucket must be removed before close. The focused compiler suite now passes
+`67/67`; the native checked runtime suite passes `17/17`.
 A Scala-next checked Rift-region API slice has been reviewed and
 merged into `feature/rift` at `79953ad8d`; its source branch was
 `codex/safe-region-api-checked-slice` at `e8c3b961d`. The Q2 incremental
@@ -261,7 +269,8 @@ Dataflow AGGREGATE/JOIN was committed at `4ab5b898b`; checked
 `RegionPriorityQueue` was committed at `07ad90177`; checked
 `RegionIndexedPriorityQueue` was committed at `be42ea22c`; checked Q1
 window-rank arenas were committed at `088fe2a59`; the reusable checked
-`StreamBucketArena` API was committed at `cd9b86a0a`. The
+`StreamBucketArena` API was committed at `cd9b86a0a`; checked
+`StreamWindowIndexedRank` was committed at `4f310d21f`. The
 checked API is not a
 complete compiler capture-checking implementation. The fork is ahead of
 `origin/feature/rift` unless pushed.
@@ -2525,12 +2534,19 @@ Immediate next step:
     for the accepted window-rank arena pattern. This generalizes the bucket
     lifetime primitive, but it is still below a full checked rank/window
     collection API.
+13. `RiftRegion.StreamWindowIndexedRank` is implemented as the first higher
+    checked rank/window collection. It combines `StreamBucketArena` with
+    `RegionIndexedPriorityQueue`, checks direct heap stores through the
+    compiler guard, and has compiler/runtime probes. It is dense-key and
+    single-`Long` priority only; richer comparator and hash-key variants remain
+    open.
 
 Next technical milestone:
 
-1. Build the next higher-level checked rank/window collection on top of
-   `StreamBucketArena`, so operators can reuse the same lifetime discipline
-   without hand-rolled bucket metadata.
+1. Apply or benchmark `StreamWindowIndexedRank` in a focused stream-window
+   harness, then decide whether Q1/Q2 need a richer comparator/hash-key
+   variant or whether the next DEBS work should be the checked Q2 same-count
+   overhead investigation.
 2. Continue the DEBS "region-heavy" path with measurement first after the
    checked RunBoth median and attribution checkpoints. The next DEBS work
    should be a safety abstraction or control run, not a blind region-allocation
@@ -3295,6 +3311,45 @@ Interpretation:
   primitive, then investigate checked Q2 overhead under identical operation
   counts.
 
+## Latest Update: Checked StreamWindowIndexedRank API
+
+Date: 2026-04-28
+
+What changed:
+
+- Added `RiftRegion.StreamWindowIndexedRank` in
+  `scala-native-rift/nativelib/src/main/scala-next/scala/scalanative/memory/RiftRegion.scala`.
+- Added owner-token helpers for opening window buckets, inserting/updating
+  ranked values, peeking/popping ranked values, removing keys, querying length,
+  and closing window buckets.
+- Extended the Scala 3 lowering guard in
+  `scala-native-rift/nscplugin/src/main/scala-3/scala/scalanative/nscplugin/NirGenExpr.scala`
+  so `putWindowRank` rejects direct unrooted heap objects.
+- Added compiler probes and a native runtime smoke for storing ordinary Scala
+  objects allocated in a child window region, removing them before close, and
+  rejecting direct heap values.
+
+Validation:
+
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile` passed.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"`
+  passed `67/67`.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionCheckedTest"`
+  passed `17/17`.
+
+Interpretation:
+
+- This is the first higher-level checked rank/window collection above
+  `StreamBucketArena`. It is framework work, not a DEBS algorithm change.
+- It gives stream operators a reusable way to keep dense-key rank state in a
+  parent stream while placing ranked objects in child-window regions.
+- Cleanup is still explicit: callers must remove keys and clear parent-visible
+  references in the close callback before a bucket closes.
+- The API is intentionally narrow: dense integer keys and one `Long` priority.
+  DEBS Q1 still needs richer tie-breaking or a specialized comparator layer;
+  Q2 can use the shape more directly but still needs same-operation overhead
+  investigation before integration.
+
 ## Unsafe Assumptions To Avoid
 
 - "Rift already has final DEBS application proof." It does not. The current
@@ -3305,9 +3360,10 @@ Interpretation:
   heap-scale RSS. The Q1 window-rank arena then reduced, but did not eliminate,
   the checked rank-refresh churn and produced a full-month single-run RSS win.
   The reusable `StreamBucketArena` API now generalizes the bucket lifetime
-  primitive, but higher-level rank/window collections, checked Q2 same-count
-  overhead explanation, optional full-month SafeZone comparison, and stronger
-  safe-API controls are still missing.
+  primitive, and `StreamWindowIndexedRank` is the first dense-key rank/window
+  collection. Checked Q2 same-count overhead explanation, richer comparator or
+  hash-key rank collections, optional full-month SafeZone comparison, and
+  stronger safe-API controls are still missing.
 - "GC time should disappear because Q1/Q2 windows and input bytes use Rift."
   `gc_time_ns` is collection time only. Some former heap-heavy paths have
   moved, including taxi-id bytes/entries and latency backing arrays, and the
