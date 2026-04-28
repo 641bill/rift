@@ -101,9 +101,14 @@ Current reliable evidence:
   heap output on 100k controls and 1M 3-run medians for both current and
   improved roots modes. At 1M, SafeZone is lower-RSS than heap but slower than
   heap and checked Rift; checked Rift remains fastest and lowest-RSS in both
-  SafeZone roots-mode median matrices. This is still not a final full-DEBS
-  claim because full-month SafeZone controls, CPU-overhead attribution, and
-  stronger safe API boundaries remain open. A
+  SafeZone roots-mode median matrices. Opt-in
+  `DEBS2015_PROCESS_DIAGNOSTICS=1` rows now attribute the remaining checked CPU
+  shape: Q2 operation counts are identical between heap and checked, while Q1
+  checked rank creations rise from `6195167` heap to `14487771` checked at
+  full-month scale because checked rank objects are refreshed into child-bucket
+  lifetimes. This is still not a final full-DEBS claim because full-month
+  SafeZone controls, CPU-overhead reduction, and stronger safe API boundaries
+  remain open. A
   route-lifetime child-bucket probe was rejected: it reduced Q1
   rank-object churn but opened one child region per active route, raising 100k
   checked RSS to `113721344` bytes.
@@ -178,10 +183,13 @@ framing:
   latest-empty taxi arrays, Q2 ranking-index arrays, and Q2 taxi-id table
   entries/bytes, output snapshots, and latency buffers in Rift modes. The
   latest bounded-sample medians show Rift elapsed wins and much lower RSS, and
-  allocation attribution shows fewer heap allocation calls/bytes. It still does
-  not prove a final application-level win because the strongest speed rows are
-  bounded samples, SafeZone DEBS is missing, the first full-month run is only
-  output-equivalence plus scale diagnosis, and safe API boundaries are still
+  allocation attribution shows fewer heap allocation calls/bytes. Full-month
+  checked RunBoth now has a post-lifetime-fix heap/checked 3-run median that is
+  a near-tie on elapsed time with much better checked RSS than the earlier
+  checked run. Closeable SafeZone DEBS controls also exist at 100k and 1M. This
+  still does not prove a final application-level win because full-month
+  SafeZone controls, Q1 rank-refresh overhead reduction, checked Q2
+  same-operation overhead explanation, and safe API boundaries are still
   incomplete.
 - The literature-review target is broader than local baselines: Rift must be
   compared against Broom, StreamFlex, Yak, Stancu-style hybrid static analysis,
@@ -772,8 +780,11 @@ Interpretation:
   near-tie on elapsed time and much better on RSS than the pre-fix checked
   median, but not a large speedup. The closeable SafeZone DEBS controls now
   have 1M medians: SafeZone is lower-RSS than heap but slower than heap and
-  checked Rift. CPU-overhead attribution and stronger safe API boundaries are
-  still missing for the final application claim.
+  checked Rift. Opt-in process diagnostics show Q2 has identical operation
+  counts between heap and checked; the remaining checked CPU work is now Q1
+  rank-refresh churn and checked-region overhead with the same Q2 algorithm.
+  Stronger safe API boundaries are still missing for the final application
+  claim.
 - Checked RunBoth is now median-backed on bounded 100k/1M samples. It is
   encouraging Phase 5/7 evidence, but not an apples-to-apples proof that the
   checked API is always faster than the trusted API because the trusted and
@@ -835,9 +846,10 @@ Claims that are not yet supported:
 - Rift has a final full-DEBS application-level speedup. It has bounded-sample
   Q2 top-cache and checked RunBoth medians plus allocation-attribution evidence,
   including a 3-run Commix control, one full-month output-equivalence run, one
-  post-pool-cap same-run full-month timing row, and bounded closeable SafeZone
-  DEBS medians, but not SafeZone full-month controls, repeated controlled
-  full-scale medians, or complete safe-API controls.
+  post-pool-cap same-run full-month timing row, one post-Q1-lifetime-fix
+  heap/checked full-month 3-run median, and bounded closeable SafeZone DEBS
+  medians, but not SafeZone full-month controls, Q1/Q2 CPU-overhead reduction,
+  or complete safe-API controls.
 - Rift has a capture-checked safe API.
 - Rift beats Broom, StreamFlex, Yak, Stancu et al., or Reggio on their strongest
   axes.

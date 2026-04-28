@@ -101,7 +101,7 @@ For performance numbers, use the following rule of thumb:
 | Phase 2 | Integrated Rift into Scala Native runtime/compiler paths. | Mostly enablement work; judged by smoke/tests more than standalone speed tables. |
 | Phase 3 | Reran same-layout runtime matrices. | Rift has credible allocator/runtime wins on allocation-heavy linked structures. |
 | Phase 4 | Split allocator effects from layout/topology effects. | Layout and reference topology can dominate allocator choice; mixed region/GC references require a safety story. |
-| Phase 5 | Built DEBS Q1/Q2 runners and progressively moved structured-lifetime state into regions; added checked Q1 output/ranking, checked Q1 processing, checked Q2 processing probes, active-memory diagnostics, region-family attribution, and a closeable SafeZone Q1/Q2 control mode. | Current DEBS evidence shows bounded-sample elapsed/RSS wins and much lower heap allocation pressure. The latest full-month diagnostic found and fixed one wrong checked lifetime: Q1 rank object graphs were parent-lived instead of bucket-lived. Q1/Q2 CPU, I/O, production full-month medians, optional SafeZone full-month controls, and stronger checked boundaries still keep it short of final application proof. |
+| Phase 5 | Built DEBS Q1/Q2 runners and progressively moved structured-lifetime state into regions; added checked Q1 output/ranking, checked Q1 processing, checked Q2 processing probes, active-memory diagnostics, region-family attribution, and a closeable SafeZone Q1/Q2 control mode. | Current DEBS evidence shows bounded-sample elapsed/RSS wins and much lower heap allocation pressure. Full-month heap/checked medians are now near-tied after fixing one wrong checked lifetime: Q1 rank object graphs were parent-lived instead of bucket-lived. Q1/Q2 CPU overhead, I/O, optional SafeZone full-month controls, and stronger checked boundaries still keep it short of final application proof. |
 | Phase 6 | Built methodology harnesses for Broom/StreamFlex/Yak/Stancu comparison axes. | These support the broader research story but are not exact reproductions of closed or unavailable artifacts. |
 | Phase 7 | Added checked `scoped`/`streaming` API probes using Scala capture checking. | Source-level safety evidence is started; ergonomics and broader container patterns remain open. |
 | Phase 8 | Added explicit heap-root handles and conservative mixed-reference rejection. | Region memory is not GC-scanned, so region-to-heap references need roots or static rejection. |
@@ -640,8 +640,9 @@ Interpretation:
   fallback path: after byte output, Rift 1M heap allocation is about `0.56M`
   calls and `10.5 MB`, and GC collection time is below `1 ms`.
 - The remaining gap to a final Phase 5 claim is no longer "move obvious output
-  strings/builders into regions"; it is controls and scope: SafeZone,
-  full-month CPU attribution, and safe API coverage.
+  strings/builders into regions"; it is controls and scope: Q1 rank-refresh
+  overhead, checked Q2 same-operation overhead, optional full-month SafeZone
+  context, and safe API coverage.
 
 ### Q1 Checked-Output Safe-API Probe
 
@@ -823,8 +824,8 @@ Interpretation:
   allocation.
 - This is still not final DEBS proof. It remains a bounded 100k/1M result, the
   byte-reader/output scratch paths still use trusted helpers, previous-output
-  snapshots remain primitive heap control metadata, and SafeZone DEBS is
-  missing.
+  snapshots remain primitive heap control metadata, and full-month SafeZone
+  context is still optional/open.
 
 Checked child-window close discipline and Commix control:
 
@@ -989,10 +990,10 @@ Interpretation:
 - The improvement is shared algorithmic cleanup plus allocation placement:
   heap and Rift use the same two-heap median maintenance, while Rift allocates
   the median/control arrays and related ordinary Scala objects in regions.
-- Rift still does not prove final DEBS success because SafeZone DEBS, checked
-  Q1/Q2 process CPU attribution, and stronger safe API boundaries remain open.
-  The remaining DEBS bottleneck is query CPU and file I/O rather than Rift
-  allocator overhead.
+- Rift still does not prove final DEBS success because full-month SafeZone
+  controls, checked process-overhead reductions, and stronger safe API
+  boundaries remain open. The remaining DEBS bottleneck is query CPU and file
+  I/O rather than Rift allocator overhead.
 
 Active-memory diagnostic:
 
@@ -1640,8 +1641,8 @@ Status:
   byte-oriented output: HPZone and Streaming are faster than heap at 1M with
   lower RSS, and allocation attribution shows much lower heap allocation
   calls/bytes and measured allocation-call time. This is still not final
-  application evidence without SafeZone DEBS, repeated controlled full-month
-  performance, and stronger safe API controls.
+  application evidence without checked CPU-overhead reduction, optional
+  full-month SafeZone context, and stronger safe API controls.
 - Checked RunBoth now also has bounded 100k/1M 3-run medians. At 1M,
   `rift-checked` is fastest in the local matrix (`5043.240 ms` vs heap
   `5363.257 ms`, trusted HPZone `5224.005 ms`, and trusted Streaming
@@ -1680,8 +1681,13 @@ Status:
 - The post-fix full-month heap/checked 3-run control matched outputs and
   brings checked RSS close to heap (`613.3 MiB` median versus `595.9 MiB`), but
   elapsed time is a near-tie (`66.804 s` checked versus `67.122 s` heap).
-  The next memory/performance work is SafeZone controls and checked Q1/Q2 CPU
-  attribution, not another pool cap tweak.
+- Opt-in process diagnostics now explain the remaining checked CPU shape. Q2
+  operation counts are identical between heap and checked on the full-month
+  input, while Q1 checked rank creations rise from `6195167` to `14487771`
+  because checked rank objects are refreshed into child-bucket lifetimes. The
+  next memory/performance work is reducing Q1 rank-refresh churn without one
+  child region per route and explaining checked Q2 overhead with identical
+  counts, not another pool cap tweak.
 - Latest DEBS phase breakdown shows remaining cost is mostly Q1/Q2 CPU and
   file I/O rather than Rift bookkeeping or GC collection.
 - The pipeline/parallel-collections story is still a surrogate until a fair
