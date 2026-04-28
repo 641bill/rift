@@ -98,11 +98,12 @@ Current reliable evidence:
   `595.9 MiB`; GC collection time drops from `0.285 s` to `0.117 s`, but
   checked pays `0.779 s` median Rift region-operation time and has slower Q1/Q2
   process CPU phases. A closeable SafeZone DEBS mode now exists and matches
-  heap output on single-run 100k/1M controls for both current and improved roots
-  modes. At 1M, improved SafeZone is slower than heap and checked Rift in the
-  first control, while using less RSS than heap. This is still not a final
-  full-DEBS claim because SafeZone medians/full-month controls,
-  CPU-overhead attribution, and stronger safe API boundaries remain open. A
+  heap output on 100k controls and 1M 3-run medians for both current and
+  improved roots modes. At 1M, SafeZone is lower-RSS than heap but slower than
+  heap and checked Rift; checked Rift remains fastest and lowest-RSS in both
+  SafeZone roots-mode median matrices. This is still not a final full-DEBS
+  claim because full-month SafeZone controls, CPU-overhead attribution, and
+  stronger safe API boundaries remain open. A
   route-lifetime child-bucket probe was rejected: it reduced Q1
   rank-object churn but opened one child region per active route, raising 100k
   checked RSS to `113721344` bytes.
@@ -769,10 +770,10 @@ Interpretation:
   parent lifetime to child-bucket lifetime and brings the checked full-month
   RSS diagnostic back to heap scale. The post-fix full-month median is a
   near-tie on elapsed time and much better on RSS than the pre-fix checked
-  median, but not a large speedup. The first closeable SafeZone DEBS controls
-  now exist and show improved SafeZone still slower than heap/checked Rift on a
-  1M single run, but this needs medians. CPU-overhead attribution and stronger
-  safe API boundaries are still missing for the final application claim.
+  median, but not a large speedup. The closeable SafeZone DEBS controls now
+  have 1M medians: SafeZone is lower-RSS than heap but slower than heap and
+  checked Rift. CPU-overhead attribution and stronger safe API boundaries are
+  still missing for the final application claim.
 - Checked RunBoth is now median-backed on bounded 100k/1M samples. It is
   encouraging Phase 5/7 evidence, but not an apples-to-apples proof that the
   checked API is always faster than the trusted API because the trusted and
@@ -834,8 +835,8 @@ Claims that are not yet supported:
 - Rift has a final full-DEBS application-level speedup. It has bounded-sample
   Q2 top-cache and checked RunBoth medians plus allocation-attribution evidence,
   including a 3-run Commix control, one full-month output-equivalence run, one
-  post-pool-cap same-run full-month timing row, and a single-run closeable
-  SafeZone DEBS control, but not SafeZone medians, repeated controlled
+  post-pool-cap same-run full-month timing row, and bounded closeable SafeZone
+  DEBS medians, but not SafeZone full-month controls, repeated controlled
   full-scale medians, or complete safe-API controls.
 - Rift has a capture-checked safe API.
 - Rift beats Broom, StreamFlex, Yak, Stancu et al., or Reggio on their strongest

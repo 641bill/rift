@@ -148,14 +148,15 @@ The latest checkpoint adds a closeable SafeZone DEBS control. `Q1SafeZone` and
 Rift, but allocate Q1/Q2 data structures through explicit `SafeZone.open()` /
 `SafeZone.close(zone)` scopes. Single-run 100k and 1M controls matched heap
 output for current SafeZone (`SAFEZONE_ROOTS_MODE=0`) and improved SafeZone
-(`SAFEZONE_ROOTS_MODE=1`). At 1M, improved SafeZone was slower than heap
-(`4946.909 ms` versus `4308.667 ms`) and checked Rift (`4211.395 ms`) while
-using less RSS than heap (`103.1 MiB` versus `153.7 MiB`) but more than checked
-Rift (`63.6 MiB`). Treat this as provisional control evidence: SafeZone DEBS
-mode now exists, but it needs 3-run bounded medians and only then full-month
-controls if the bounded result is stable enough.
-The next claim-level step is 1M SafeZone median controls and CPU attribution
-for checked Q1/Q2 process overhead.
+(`SAFEZONE_ROOTS_MODE=1`); 1M now has 3-run medians. In the 1M improved-roots
+median matrix, SafeZone is slower than heap (`5576.947 ms` versus
+`5029.882 ms`) and checked Rift (`4702.930 ms`) while using less RSS than heap
+(`103.1 MiB` versus `153.7 MiB`) but more than checked Rift (`63.6 MiB`).
+Improved roots mode cuts SafeZone close time versus current roots mode
+(`34.876 ms` median versus `118.124 ms`), but Q1/Q2 process CPU remains slower.
+Treat this as median-backed bounded control evidence, not full-month evidence.
+The next claim-level step is checked Q1/Q2 process CPU attribution; full-month
+SafeZone controls are now optional rather than blocking the immediate CPU work.
 A Scala-next checked Rift-region API slice has been reviewed and
 merged into `feature/rift` at `79953ad8d`; its source branch was
 `codex/safe-region-api-checked-slice` at `e8c3b961d`. The Q2 incremental
