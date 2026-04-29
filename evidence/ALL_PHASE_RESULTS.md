@@ -1682,8 +1682,8 @@ key capacity 65536, top 128:
 
 | Mode | Median elapsed ms | Median GC ms | Median Rift op ms | Region objects | Opens/closes/resets | Peak RSS bytes |
 |---|---:|---:|---:|---:|---:|---:|
-| heap | 200.304 | 0.000 | 0.000 | 0 | 0 / 0 / 0 | 145768448 |
-| rift-checked | 302.001 | 7.447 | 0.289 | 826643 | 41 / 41 / 0 | 87441408 |
+| heap | 258.839 | 0.000 | 0.000 | 0 | 0 / 0 / 0 | 145784832 |
+| rift-checked | 355.671 | 8.005 | 0.374 | 826643 | 41 / 41 / 0 | 87441408 |
 
 Interpretation:
 
@@ -1693,11 +1693,13 @@ Interpretation:
   automatically unlinked from parent rank state before bucket close.
 - It is not a speed win. Checked Rift is slower on elapsed time even though
   Rift runtime operation time is low and RSS is lower. The entry-cleanup API
-  improves the previous auto-cleanup default (`313.572 ms`, `94732288` bytes
-  RSS) by avoiding a second checked-side key list, but remains slower than the
-  earlier manual-cleanup checked median (`254.050 ms`). Treat this as API/safety
-  evidence plus a CPU-overhead warning before integrating the abstraction into
-  DEBS.
+  improved the previous auto-cleanup default (`313.572 ms`, `94732288` bytes
+  RSS) by avoiding a second checked-side key list, but remained slower than the
+  earlier manual-cleanup checked median (`254.050 ms`). The remove-with-value
+  close primitive simplifies framework unlinking and validates
+  already-popped-key cleanup, but did not produce a measured speedup in the
+  current local matrix. Treat this as API/safety evidence plus a CPU-overhead
+  warning before integrating the abstraction into DEBS.
 - The harness uses dense keys and one `Long` priority. Richer comparator,
   tie-breaker, and hash-key collection variants are still needed for a general
   Q1-style API.

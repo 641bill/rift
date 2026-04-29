@@ -254,8 +254,13 @@ the child bucket. The follow-up entry-cleanup API adds
 `closeAllWindowRankBucketsWithEntries`, so stream operators can clean
 side tables during framework unlinking instead of maintaining a duplicate
 bucket-local key list. The focused compiler suite now passes `70/70`; the
-native checked runtime suite passes `21/21`.
-The newest Phase 5 diagnostic checkpoint adds opt-in Q2 CPU substep timers
+native checked runtime suite passes `22/22`.
+The follow-up remove-with-value close primitive validates already-popped-key
+cleanup but does not yet reduce the focused checked CPU gap; the next useful
+stream-window-rank direction is a richer/lower-overhead rank API rather than
+another narrow queue tweak.
+
+A recent Phase 5 diagnostic checkpoint adds opt-in Q2 CPU substep timers
 behind `DEBS2015_Q2_CPU_DIAGNOSTICS=1`. Heap and checked Q2 now emit matching
 `diag_q2_cpu_*` buckets for eviction, taxi lookup, previous-empty removal,
 profit/empty path updates, rank updates, and top-10 extraction when the flag is
@@ -2305,9 +2310,10 @@ Post-table update: the current checked API slice now includes
 entry-cleanup callbacks that report removed rank entries during close so
 operators can clean side tables without a duplicate checked-side key list. The
 focused compiler suite now passes `70/70`, and the native checked runtime suite
-passes `21/21`. This strengthens close discipline and slightly improves the
-focused auto-cleanup matrix, but checked remains slower than heap and the older
-manual-cleanup path.
+passes `22/22`. The newest remove-with-value close primitive simplifies
+framework unlinking and validates already-popped-key cleanup, but does not yet
+remove the focused checked CPU gap. The checked path remains slower than heap
+and the older manual-cleanup path.
 
 Is Phase 0 actually complete?
 
@@ -2589,9 +2595,11 @@ Next technical milestone:
 
 1. Continue reducing `StreamWindowIndexedRank` container CPU overhead or build
    the next richer checked rank/window API slice. The entry-cleanup matrix
-   improves the auto-cleanup path from `313.572 ms` to `302.001 ms`, but remains
-   slower than heap and the earlier manual-cleanup path, while the Q2 substep
-   diagnostic does not currently reproduce bounded same-count Q2 overhead.
+   improved the auto-cleanup path from `313.572 ms` to `302.001 ms`, but remains
+   slower than heap and the earlier manual-cleanup path. The follow-up
+   remove-with-value close primitive is correctness/usefulness cleanup, not a
+   measured speed fix. The Q2 substep diagnostic does not currently reproduce
+   bounded same-count Q2 overhead.
 2. Continue the DEBS "region-heavy" path with measurement first after the
    checked RunBoth median and attribution checkpoints. The next DEBS work
    should be a safety abstraction or control run, not a blind region-allocation
@@ -3534,6 +3542,53 @@ Interpretation:
 - The result supports keeping the API because it removes duplicate operator
   bookkeeping while preserving the stronger close discipline. It does not yet
   justify direct wholesale DEBS Q1 integration.
+
+## Latest Update: StreamWindowIndexedRank Remove-With-Value Close
+
+Date: 2026-04-29
+
+Child repo commit: `1904bd72623c`.
+
+What changed:
+
+- Added an internal `RegionIndexedPriorityQueue.removeWithValueTrusted` close
+  primitive. Bucket close now removes a key and retrieves its ranked value in
+  one trusted operation instead of `contains` + `get` + `remove`.
+- Added a runtime regression test for the already-popped-key case:
+  `closeAllWindowRankBucketsWithEntries` must not report a callback for a rank
+  entry that was popped before its owning bucket closes.
+- Updated `sandbox/CHECKED_STREAM_WINDOW_RANK_MATRIX.md` and synced the parent
+  evidence pack.
+
+Validation:
+
+- `git diff --check` passed in `scala-native-rift`.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile` passed.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionCheckedTest"`
+  passed `22/22`.
+- 100k remove-with-value matrix matched checksum `-476315670107920613`.
+- Default 1M remove-with-value matrix matched checksum `6881312641757835670`.
+
+Remove-with-value matrix results:
+
+| Input | Mode | Median elapsed ms | GC ms | Rift op ms | Region objects | Opens / closes / resets | Peak RSS bytes |
+|---|---|---:|---:|---:|---:|---:|---:|
+| 100k | heap | 25.360 | 0.000 | 0.000 | 0 | 0 / 0 / 0 | 35225600 |
+| 100k | rift-checked | 38.823 | 1.021 | 0.162 | 82545 | 5 / 5 / 0 | 30015488 |
+| 1M | heap | 258.839 | 0.000 | 0.000 | 0 | 0 / 0 / 0 | 145784832 |
+| 1M | rift-checked | 355.671 | 8.005 | 0.374 | 826643 | 41 / 41 / 0 | 87441408 |
+
+Interpretation:
+
+- This is framework correctness cleanup, not a speed win.
+- The focused matrix is noisy on wall time, but the new close primitive did not
+  produce a measured improvement over the prior entry-cleanup checkpoint.
+- RSS remains lower for checked Rift, and measured Rift operation time remains
+  small. The remaining overhead is likely in checked container/object program
+  shape rather than raw region allocator operations.
+- The next useful direction is a richer/lower-overhead rank-window API
+  (tie-breakers, hash-keyed state, and fewer per-event object/control
+  transitions), not another narrow queue method tweak.
 
 ## Latest Update: Q2 CPU Substep Diagnostics
 

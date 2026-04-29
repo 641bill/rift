@@ -158,7 +158,7 @@ Current reliable evidence:
   parent-owned rank state before closing the child region. The compiler guard
   rejects direct unrooted heap stores through both `putWindowRank` and
   `putWindowRankInBucket`; the focused compiler suite is now `70/70`, and the
-  native checked runtime suite is `21/21`. The Q1
+  native checked runtime suite is `22/22`. The Q1
   checked-processing probe uses path-dependent bucket event nodes to keep
   child-owned values local before closing the child region at bucket eviction.
   The focused `CheckedRegionBufferMatrix`
@@ -177,11 +177,13 @@ Current reliable evidence:
   before close, with matching heap/Rift checksums. Its entry-cleanup API now
   reports removed rank entries during bucket close so operators can clean their
   side tables without maintaining a duplicate checked-side key list. The current
-  default local median is still a negative speed signal, heap `200.304 ms`
-  versus checked `302.001 ms`, although checked uses less RSS and only
-  `0.289 ms` measured Rift operation time. This improves the previous
-  auto-cleanup median (`313.572 ms` checked) but remains slower than the earlier
-  manual-cleanup median (`254.050 ms`). Treat these as API/safety evidence and
+  remove-with-value close probe keeps this API shape and validates the
+  already-popped-key case, but is still a negative speed signal: the latest
+  default local median was heap `258.839 ms` versus checked `355.671 ms`,
+  although checked uses less RSS and only `0.374 ms` measured Rift operation
+  time. The earlier entry-cleanup step improved the previous auto-cleanup median
+  (`313.572 ms` checked) but remained slower than the earlier manual-cleanup
+  median (`254.050 ms`). Treat these as API/safety evidence and
   overhead diagnostics rather than speed claims.
   Dataflow
   SELECT, AGGREGATE, and JOIN now have checked `rift-checked` modes using the
@@ -832,9 +834,12 @@ Interpretation:
   rank/window collection. Its auto-cleanup path moves bucket-owned rank-key
   removal into the framework close path, validating a stronger close boundary.
   The entry-cleanup path removes the duplicate checked-side bucket key list and
-  improves the focused default median, but the matrix is still slower than heap
-  and slower than the earlier manual-cleanup path. The next design pressure is
-  lower-overhead/richer rank APIs rather than direct application integration.
+  improved the focused default median, but the matrix remained slower than heap
+  and slower than the earlier manual-cleanup path. The follow-up
+  remove-with-value close primitive simplifies framework unlinking and validates
+  already-popped-key cleanup, but did not produce a measured speedup. The next
+  design pressure is lower-overhead/richer rank APIs rather than direct
+  application integration.
   Richer comparator/hash-key collections, checked Q1/Q2 CPU overhead work, and
   stronger safe API boundaries are still needed before it can support a final
   application claim.
