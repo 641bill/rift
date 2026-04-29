@@ -9,8 +9,8 @@ Active implementation branch for this update:
 `feature/rift`
 
 Implementation commit at this update:
-`87fbc088a6`
-(`Add checked window-rank entry cleanup`)
+`8690d06d3d`
+(`Clarify TableRank profile instability`)
 
 Status: active research fork. The Phase 5 input-boundary checkpoint, reusable
 ranking backend, Q2 bounded cell-table checkpoint, Q1 primitive route-table
@@ -287,6 +287,18 @@ is heap-long `358.988 ms`, `6.973 ms` GC, `111.4 MB` RSS versus
 `128.3 MB` RSS. Treat this as functional API evidence and an overhead warning:
 the packed-key/dense-remap blocker is gone, but broad Q1 integration should
 wait for a lower-overhead checked rank/window pass.
+The next checked-rank checkpoint added fused `StreamWindowTableRank`, but its
+focused 1M gate failed and the Q1 prototype was backed out of DEBS. A profile
+pack showed combined lookup/probe/replacement/heap-maintenance overhead rather
+than Rift open/close/allocation cost, so TableRank remains framework evidence
+only. The latest cheap-operator checkpoint then added
+`CheckedAppendWindowMatrix` and a reusable `RiftRegion.StreamAppendWindow`
+API. The manual checked child-bucket append shape wins at 1M
+(`32.261 ms` versus heap `35.513 ms`, with lower RSS), but the reusable API
+does not pass the gate (`rift-checked-api` `76.057 ms` versus same-run heap
+`37.424 ms`). Treat this as a clear split: simple checked region lifetimes can
+win, but reusable framework APIs must be benchmarked for abstraction overhead
+before DEBS integration.
 
 A recent Phase 5 diagnostic checkpoint adds opt-in Q2 CPU substep timers
 behind `DEBS2015_Q2_CPU_DIAGNOSTICS=1`. Heap and checked Q2 now emit matching
@@ -391,7 +403,7 @@ Use this worktree for this active Rift session:
 - `/Users/siyaoliu/rift/scala-native-rift`
 - branch: `feature/rift`
 - current implementation commit at this handoff update:
-  `4ab5b898b463e9bc20d65f4626e0060be4e406a5`
+  `8690d06d3df6d3299e0c474064f2bac78c35e261c`
 - `origin`: `git@github.com:641bill/scala-native.git`
 - `upstream`: `https://github.com/scala-native/scala-native.git`
 
@@ -4048,6 +4060,109 @@ Safe next action:
    reduces lookup/update/heap maintenance together, then re-run the focused
    20k/100k/1M gates before touching DEBS.
 
+### 2026-04-29 Update: Scala Native Win Envelope / Checked Append Window
+
+Active implementation repo:
+
+- `/Users/siyaoliu/rift/scala-native-rift` on `feature/rift`
+
+What changed:
+
+- Added `CheckedAppendWindowMatrix`, a focused cheap stream-window operator
+  benchmark in `sandbox/src/main/scala-next/CheckedAppendWindowMatrix.scala`.
+- Added `sandbox/run_checked_append_window_matrix.sh`.
+- Added `sandbox/CHECKED_APPEND_WINDOW_MATRIX.md` and synced it to
+  `evidence/CHECKED_APPEND_WINDOW_MATRIX.md`.
+- Added `sandbox/SN_WIN_ENVELOPE.md` and synced it to
+  `evidence/SN_WIN_ENVELOPE.md`.
+- Added the first reusable checked append-window API:
+  `RiftRegion.StreamAppendWindow`, `RiftRegion.StreamAppendNode`,
+  `streamAppendWindow`, `streamAppendWindowBucketFor`, `appendWindow`,
+  length helpers, and structured close helpers. The API links user records
+  directly through an intrusive hidden next pointer to avoid wrapper nodes.
+- Added compiler guards and tests so `appendWindow` rejects direct unrooted
+  heap records, while accepting records allocated in a child bucket region.
+- Added `rift-checked-api` mode to `CheckedAppendWindowMatrix` to test the
+  reusable API separately from the handwritten manual checked child-bucket
+  path.
+- Updated `evidence/ALL_PHASE_RESULTS.md` and `scripts/sync-evidence.sh`.
+- TableRank and DEBS Q1 were not touched.
+
+Why it was done:
+
+- The previous TableRank work showed useful framework progress but failed the
+  1M focused gate because checked container CPU/layout overhead dominates.
+- The new goal is to rebuild the Scala Native win envelope: identify which
+  operator shapes are allocation/GC-bound enough for Rift to beat Immix and
+  which shapes are CPU/I/O/container-bound.
+- `CheckedAppendWindowMatrix` deliberately avoids ranking/hash-table/top-k
+  maintenance and measures the cheaper append/bucket/fold pattern that should
+  generalize to stream operators beyond DEBS.
+
+Validation:
+
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile`
+  passed.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"`
+  passed `88/88`.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionCheckedTest"`
+  passed `34/34`.
+- 20k smoke, 100k 3-run, and 1M 3-run append-window matrices matched checksums
+  across `heap`, `rift-checked`, `rift-trusted-hp`, and
+  `rift-trusted-streaming`.
+- Follow-up 20k, 100k, and 1M reusable API matrices matched checksums across
+  all five modes, including `rift-checked-api`.
+
+Key append-window rows:
+
+| Input | Mode | Median elapsed ms | GC ms | Rift op ms | Region objects | RSS bytes |
+|---|---|---:|---:|---:|---:|---:|
+| 100k | heap | 2.782 | 0.000 | 0.000 | 0 | 21282816 |
+| 100k | rift-checked | 3.370 | 0.000 | 0.008 | 100000 | 15728640 |
+| 100k | rift-trusted-hp | 4.087 | 0.000 | 0.006 | 100000 | 15646720 |
+| 100k | rift-trusted-streaming | 4.211 | 0.000 | 0.017 | 100000 | 15712256 |
+| 1M | heap | 35.513 | 11.149 | 0.000 | 0 | 74989568 |
+| 1M | rift-checked | 32.261 | 0.000 | 0.074 | 1000000 | 47497216 |
+| 1M | rift-trusted-hp | 41.641 | 0.000 | 0.093 | 1000000 | 47349760 |
+| 1M | rift-trusted-streaming | 41.859 | 0.000 | 0.088 | 1000000 | 47480832 |
+
+Reusable `StreamAppendWindow` 1M follow-up:
+
+| Mode | Median elapsed ms | GC ms | Rift op ms | Region objects | RSS bytes |
+|---|---:|---:|---:|---:|---:|
+| heap | 37.424 | 11.596 | 0.000 | 0 | 75071488 |
+| rift-checked | 34.762 | 0.000 | 0.117 | 1000000 | 47546368 |
+| rift-checked-api | 76.057 | 0.000 | 0.092 | 1000000 | 83247104 |
+
+Interpretation:
+
+- At 100k, heap still wins and measured GC is zero. This is below the useful
+  allocation-pressure threshold.
+- At 1M, checked Rift is about `9.2%` faster than heap, eliminates
+  `11.149 ms` of measured GC collection time, and lowers RSS by about
+  `27.5 MB` with only `0.074 ms` of measured Rift operation time.
+- The trusted per-bucket modes lose here, so the claim is not "trusted HPZone
+  always wins." The useful shape is checked parent streaming plus structured
+  child-bucket regions.
+- The result supports the broader framework goal: ordinary Scala stream data
+  objects can live in checked regions and win when the operator is simple
+  enough and allocation volume is high enough.
+- The reusable `StreamAppendWindow` API is not ready for application
+  integration. It is correctness-valid, but the 1M `rift-checked-api` row is
+  much slower than heap and the manual checked child-bucket path. Since its
+  Rift op time is still tiny, the gap is API/container CPU and representation
+  overhead, not allocation or close cost.
+
+Safe next action:
+
+1. Keep TableRank out of DEBS Q1.
+2. Use `SN_WIN_ENVELOPE.md` as the current selection guide.
+3. Do not integrate the current `StreamAppendWindow` API into DEBS until its
+   focused 1M gate is fixed.
+4. Next implementation should reduce reusable append/window API overhead in
+   the focused matrix, or choose a different cheap operator primitive and prove
+   it there before application integration.
+
 ## Unsafe Assumptions To Avoid
 
 - "Rift already has final DEBS application proof." It does not. The current
@@ -4090,6 +4205,11 @@ Safe next action:
 - "The Q2 top-10 cache medians are final DEBS evidence." They are not; they are
   bounded-sample evidence and still lack SafeZone controls and safe API
   boundaries.
+- "The append-window API is ready because the manual checked append-window
+  benchmark won at 1M." It is not. The manual child-bucket shape is the
+  positive result; the reusable `StreamAppendWindow` API currently fails the
+  1M focused gate and should stay out of DEBS until its abstraction overhead is
+  reduced.
 - "The Q1 checked-output probe proves checked DEBS processing." It does not.
   It only checks transient output/ranking materialization; the Q1 window and
   rank maintenance engine is still heap in both probe modes.
