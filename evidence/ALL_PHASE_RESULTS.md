@@ -2010,5 +2010,8 @@ Status:
   replacements and bucket moves/event, `1.862` heap sift steps/event, and
   `1.117` heap swaps/event. No post-profile optimization was applied because
   the counters did not identify one low-risk representation patch.
+- The fresh 100k TableRank profile did not reproduce the earlier strong
+  `<= 43 ms` row (`56.585 ms` in the new same-run profile), so even the 100k
+  pass should be treated as unstable until rerun under controlled conditions.
 - The pipeline/parallel-collections story is still a surrogate until a fair
   Rift-backed collection API exists.

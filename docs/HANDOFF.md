@@ -4027,6 +4027,10 @@ Profile rows:
 
 Diagnostic interpretation:
 
+- The fresh 100k profile did not reproduce the earlier strong 100k TableRank
+  gate row: `rift-checked-table-long` was `56.585 ms`, above the earlier
+  `<= 43 ms` threshold. Treat the 100k pass as unstable until rerun under
+  controlled conditions.
 - 1M `rift-checked-table-long` did `3.000` lookups/event and `4.804`
   probes/event.
 - It also did `0.719` replacements/event, `0.719` bucket moves/event,
