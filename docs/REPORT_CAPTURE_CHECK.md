@@ -72,13 +72,16 @@ Scala-next capture checking supports the first Rift safe API slice:
 - `RiftRegion.RegionLongIndexedPriorityQueue` extends that checked rank shape
   to arbitrary `Long` keys. Values, heap keys, priorities, and the
   open-addressed index table are region-owned arrays; `put` uses the same
-  checked value-store guard as the dense-key queue. This is standalone
-  hash-keyed rank state, not yet a stream-window close-discipline integration.
+  checked value-store guard as the dense-key queue.
 - `RiftRegion.StreamWindowIndexedRank` composes dense-key ranking with
   stream-bucket child regions. Bucket-owned rank entries are unlinked before
   the child bucket closes, close-with-entry callbacks let operators clean side
   tables during framework unlinking, and direct heap values are rejected through
   the same checked put guard.
+- `RiftRegion.StreamWindowLongIndexedRank` composes long-key ranking with the
+  same stream-bucket close discipline. It tracks bucket-owned arbitrary `Long`
+  keys in a region-owned owner table and removes them from parent rank state
+  before child bucket close.
 - The first literature-shaped safe API probes now compile: streaming reset
   epochs can process region-owned arrays of ordinary record objects, a
   top-word-style `ObjectBuffer` can store records that refer to heap metadata
@@ -292,6 +295,10 @@ Current checked compiler probes:
 | `regionLongIndexedPriorityQueueCannotStoreHeapObject` | long-key lexicographic `put` stores direct heap object | fails | Confirms the value-argument guard covers long-key and multi-priority `put`. |
 | `regionLongIndexedPriorityQueueCanStoreHeapRoot` | long-key indexed priority queue stores explicit `HeapRoot` handles | compiles | Covers durable heap metadata through hash-keyed ranking containers. |
 | `regionLongIndexedPriorityQueueCannotStoreInnerScopedValue` | outer long-key indexed priority queue stores value allocated in inner region | fails | Confirms owner tokens still prevent cross-region storage for hash-keyed ranking state. |
+| `streamWindowLongIndexedRankInBucketAutoCleanupCompiles` | long-key stream-window rank stores bucket-owned region object and auto-removes it during close | compiles | Extends bucket-owned rank cleanup from dense keys to arbitrary long keys. |
+| `streamWindowLongIndexedRankCloseEntriesCompiles` | long-key close-with-entry callback reports removed entries | compiles | Lets operators clean side tables during framework unlinking without dense remapping. |
+| `streamWindowLongIndexedRankLexicographicCompiles` | long-key stream-window rank supports four Q1-style lexicographic priorities | compiles | Covers route-key-style ranking without a dense side table. |
+| `streamWindowLongIndexedRankCannotStoreDirectHeapObject` | long-key stream-window rank stores direct heap object | fails | Confirms the stream-window long-key put path is guarded. |
 | `streamingResetRegionArrayEpochCompiles` | reset epoch processes a region-owned array of ordinary records | compiles | Models sort/dataflow epoch records through the supported checked array shape. |
 | `topwordBufferCanStoreRecordsWithRootedMetadata` | top-word-style buffer stores records that carry rooted heap metadata | compiles | Covers durable heap metadata via `HeapRoot` inside a higher-level checked buffer. |
 | `graphChiSubintervalCanUseRootedHeapVertexMetadata` | GraphChi-style subinterval record refers to durable heap vertex metadata through `HeapRoot` | compiles | Covers the safe data/control split for graph updates. |

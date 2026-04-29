@@ -113,7 +113,7 @@ Current reliable evidence:
   rank-object churn but opened one child region per active route, raising 100k
   checked RSS to `113721344` bytes.
 - Phase 7 checked API evidence has started. The targeted Scala-next compiler
-  suite passed 76/76 for the current `Scoped`/`Streaming` API slice, including
+  suite passed 80/80 for the current `Scoped`/`Streaming` API slice, including
   for-loop allocation, nested scoped regions, local higher-order consumers, and
   direct escape/reset rejection. Returned function values are now rejected
   conservatively because returned closures can hide region-local captures.
@@ -140,6 +140,9 @@ Current reliable evidence:
   it keeps arbitrary `Long` keys, values, heap priorities, and open-addressed
   index state in region-owned arrays, so route-style packed keys do not need a
   benchmark-specific dense remapping layer before entering checked rank state.
+  `RiftRegion.StreamWindowLongIndexedRank` composes that long-key queue with
+  `StreamBucketArena`: bucket-owned long-key rank entries are tracked in a
+  region-owned owner table and removed before the child bucket closes.
   Raw
   `RiftRegion.childStreaming` plus the
   preferred `RiftRegion.childWindow` wrapper are now first checked
@@ -164,7 +167,7 @@ Current reliable evidence:
   rejects direct unrooted heap stores through both `putWindowRank` and
   `putWindowRankInBucket`; standalone dense-key and long-key checked rank
   queues use the same owner-token value-store guard. The focused compiler
-  suite is now `76/76`, and the native checked runtime suite is `25/25`. The Q1
+  suite is now `80/80`, and the native checked runtime suite is `28/28`. The Q1
   checked-processing probe uses path-dependent bucket event nodes to keep
   child-owned values local before closing the child region at bucket eviction.
   The focused `CheckedRegionBufferMatrix`
@@ -189,8 +192,8 @@ Current reliable evidence:
   although checked uses less RSS and only `0.352 ms` measured Rift operation
   time. The lexicographic priority API now supports Q1-style
   count/time/sequence/key tie-breakers without changing the bucket-close
-  discipline, and the long-key queue removes the dense-key remapping blocker
-  for route-keyed ranking. The earlier entry-cleanup step improved the previous auto-cleanup median
+  discipline, and the long-key stream-window rank API removes the dense-key
+  remapping blocker for route-keyed stream-window ranking. The earlier entry-cleanup step improved the previous auto-cleanup median
   (`313.572 ms` checked) but remained slower than the earlier manual-cleanup
   median (`254.050 ms`). Treat these as API/safety evidence and
   overhead diagnostics rather than speed claims.
@@ -848,9 +851,9 @@ Interpretation:
   remove-with-value close primitive simplifies framework unlinking and validates
   already-popped-key cleanup, but did not produce a measured speedup. The
   lexicographic priority API removes one Q1 integration blocker. Standalone
-  long-key indexed rank state now removes the dense-key remapping blocker, but
-  stream-window integration and lower-overhead checked rank containers remain
-  open before direct application integration.
+  long-key stream-window rank state now removes the dense-key remapping blocker,
+  but lower-overhead checked rank containers and application integration remain
+  open before direct DEBS Q1 use.
   Hash-key collections, checked Q1/Q2 CPU overhead work, and
   stronger safe API boundaries are still needed before it can support a final
   application claim.

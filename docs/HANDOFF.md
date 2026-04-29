@@ -269,6 +269,12 @@ guard as the dense indexed queue. This removes the standalone dense-remapping
 blocker for packed route keys, but stream-window close-discipline integration
 and lower checked-container CPU overhead remain open. The focused compiler
 suite now passes `76/76`, and the native checked runtime suite passes `25/25`.
+The follow-up framework checkpoint adds `RiftRegion.StreamWindowLongIndexedRank`,
+which composes the long-key queue with `StreamBucketArena` close discipline.
+Bucket-owned arbitrary `Long` keys are tracked in a region-owned owner table
+and removed from parent rank state before the child bucket closes. The focused
+compiler suite now passes `80/80`, and the native checked runtime suite passes
+`28/28`. This is still API/safety evidence, not a DEBS performance row.
 
 A recent Phase 5 diagnostic checkpoint adds opt-in Q2 CPU substep timers
 behind `DEBS2015_Q2_CPU_DIAGNOSTICS=1`. Heap and checked Q2 now emit matching
@@ -318,7 +324,8 @@ stream-window rank matrix evidence was committed at `d6fb94cd3`; Q2 CPU
 substep diagnostics were committed at `de2134712`; and
 `StreamWindowIndexedRank` auto cleanup was committed at `a70ce412e2`. The
 entry-cleanup checkpoint was committed at `87fbc088a6`; the hash-keyed checked
-rank queue was committed at `87c0d5cf3b`. The
+rank queue was committed at `87c0d5cf3b`; and the long-key checked
+stream-window rank API was committed at `7cde2473c2`. The
 checked API is not a
 complete compiler capture-checking implementation. The fork is ahead of
 `origin/feature/rift` unless pushed.
@@ -2323,12 +2330,13 @@ operators can clean side tables without a duplicate checked-side key list. The
 focused compiler suite now passes `72/72`, and the native checked runtime suite
 passes `23/23`. The hash-keyed checked rank queue checkpoint then raises the
 focused compiler suite to `76/76` and the native checked runtime suite to
-`25/25`. The remove-with-value close primitive simplifies framework
+`25/25`; the long-key stream-window rank checkpoint raises them to `80/80` and
+`28/28`. The remove-with-value close primitive simplifies framework
 unlinking and validates already-popped-key cleanup, but does not yet remove the
 focused checked CPU gap. The lexicographic priority API removes the Q1
 tie-breaker blocker for this dense-key rank shape. Standalone hash-keyed rank
-state now exists; stream-window integration and lower container CPU overhead
-remain open.
+state and stream-window integration now exist; lower container CPU overhead and
+application integration remain open.
 
 Is Phase 0 actually complete?
 
@@ -2604,21 +2612,20 @@ Immediate next step:
     bucket-owned rank keys before child bucket close. The entry-cleanup close
     callbacks report removed rank entries for side-table cleanup. It is dense-key and
     supports single-`Long` and four-component lexicographic priorities. A
-    standalone long-key queue now exists, but hash-keyed stream-window rank
-    integration remains open, and the checked window-rank container still has
-    CPU overhead.
+    standalone long-key queue and `StreamWindowLongIndexedRank` now cover
+    arbitrary `Long` keys with the same bucket-close discipline. The checked
+    window-rank container still has CPU overhead.
 
 Next technical milestone:
 
-1. Continue reducing `StreamWindowIndexedRank` container CPU overhead or
-   integrate `RegionLongIndexedPriorityQueue` into a checked stream-window rank
-   slice. The entry-cleanup matrix
+1. Continue reducing checked stream-window rank container CPU overhead or apply
+   `StreamWindowLongIndexedRank` to a Q1-style route-key operator slice. The entry-cleanup matrix
    improved the auto-cleanup path from `313.572 ms` to `302.001 ms`, but remains
    slower than heap and the earlier manual-cleanup path. The follow-up
    remove-with-value close primitive is correctness/usefulness cleanup, not a
    measured speed fix. The lexicographic priority API now covers Q1-style
-   tie-breakers, and standalone long-key rank state now exists, so the next
-   blocker is stream-window integration or lower CPU overhead.
+   tie-breakers, and long-key stream-window rank state now exists, so the next
+   blocker is application integration or lower CPU overhead.
    The Q2 substep diagnostic does not currently reproduce bounded same-count Q2
    overhead.
 2. Continue the DEBS "region-heavy" path with measurement first after the
@@ -3515,9 +3522,9 @@ Interpretation:
   framework-owned.
 - This checkpoint left ownership-bookkeeping overhead and richer ordering open;
   the later lexicographic priority checkpoint covers Q1-style tie-breakers, and
-  the later long-key queue covers standalone hash-keyed rank state. Lower CPU
-  overhead and hash-keyed stream-window integration remain open before broad
-  DEBS Q1 integration.
+  the later long-key stream-window rank API covers arbitrary route-style keys.
+  Lower CPU overhead and application integration remain open before broad DEBS
+  Q1 integration.
 
 ## Latest Update: StreamWindowIndexedRank Entry Cleanup
 
@@ -3611,9 +3618,9 @@ Interpretation:
 - RSS remains lower for checked Rift, and measured Rift operation time remains
   small. The remaining overhead is likely in checked container/object program
   shape rather than raw region allocator operations.
-- The next useful direction is a richer/lower-overhead rank-window API
-  (stream-window hash-key integration and fewer per-event object/control
-  transitions), not another narrow queue method tweak.
+- The next useful direction is applying the long-key rank-window API to a real
+  operator or reducing per-event object/control transitions, not another narrow
+  queue method tweak.
 
 ## Latest Update: StreamWindowIndexedRank Lexicographic Priority API
 
@@ -3752,6 +3759,48 @@ Interpretation:
 - It does not yet make `StreamWindowIndexedRank` hash-keyed. The next framework
   step is composing long-key rank state with bucket ownership/close cleanup, or
   attacking checked container CPU overhead if that integration looks too costly.
+
+## Latest Update: Long-Key Checked Stream-Window Rank
+
+Date: 2026-04-29
+
+Implementation commit:
+
+- `scala-native-rift` `7cde2473c2`
+  (`Add long-key checked stream-window rank`)
+
+What changed:
+
+- Added `RiftRegion.StreamWindowLongIndexedRank[T]`, composing
+  `StreamBucketArena` with `RegionLongIndexedPriorityQueue`.
+- Added region-owned owner-table arrays for bucket-owned arbitrary `Long` keys,
+  so the close path can remove parent-visible rank entries before child bucket
+  close without a dense remapping layer.
+- Added long-key overloads for `streamWindowBucketFor`, `putWindowRank`,
+  `putWindowRankInBucket`, `updateWindowRankPriority`, `removeWindowRank`,
+  `containsWindowRank`, `getWindowRank`, `peekWindowRank`,
+  `peekWindowRankKey`, `peekWindowRankPriority`, `popWindowRank`,
+  `windowRankLength`, and close-with-entry helpers.
+- Added compiler probes for auto cleanup, close-with-entry callbacks,
+  lexicographic long-key ranking, and direct heap-store rejection.
+- Added native runtime smokes for rehash/cleanup, key movement between buckets,
+  already-popped-key close cleanup, and Q1-style lexicographic priorities.
+
+Validation:
+
+- `git diff --check` passed.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile` passed.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"` passed: `80/80`.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionCheckedTest"` passed: `28/28`.
+
+Interpretation:
+
+- This is Phase 7 API/safety evidence, not a new DEBS timing row.
+- It removes the framework-level blocker for route-style packed `Long` keys in
+  checked stream-window rank state.
+- Remaining work is either applying this to a real Q1 route-key slice or
+  measuring/reducing checked stream-window rank CPU overhead before application
+  integration.
 
 ## Unsafe Assumptions To Avoid
 
