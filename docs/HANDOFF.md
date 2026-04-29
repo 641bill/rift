@@ -3873,6 +3873,18 @@ Interpretation:
 - The next safe action is to reduce checked rank/window CPU and memory overhead
   before wiring this directly into DEBS Q1 route ranking.
 
+Rejected follow-up probe:
+
+- An uncommitted experiment tried three narrow changes: `getWindowRankOrNull`
+  to avoid `contains` + `get`, avoiding a post-`siftUp` index lookup, and
+  backward-shift deletion for the long-key queue table. The same 100k/1M
+  matrices got slower (`rift-checked-long` around `54-60 ms` at 100k and
+  `528 ms` at 1M), so the code was reverted before commit.
+- Do not repeat those narrow changes as the next optimization. The likely next
+  useful work is either profiling the checked long-key path or designing a
+  deeper stream-window rank representation that avoids the duplicate
+  queue-table plus owner-table probing/metadata.
+
 ## Unsafe Assumptions To Avoid
 
 - "Rift already has final DEBS application proof." It does not. The current

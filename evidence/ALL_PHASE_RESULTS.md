@@ -1754,6 +1754,11 @@ Interpretation:
   collection owns lookup state in this shape. That improves the 100k checked
   median versus the first close-with-entry run, but the 1M row remains a
   same-run overhead warning.
+- A follow-up uncommitted optimization probe was rejected: a nullable fused
+  lookup API, post-`siftUp` index-lookup removal, and backward-shift queue-table
+  deletion did not improve the long-key matrix and made the checked rows
+  slower in the measured 100k/1M controls. Treat the remaining gap as a deeper
+  representation/profiling problem, not as a small duplicate-lookup issue.
 - It is not a speed win. Checked Rift is slower on elapsed time even though
   Rift runtime operation time is low and RSS is lower. The entry-cleanup API
   improved the previous auto-cleanup default (`313.572 ms`, `94732288` bytes
