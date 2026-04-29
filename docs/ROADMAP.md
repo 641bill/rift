@@ -65,9 +65,11 @@ positive focused result for that envelope. At 1M events, checked Rift is
 100k events, heap remains faster (`2.782 ms` versus checked `3.370 ms`), so
 the result is a threshold result, not a universal checked-region win. The first
 reusable `StreamAppendWindow` API is correctness-valid but not performance
-ready: at 1M it measured `76.057 ms` versus same-run heap `37.424 ms` and
-manual checked `34.762 ms`. Next work should reduce append/window API overhead
-in the focused matrix before using that API in DEBS; DEBS Q1 ranking remains
+ready: after removing no-callback bucket-lookup delegation, it still measured
+`66.023 ms` versus same-run heap `37.455 ms` and manual checked `33.157 ms`.
+Diagnostics show healthy bucket reuse (`999960` current-bucket hits and `40`
+opens at 1M), so next work should target per-entry API/linking/callback and
+representation overhead before using that API in DEBS. DEBS Q1 ranking remains
 out of scope until rank/table-maintenance primitives clear their own gates.
 
 Phase 0 is not "final." It is complete enough for GCBench and ListOfLists, but

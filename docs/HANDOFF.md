@@ -4134,6 +4134,14 @@ Reusable `StreamAppendWindow` 1M follow-up:
 | rift-checked | 34.762 | 0.000 | 0.117 | 1000000 | 47546368 |
 | rift-checked-api | 76.057 | 0.000 | 0.092 | 1000000 | 83247104 |
 
+No-callback bucket-lookup follow-up, same 1M workload:
+
+| Mode | Median elapsed ms | GC ms | Rift op ms | Region objects | RSS bytes |
+|---|---:|---:|---:|---:|---:|
+| heap | 37.455 | 11.906 | 0.000 | 0 | 75038720 |
+| rift-checked | 33.157 | 0.000 | 0.084 | 1000000 | 47513600 |
+| rift-checked-api | 66.023 | 0.000 | 0.082 | 1000000 | 47513600 |
+
 Interpretation:
 
 - At 100k, heap still wins and measured GC is zero. This is below the useful
@@ -4148,10 +4156,16 @@ Interpretation:
   objects can live in checked regions and win when the operator is simple
   enough and allocation volume is high enough.
 - The reusable `StreamAppendWindow` API is not ready for application
-  integration. It is correctness-valid, but the 1M `rift-checked-api` row is
-  much slower than heap and the manual checked child-bucket path. Since its
-  Rift op time is still tiny, the gap is API/container CPU and representation
-  overhead, not allocation or close cost.
+  integration. It is correctness-valid, and removing no-callback bucket-lookup
+  delegation improves the 1M row from `76.057 ms` to `66.023 ms`, but it is
+  still much slower than heap and the manual checked child-bucket path. Since
+  its Rift op time is still tiny, the gap is API/container CPU and
+  representation overhead, not allocation or close cost.
+- `CHECKED_APPEND_API_DIAG=1` counters show the 1M API path doing `1000000`
+  bucket lookups, `999960` current-bucket hits, `40` bucket opens, `1000000`
+  appends, `40` closed buckets, `1000000` close entries, and final live length
+  `0`. The bucket-open/close pattern is healthy; the remaining issue is
+  per-entry API/linking/callback/representation overhead.
 
 Safe next action:
 
@@ -4159,9 +4173,9 @@ Safe next action:
 2. Use `SN_WIN_ENVELOPE.md` as the current selection guide.
 3. Do not integrate the current `StreamAppendWindow` API into DEBS until its
    focused 1M gate is fixed.
-4. Next implementation should reduce reusable append/window API overhead in
-   the focused matrix, or choose a different cheap operator primitive and prove
-   it there before application integration.
+4. Next implementation should target per-entry API/linking/callback overhead in
+   `StreamAppendWindow`, or choose a different cheap operator primitive and
+   prove it in the focused matrix before application integration.
 
 ## Unsafe Assumptions To Avoid
 

@@ -1870,6 +1870,14 @@ Reusable `StreamAppendWindow` API follow-up, same 1M workload:
 | rift-checked | 34.762 | 0.000 | 0.117 | 1000000 | 41 / 41 / 0 | 47546368 |
 | rift-checked-api | 76.057 | 0.000 | 0.092 | 1000000 | 41 / 41 / 0 | 83247104 |
 
+No-callback bucket-lookup follow-up, same 1M workload:
+
+| Mode | Median elapsed ms | Median GC ms | Median Rift op ms | Region objects | Opens/closes/resets | Peak RSS bytes |
+|---|---:|---:|---:|---:|---:|---:|
+| heap | 37.455 | 11.906 | 0.000 | 0 | 0 / 0 / 0 | 75038720 |
+| rift-checked | 33.157 | 0.000 | 0.084 | 1000000 | 41 / 41 / 0 | 47513600 |
+| rift-checked-api | 66.023 | 0.000 | 0.082 | 1000000 | 41 / 41 / 0 | 47513600 |
+
 Interpretation:
 
 - This is the cheap checked operator contrast to TableRank. It deliberately
@@ -1889,10 +1897,15 @@ Interpretation:
   enough, while maintenance-heavy checked ranking still needs container CPU
   work before DEBS Q1 integration.
 - The reusable `StreamAppendWindow` API is not ready for application
-  integration. It matches checksums and passes compiler/runtime probes, but the
-  1M `rift-checked-api` row is `76.057 ms`, much slower than heap and the
-  manual checked child-bucket path. Region-op time remains tiny, so this is
-  API/container CPU and representation overhead, not allocator or close cost.
+  integration. It matches checksums and passes compiler/runtime probes. The
+  no-callback fix improves the 1M `rift-checked-api` row from `76.057 ms` to
+  `66.023 ms`, but it remains much slower than heap and the manual checked
+  child-bucket path. Region-op time remains tiny, so this is API/container CPU
+  and representation overhead, not allocator or close cost.
+- Opt-in `CHECKED_APPEND_API_DIAG=1` counters show the 1M API path doing
+  `1000000` bucket lookups, `999960` current-bucket hits, `40` bucket opens,
+  `1000000` appends, `40` close buckets, `1000000` close entries, and final
+  live length `0`. Bucket lookup delegation was not the whole problem.
 
 Relevant evidence carried from Phase 4:
 
@@ -2083,8 +2096,9 @@ Status:
   and only `0.074 ms` of Rift operation time. At 100k, heap remains faster,
   so this is a threshold result rather than a universal checked-region win.
 - The first reusable API version of that shape, `StreamAppendWindow`, failed
-  the focused 1M gate: `rift-checked-api` measured `76.057 ms` versus same-run
-  heap `37.424 ms` and manual checked `34.762 ms`. Keep it as API/correctness
+  the focused 1M gate. After removing no-callback bucket-lookup delegation,
+  `rift-checked-api` still measured `66.023 ms` versus same-run heap
+  `37.455 ms` and manual checked `33.157 ms`. Keep it as API/correctness
   evidence until its abstraction overhead is reduced.
 - The append-window result does not justify returning to DEBS Q1 ranking.
   TableRank remains gated out. The next DEBS candidate should be an
