@@ -66,7 +66,14 @@ Scala-next capture checking supports the first Rift safe API slice:
   mutable ranking state. `put` is guarded like `push`; `get`, `contains`,
   `updatePriority`, `peek`, and `pop` let checked stream code fetch ordinary
   region objects by key, mutate their fields, and update ranking priority
-  without allocating a new object every refresh.
+  without allocating a new object every refresh. The lexicographic priority
+  overloads use the same value-store guard while allowing Q1-style
+  count/time/sequence/key tie-breakers.
+- `RiftRegion.StreamWindowIndexedRank` composes dense-key ranking with
+  stream-bucket child regions. Bucket-owned rank entries are unlinked before
+  the child bucket closes, close-with-entry callbacks let operators clean side
+  tables during framework unlinking, and direct heap values are rejected through
+  the same checked put guard.
 - The first literature-shaped safe API probes now compile: streaming reset
   epochs can process region-owned arrays of ordinary record objects, a
   top-word-style `ObjectBuffer` can store records that refer to heap metadata
@@ -107,7 +114,8 @@ Known gaps remain:
   and stable primary-constructor field selections whose source type is
   explicitly region-captured. It also checks stores into known region arrays
   and the current owner-token `ObjectBuffer`/`RegionBuffer`/
-  `RegionPriorityQueue`/`RegionIndexedPriorityQueue` APIs. Broader
+  `RegionPriorityQueue`/`RegionIndexedPriorityQueue`/stream-window rank APIs.
+  Broader
   cases such as plain `T^` fields, richer static-field provenance, and plain
   receiver-style collection/container abstractions still need a more precise
   policy or compiler extension.

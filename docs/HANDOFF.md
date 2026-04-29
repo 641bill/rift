@@ -253,12 +253,15 @@ the child bucket. The follow-up entry-cleanup API adds
 `closeWindowRankBucketsBeforeWithEntries` and
 `closeAllWindowRankBucketsWithEntries`, so stream operators can clean
 side tables during framework unlinking instead of maintaining a duplicate
-bucket-local key list. The focused compiler suite now passes `70/70`; the
-native checked runtime suite passes `22/22`.
+bucket-local key list. The focused compiler suite now passes `72/72`; the
+native checked runtime suite passes `23/23`.
 The follow-up remove-with-value close primitive validates already-popped-key
 cleanup but does not yet reduce the focused checked CPU gap; the next useful
-stream-window-rank direction is a richer/lower-overhead rank API rather than
-another narrow queue tweak.
+stream-window-rank direction is a lower-overhead rank API rather than another
+narrow queue tweak. The newest lexicographic priority API adds Q1-style
+count/time/sequence/key tie-breakers to the same dense-key checked rank/window
+shape; the focused compiler suite now passes `72/72`, and the native checked
+runtime suite passes `23/23`.
 
 A recent Phase 5 diagnostic checkpoint adds opt-in Q2 CPU substep timers
 behind `DEBS2015_Q2_CPU_DIAGNOSTICS=1`. Heap and checked Q2 now emit matching
@@ -2299,7 +2302,7 @@ Roadmap source: `/Users/siyaoliu/rift/Claude_output/ROADMAP.md`
 | Phase 4 topology/layout | Done enough to move on | `PHASE4_LAYOUT.md`, `PHASE4_TOPOLOGY.md`, `PHASE4_EXIT.md`. | Chunked layout still not a Rift win vs improved SafeZone. Mixed GC/region safety story needs Phase 6 tests. |
 | Phase 5 streaming operators and DEBS | In progress | DEBS Q1/Q2 run simultaneously on real data; outputs match; instrumentation added; Q1 and Q2 window entries have shared heap/Rift backends; Q2 active profit values live in window entries; Q2 ranking uses primitive cell keys internally; RunBoth input bytes use a heap/Rift allocation-placement split; the reusable ranking backend region-allocates Q1/Q2 ranking objects and top-k result arrays; Q2 bounded per-cell tables, Q1 primitive route-table arrays, Q1 ranking-index arrays, Q2 latest-empty taxi arrays, Q2 ranking-index arrays, Q2 taxi-id table entries/bytes, RunBoth output snapshots, Q2 incremental median heap arrays, and RunBoth latency buffers are region-backed in Rift modes. New `diag_*` counters identify remaining heap/control paths, and the shared `Grid.cellKeyOrZero` hot path removes temporary `Some(Cell)`/`Cell` allocation from both heap and Rift. Q2 rank/output attribution reports change-check time, snapshot time, rank comparisons/swaps, top-candidate comparisons, and changed-output element checks. Q2 top-10 extraction is now cached with conservative invalidation. Opt-in GC heap allocation attribution now reports allocation calls, rounded bytes, allocation-call time, and C-side phase buckets. RunBoth byte output uses the same writer in heap/Rift modes while placing the reusable byte buffer in the region for Rift modes; `rift-checked` now integrates checked Q1/Q2 processors in the same RunBoth loop. Opt-in active-memory and region-family diagnostics now attribute live checked-region payload. Opt-in process diagnostics now attribute checked Q1/Q2 CPU shape without changing normal timing rows. Opt-in Q2 CPU substep diagnostics now attribute bounded Q2 process time. | Latest trusted 1M byte-output medians are heap `4640.593 ms`, HPZone `4524.706 ms`, and Streaming `4522.308 ms`; GC collection medians are heap `21.025 ms`, HPZone `0.685 ms`, and Streaming `0.635 ms`; heap RSS is `159907840`, HPZone/Streaming RSS is `116785152`. Checked RunBoth 1M medians are heap `5363.257 ms`, HPZone `5224.005 ms`, Streaming `5209.104 ms`, and checked `5043.240 ms`; GC medians are heap `21.226 ms`, HPZone `0.834 ms`, Streaming `0.862 ms`, and checked `2.473 ms`. The latest trusted 1M allocation-attribution run shows heap at `6,025,143` GC allocation calls, `235,159,552` bytes, and `171.868 ms` allocation-call time, versus about `0.56M` calls, `10.5 MB`, and `12.8-12.9 ms` in trusted Rift modes. Checked allocation attribution drops the heap baseline to `752568` calls, `28785632` bytes, and `20.514 ms` allocation-call time. The first full-month checked RunBoth control matched heap output but had invalid checked wall-clock timing due descheduling; the pool-cap same-run full-month control is heap `71.919 s`, `0.323 s` GC, `579.1 MiB` RSS versus checked `77.947 s`, `0.190 s` GC, `695.2 MiB` RSS. After the single-control-object `ChildBucket` change, the same-order full-month 3-run median is heap `73.029 s` versus checked `67.670 s`, with GC `0.315 s` versus `0.086 s`; checked RSS is worse (`866.6 MiB` median versus heap `586.4 MiB`), and one checked repeat is slower. Region-family attribution found Q1 checked rank object graphs parent-lived; moving them into Q1 child bucket regions reduces full-month checked active requested peak from `823153856` to `180948200` bytes and RSS from `1086668800` to `613318656` bytes in checked-only diagnostics. The post-fix full-month 3-run median is heap `67.122 s` versus checked `66.804 s`; checked RSS median is now `613.3 MiB` versus heap `595.9 MiB`, with checked GC `0.117 s`, heap GC `0.285 s`, and checked Rift op `0.779 s`. Closeable SafeZone DEBS 1M medians now exist and show SafeZone lower-RSS but slower than heap and checked. Process diagnostics show Q2 operation counts are identical between heap and checked, while full-month Q1 checked rank creations rise from `6195167` to `14487771` because rank objects are refreshed into child-bucket lifetimes. Q2 CPU substep diagnostics on bounded 100k/1M inputs do not reproduce checked Q2 same-operation overhead: checked Q2 process and recorded Q2 CPU are lower than heap in those perturbing rows. Remaining work is lower-overhead/richer checked rank APIs, optional full-month SafeZone comparison, remaining control/collection work, and stronger safe API boundaries. |
 | Phase 6 literature-benchmark evidence | Started | `docs/LITERATURE_BENCHMARK_CONTRACT.md` extracts the paper comparison contract. `DataflowRegionMatrix` now runs Broom-style SELECT/AGGREGATE/JOIN methodology workloads with ordinary Scala objects in heap, current SafeZone, improved SafeZone, Rift HPZone, and Rift Streaming modes. Native-only local medians include peak RSS, and a Broom-scale single run is recorded. `StreamFlexRegionMatrix` now runs stream throughput/latency methodology workloads with deadline-miss and latency-tail metrics. `YakRegionMatrix` now runs word-count, graph-step, external-sort-shaped grouped sort, top-word/filter, GraphChi-like subintervals, runtime-proxy, and promotion/escape control-data split workloads. `StancuRegionMatrix` now runs transaction/accounting probes with batched transaction regions. The 2026-04-26 Stancu boundary sweep records per-transaction, 64-transaction, and 512-transaction region boundaries. | Keep improved SafeZone in all claims, and do not claim exact Naiad/Broom, exact StreamFlex/Ovm, exact Yak, or exact Stancu reproduction. The current sequence gives strong Broom/Dataflow HPZone evidence, strong StreamFlex-style throughput/latency evidence, Yak-style Rift-vs-heap and near-improved-SafeZone evidence for no-escape epochs, a modest grouped-sort allocation-placement win, a stronger top-word/filter result, a GraphChi-like Rift-vs-heap but not Rift-vs-improved-SafeZone result, a negative memory-API-level dynamic-promotion result, and Stancu-style Rift-vs-heap evidence after batching/fixed counters. The Stancu weak result is now specifically attributed to too-fine region boundaries. Next choices are safe API rejection probes or returning to DEBS with the literature findings in mind. Build a fair Rift collection/operator API before redoing parallel-collections claims. |
-| Phase 7 capture checking | Started | `RiftRegion.scoped`/`streaming` safe API slice exists. Targeted Scala-next compiler tests now pass for scoped object graphs, for-loop allocation, nested scoped regions, local higher-order consumers, non-escaping closures, return escape rejection, heap retention rejection, nested-region leak rejection, streaming reset escape rejection, conservative returned-function rejection, explicit `HeapRoot` metadata handles, static module singleton and immutable module-val metadata, direct unrooted heap-object constructor-argument rejection, region-local alias acceptance, heap-alias rejection, heap-field-selection rejection, explicit `{region}` constructor-field reuse, plain `T^` field-reuse rejection, region-owned array checks, owner-token `ObjectBuffer`, growable owner-token `RegionBuffer`, owner-token `RegionPriorityQueue`, owner-token `RegionIndexedPriorityQueue`, reset epoch arrays, top-word rooted metadata buffers, GraphChi rooted/unrooted heap metadata, reset-epoch values stored into outer buffers, mutable local linked-list heads with provenance-preserving assignments, pinned diagnostic substrings for every current negative compiler probe, and the explicit split that `RiftRegion.open` is trusted while `ScopedRegion`/`StreamingRegion` allocations are checked. `docs/REPORT_CAPTURE_CHECK.md` records the current checker behavior. | Broader collection/operator APIs, richer tie-breaking/hash-keyed state, broader static-field provenance, and a better ergonomics story for field/container provenance beyond local linked-list heads. |
+| Phase 7 capture checking | Started | `RiftRegion.scoped`/`streaming` safe API slice exists. Targeted Scala-next compiler tests now pass for scoped object graphs, for-loop allocation, nested scoped regions, local higher-order consumers, non-escaping closures, return escape rejection, heap retention rejection, nested-region leak rejection, streaming reset escape rejection, conservative returned-function rejection, explicit `HeapRoot` metadata handles, static module singleton and immutable module-val metadata, direct unrooted heap-object constructor-argument rejection, region-local alias acceptance, heap-alias rejection, heap-field-selection rejection, explicit `{region}` constructor-field reuse, plain `T^` field-reuse rejection, region-owned array checks, owner-token `ObjectBuffer`, growable owner-token `RegionBuffer`, owner-token `RegionPriorityQueue`, owner-token `RegionIndexedPriorityQueue`, lexicographic checked indexed-rank priorities, reset epoch arrays, top-word rooted metadata buffers, GraphChi rooted/unrooted heap metadata, reset-epoch values stored into outer buffers, mutable local linked-list heads with provenance-preserving assignments, pinned diagnostic substrings for every current negative compiler probe, and the explicit split that `RiftRegion.open` is trusted while `ScopedRegion`/`StreamingRegion` allocations are checked. `docs/REPORT_CAPTURE_CHECK.md` records the current checker behavior. | Broader collection/operator APIs, hash-keyed state, broader static-field provenance, and a better ergonomics story for field/container provenance beyond local linked-list heads. |
 | Phase 8 native GC/region hardening | Started | `HeapRoot` handles give a GC-visible explicit-root path for heap metadata stored from region objects; direct unrooted heap-object constructor arguments, heap aliases, heap field selections, unsafe region-array stores, unsafe owner-token `ObjectBuffer`/`RegionBuffer` heap stores, mutable static vars, and mutable-head heap retagging are rejected in checked Rift lowering while region-to-region object graphs, simple region-local aliases, static module singletons, immutable module vals, stable constructor fields explicitly captured by `{region}`, explicitly captured region arrays, owner-token object buffers, growable region buffers, and provenance-preserving mutable local linked-list heads still compile. | Extend or deliberately limit the mixed-reference rule for richer containers; decide whether plain `T^` field reuse and plain receiver-style container operations need a compiler extension or owner-token APIs. |
 | Phase 9 Lean mechanization | Open | Design pack has Lean stubs/templates. | Port or start proof work; prove without `sorry`. |
 | Phase 10 writing | Not started beyond notes | Result packs and this handoff exist. | Thesis/paper narrative after evidence stabilizes. |
@@ -2309,11 +2312,12 @@ Post-table update: the current checked API slice now includes
 `StreamWindowIndexedRank` keys before child bucket close. It also includes
 entry-cleanup callbacks that report removed rank entries during close so
 operators can clean side tables without a duplicate checked-side key list. The
-focused compiler suite now passes `70/70`, and the native checked runtime suite
-passes `22/22`. The newest remove-with-value close primitive simplifies
-framework unlinking and validates already-popped-key cleanup, but does not yet
-remove the focused checked CPU gap. The checked path remains slower than heap
-and the older manual-cleanup path.
+focused compiler suite now passes `72/72`, and the native checked runtime suite
+passes `23/23`. The remove-with-value close primitive simplifies framework
+unlinking and validates already-popped-key cleanup, but does not yet remove the
+focused checked CPU gap. The lexicographic priority API removes the Q1
+tie-breaker blocker for this dense-key rank shape. Hash-keyed state and lower
+container CPU overhead remain open.
 
 Is Phase 0 actually complete?
 
@@ -2588,18 +2592,21 @@ Immediate next step:
     compiler guard, and now has `putWindowRankInBucket` auto cleanup for
     bucket-owned rank keys before child bucket close. The entry-cleanup close
     callbacks report removed rank entries for side-table cleanup. It is dense-key and
-    single-`Long` priority only; richer comparator and hash-key variants remain
-    open, and the checked window-rank container still has CPU overhead.
+    single-`Long` and four-component lexicographic priorities; hash-key
+    variants remain open, and the checked window-rank container still has CPU
+    overhead.
 
 Next technical milestone:
 
 1. Continue reducing `StreamWindowIndexedRank` container CPU overhead or build
-   the next richer checked rank/window API slice. The entry-cleanup matrix
+   the next hash-keyed checked rank/window API slice. The entry-cleanup matrix
    improved the auto-cleanup path from `313.572 ms` to `302.001 ms`, but remains
    slower than heap and the earlier manual-cleanup path. The follow-up
    remove-with-value close primitive is correctness/usefulness cleanup, not a
-   measured speed fix. The Q2 substep diagnostic does not currently reproduce
-   bounded same-count Q2 overhead.
+   measured speed fix. The lexicographic priority API now covers Q1-style
+   tie-breakers, so the next blocker is hash-keyed state or lower CPU overhead.
+   The Q2 substep diagnostic does not currently reproduce bounded same-count Q2
+   overhead.
 2. Continue the DEBS "region-heavy" path with measurement first after the
    checked RunBoth median and attribution checkpoints. The next DEBS work
    should be a safety abstraction or control run, not a blind region-allocation
@@ -3492,13 +3499,16 @@ Interpretation:
 - Compared with the previous manual-cleanup 1M checked median (`254.050 ms`),
   automatic cleanup adds CPU overhead while making the safety boundary more
   framework-owned.
-- The next useful step is to reduce ownership-bookkeeping overhead or add a
-  richer comparator/hash-key rank API before integrating this abstraction into
-  DEBS Q1.
+- This checkpoint left ownership-bookkeeping overhead and richer ordering open;
+  the later lexicographic priority checkpoint covers Q1-style tie-breakers, but
+  hash-keyed state and lower CPU overhead remain open before broad DEBS Q1
+  integration.
 
 ## Latest Update: StreamWindowIndexedRank Entry Cleanup
 
 Date: 2026-04-29
+
+Child repo commit: `28ccf544023e`.
 
 What changed:
 
@@ -3590,6 +3600,57 @@ Interpretation:
   (tie-breakers, hash-keyed state, and fewer per-event object/control
   transitions), not another narrow queue method tweak.
 
+## Latest Update: StreamWindowIndexedRank Lexicographic Priority API
+
+Date: 2026-04-29
+
+What changed:
+
+- Added `RiftRegion.regionIndexedPriorityQueueLexicographic` and
+  `RiftRegion.streamWindowIndexedRankLexicographic`.
+- Added overloads for `put`, `updatePriority`, `putWindowRank`,
+  `putWindowRankInBucket`, and `updateWindowRankPriority` that accept four
+  lexicographic `Long` priority components. Larger components rank first at
+  each tie-break level.
+- Updated the Scala 3 checked lowering guard so the new multi-priority put
+  overloads still check the stored value argument rather than one of the
+  trailing priority arguments.
+- Added positive compiler/runtime probes for Q1-style lexicographic ranking and
+  a negative compiler probe rejecting direct heap objects through the
+  lexicographic bucket-owned put path.
+
+Validation:
+
+- `git diff --check` passed in `scala-native-rift`.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile` passed.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"`
+  passed `72/72`.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionCheckedTest"`
+  passed `23/23`.
+- 100k focused checked stream-window-rank matrix matched checksum
+  `-476315670107920613`.
+- Default 1M focused matrix matched checksum `6881312641757835670`.
+
+Focused matrix control:
+
+| Input | Mode | Median elapsed ms | GC ms | Rift op ms | Region objects | Opens / closes / resets | Peak RSS bytes |
+|---|---|---:|---:|---:|---:|---:|---:|
+| 100k | heap | 22.211 | 0.000 | 0.000 | 0 | 0 / 0 / 0 | 35209216 |
+| 100k | rift-checked | 37.404 | 0.908 | 0.110 | 82545 | 5 / 5 / 0 | 30031872 |
+| 1M | heap | 205.849 | 0.000 | 0.000 | 0 | 0 / 0 / 0 | 145801216 |
+| 1M | rift-checked | 329.761 | 7.523 | 0.352 | 826643 | 41 / 41 / 0 | 87457792 |
+
+Interpretation:
+
+- This is a functionality and safety step, not a speed claim.
+- It removes the "single `Long` priority only" limitation for dense-key
+  checked ranking and supports Q1-style count/time/sequence/key tie-breakers.
+- The focused matrix still uses the existing single-priority logical program;
+  it is a regression/control row for the shared queue implementation, not a
+  lexicographic benchmark.
+- Hash-keyed ranking and lower checked-container CPU overhead remain the next
+  framework blockers before broad DEBS Q1 integration.
+
 ## Latest Update: Q2 CPU Substep Diagnostics
 
 Date: 2026-04-28
@@ -3650,11 +3711,11 @@ Interpretation:
   collection. The auto-cleanup path now removes tracked rank keys before child
   bucket close. The entry-cleanup path then removes the duplicate checked-side
   bucket key list and improves the focused default matrix, but it is still
-  slower than heap and slower than the earlier manual-cleanup path. The Q2 CPU
+  slower than heap and slower than the earlier manual-cleanup path. The
+  lexicographic priority API then covers Q1-style tie-breakers, but the Q2 CPU
   substep diagnostic does not reproduce bounded checked same-operation overhead,
-  so lower-overhead richer comparator or hash-key rank collections, optional
-  full-month SafeZone comparison, and stronger safe-API controls are still
-  missing.
+  so lower-overhead or hash-key rank collections, optional full-month SafeZone
+  comparison, and stronger safe-API controls are still missing.
 - "GC time should disappear because Q1/Q2 windows and input bytes use Rift."
   `gc_time_ns` is collection time only. Some former heap-heavy paths have
   moved, including taxi-id bytes/entries and latency backing arrays, and the
