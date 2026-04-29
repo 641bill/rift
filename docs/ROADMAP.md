@@ -51,9 +51,13 @@ with the same owner-token heap-store guard as the dense indexed queue.
 discipline: bucket-owned long-key rank entries are tracked in a region-owned
 owner table and removed before child bucket close. The focused checked compiler
 suite is `80/80`, and the native checked runtime suite is `28/28`. Remaining
-work now means lowering checked rank/container CPU overhead and integrating the
-new long-key stream-window API into real operators, not inventing the framework
-shape.
+work now means lowering checked rank/container CPU and memory overhead before
+integrating the new long-key stream-window API broadly into real operators, not
+inventing the framework shape. The first focused long-key matrix matched
+heap-long and `rift-checked-long` checksums, but the default 1M median is a
+caution: heap-long `301.098 ms`, `5.973 ms` GC, `111.4 MB` RSS versus
+`rift-checked-long` `421.502 ms`, `5.710 ms` GC, `0.358 ms` Rift op, and
+`128.3 MB` RSS.
 
 Phase 0 is not "final." It is complete enough for GCBench and ListOfLists, but
 not for a final pipeline or application story.
@@ -713,8 +717,10 @@ Implementation substeps:
   but it is still not a speed win. The follow-up remove-with-value close
   primitive simplifies unlinking and validates already-popped-key cleanup, but
   it did not produce a measured speedup. The long-key stream-window rank shape
-  now exists; the next step is either applying it to Q1-style route keys or
-  continuing container CPU reduction. Bounded Q2
+  now exists and has focused 100k/1M matrix measurements. It removes the
+  packed-route-key/dense-remap blocker, but the 1M checked-long mode is slower
+  and higher-RSS than heap-long, so the next step is container CPU/memory
+  reduction before broad Q1 route-key integration. Bounded Q2
   same-operation overhead should not be optimized further until a clean or
   full-month diagnostic identifies a specific substep.
 - Scale to full-month joined/sorted data only after the bounded samples have a
@@ -829,6 +835,9 @@ Required work:
   arbitrary `Long` keys, using region-owned heap arrays plus a region-owned
   open-addressed index table. `StreamWindowLongIndexedRank` composes it with
   `StreamBucketArena` close cleanup for bucket-owned long-key entries.
+  The first focused long-key matrix validates matching heap/checked checksums
+  but shows overhead rather than a speed win, so it is a measurement gate before
+  DEBS integration rather than an application result.
   `CheckedRegionIndexedPriorityQueueMatrix` is the first focused harness for
   durable keyed region state with ordinary mutable Scala objects.
   `CheckedStreamWindowRankMatrix` is the first focused stream-window rank

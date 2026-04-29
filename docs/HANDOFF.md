@@ -275,6 +275,16 @@ Bucket-owned arbitrary `Long` keys are tracked in a region-owned owner table
 and removed from parent rank state before the child bucket closes. The focused
 compiler suite now passes `80/80`, and the native checked runtime suite passes
 `28/28`. This is still API/safety evidence, not a DEBS performance row.
+The latest focused matrix checkpoint adds `heap-long` and `rift-checked-long`
+modes to `CheckedStreamWindowRankMatrix` so the long-key stream-window API is
+measured before DEBS integration. Checksums match at 20k, 100k, and 1M. The
+100k median is heap-long `38.242 ms`, `0.000 ms` GC, `38.8 MB` RSS versus
+`rift-checked-long` `54.574 ms`, `0.974 ms` GC, `0.281 ms` Rift op, and
+`33.9 MB` RSS. The default 1M median is heap-long `301.098 ms`, `5.973 ms`
+GC, `111.4 MB` RSS versus `rift-checked-long` `421.502 ms`, `5.710 ms` GC,
+`0.358 ms` Rift op, and `128.3 MB` RSS. Treat this as functional API evidence
+and an overhead warning: the packed-key/dense-remap blocker is gone, but broad
+Q1 integration should wait for a lower-overhead checked rank/window pass.
 
 A recent Phase 5 diagnostic checkpoint adds opt-in Q2 CPU substep timers
 behind `DEBS2015_Q2_CPU_DIAGNOSTICS=1`. Heap and checked Q2 now emit matching
@@ -3801,6 +3811,57 @@ Interpretation:
 - Remaining work is either applying this to a real Q1 route-key slice or
   measuring/reducing checked stream-window rank CPU overhead before application
   integration.
+
+## Latest Update: Long-Key Stream-Window Rank Matrix
+
+Date: 2026-04-29
+
+Implementation status:
+
+- `scala-native-rift` `e46813cbb`
+  (`Add long-key stream-window rank matrix`)
+
+What changed:
+
+- Added `heap-long` and `rift-checked-long` modes to
+  `scala-native-rift/sandbox/src/main/scala-next/CheckedStreamWindowRankMatrix.scala`.
+- Added a heap open-addressed long-key indexed priority queue so the heap
+  comparator uses the same arbitrary-`Long` key shape as
+  `StreamWindowLongIndexedRank`.
+- Updated `scala-native-rift/sandbox/run_checked_stream_window_rank_matrix.sh`
+  to accept `CHECKED_SWR_MODES`, keeping the default `heap rift-checked`
+  behavior unchanged.
+- Updated `scala-native-rift/sandbox/CHECKED_STREAM_WINDOW_RANK_MATRIX.md`
+  and synced it to `evidence/CHECKED_STREAM_WINDOW_RANK_MATRIX.md`.
+
+Validation:
+
+- `git diff --check` passed before doc edits.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile`
+  passed.
+- 20k long-key smoke matched checksum `-715513143181030887`.
+- 100k long-key 3-run matrix matched checksum `-2863780563714953957`.
+- 1M long-key 3-run matrix matched checksum `4222832129898301078`.
+
+Key numbers:
+
+| Input | Mode | Median elapsed ms | GC ms | Rift op ms | Region objects | RSS bytes |
+|---|---|---:|---:|---:|---:|---:|
+| 20k | heap-long | 10.460 | 0.311 | 0.000 | 0 | 9895936 |
+| 20k | rift-checked-long | 10.663 | 0.199 | 0.081 | 18679 | 13303808 |
+| 100k | heap-long | 38.242 | 0.000 | 0.000 | 0 | 38846464 |
+| 100k | rift-checked-long | 54.574 | 0.974 | 0.281 | 82547 | 33898496 |
+| 1M | heap-long | 301.098 | 5.973 | 0.000 | 0 | 111411200 |
+| 1M | rift-checked-long | 421.502 | 5.710 | 0.358 | 826645 | 128253952 |
+
+Interpretation:
+
+- The arbitrary-long-key checked stream-window API is functionally validated
+  under a same-logical-program heap comparator.
+- This is not a speed win. The default 1M checked-long path is about `40%`
+  slower than heap-long and has higher RSS, despite low measured Rift op time.
+- The next safe action is to reduce checked rank/window CPU and memory overhead
+  before wiring this directly into DEBS Q1 route ranking.
 
 ## Unsafe Assumptions To Avoid
 
