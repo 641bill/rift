@@ -3885,6 +3885,119 @@ Rejected follow-up probe:
   deeper stream-window rank representation that avoids the duplicate
   queue-table plus owner-table probing/metadata.
 
+### 2026-04-29 Update: Fused TableRank Prototype
+
+Active implementation repo:
+
+- `/Users/siyaoliu/rift/scala-native-rift` on `feature/rift`
+
+What changed:
+
+- Added experimental `RiftRegion.StreamWindowTableRank[T]` in
+  `nativelib/src/main/scala-next/scala/scalanative/memory/RiftRegion.scala`.
+- Added factories:
+  `streamWindowTableRank` and `streamWindowTableRankLexicographic`.
+- Added TableRank operations:
+  `putTableRankInBucket`, `getTableRank`, `containsTableRank`,
+  `updateTableRankPriority`, `removeTableRank`, `peekTableRank`,
+  `popTableRank`, `copyTableRankTopK`, `tableRankLength`,
+  `hasTableRankBucketsBefore`, `closeTableRankBucketsBefore`,
+  `closeTableRankBucketsBeforeWithEntries`, `closeAllTableRankBuckets`, and
+  `closeAllTableRankBucketsWithEntries`.
+- Updated the Scala 3 plugin guard in
+  `nscplugin/src/main/scala-3/scala/scalanative/nscplugin/NirGenExpr.scala`
+  so `putTableRankInBucket` rejects direct heap values just like the existing
+  checked rank/container APIs.
+- Added compiler/runtime tests for TableRank bucket ownership, lexicographic
+  priority, top-k copy, removal, and direct heap-value rejection.
+- Added `rift-checked-table` and `rift-checked-table-long` modes to
+  `sandbox/src/main/scala-next/CheckedStreamWindowRankMatrix.scala`.
+- Prototyped checked Q1 rank maintenance on TableRank, correctness-smoked it,
+  and then backed it out of
+  `sandbox/src/main/scala-next/debs2015/Debs2015Q1CheckedProcessingRun.scala`
+  because the focused 1M TableRank gate did not clear. Current DEBS checked Q1
+  runs use the previous rank-arena path, not TableRank.
+- Added opt-in TableRank diagnostics controlled by `CHECKED_SWR_TABLE_DIAG=1`.
+  Diagnostic counters cover lookups/probes, inserts, replacements, priority
+  updates, heap sift steps/swaps, bucket moves, bucket-close removals, rehashes,
+  top-k candidate comparisons, and final table load/deleted counts.
+- Added two general TableRank optimizations: bucket-close fast removal for known
+  bucket-owned slots, and directional heap repair after removal.
+
+Validation:
+
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile`
+  passed.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"`
+  passed `86/86`.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionCheckedTest"`
+  passed `33/33`.
+- `bench/debs2015/run_q1_checked_processing_matrix.sh` on
+  `bench/debs2015/sample_q1.csv` matched heap vs checked-processing outputs
+  after the TableRank Q1 prototype backout.
+- `CHECKED_SWR_TABLE_DIAG=1` was verified to print `TABLE_DIAG` counters from
+  `sandbox/run_checked_stream_window_rank_matrix.sh`.
+
+Focused TableRank gate results:
+
+| Input | Mode | Median elapsed ms | GC ms | Rift op ms | Region objects | RSS bytes |
+|---|---|---:|---:|---:|---:|---:|
+| 20k | heap-long | 7.498 | 0.000 | 0.000 | 0 | 11321344 |
+| 20k | rift-checked-table-long | 9.246 | 0.000 | 0.292 | 17781 | 16269312 |
+| 100k | heap-long | 40.582 | 0.000 | 0.000 | 0 | 38780928 |
+| 100k | rift-checked-long | 54.018 | 0.000 | 0.215 | 82547 | 33931264 |
+| 100k | rift-checked-table-long | 41.069 | 0.000 | 0.164 | 82533 | 49938432 |
+| 1M | heap-long | 413.664 | 7.080 | 0.000 | 0 | 111443968 |
+| 1M | rift-checked-long | 568.427 | 5.821 | 0.449 | 826645 | 128335872 |
+| 1M | rift-checked-table-long | 491.918 | 5.927 | 0.475 | 826631 | 126468096 |
+
+Fast-close / directional-repair follow-up:
+
+| Input | Mode | Median elapsed ms | GC ms | Rift op ms | Region objects | RSS bytes |
+|---|---|---:|---:|---:|---:|---:|
+| 20k | heap-long | 11.297 | 0.000 | 0.000 | 0 | 11288576 |
+| 20k | rift-checked-table-long | 8.595 | 0.000 | 0.141 | 17781 | 16203776 |
+| 100k | heap-long | 34.620 | 0.000 | 0.000 | 0 | 38846464 |
+| 100k | rift-checked-long | 44.762 | 0.000 | 0.144 | 82547 | 33898496 |
+| 100k | rift-checked-table-long | 32.330 | 0.000 | 0.093 | 82533 | 49922048 |
+| 1M | heap-long | 300.667 | 4.252 | 0.000 | 0 | 111394816 |
+| 1M | rift-checked-long | 476.015 | 6.541 | 0.498 | 826645 | 128221184 |
+| 1M | rift-checked-table-long | 512.764 | 5.964 | 0.490 | 826631 | 126451712 |
+
+Opt-in diagnostic sample, 100k one-run, not a headline timing row:
+
+```text
+TABLE_DIAG mode=rift-checked-table-long lookups=300000 probes=385422 inserts=52382 replacements=30135 priority_updates=17483 heap_sift_steps=266870 heap_swaps=168244 bucket_moves=30135 bucket_close_removals=52254 rehashes=0 topk_candidate_compares=0 table_active=0 table_used=52382 table_deleted=52382 table_capacity=131072 heap_used=0 heap_capacity=65536
+```
+
+Interpretation:
+
+- TableRank is a general checked stream-window operator improvement, not a
+  DEBS-specific algorithm change. It removes the old duplicate queue-entry
+  representation and lets heap slots store table-slot ids.
+- The 100k gate passes: `rift-checked-table-long` is under `43 ms` and much
+  faster than same-run old checked-long.
+- The initial 1M gate did not pass: `491.918 ms` was lower than same-run old
+  checked-long but still about `19%` slower than same-run heap-long, missing
+  the within-15% target.
+- The fast-close/directional-repair follow-up still does not pass: the 100k
+  gate improves to `32.330 ms`, but the 1M same-run row is `512.764 ms`,
+  slower than old checked-long and `1.71x` heap-long.
+- Rift op time stays below `1 ms`, so the remaining gap is container CPU/layout
+  and memory behavior, not region allocation/close overhead.
+- A probe that removed bounded probe counters from TableRank lookup was tested
+  and rejected: the 1M table-long median regressed to `569.633 ms`. Keep the
+  bounded probe loop.
+
+Safe next action:
+
+1. Write a focused TableRank profile/result pack from the diagnostic counters
+   and same-run 1M failure before making more container changes.
+2. Investigate table/heap array layout, compare cost, hash probe count, and
+   update/remove duplicate work under identical operation counts.
+3. Do not re-integrate TableRank into DEBS Q1 until the focused 1M gate passes
+   or the roadmap explicitly relaxes the gate.
+
 ## Unsafe Assumptions To Avoid
 
 - "Rift already has final DEBS application proof." It does not. The current

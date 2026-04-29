@@ -102,9 +102,9 @@ For performance numbers, use the following rule of thumb:
 | Phase 2 | Integrated Rift into Scala Native runtime/compiler paths. | Mostly enablement work; judged by smoke/tests more than standalone speed tables. |
 | Phase 3 | Reran same-layout runtime matrices. | Rift has credible allocator/runtime wins on allocation-heavy linked structures. |
 | Phase 4 | Split allocator effects from layout/topology effects. | Layout and reference topology can dominate allocator choice; mixed region/GC references require a safety story. |
-| Phase 5 | Built DEBS Q1/Q2 runners and progressively moved structured-lifetime state into regions; added checked Q1 output/ranking, checked Q1 processing, checked Q2 processing probes, active-memory diagnostics, region-family attribution, Q1 window-rank arenas, reusable checked `StreamBucketArena`, checked `StreamWindowIndexedRank`, auto-cleanup and entry-cleanup for bucket-owned rank keys, lexicographic checked rank priorities, Q2 CPU substep diagnostics, and a closeable SafeZone Q1/Q2 control mode. | Current DEBS evidence shows bounded-sample elapsed/RSS wins and much lower heap allocation pressure. Full-month heap/checked medians are now near-tied after fixing one wrong checked lifetime: Q1 rank object graphs were parent-lived instead of bucket-lived. The Q1 window-rank arena further reduces rank churn and gives a single-run full-month RSS win, `StreamBucketArena` generalizes the bucket lifetime primitive, and `StreamWindowIndexedRank` is the first dense-key rank/window collection. Auto cleanup strengthens the close boundary but adds CPU overhead versus manual cleanup; entry cleanup removes duplicate checked-side bucket key lists and improves that overhead, but not enough for a speed win. Lexicographic rank priorities remove the single-priority ordering limitation for Q1-style tie-breaks. Bounded Q2 same-operation overhead is not reproduced by the new perturbing substep diagnostic. Long-key stream-window rank state now exists, but Q1 application integration, CPU overhead, I/O, optional SafeZone full-month controls, and stronger checked boundaries still keep this short of final application proof. |
+| Phase 5 | Built DEBS Q1/Q2 runners and progressively moved structured-lifetime state into regions; added checked Q1 output/ranking, checked Q1 processing, checked Q2 processing probes, active-memory diagnostics, region-family attribution, Q1 window-rank arenas, reusable checked `StreamBucketArena`, checked `StreamWindowIndexedRank`, auto-cleanup and entry-cleanup for bucket-owned rank keys, lexicographic checked rank priorities, Q2 CPU substep diagnostics, and a closeable SafeZone Q1/Q2 control mode. | Current DEBS evidence shows bounded-sample elapsed/RSS wins and much lower heap allocation pressure. Full-month heap/checked medians are now near-tied after fixing one wrong checked lifetime: Q1 rank object graphs were parent-lived instead of bucket-lived. The Q1 window-rank arena further reduces rank churn and gives a single-run full-month RSS win, `StreamBucketArena` generalizes the bucket lifetime primitive, and `StreamWindowIndexedRank` is the first dense-key rank/window collection. Auto cleanup strengthens the close boundary but adds CPU overhead versus manual cleanup; entry cleanup removes duplicate checked-side bucket key lists and improves that overhead, but not enough for a speed win. Lexicographic rank priorities remove the single-priority ordering limitation for Q1-style tie-breaks. Bounded Q2 same-operation overhead is not reproduced by the new perturbing substep diagnostic. Long-key stream-window rank and fused TableRank state now exist, but TableRank is backed out of DEBS Q1 because the focused 1M gate failed. Q1 application integration, CPU overhead, I/O, optional SafeZone full-month controls, and stronger checked boundaries still keep this short of final application proof. |
 | Phase 6 | Built methodology harnesses for Broom/StreamFlex/Yak/Stancu comparison axes. | These support the broader research story but are not exact reproductions of closed or unavailable artifacts. |
-| Phase 7 | Added checked `scoped`/`streaming` API probes using Scala capture checking, then moved from buffers to ranking and stream-window ranking containers. | Source-level safety evidence is started. The stream-window rank matrix validates the general bucket-region object pattern, auto-removes bucket-owned rank keys before close, reports removed entries for side-table cleanup, and now supports lexicographic priorities. `StreamWindowLongIndexedRank` extends that pattern to arbitrary `Long` keys using region-owned owner tables, and the focused long-key matrix matches checksums. Its 1M checked mode is slower and higher-RSS than heap-long, so container CPU/memory overhead and application integration remain open. |
+| Phase 7 | Added checked `scoped`/`streaming` API probes using Scala capture checking, then moved from buffers to ranking and stream-window ranking containers. | Source-level safety evidence is started. The stream-window rank matrix validates the general bucket-region object pattern, auto-removes bucket-owned rank keys before close, reports removed entries for side-table cleanup, and now supports lexicographic priorities. `StreamWindowLongIndexedRank` extends that pattern to arbitrary `Long` keys using region-owned owner tables. `StreamWindowTableRank` fuses lookup/value/priority/heap/bucket state into one parent-owned table and now has opt-in diagnostics, bucket-close fast removal, and directional heap repair. Checksums match, and the 100k TableRank gate passes, but the 1M gate fails; container CPU/memory overhead and application integration remain open. |
 | Phase 8 | Added explicit heap-root handles and conservative mixed-reference rejection. | Region memory is not GC-scanned, so region-to-heap references need roots or static rejection. |
 | Phase 9 | Reserved for Lean mechanization. | No proof result yet. |
 | Phase 10 | Reserved for writing and claim assembly. | Should wait for stronger Phase 5/7/9 evidence. |
@@ -1210,6 +1210,24 @@ Checked StreamWindowLongIndexedRank API:
   and `128.3 MB` RSS. Checksums matched in both rows.
 - This is Phase 7 API/safety and overhead evidence, not a new DEBS timing row.
 
+Checked StreamWindowTableRank API:
+
+- `RiftRegion.StreamWindowTableRank` is an experimental fused parent-owned
+  checked rank table. One open-addressed table owns key lookup, region value
+  reference, priority, heap index, bucket owner, and bucket-list links. The heap
+  stores table-slot ids instead of duplicate key/value entries.
+- It supports single-`Long` and four-component lexicographic priorities,
+  bucket-owned put/update/remove/pop/peek/copy-top-k operations, close callbacks
+  with entries, and opt-in diagnostics via `CHECKED_SWR_TABLE_DIAG=1`.
+- The plugin guard rejects direct heap values passed to `putTableRankInBucket`.
+- Validation: `sandbox3_next/compile` passed; the focused checked compiler
+  suite passed `86/86`; the native checked runtime suite passed `33/33`.
+- The 100k long-key focused gate passes, but the 1M focused gate fails after
+  both the initial implementation and the fast-close/directional-repair
+  follow-up. The provisional DEBS Q1 TableRank integration was correctness
+  smoked and then backed out. This is framework progress and profiling evidence,
+  not DEBS application evidence.
+
 Q2 CPU substep diagnostics:
 
 | Input | Mode | Elapsed ms | GC ms | RSS MiB | Q2 process ms | Q2 recorded CPU ms | Taxi lookup ms | Profit path+rank ms | Empty path+rank ms |
@@ -1539,10 +1557,10 @@ Targeted command:
 ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"
 ```
 
-Result on 2026-04-28:
+Current result on 2026-04-29:
 
 ```text
-Passed: Total 67, Failed 0, Errors 0, Passed 67
+Passed: Total 86, Failed 0, Errors 0, Passed 86
 ```
 
 Runtime smoke command:
@@ -1551,10 +1569,10 @@ Runtime smoke command:
 ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionCheckedTest"
 ```
 
-Result on 2026-04-28:
+Current result on 2026-04-29:
 
 ```text
-Passed: Total 17, Failed 0, Errors 0, Passed 17
+Passed: Total 33, Failed 0, Errors 0, Passed 33
 ```
 
 Covered source-level patterns:
@@ -1614,6 +1632,8 @@ Covered source-level patterns:
 | outer `RegionLongIndexedPriorityQueue` stores inner-region value | rejected by explicit owner-token type |
 | `StreamWindowLongIndexedRank` stores bucket-region objects with arbitrary `Long` keys, auto-removes tracked keys, reports removed entries, moves keys between buckets, skips already-popped keys on close, and supports lexicographic priorities | passes compiler probes and native runtime smokes |
 | `StreamWindowLongIndexedRank` stores direct heap object | rejected by Rift put lowering guard |
+| `StreamWindowTableRank` stores bucket-region objects with arbitrary `Long` keys in fused table/heap/bucket state, supports lexicographic priorities, top-k copy, direct removal, fast bucket close, and opt-in diagnostics | passes compiler probes and native runtime smokes |
+| `StreamWindowTableRank` stores direct heap object | rejected by Rift put lowering guard |
 | streaming reset epoch processes region-owned array of ordinary records | passes compiler probe and native runtime smoke |
 | top-word-style `ObjectBuffer` stores records with rooted heap metadata | passes compiler probe and native runtime smoke |
 | GraphChi-style subinterval uses rooted durable heap vertex metadata | passes compiler probe |
@@ -1741,6 +1761,38 @@ Long-key default local median, same stream shape with arbitrary `Long` keys:
 | heap-long | 358.988 | 6.973 | 0.000 | 0 | 0 / 0 / 0 | 111394816 |
 | rift-checked-long | 503.906 | 5.470 | 0.491 | 826645 | 41 / 41 / 0 | 128286720 |
 
+Fused `StreamWindowTableRank` gate rerun, same logical long-key stream shape:
+
+| Input | Mode | Median elapsed ms | Median GC ms | Median Rift op ms | Region objects | Opens/closes/resets | Peak RSS bytes |
+|---|---|---:|---:|---:|---:|---:|---:|
+| 20k | heap-long | 7.498 | 0.000 | 0.000 | 0 | 0 / 0 / 0 | 11321344 |
+| 20k | rift-checked-table-long | 9.246 | 0.000 | 0.292 | 17781 | 5 / 5 / 0 | 16269312 |
+| 100k | heap-long | 40.582 | 0.000 | 0.000 | 0 | 0 / 0 / 0 | 38780928 |
+| 100k | rift-checked-long | 54.018 | 0.000 | 0.215 | 82547 | 5 / 5 / 0 | 33931264 |
+| 100k | rift-checked-table-long | 41.069 | 0.000 | 0.164 | 82533 | 5 / 5 / 0 | 49938432 |
+| 1M | heap-long | 413.664 | 7.080 | 0.000 | 0 | 0 / 0 / 0 | 111443968 |
+| 1M | rift-checked-long | 568.427 | 5.821 | 0.449 | 826645 | 41 / 41 / 0 | 128335872 |
+| 1M | rift-checked-table-long | 491.918 | 5.927 | 0.475 | 826631 | 41 / 41 / 0 | 126468096 |
+
+Fast bucket-close / directional heap-repair follow-up:
+
+| Input | Mode | Median elapsed ms | Median GC ms | Median Rift op ms | Region objects | Opens/closes/resets | Peak RSS bytes |
+|---|---|---:|---:|---:|---:|---:|---:|
+| 20k | heap-long | 11.297 | 0.000 | 0.000 | 0 | 0 / 0 / 0 | 11288576 |
+| 20k | rift-checked-table-long | 8.595 | 0.000 | 0.141 | 17781 | 5 / 5 / 0 | 16203776 |
+| 100k | heap-long | 34.620 | 0.000 | 0.000 | 0 | 0 / 0 / 0 | 38846464 |
+| 100k | rift-checked-long | 44.762 | 0.000 | 0.144 | 82547 | 5 / 5 / 0 | 33898496 |
+| 100k | rift-checked-table-long | 32.330 | 0.000 | 0.093 | 82533 | 5 / 5 / 0 | 49922048 |
+| 1M | heap-long | 300.667 | 4.252 | 0.000 | 0 | 0 / 0 / 0 | 111394816 |
+| 1M | rift-checked-long | 476.015 | 6.541 | 0.498 | 826645 | 41 / 41 / 0 | 128221184 |
+| 1M | rift-checked-table-long | 512.764 | 5.964 | 0.490 | 826631 | 41 / 41 / 0 | 126451712 |
+
+Opt-in diagnostic sample, 100k one-run, not a headline timing row:
+
+```text
+TABLE_DIAG mode=rift-checked-table-long lookups=300000 probes=385422 inserts=52382 replacements=30135 priority_updates=17483 heap_sift_steps=266870 heap_swaps=168244 bucket_moves=30135 bucket_close_removals=52254 rehashes=0 topk_candidate_compares=0 table_active=0 table_used=52382 table_deleted=52382 table_capacity=131072 heap_used=0 heap_capacity=65536
+```
+
 Interpretation:
 
 - This validates the next general stream-operator shape above
@@ -1750,6 +1802,14 @@ Interpretation:
 - The long-key row removes the packed-key/dense-remap blocker for Q1-style
   route keys, but it is not a speed win. It points the next work at
   checked-rank CPU/memory overhead before broad DEBS Q1 integration.
+- The fused `StreamWindowTableRank` removes the duplicate queue-entry shape
+  and is materially better than old checked-long at the initial 100k/1M gate,
+  but it still misses the strict 1M gate: `491.918 ms` is about `19%` slower
+  than same-run heap-long.
+- The fast-close/directional-repair follow-up keeps the 100k gate strong
+  (`32.330 ms`, faster than same-run heap-long), but the 1M row still fails:
+  `512.764 ms` is `1.71x` heap-long and slower than same-run old checked-long.
+  TableRank therefore remains gated out of DEBS Q1.
 - The long-key checked mode now uses the no-entry close helper because the rank
   collection owns lookup state in this shape. That improves the 100k checked
   median versus the first close-with-entry run, but the 1M row remains a
@@ -1759,18 +1819,19 @@ Interpretation:
   deletion did not improve the long-key matrix and made the checked rows
   slower in the measured 100k/1M controls. Treat the remaining gap as a deeper
   representation/profiling problem, not as a small duplicate-lookup issue.
-- It is not a speed win. Checked Rift is slower on elapsed time even though
-  Rift runtime operation time is low and RSS is lower. The entry-cleanup API
-  improved the previous auto-cleanup default (`313.572 ms`, `94732288` bytes
-  RSS) by avoiding a second checked-side key list, but remained slower than the
-  earlier manual-cleanup checked median (`254.050 ms`). The remove-with-value
-  close primitive simplifies framework unlinking and validates
-  already-popped-key cleanup, but did not produce a measured speedup in the
-  current local matrix. The lexicographic API is a functionality step toward
-  Q1-style ordering, not a speed claim. Treat this as API/safety evidence plus
-  a CPU-overhead warning before integrating the abstraction into DEBS.
-- The harness still uses dense keys. Hash-key collection variants are still
-  needed for a more general Q1-style API.
+- The earlier dense-key default is not a speed win. Checked Rift is slower on
+  elapsed time even though Rift runtime operation time is low and RSS is lower.
+  The entry-cleanup API improved the previous auto-cleanup default
+  (`313.572 ms`, `94732288` bytes RSS) by avoiding a second checked-side key
+  list, but remained slower than the earlier manual-cleanup checked median
+  (`254.050 ms`). The remove-with-value close primitive simplifies framework
+  unlinking and validates already-popped-key cleanup, but did not produce a
+  measured speedup in the current local matrix. The lexicographic API is a
+  functionality step toward Q1-style ordering, not a speed claim.
+- Long-key and fused TableRank modes now cover the hash-key stream-window shape
+  needed for a more general Q1-style API. Treat the current result as
+  API/safety evidence plus a CPU-overhead warning before integrating the
+  abstraction into DEBS.
 
 Relevant evidence carried from Phase 4:
 
@@ -1937,5 +1998,10 @@ Status:
   overhead is not currently reproduced.
 - Latest DEBS phase breakdown shows remaining cost is mostly Q1/Q2 CPU and
   file I/O rather than Rift bookkeeping or GC collection.
+- `StreamWindowTableRank` is useful checked-framework progress but not DEBS
+  evidence yet. The 100k focused gate passes, diagnostics are now available,
+  and Rift op time remains below `1 ms`, but the 1M gate still fails after the
+  fast-close/directional-repair follow-up. The Q1 TableRank prototype was
+  backed out until this focused gate clears.
 - The pipeline/parallel-collections story is still a surrogate until a fair
   Rift-backed collection API exists.
