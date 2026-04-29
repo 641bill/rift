@@ -107,7 +107,7 @@ For performance numbers, use the following rule of thumb:
 | Phase 4 | Split allocator effects from layout/topology effects. | Layout and reference topology can dominate allocator choice; mixed region/GC references require a safety story. |
 | Phase 5 | Built DEBS Q1/Q2 runners and progressively moved structured-lifetime state into regions; added checked Q1 output/ranking, checked Q1 processing, checked Q2 processing probes, active-memory diagnostics, region-family attribution, Q1 window-rank arenas, reusable checked `StreamBucketArena`, checked `StreamWindowIndexedRank`, auto-cleanup and entry-cleanup for bucket-owned rank keys, lexicographic checked rank priorities, Q2 CPU substep diagnostics, and a closeable SafeZone Q1/Q2 control mode. | Current DEBS evidence shows bounded-sample elapsed/RSS wins and much lower heap allocation pressure. Full-month heap/checked medians are now near-tied after fixing one wrong checked lifetime: Q1 rank object graphs were parent-lived instead of bucket-lived. The Q1 window-rank arena further reduces rank churn and gives a single-run full-month RSS win, `StreamBucketArena` generalizes the bucket lifetime primitive, and `StreamWindowIndexedRank` is the first dense-key rank/window collection. Auto cleanup strengthens the close boundary but adds CPU overhead versus manual cleanup; entry cleanup removes duplicate checked-side bucket key lists and improves that overhead, but not enough for a speed win. Lexicographic rank priorities remove the single-priority ordering limitation for Q1-style tie-breaks. Bounded Q2 same-operation overhead is not reproduced by the new perturbing substep diagnostic. Long-key stream-window rank and fused TableRank state now exist, but TableRank is backed out of DEBS Q1 because the focused 1M gate failed. Q1 application integration, CPU overhead, I/O, optional SafeZone full-month controls, and stronger checked boundaries still keep this short of final application proof. |
 | Phase 6 | Built methodology harnesses for Broom/StreamFlex/Yak/Stancu comparison axes. | These support the broader research story but are not exact reproductions of closed or unavailable artifacts. |
-| Phase 7 | Added checked `scoped`/`streaming` API probes using Scala capture checking, then moved from buffers to ranking, stream-window ranking, and cheap append/window operators. | Source-level safety evidence is started. The stream-window rank matrix validates the general bucket-region object pattern, auto-removes bucket-owned rank keys before close, reports removed entries for side-table cleanup, and now supports lexicographic priorities. `StreamWindowLongIndexedRank` extends that pattern to arbitrary `Long` keys using region-owned owner tables. `StreamWindowTableRank` fuses lookup/value/priority/heap/bucket state into one parent-owned table and now has opt-in diagnostics, bucket-close fast removal, and directional heap repair. Checksums match, but the 1M TableRank gate fails; container CPU/memory overhead and application integration remain open. `CheckedAppendWindowMatrix` shows a simpler checked child-bucket operator can beat heap at 1M while remaining non-winning at 100k. The first reusable per-entry `StreamAppendWindow` close API failed the 1M gate, but cached bucket/region use plus `StreamAppendCursor` close now clears the focused 1M API gate. No DEBS integration has been done from this result yet. |
+| Phase 7 | Added checked `scoped`/`streaming` API probes using Scala capture checking, then moved from buffers to ranking, stream-window ranking, and cheap append/window operators. | Source-level safety evidence is started. The stream-window rank matrix validates the general bucket-region object pattern, auto-removes bucket-owned rank keys before close, reports removed entries for side-table cleanup, and now supports lexicographic priorities. `StreamWindowLongIndexedRank` extends that pattern to arbitrary `Long` keys using region-owned owner tables. `StreamWindowTableRank` fuses lookup/value/priority/heap/bucket state into one parent-owned table and now has opt-in diagnostics, bucket-close fast removal, and directional heap repair. Checksums match, but the 1M TableRank gate fails; container CPU/memory overhead and application integration remain open. `CheckedAppendWindowMatrix` shows a simpler checked child-bucket operator can beat heap at 1M while remaining non-winning at 100k. The first reusable per-entry `StreamAppendWindow` close API failed the 1M gate, but cached bucket/region use plus `StreamAppendCursor` close now clears the focused 1M API gate. Checked Q1 event-window entries now use this cursor-close API and match heap output on sample and 100k Q1/RunBoth controls; this is a correctness/control checkpoint, not a new median. |
 | Phase 8 | Added explicit heap-root handles and conservative mixed-reference rejection. | Region memory is not GC-scanned, so region-to-heap references need roots or static rejection. |
 | Phase 9 | Reserved for Lean mechanization. | No proof result yet. |
 | Phase 10 | Reserved for writing and claim assembly. | Should wait for stronger Phase 5/7/9 evidence. |
@@ -1929,6 +1929,53 @@ Interpretation:
   close entries, and final live length `0`. The remaining per-entry issue was
   close callback/link traversal shape, which cursor close targets.
 
+DEBS Q1 event-window cursor integration:
+
+Sources:
+
+- `evidence/DEBS_RESULTS.md`
+- `sandbox/src/main/scala-next/debs2015/Debs2015Q1CheckedProcessingRun.scala`
+
+What changed:
+
+- Checked Q1 event-window entries now use
+  `RiftRegion.StreamAppendWindow[RouteEvent]`.
+- `RouteEvent` is an ordinary Scala class extending
+  `RiftRegion.StreamAppendNode`, allocated in the current checked child bucket.
+- Expired Q1 event buckets are consumed through
+  `closeAppendWindowBucketsBeforeWithCursor`; end-of-run cleanup uses
+  `closeAllAppendWindowBucketsWithCursor`.
+- Q1 ranking/TableRank and Q2 ranking were not changed.
+
+Validation:
+
+- `sandbox3_next/compile` passed.
+- `RiftRegionCheckedCompilerTest` passed `89/89`.
+- `RiftRegionCheckedTest` passed `35/35`.
+- Q1 checked-processing sample output matched heap.
+- Q1 checked-processing 100k output matched heap.
+- RunBoth sample output matched heap for `rift-hp`, `rift-streaming`, and
+  `rift-checked`.
+- RunBoth 100k output matched heap for `rift-checked`.
+
+100k single-run control rows:
+
+| Harness | Mode | Elapsed ms | GC ms | Rift op ms | Q1 process ms | Q2 process ms | Q1 outputs | Q2 outputs |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| Q1 only | heap | 761.989 | n/a | n/a | n/a | n/a | 5942 | n/a |
+| Q1 only | checked-processing | 771.422 | n/a | n/a | n/a | n/a | 5942 | n/a |
+| RunBoth | heap | 979.461 | 15.857 | 0.000 | 291.974 | 249.467 | 5942 | 3246 |
+| RunBoth | rift-checked | 872.828 | 3.350 | 2.606 | 288.270 | 196.571 | 5942 | 3246 |
+
+Interpretation:
+
+- This is the first DEBS application use of the passing
+  `StreamAppendWindow` cursor-close shape.
+- It keeps heap/Rift logical behavior aligned and changes allocation/lifetime
+  placement for checked Q1 event-window storage.
+- Treat the rows as correctness/control evidence. They are not replacement
+  headline medians.
+
 Relevant evidence carried from Phase 4:
 
 | Finding | Data |
@@ -2123,8 +2170,10 @@ Status:
   `37.455 ms` and manual checked `33.157 ms`. Keep it as API/correctness
   evidence until its abstraction overhead is reduced.
 - The append-window result does not justify returning to DEBS Q1 ranking.
-  TableRank remains gated out. The next DEBS candidate should be an
-  append/fold/window subpath that matches the cheap checked shape, not Q1
-  rank maintenance or the current `StreamAppendWindow` API.
+  TableRank remains gated out. The first DEBS integration of the passing
+  cursor-close shape now exists for checked Q1 event-window entries and
+  matches heap output on sample/100k controls. This should be followed by a
+  1M median/control rerun or another append/fold/window subpath, not Q1
+  rank-maintenance integration.
 - The pipeline/parallel-collections story is still a surrogate until a fair
   Rift-backed collection API exists.

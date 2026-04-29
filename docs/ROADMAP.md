@@ -52,7 +52,7 @@ gated out of DEBS Q1: the latest 1M profile row is `568.572 ms` versus
 same-run heap-long `437.702 ms`, with the gap explained by combined
 lookup/probe/replacement/heap-maintenance pressure rather than Rift
 open/close/allocation bookkeeping. The focused checked compiler suite is now
-`88/88`, and the native checked runtime suite is `34/34`.
+`89/89`, and the native checked runtime suite is `35/35`.
 
 The current roadmap direction is therefore not "tune TableRank harder before
 anything else." `SN_WIN_ENVELOPE.md` is now the selection guide: favor
@@ -64,13 +64,15 @@ positive focused result for that envelope. At 1M events, checked Rift is
 `11.149 ms`, `47.5 MB` RSS versus `75.0 MB`, and `0.074 ms` Rift op time. At
 100k events, heap remains faster (`2.782 ms` versus checked `3.370 ms`), so
 the result is a threshold result, not a universal checked-region win. The first
-reusable `StreamAppendWindow` API is correctness-valid but not performance
-ready: after removing no-callback bucket-lookup delegation, it still measured
-`66.023 ms` versus same-run heap `37.455 ms` and manual checked `33.157 ms`.
-Diagnostics show healthy bucket reuse (`999960` current-bucket hits and `40`
-opens at 1M), so next work should target per-entry API/linking/callback and
-representation overhead before using that API in DEBS. DEBS Q1 ranking remains
-out of scope until rank/table-maintenance primitives clear their own gates.
+reusable per-entry `StreamAppendWindow` close API was correctness-valid but
+not performance-ready. Cached bucket/region use narrowed the gap, and cursor
+close now clears the focused 1M API gate: `rift-checked-api-cursor` is
+`34.708 ms` versus same-run heap `35.705 ms` and same-run manual checked
+`32.367 ms`. Checked Q1 event-window entries now use this cursor-close shape
+and match heap output on sample/100k Q1 and RunBoth controls. Treat that as an
+application-path correctness/control checkpoint, not a new median-backed DEBS
+claim. DEBS Q1 ranking remains out of scope until rank/table-maintenance
+primitives clear their own gates.
 
 Phase 0 is not "final." It is complete enough for GCBench and ListOfLists, but
 not for a final pipeline or application story.

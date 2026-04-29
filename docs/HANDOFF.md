@@ -9,8 +9,8 @@ Active implementation branch for this update:
 `feature/rift`
 
 Implementation commit at this update:
-`992e37a6e`
-(`Add append-window cursor close mode`)
+`e7bc1dadb`
+(`Use append-window cursor for checked Q1 events`)
 
 Status: active research fork. The Phase 5 input-boundary checkpoint, reusable
 ranking backend, Q2 bounded cell-table checkpoint, Q1 primitive route-table
@@ -294,11 +294,13 @@ than Rift open/close/allocation cost, so TableRank remains framework evidence
 only. The latest cheap-operator checkpoint then added
 `CheckedAppendWindowMatrix` and a reusable `RiftRegion.StreamAppendWindow`
 API. The manual checked child-bucket append shape wins at 1M
-(`32.261 ms` versus heap `35.513 ms`, with lower RSS), but the reusable API
-does not pass the gate (`rift-checked-api` `76.057 ms` versus same-run heap
-`37.424 ms`). Treat this as a clear split: simple checked region lifetimes can
-win, but reusable framework APIs must be benchmarked for abstraction overhead
-before DEBS integration.
+(`32.261 ms` versus heap `35.513 ms`, with lower RSS). The first reusable
+per-entry close API did not pass, but cached bucket/region use plus
+`StreamAppendCursor` close clears the focused 1M API gate
+(`34.708 ms` versus same-run heap `35.705 ms`). Checked Q1 event-window
+entries now use that cursor-close API and match heap output on sample/100k
+Q1 and RunBoth controls. Treat this as a correctness/control integration, not
+as a new DEBS median.
 
 A recent Phase 5 diagnostic checkpoint adds opt-in Q2 CPU substep timers
 behind `DEBS2015_Q2_CPU_DIAGNOSTICS=1`. Heap and checked Q2 now emit matching
@@ -4204,9 +4206,78 @@ Safe next action:
 2. Use `SN_WIN_ENVELOPE.md` as the current selection guide.
 3. Treat `StreamAppendWindow` cursor close as the first reusable append-window
    API form that has cleared the focused 1M gate.
-4. Do not integrate it into DEBS in this checkpoint. The next implementation
-   step should be a separate DEBS append-only/window-entry integration with
-   output equality checks; leave Q1 TableRank/ranking out of scope.
+4. Integrate it only into append/fold/window-entry paths with output equality
+   checks; leave Q1 TableRank/ranking out of scope until rank primitives clear
+   their own gates.
+
+### 2026-04-30 Update: Q1 StreamAppendWindow Cursor Integration
+
+Active implementation repo:
+
+- `/Users/siyaoliu/rift/scala-native-rift` on `feature/rift`
+
+What changed:
+
+- Migrated checked Q1 event-window entries in
+  `sandbox/src/main/scala-next/debs2015/Debs2015Q1CheckedProcessingRun.scala`
+  from a hand-written path-dependent child-bucket linked list to
+  `RiftRegion.StreamAppendWindow[RouteEvent]`.
+- `RouteEvent` is now an ordinary Scala class extending
+  `RiftRegion.StreamAppendNode`, allocated in the current checked event bucket
+  region and appended through `RiftRegion.appendWindow`.
+- Q1 eviction now consumes expired event buckets through
+  `closeAppendWindowBucketsBeforeWithCursor`; end-of-run cleanup uses
+  `closeAllAppendWindowBucketsWithCursor`.
+- Adjusted the cursor close callback type in
+  `nativelib/src/main/scala-next/scala/scalanative/memory/RiftRegion.scala` to
+  match the existing checked close-helper pattern, so close callbacks can
+  capture parent-owned operator metadata while child entries are consumed.
+- Q1 ranking, TableRank, Q2 ranking, and Q2 processing were not changed.
+
+Validation:
+
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile`
+  passed.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"`
+  passed `89/89`.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionCheckedTest"`
+  passed `35/35`.
+- `zsh bench/debs2015/run_q1_checked_processing_matrix.sh` matched heap output
+  on the sample input after stripping only latency.
+- 100k Q1 checked-processing output matched heap in
+  `/tmp/debs2015-q1-checked-processing-cursor-100k`.
+- RunBoth sample output matched heap for all modes in
+  `/tmp/debs2015-runboth-cursor-sample`.
+- RunBoth 100k `heap`/`rift-checked` output matched in
+  `/tmp/debs2015-runboth-cursor-100k`.
+
+100k single-run control rows:
+
+| Harness | Mode | Elapsed ms | GC ms | Rift op ms | Q1 process ms | Q2 process ms | Q1 outputs | Q2 outputs |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| Q1 only | heap | 761.989 | n/a | n/a | n/a | n/a | 5942 | n/a |
+| Q1 only | checked-processing | 771.422 | n/a | n/a | n/a | n/a | 5942 | n/a |
+| RunBoth | heap | 979.461 | 15.857 | 0.000 | 291.974 | 249.467 | 5942 | 3246 |
+| RunBoth | rift-checked | 872.828 | 3.350 | 2.606 | 288.270 | 196.571 | 5942 | 3246 |
+
+Interpretation:
+
+- This is the first DEBS application use of the passing append-window
+  cursor-close shape, but it is a correctness/control checkpoint, not a new
+  median-backed DEBS result.
+- The heap/Rift logical program remains aligned: route counts, ranking, output
+  semantics, and Q2 are unchanged; only checked Q1 event-window allocation and
+  close discipline moved to the reusable region-backed primitive.
+- The single-run 100k RunBoth row is directionally favorable for checked Rift,
+  but it should not replace the existing 3-run bounded medians.
+
+Safe next action:
+
+1. Run a 1M heap/`rift-checked` RunBoth median/control for this Q1 event-window
+   integration if performance evidence is needed.
+2. Otherwise migrate another append/fold/window-entry path that matches the
+   cheap cursor-close shape.
+3. Keep Q1 TableRank/ranking integration gated out.
 
 ## Unsafe Assumptions To Avoid
 
@@ -4253,8 +4324,8 @@ Safe next action:
 - "Any append-window API shape is ready because cursor close passed the focused
   1M gate." Too broad. The old per-entry `StreamAppendWindow` close API still
   misses the strict gate. The passing reusable shape is specifically cached
-  bucket/region use plus cursor close, and it still needs a separate DEBS
-  integration/output-equality step before becoming application evidence.
+  bucket/region use plus cursor close. It now has a Q1 event-window DEBS
+  correctness/control integration, but not a median-backed application claim.
 - "The Q1 checked-output probe proves checked DEBS processing." It does not.
   It only checks transient output/ranking materialization; the Q1 window and
   rank maintenance engine is still heap in both probe modes.
