@@ -3998,6 +3998,52 @@ Safe next action:
 3. Do not re-integrate TableRank into DEBS Q1 until the focused 1M gate passes
    or the roadmap explicitly relaxes the gate.
 
+### 2026-04-29 Update: TableRank Profile Pack
+
+Active implementation repo:
+
+- `/Users/siyaoliu/rift/scala-native-rift` on `feature/rift`
+
+What changed:
+
+- Added `sandbox/TABLERANK_PROFILE.md` and synced it to
+  `evidence/TABLERANK_PROFILE.md`.
+- Added the profile pack to `scripts/sync-evidence.sh`.
+- Updated `CHECKED_STREAM_WINDOW_RANK_MATRIX.md` and this handoff with the
+  profile result.
+- No TableRank representation optimization was applied after profiling, because
+  the counters did not identify a single low-risk target.
+
+Profile rows:
+
+| Input | Mode | Median elapsed ms | GC ms | Rift op ms | Region objects | RSS bytes |
+|---|---|---:|---:|---:|---:|---:|
+| 100k | heap-long | 41.941 | 0.000 | 0.000 | 0 | 38862848 |
+| 100k | rift-checked-long | 58.441 | 0.000 | 0.218 | 82547 | 33898496 |
+| 100k | rift-checked-table-long | 56.585 | 0.000 | 0.198 | 82533 | 49905664 |
+| 1M | heap-long | 437.702 | 8.367 | 0.000 | 0 | 111411200 |
+| 1M | rift-checked-long | 610.358 | 5.817 | 1.035 | 826645 | 128253952 |
+| 1M | rift-checked-table-long | 568.572 | 8.064 | 0.562 | 826631 | 126418944 |
+
+Diagnostic interpretation:
+
+- 1M `rift-checked-table-long` did `3.000` lookups/event and `4.804`
+  probes/event.
+- It also did `0.719` replacements/event, `0.719` bucket moves/event,
+  `1.862` heap sift steps/event, and `1.117` heap swaps/event.
+- TableRank was faster than same-run old checked-long at 1M, but still
+  `1.30x` heap-long and higher RSS than heap.
+- The problem remains checked container CPU/layout overhead, not Rift
+  allocation/close overhead.
+
+Safe next action:
+
+1. Do not integrate TableRank into DEBS Q1.
+2. Do not repeat rejected lookup/probe/deletion tweaks.
+3. If continuing TableRank, design a deeper representation experiment that
+   reduces lookup/update/heap maintenance together, then re-run the focused
+   20k/100k/1M gates before touching DEBS.
+
 ## Unsafe Assumptions To Avoid
 
 - "Rift already has final DEBS application proof." It does not. The current

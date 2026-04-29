@@ -64,6 +64,7 @@ For performance numbers, use the following rule of thumb:
 | Phase 6 Stancu-style transaction accounting | `evidence/STANCU_REGION_MATRIX.md` |
 | Phase 6 pipeline / parallel collections | `evidence/PIPELINE_PARCOLL_COMPARISON.md` |
 | Phase 7 checked stream-window rank | `evidence/CHECKED_STREAM_WINDOW_RANK_MATRIX.md` |
+| Phase 7 TableRank profile | `evidence/TABLERANK_PROFILE.md` |
 | Current roadmap status | `docs/ROADMAP.md` |
 | Handoff / caveats | `docs/HANDOFF.md` |
 
@@ -2003,5 +2004,11 @@ Status:
   and Rift op time remains below `1 ms`, but the 1M gate still fails after the
   fast-close/directional-repair follow-up. The Q1 TableRank prototype was
   backed out until this focused gate clears.
+- The focused TableRank profile pack confirms that the issue is combined
+  container CPU/layout pressure rather than region runtime cost: at 1M,
+  TableRank performs `3.000` lookups/event, `4.804` probes/event, `0.719`
+  replacements and bucket moves/event, `1.862` heap sift steps/event, and
+  `1.117` heap swaps/event. No post-profile optimization was applied because
+  the counters did not identify one low-risk representation patch.
 - The pipeline/parallel-collections story is still a surrogate until a fair
   Rift-backed collection API exists.
