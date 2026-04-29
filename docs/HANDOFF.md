@@ -278,13 +278,15 @@ compiler suite now passes `80/80`, and the native checked runtime suite passes
 The latest focused matrix checkpoint adds `heap-long` and `rift-checked-long`
 modes to `CheckedStreamWindowRankMatrix` so the long-key stream-window API is
 measured before DEBS integration. Checksums match at 20k, 100k, and 1M. The
-100k median is heap-long `38.242 ms`, `0.000 ms` GC, `38.8 MB` RSS versus
-`rift-checked-long` `54.574 ms`, `0.974 ms` GC, `0.281 ms` Rift op, and
-`33.9 MB` RSS. The default 1M median is heap-long `301.098 ms`, `5.973 ms`
-GC, `111.4 MB` RSS versus `rift-checked-long` `421.502 ms`, `5.710 ms` GC,
-`0.358 ms` Rift op, and `128.3 MB` RSS. Treat this as functional API evidence
-and an overhead warning: the packed-key/dense-remap blocker is gone, but broad
-Q1 integration should wait for a lower-overhead checked rank/window pass.
+checked long-key mode now uses the no-entry close helper because rank state
+owns lookup in that shape. The 100k median is heap-long `37.045 ms`,
+`0.000 ms` GC, `38.8 MB` RSS versus `rift-checked-long` `49.450 ms`,
+`0.000 ms` GC, `0.178 ms` Rift op, and `33.9 MB` RSS. The default 1M median
+is heap-long `358.988 ms`, `6.973 ms` GC, `111.4 MB` RSS versus
+`rift-checked-long` `503.906 ms`, `5.470 ms` GC, `0.491 ms` Rift op, and
+`128.3 MB` RSS. Treat this as functional API evidence and an overhead warning:
+the packed-key/dense-remap blocker is gone, but broad Q1 integration should
+wait for a lower-overhead checked rank/window pass.
 
 A recent Phase 5 diagnostic checkpoint adds opt-in Q2 CPU substep timers
 behind `DEBS2015_Q2_CPU_DIAGNOSTICS=1`. Heap and checked Q2 now emit matching
@@ -3820,6 +3822,8 @@ Implementation status:
 
 - `scala-native-rift` `e46813cbb`
   (`Add long-key stream-window rank matrix`)
+- `scala-native-rift` `672e56c0f`
+  (`Use no-entry close in long-key rank matrix`)
 
 What changed:
 
@@ -3828,6 +3832,9 @@ What changed:
 - Added a heap open-addressed long-key indexed priority queue so the heap
   comparator uses the same arbitrary-`Long` key shape as
   `StreamWindowLongIndexedRank`.
+- Switched `rift-checked-long` to the no-entry close helper because the long-key
+  rank state owns lookup and does not need an operator side-table cleanup
+  callback.
 - Updated `scala-native-rift/sandbox/run_checked_stream_window_rank_matrix.sh`
   to accept `CHECKED_SWR_MODES`, keeping the default `heap rift-checked`
   behavior unchanged.
@@ -3847,12 +3854,12 @@ Key numbers:
 
 | Input | Mode | Median elapsed ms | GC ms | Rift op ms | Region objects | RSS bytes |
 |---|---|---:|---:|---:|---:|---:|
-| 20k | heap-long | 10.460 | 0.311 | 0.000 | 0 | 9895936 |
-| 20k | rift-checked-long | 10.663 | 0.199 | 0.081 | 18679 | 13303808 |
-| 100k | heap-long | 38.242 | 0.000 | 0.000 | 0 | 38846464 |
-| 100k | rift-checked-long | 54.574 | 0.974 | 0.281 | 82547 | 33898496 |
-| 1M | heap-long | 301.098 | 5.973 | 0.000 | 0 | 111411200 |
-| 1M | rift-checked-long | 421.502 | 5.710 | 0.358 | 826645 | 128253952 |
+| 20k | heap-long | 6.007 | 0.149 | 0.000 | 0 | 9879552 |
+| 20k | rift-checked-long | 9.440 | 0.310 | 0.128 | 18679 | 13254656 |
+| 100k | heap-long | 37.045 | 0.000 | 0.000 | 0 | 38830080 |
+| 100k | rift-checked-long | 49.450 | 0.000 | 0.178 | 82547 | 33882112 |
+| 1M | heap-long | 358.988 | 6.973 | 0.000 | 0 | 111394816 |
+| 1M | rift-checked-long | 503.906 | 5.470 | 0.491 | 826645 | 128286720 |
 
 Interpretation:
 
@@ -3860,6 +3867,9 @@ Interpretation:
   under a same-logical-program heap comparator.
 - This is not a speed win. The default 1M checked-long path is about `40%`
   slower than heap-long and has higher RSS, despite low measured Rift op time.
+- The no-entry close path improves the 100k checked-long median versus the
+  first close-with-entry run, but the remaining 1M gap shows callback removal is
+  not enough.
 - The next safe action is to reduce checked rank/window CPU and memory overhead
   before wiring this directly into DEBS Q1 route ranking.
 

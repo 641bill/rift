@@ -55,9 +55,10 @@ work now means lowering checked rank/container CPU and memory overhead before
 integrating the new long-key stream-window API broadly into real operators, not
 inventing the framework shape. The first focused long-key matrix matched
 heap-long and `rift-checked-long` checksums, but the default 1M median is a
-caution: heap-long `301.098 ms`, `5.973 ms` GC, `111.4 MB` RSS versus
-`rift-checked-long` `421.502 ms`, `5.710 ms` GC, `0.358 ms` Rift op, and
-`128.3 MB` RSS.
+caution: heap-long `358.988 ms`, `6.973 ms` GC, `111.4 MB` RSS versus
+`rift-checked-long` `503.906 ms`, `5.470 ms` GC, `0.491 ms` Rift op, and
+`128.3 MB` RSS. The 100k no-entry-close row improved checked-long versus the
+first close-with-entry measurement, but it did not close the main overhead gap.
 
 Phase 0 is not "final." It is complete enough for GCBench and ListOfLists, but
 not for a final pipeline or application story.

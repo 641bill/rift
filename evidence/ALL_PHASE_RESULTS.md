@@ -1202,12 +1202,12 @@ Checked StreamWindowLongIndexedRank API:
 - Validation: `sandbox3_next/compile` passed; the focused checked compiler
   suite passed `80/80`; the native checked runtime suite passed `28/28`.
 - Focused matrix validation now exists in `CheckedStreamWindowRankMatrix`.
-  The 100k long-key 3-run median is heap-long `38.242 ms`, `0.000 ms` GC,
-  `38.8 MB` RSS versus `rift-checked-long` `54.574 ms`, `0.974 ms` GC,
-  `0.281 ms` Rift op, and `33.9 MB` RSS. The default 1M median is heap-long
-  `301.098 ms`, `5.973 ms` GC, `111.4 MB` RSS versus
-  `rift-checked-long` `421.502 ms`, `5.710 ms` GC, `0.358 ms` Rift op, and
-  `128.3 MB` RSS. Checksums matched in both rows.
+  The current no-entry-close 100k long-key 3-run median is heap-long
+  `37.045 ms`, `0.000 ms` GC, `38.8 MB` RSS versus `rift-checked-long`
+  `49.450 ms`, `0.000 ms` GC, `0.178 ms` Rift op, and `33.9 MB` RSS. The
+  default 1M median is heap-long `358.988 ms`, `6.973 ms` GC, `111.4 MB` RSS
+  versus `rift-checked-long` `503.906 ms`, `5.470 ms` GC, `0.491 ms` Rift op,
+  and `128.3 MB` RSS. Checksums matched in both rows.
 - This is Phase 7 API/safety and overhead evidence, not a new DEBS timing row.
 
 Q2 CPU substep diagnostics:
@@ -1738,8 +1738,8 @@ Long-key default local median, same stream shape with arbitrary `Long` keys:
 
 | Mode | Median elapsed ms | Median GC ms | Median Rift op ms | Region objects | Opens/closes/resets | Peak RSS bytes |
 |---|---:|---:|---:|---:|---:|---:|
-| heap-long | 301.098 | 5.973 | 0.000 | 0 | 0 / 0 / 0 | 111411200 |
-| rift-checked-long | 421.502 | 5.710 | 0.358 | 826645 | 41 / 41 / 0 | 128253952 |
+| heap-long | 358.988 | 6.973 | 0.000 | 0 | 0 / 0 / 0 | 111394816 |
+| rift-checked-long | 503.906 | 5.470 | 0.491 | 826645 | 41 / 41 / 0 | 128286720 |
 
 Interpretation:
 
@@ -1750,6 +1750,10 @@ Interpretation:
 - The long-key row removes the packed-key/dense-remap blocker for Q1-style
   route keys, but it is not a speed win. It points the next work at
   checked-rank CPU/memory overhead before broad DEBS Q1 integration.
+- The long-key checked mode now uses the no-entry close helper because the rank
+  collection owns lookup state in this shape. That improves the 100k checked
+  median versus the first close-with-entry run, but the 1M row remains a
+  same-run overhead warning.
 - It is not a speed win. Checked Rift is slower on elapsed time even though
   Rift runtime operation time is low and RSS is lower. The entry-cleanup API
   improved the previous auto-cleanup default (`313.572 ms`, `94732288` bytes
