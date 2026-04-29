@@ -113,7 +113,7 @@ Current reliable evidence:
   rank-object churn but opened one child region per active route, raising 100k
   checked RSS to `113721344` bytes.
 - Phase 7 checked API evidence has started. The targeted Scala-next compiler
-  suite passed 69/69 for the current `Scoped`/`Streaming` API slice, including
+  suite passed 70/70 for the current `Scoped`/`Streaming` API slice, including
   for-loop allocation, nested scoped regions, local higher-order consumers, and
   direct escape/reset rejection. Returned function values are now rejected
   conservatively because returned closures can hide region-local captures.
@@ -157,8 +157,8 @@ Current reliable evidence:
   owns each dense key, and bucket close removes those tracked keys from
   parent-owned rank state before closing the child region. The compiler guard
   rejects direct unrooted heap stores through both `putWindowRank` and
-  `putWindowRankInBucket`; the focused compiler suite is now `69/69`, and the
-  native checked runtime suite is `19/19`. The Q1
+  `putWindowRankInBucket`; the focused compiler suite is now `70/70`, and the
+  native checked runtime suite is `21/21`. The Q1
   checked-processing probe uses path-dependent bucket event nodes to keep
   child-owned values local before closing the child region at bucket eviction.
   The focused `CheckedRegionBufferMatrix`
@@ -174,13 +174,15 @@ Current reliable evidence:
   `0.406 ms` Rift op time. `CheckedStreamWindowRankMatrix` validates the next
   stream-window shape: ordinary Scala records allocated in child bucket
   regions are ranked through checked parent state and automatically unlinked
-  before close, with matching heap/Rift checksums. Its default local
-  auto-cleanup median is a negative speed signal, heap `207.038 ms` versus
-  checked `313.572 ms`, although checked uses less RSS and only `0.307 ms`
-  measured Rift operation time. The earlier manual-cleanup checked median was
-  `254.050 ms`, so the stronger close boundary currently buys safety at a CPU
-  cost. Treat these as API/safety evidence and overhead diagnostics rather than
-  speed claims.
+  before close, with matching heap/Rift checksums. Its entry-cleanup API now
+  reports removed rank entries during bucket close so operators can clean their
+  side tables without maintaining a duplicate checked-side key list. The current
+  default local median is still a negative speed signal, heap `200.304 ms`
+  versus checked `302.001 ms`, although checked uses less RSS and only
+  `0.289 ms` measured Rift operation time. This improves the previous
+  auto-cleanup median (`313.572 ms` checked) but remains slower than the earlier
+  manual-cleanup median (`254.050 ms`). Treat these as API/safety evidence and
+  overhead diagnostics rather than speed claims.
   Dataflow
   SELECT, AGGREGATE, and JOIN now have checked `rift-checked` modes using the
   same safe API; local checked medians are SELECT `18.865 ms`, AGGREGATE
@@ -829,11 +831,13 @@ Interpretation:
   lifetime primitive, and `StreamWindowIndexedRank` adds the first dense-key
   rank/window collection. Its auto-cleanup path moves bucket-owned rank-key
   removal into the framework close path, validating a stronger close boundary.
-  The focused matrix is still slower than heap and slower than the earlier
-  manual-cleanup path, so the next design pressure is lower-overhead/richer rank
-  APIs rather than direct application integration. Richer comparator/hash-key
-  collections, checked Q1/Q2 CPU overhead work, and stronger safe API boundaries
-  are still needed before it can support a final application claim.
+  The entry-cleanup path removes the duplicate checked-side bucket key list and
+  improves the focused default median, but the matrix is still slower than heap
+  and slower than the earlier manual-cleanup path. The next design pressure is
+  lower-overhead/richer rank APIs rather than direct application integration.
+  Richer comparator/hash-key collections, checked Q1/Q2 CPU overhead work, and
+  stronger safe API boundaries are still needed before it can support a final
+  application claim.
 - Checked RunBoth is now median-backed on bounded 100k/1M samples. It is
   encouraging Phase 5/7 evidence, but not an apples-to-apples proof that the
   checked API is always faster than the trusted API because the trusted and

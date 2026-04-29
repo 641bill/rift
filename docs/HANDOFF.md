@@ -1,6 +1,6 @@
 # Rift Project Handoff
 
-Date: 2026-04-28
+Date: 2026-04-29
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -9,8 +9,8 @@ Active implementation branch for this update:
 `feature/rift`
 
 Implementation commit at this update:
-`a70ce412e2`
-(`Add checked window-rank auto cleanup`)
+`87fbc088a6`
+(`Add checked window-rank entry cleanup`)
 
 Status: active research fork. The Phase 5 input-boundary checkpoint, reusable
 ranking backend, Q2 bounded cell-table checkpoint, Q1 primitive route-table
@@ -249,8 +249,12 @@ child-window regions and widened through the parent stream owner token. The
 new `putWindowRankInBucket` insertion path records which child bucket owns a
 dense key, and `closeWindowRankBucketsBefore`/`closeAllWindowRankBuckets`
 automatically remove tracked keys from parent-owned rank state before closing
-the child bucket. The focused compiler suite now passes `69/69`; the native
-checked runtime suite passes `19/19`.
+the child bucket. The follow-up entry-cleanup API adds
+`closeWindowRankBucketsBeforeWithEntries` and
+`closeAllWindowRankBucketsWithEntries`, so stream operators can clean
+side tables during framework unlinking instead of maintaining a duplicate
+bucket-local key list. The focused compiler suite now passes `70/70`; the
+native checked runtime suite passes `21/21`.
 The newest Phase 5 diagnostic checkpoint adds opt-in Q2 CPU substep timers
 behind `DEBS2015_Q2_CPU_DIAGNOSTICS=1`. Heap and checked Q2 now emit matching
 `diag_q2_cpu_*` buckets for eviction, taxi lookup, previous-empty removal,
@@ -298,6 +302,7 @@ window-rank arenas were committed at `088fe2a59`; the reusable checked
 stream-window rank matrix evidence was committed at `d6fb94cd3`; Q2 CPU
 substep diagnostics were committed at `de2134712`; and
 `StreamWindowIndexedRank` auto cleanup was committed at `a70ce412e2`. The
+entry-cleanup checkpoint was committed at `87fbc088a6`. The
 checked API is not a
 complete compiler capture-checking implementation. The fork is ahead of
 `origin/feature/rift` unless pushed.
@@ -2296,9 +2301,13 @@ Roadmap source: `/Users/siyaoliu/rift/Claude_output/ROADMAP.md`
 
 Post-table update: the current checked API slice now includes
 `putWindowRankInBucket` and framework-owned auto-removal of bucket-owned
-`StreamWindowIndexedRank` keys before child bucket close. The focused compiler
-suite now passes `69/69`, and the native checked runtime suite passes `19/19`.
-This strengthens close discipline but increases focused matrix CPU overhead.
+`StreamWindowIndexedRank` keys before child bucket close. It also includes
+entry-cleanup callbacks that report removed rank entries during close so
+operators can clean side tables without a duplicate checked-side key list. The
+focused compiler suite now passes `70/70`, and the native checked runtime suite
+passes `21/21`. This strengthens close discipline and slightly improves the
+focused auto-cleanup matrix, but checked remains slower than heap and the older
+manual-cleanup path.
 
 Is Phase 0 actually complete?
 
@@ -2571,17 +2580,18 @@ Immediate next step:
     checked rank/window collection. It combines `StreamBucketArena` with
     `RegionIndexedPriorityQueue`, checks direct heap stores through the
     compiler guard, and now has `putWindowRankInBucket` auto cleanup for
-    bucket-owned rank keys before child bucket close. It is dense-key and
+    bucket-owned rank keys before child bucket close. The entry-cleanup close
+    callbacks report removed rank entries for side-table cleanup. It is dense-key and
     single-`Long` priority only; richer comparator and hash-key variants remain
-    open, and the auto-cleanup bookkeeping currently adds CPU overhead.
+    open, and the checked window-rank container still has CPU overhead.
 
 Next technical milestone:
 
-1. Reduce `StreamWindowIndexedRank` ownership-bookkeeping overhead or build the
-   next richer checked rank/window API slice. The focused auto-cleanup matrix
-   works but is slower than heap and slower than the earlier manual-cleanup
-   path, while the Q2 substep diagnostic does not currently reproduce bounded
-   same-count Q2 overhead.
+1. Continue reducing `StreamWindowIndexedRank` container CPU overhead or build
+   the next richer checked rank/window API slice. The entry-cleanup matrix
+   improves the auto-cleanup path from `313.572 ms` to `302.001 ms`, but remains
+   slower than heap and the earlier manual-cleanup path, while the Q2 substep
+   diagnostic does not currently reproduce bounded same-count Q2 overhead.
 2. Continue the DEBS "region-heavy" path with measurement first after the
    checked RunBoth median and attribution checkpoints. The next DEBS work
    should be a safety abstraction or control run, not a blind region-allocation
@@ -3478,6 +3488,53 @@ Interpretation:
   richer comparator/hash-key rank API before integrating this abstraction into
   DEBS Q1.
 
+## Latest Update: StreamWindowIndexedRank Entry Cleanup
+
+Date: 2026-04-29
+
+What changed:
+
+- Added `RiftRegion.closeWindowRankBucketsBeforeWithEntries(...)` and
+  `RiftRegion.closeAllWindowRankBucketsWithEntries(...)`.
+- These close helpers keep the framework-owned key unlinking from auto cleanup,
+  but also report each still-ranked removed entry to the operator before the
+  child bucket closes.
+- Updated `CheckedStreamWindowRankMatrix` so checked mode cleans `recordByKey`
+  through those entry callbacks instead of maintaining a second checked-side
+  bucket-local key list.
+- A direct heap bucket-reference owner table was tested and rejected before this
+  final shape because it regressed the default focused checked median to
+  `341.705 ms`.
+
+Validation:
+
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile` passed.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"`
+  passed `70/70`.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionCheckedTest"`
+  passed `21/21`.
+- 100k entry-cleanup smoke matched checksum `-476315670107920613`.
+- Default local entry-cleanup matrix matched checksum `6881312641757835670`.
+
+Entry-cleanup matrix results:
+
+| Input | Mode | Median elapsed ms | GC ms | Rift op ms | Region objects | Opens / closes / resets | Peak RSS bytes |
+|---|---|---:|---:|---:|---:|---:|---:|
+| 100k | heap | 22.271 | 0.000 | 0.000 | 0 | 0 / 0 / 0 | 35176448 |
+| 100k | rift-checked | 33.840 | 0.901 | 0.117 | 82545 | 5 / 5 / 0 | 29999104 |
+| 1M | heap | 200.304 | 0.000 | 0.000 | 0 | 0 / 0 / 0 | 145768448 |
+| 1M | rift-checked | 302.001 | 7.447 | 0.289 | 826643 | 41 / 41 / 0 | 87441408 |
+
+Interpretation:
+
+- This is a modest framework overhead reduction, not a throughput win.
+- It improves the previous auto-cleanup default checked median (`313.572 ms`)
+  and peak RSS (`94732288` bytes), but remains slower than heap and the earlier
+  manual-cleanup checked median (`254.050 ms`).
+- The result supports keeping the API because it removes duplicate operator
+  bookkeeping while preserving the stronger close discipline. It does not yet
+  justify direct wholesale DEBS Q1 integration.
+
 ## Latest Update: Q2 CPU Substep Diagnostics
 
 Date: 2026-04-28
@@ -3536,11 +3593,13 @@ Interpretation:
   The reusable `StreamBucketArena` API now generalizes the bucket lifetime
   primitive, and `StreamWindowIndexedRank` is the first dense-key rank/window
   collection. The auto-cleanup path now removes tracked rank keys before child
-  bucket close, but its focused matrix is still slower than heap and slower than
-  the earlier manual-cleanup path. The Q2 CPU substep diagnostic does not
-  reproduce bounded checked same-operation overhead, so lower-overhead richer
-  comparator or hash-key rank collections, optional full-month SafeZone
-  comparison, and stronger safe-API controls are still missing.
+  bucket close. The entry-cleanup path then removes the duplicate checked-side
+  bucket key list and improves the focused default matrix, but it is still
+  slower than heap and slower than the earlier manual-cleanup path. The Q2 CPU
+  substep diagnostic does not reproduce bounded checked same-operation overhead,
+  so lower-overhead richer comparator or hash-key rank collections, optional
+  full-month SafeZone comparison, and stronger safe-API controls are still
+  missing.
 - "GC time should disappear because Q1/Q2 windows and input bytes use Rift."
   `gc_time_ns` is collection time only. Some former heap-heavy paths have
   moved, including taxi-id bytes/entries and latency backing arrays, and the
