@@ -9,8 +9,8 @@ Active implementation branch for this update:
 `feature/rift`
 
 Implementation commit at this update:
-`8690d06d3d`
-(`Clarify TableRank profile instability`)
+`992e37a6e`
+(`Add append-window cursor close mode`)
 
 Status: active research fork. The Phase 5 input-boundary checkpoint, reusable
 ranking backend, Q2 bounded cell-table checkpoint, Q1 primitive route-table
@@ -4085,6 +4085,15 @@ What changed:
 - Added `rift-checked-api` mode to `CheckedAppendWindowMatrix` to test the
   reusable API separately from the handwritten manual checked child-bucket
   path.
+- Optimized the benchmark API usage so `rift-checked-api` caches the current
+  `StreamBucket` and `streamBucketRegion` once per bucket instead of calling
+  `streamAppendWindowBucketFor` and `streamBucketRegion` on every event.
+- Added experimental cursor close support:
+  `RiftRegion.StreamAppendCursor`,
+  `closeAppendWindowBucketsBeforeWithCursor`, and
+  `closeAllAppendWindowBucketsWithCursor`.
+- Added `rift-checked-api-cursor` mode to `CheckedAppendWindowMatrix` while
+  keeping the older per-entry `rift-checked-api` mode as a control.
 - Updated `evidence/ALL_PHASE_RESULTS.md` and `scripts/sync-evidence.sh`.
 - TableRank and DEBS Q1 were not touched.
 
@@ -4104,14 +4113,16 @@ Validation:
 - `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile`
   passed.
 - `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"`
-  passed `88/88`.
+  passed `89/89`.
 - `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionCheckedTest"`
-  passed `34/34`.
+  passed `35/35`.
 - 20k smoke, 100k 3-run, and 1M 3-run append-window matrices matched checksums
   across `heap`, `rift-checked`, `rift-trusted-hp`, and
   `rift-trusted-streaming`.
 - Follow-up 20k, 100k, and 1M reusable API matrices matched checksums across
   all five modes, including `rift-checked-api`.
+- Cached bucket/region and cursor follow-up matrices matched checksums across
+  all six modes, including `rift-checked-api-cursor`.
 
 Key append-window rows:
 
@@ -4142,6 +4153,23 @@ No-callback bucket-lookup follow-up, same 1M workload:
 | rift-checked | 33.157 | 0.000 | 0.084 | 1000000 | 47513600 |
 | rift-checked-api | 66.023 | 0.000 | 0.082 | 1000000 | 47513600 |
 
+Cached bucket/region follow-up, same 1M workload:
+
+| Mode | Median elapsed ms | GC ms | Rift op ms | Region objects | RSS bytes |
+|---|---:|---:|---:|---:|---:|
+| heap | 38.559 | 11.581 | 0.000 | 0 | 74989568 |
+| rift-checked | 33.172 | 0.000 | 0.083 | 1000000 | 47497216 |
+| rift-checked-api | 39.372 | 0.000 | 0.084 | 1000000 | 47480832 |
+
+Cursor close follow-up, same 1M workload:
+
+| Mode | Median elapsed ms | GC ms | Rift op ms | Region objects | RSS bytes |
+|---|---:|---:|---:|---:|---:|
+| heap | 35.705 | 11.095 | 0.000 | 0 | 75022336 |
+| rift-checked | 32.367 | 0.000 | 0.077 | 1000000 | 47529984 |
+| rift-checked-api | 37.705 | 0.000 | 0.073 | 1000000 | 47529984 |
+| rift-checked-api-cursor | 34.708 | 0.000 | 0.074 | 1000000 | 47529984 |
+
 Interpretation:
 
 - At 100k, heap still wins and measured GC is zero. This is below the useful
@@ -4155,27 +4183,30 @@ Interpretation:
 - The result supports the broader framework goal: ordinary Scala stream data
   objects can live in checked regions and win when the operator is simple
   enough and allocation volume is high enough.
-- The reusable `StreamAppendWindow` API is not ready for application
-  integration. It is correctness-valid, and removing no-callback bucket-lookup
-  delegation improves the 1M row from `76.057 ms` to `66.023 ms`, but it is
-  still much slower than heap and the manual checked child-bucket path. Since
-  its Rift op time is still tiny, the gap is API/container CPU and
-  representation overhead, not allocation or close cost.
-- `CHECKED_APPEND_API_DIAG=1` counters show the 1M API path doing `1000000`
-  bucket lookups, `999960` current-bucket hits, `40` bucket opens, `1000000`
-  appends, `40` closed buckets, `1000000` close entries, and final live length
-  `0`. The bucket-open/close pattern is healthy; the remaining issue is
-  per-entry API/linking/callback/representation overhead.
+- The reusable per-entry `StreamAppendWindow` close API is not ready for
+  application integration. It is correctness-valid, and removing no-callback
+  bucket-lookup delegation improves the 1M row from `76.057 ms` to
+  `66.023 ms`; cached bucket/region use improves it to `39.372 ms`, but it
+  still misses the strict API gate.
+- The cursor close API clears the focused 1M gate. `rift-checked-api-cursor`
+  beats same-run heap (`34.708 ms` versus `35.705 ms`), is within 1.15x of
+  same-run manual checked (`32.367 ms`), keeps RSS far below heap and level
+  with manual checked, and keeps Rift op time below `1 ms`.
+- `CHECKED_APPEND_API_DIAG=1` counters after bucket/region caching show the 1M
+  API path doing `40` actual bucket lookups, `999960` current-bucket hits,
+  `40` bucket opens, `1000000` appends, `40` closed buckets, `1000000` close
+  entries, and final live length `0`. The remaining issue was per-entry close
+  callback/link traversal shape, which cursor close targets.
 
 Safe next action:
 
 1. Keep TableRank out of DEBS Q1.
 2. Use `SN_WIN_ENVELOPE.md` as the current selection guide.
-3. Do not integrate the current `StreamAppendWindow` API into DEBS until its
-   focused 1M gate is fixed.
-4. Next implementation should target per-entry API/linking/callback overhead in
-   `StreamAppendWindow`, or choose a different cheap operator primitive and
-   prove it in the focused matrix before application integration.
+3. Treat `StreamAppendWindow` cursor close as the first reusable append-window
+   API form that has cleared the focused 1M gate.
+4. Do not integrate it into DEBS in this checkpoint. The next implementation
+   step should be a separate DEBS append-only/window-entry integration with
+   output equality checks; leave Q1 TableRank/ranking out of scope.
 
 ## Unsafe Assumptions To Avoid
 
@@ -4219,11 +4250,11 @@ Safe next action:
 - "The Q2 top-10 cache medians are final DEBS evidence." They are not; they are
   bounded-sample evidence and still lack SafeZone controls and safe API
   boundaries.
-- "The append-window API is ready because the manual checked append-window
-  benchmark won at 1M." It is not. The manual child-bucket shape is the
-  positive result; the reusable `StreamAppendWindow` API currently fails the
-  1M focused gate and should stay out of DEBS until its abstraction overhead is
-  reduced.
+- "Any append-window API shape is ready because cursor close passed the focused
+  1M gate." Too broad. The old per-entry `StreamAppendWindow` close API still
+  misses the strict gate. The passing reusable shape is specifically cached
+  bucket/region use plus cursor close, and it still needs a separate DEBS
+  integration/output-equality step before becoming application evidence.
 - "The Q1 checked-output probe proves checked DEBS processing." It does not.
   It only checks transient output/ranking materialization; the Q1 window and
   rank maintenance engine is still heap in both probe modes.
