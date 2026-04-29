@@ -43,6 +43,15 @@ Reggio/Verona capabilities.
 | Phase 9: Lean mechanization | Open | Design target only; older proof pack is not active in fork. | Core calculus and proofs without `sorry`. |
 | Phase 10: writing | Not started beyond notes | Handoff and result packs exist. | Paper/thesis narrative after evidence stabilizes. |
 
+Current Phase 7 checkpoint note: the summary table above should be read with
+the latest checked-rank API slice included. `RegionLongIndexedPriorityQueue`
+now provides standalone hash-keyed checked rank state for arbitrary `Long`
+keys, with the same owner-token heap-store guard as the dense indexed queue.
+The focused checked compiler suite is `76/76`, and the native checked runtime
+suite is `25/25`. Remaining "hash-keyed" work now means integrating long-key
+rank state into stream-window close discipline and reducing checked container
+CPU overhead, not inventing the standalone long-key queue.
+
 Phase 0 is not "final." It is complete enough for GCBench and ListOfLists, but
 not for a final pipeline or application story.
 
@@ -700,8 +709,9 @@ Implementation substeps:
   improves the focused default checked median from `313.572 ms` to `302.001 ms`,
   but it is still not a speed win. The follow-up remove-with-value close
   primitive simplifies unlinking and validates already-popped-key cleanup, but
-  it did not produce a measured speedup. The next step is continuing container
-  CPU reduction or adding a hash-key rank API; bounded Q2
+  it did not produce a measured speedup. The standalone long-key rank API now
+  exists; the next step is either integrating it into a checked stream-window
+  rank shape or continuing container CPU reduction. Bounded Q2
   same-operation overhead should not be optimized further until a clean or
   full-month diagnostic identifies a specific substep.
 - Scale to full-month joined/sorted data only after the bounded samples have a
@@ -812,6 +822,10 @@ Required work:
   safe-API harness using `RegionBuffer` rather than trusted `RiftRegion.open`.
   `RegionPriorityQueue` covers append/pop ranking and
   `RegionIndexedPriorityQueue` covers dense-key fetch/mutate/update ranking.
+  `RegionLongIndexedPriorityQueue` covers the same checked ranking shape for
+  arbitrary `Long` keys, using region-owned heap arrays plus a region-owned
+  open-addressed index table; this removes the standalone hash-key blocker for
+  packed route ids, though stream-window integration is still open.
   `CheckedRegionIndexedPriorityQueueMatrix` is the first focused harness for
   durable keyed region state with ordinary mutable Scala objects.
   `CheckedStreamWindowRankMatrix` is the first focused stream-window rank

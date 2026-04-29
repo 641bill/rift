@@ -260,8 +260,15 @@ cleanup but does not yet reduce the focused checked CPU gap; the next useful
 stream-window-rank direction is a lower-overhead rank API rather than another
 narrow queue tweak. The newest lexicographic priority API adds Q1-style
 count/time/sequence/key tie-breakers to the same dense-key checked rank/window
-shape; the focused compiler suite now passes `72/72`, and the native checked
-runtime suite passes `23/23`.
+shape.
+The newest framework checkpoint adds `RiftRegion.RegionLongIndexedPriorityQueue`,
+a standalone hash-keyed checked rank queue for arbitrary `Long` keys. Its
+values, heap keys, priorities, and open-addressed index table are region-owned
+arrays, and its owner-token `put` overloads use the same checked value-store
+guard as the dense indexed queue. This removes the standalone dense-remapping
+blocker for packed route keys, but stream-window close-discipline integration
+and lower checked-container CPU overhead remain open. The focused compiler
+suite now passes `76/76`, and the native checked runtime suite passes `25/25`.
 
 A recent Phase 5 diagnostic checkpoint adds opt-in Q2 CPU substep timers
 behind `DEBS2015_Q2_CPU_DIAGNOSTICS=1`. Heap and checked Q2 now emit matching
@@ -310,7 +317,8 @@ window-rank arenas were committed at `088fe2a59`; the reusable checked
 stream-window rank matrix evidence was committed at `d6fb94cd3`; Q2 CPU
 substep diagnostics were committed at `de2134712`; and
 `StreamWindowIndexedRank` auto cleanup was committed at `a70ce412e2`. The
-entry-cleanup checkpoint was committed at `87fbc088a6`. The
+entry-cleanup checkpoint was committed at `87fbc088a6`; the hash-keyed checked
+rank queue was committed at `87c0d5cf3b`. The
 checked API is not a
 complete compiler capture-checking implementation. The fork is ahead of
 `origin/feature/rift` unless pushed.
@@ -2313,11 +2321,14 @@ Post-table update: the current checked API slice now includes
 entry-cleanup callbacks that report removed rank entries during close so
 operators can clean side tables without a duplicate checked-side key list. The
 focused compiler suite now passes `72/72`, and the native checked runtime suite
-passes `23/23`. The remove-with-value close primitive simplifies framework
+passes `23/23`. The hash-keyed checked rank queue checkpoint then raises the
+focused compiler suite to `76/76` and the native checked runtime suite to
+`25/25`. The remove-with-value close primitive simplifies framework
 unlinking and validates already-popped-key cleanup, but does not yet remove the
 focused checked CPU gap. The lexicographic priority API removes the Q1
-tie-breaker blocker for this dense-key rank shape. Hash-keyed state and lower
-container CPU overhead remain open.
+tie-breaker blocker for this dense-key rank shape. Standalone hash-keyed rank
+state now exists; stream-window integration and lower container CPU overhead
+remain open.
 
 Is Phase 0 actually complete?
 
@@ -2592,19 +2603,22 @@ Immediate next step:
     compiler guard, and now has `putWindowRankInBucket` auto cleanup for
     bucket-owned rank keys before child bucket close. The entry-cleanup close
     callbacks report removed rank entries for side-table cleanup. It is dense-key and
-    single-`Long` and four-component lexicographic priorities; hash-key
-    variants remain open, and the checked window-rank container still has CPU
-    overhead.
+    supports single-`Long` and four-component lexicographic priorities. A
+    standalone long-key queue now exists, but hash-keyed stream-window rank
+    integration remains open, and the checked window-rank container still has
+    CPU overhead.
 
 Next technical milestone:
 
-1. Continue reducing `StreamWindowIndexedRank` container CPU overhead or build
-   the next hash-keyed checked rank/window API slice. The entry-cleanup matrix
+1. Continue reducing `StreamWindowIndexedRank` container CPU overhead or
+   integrate `RegionLongIndexedPriorityQueue` into a checked stream-window rank
+   slice. The entry-cleanup matrix
    improved the auto-cleanup path from `313.572 ms` to `302.001 ms`, but remains
    slower than heap and the earlier manual-cleanup path. The follow-up
    remove-with-value close primitive is correctness/usefulness cleanup, not a
    measured speed fix. The lexicographic priority API now covers Q1-style
-   tie-breakers, so the next blocker is hash-keyed state or lower CPU overhead.
+   tie-breakers, and standalone long-key rank state now exists, so the next
+   blocker is stream-window integration or lower CPU overhead.
    The Q2 substep diagnostic does not currently reproduce bounded same-count Q2
    overhead.
 2. Continue the DEBS "region-heavy" path with measurement first after the
@@ -3500,9 +3514,10 @@ Interpretation:
   automatic cleanup adds CPU overhead while making the safety boundary more
   framework-owned.
 - This checkpoint left ownership-bookkeeping overhead and richer ordering open;
-  the later lexicographic priority checkpoint covers Q1-style tie-breakers, but
-  hash-keyed state and lower CPU overhead remain open before broad DEBS Q1
-  integration.
+  the later lexicographic priority checkpoint covers Q1-style tie-breakers, and
+  the later long-key queue covers standalone hash-keyed rank state. Lower CPU
+  overhead and hash-keyed stream-window integration remain open before broad
+  DEBS Q1 integration.
 
 ## Latest Update: StreamWindowIndexedRank Entry Cleanup
 
@@ -3597,7 +3612,7 @@ Interpretation:
   small. The remaining overhead is likely in checked container/object program
   shape rather than raw region allocator operations.
 - The next useful direction is a richer/lower-overhead rank-window API
-  (tie-breakers, hash-keyed state, and fewer per-event object/control
+  (stream-window hash-key integration and fewer per-event object/control
   transitions), not another narrow queue method tweak.
 
 ## Latest Update: StreamWindowIndexedRank Lexicographic Priority API
@@ -3697,6 +3712,47 @@ Interpretation:
   focus should move to lower-overhead/richer checked rank APIs and stronger
   bucket/window close discipline, not speculative Q2 substep tuning.
 
+## Latest Update: Hash-Keyed Checked Rank Queue
+
+Date: 2026-04-29
+
+Implementation commit:
+
+- `scala-native-rift` `87c0d5cf3b` (`Add hash-keyed checked rank queue`)
+
+What changed:
+
+- Added `RiftRegion.RegionLongIndexedPriorityQueue[T]` as the long-key
+  counterpart to `RegionIndexedPriorityQueue`.
+- The new queue stores values, heap keys, priority arrays, and an
+  open-addressed long-key index table in region-owned arrays.
+- Added single-priority and four-component lexicographic `put`/`updatePriority`
+  APIs, plus `get`, `contains`, `remove`, `peek`, `peekKey`, `peekPriority`,
+  `pop`, `length`, `capacity`, and `tableCapacity`.
+- Extended checked lowering so long-key `put` overloads, including owner-token
+  extension syntax, reject direct unrooted heap objects while allowing region
+  values and explicit `HeapRoot` handles.
+- Added compiler probes for long-key lexicographic ranking, heap-store
+  rejection, `HeapRoot` storage, and inner-region rejection.
+- Added native runtime smokes for rehash/growth, lexicographic ranking,
+  update/remove/pop, and keyed value replacement.
+
+Validation:
+
+- `git diff --check` passed.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile` passed.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"` passed: `76/76`.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionCheckedTest"` passed: `25/25`.
+
+Interpretation:
+
+- This is Phase 7 API/safety evidence, not a DEBS performance result.
+- It removes the standalone dense-key-remapping blocker for route-style packed
+  `Long` keys.
+- It does not yet make `StreamWindowIndexedRank` hash-keyed. The next framework
+  step is composing long-key rank state with bucket ownership/close cleanup, or
+  attacking checked container CPU overhead if that integration looks too costly.
+
 ## Unsafe Assumptions To Avoid
 
 - "Rift already has final DEBS application proof." It does not. The current
@@ -3712,9 +3768,10 @@ Interpretation:
   bucket close. The entry-cleanup path then removes the duplicate checked-side
   bucket key list and improves the focused default matrix, but it is still
   slower than heap and slower than the earlier manual-cleanup path. The
-  lexicographic priority API then covers Q1-style tie-breakers, but the Q2 CPU
-  substep diagnostic does not reproduce bounded checked same-operation overhead,
-  so lower-overhead or hash-key rank collections, optional full-month SafeZone
+  lexicographic priority API then covers Q1-style tie-breakers, and the
+  long-key rank queue covers standalone hash-keyed state. The Q2 CPU substep
+  diagnostic does not reproduce bounded checked same-operation overhead, so
+  lower-overhead stream-window rank integration, optional full-month SafeZone
   comparison, and stronger safe-API controls are still missing.
 - "GC time should disappear because Q1/Q2 windows and input bytes use Rift."
   `gc_time_ns` is collection time only. Some former heap-heavy paths have

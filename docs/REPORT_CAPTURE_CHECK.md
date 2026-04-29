@@ -69,6 +69,11 @@ Scala-next capture checking supports the first Rift safe API slice:
   without allocating a new object every refresh. The lexicographic priority
   overloads use the same value-store guard while allowing Q1-style
   count/time/sequence/key tie-breakers.
+- `RiftRegion.RegionLongIndexedPriorityQueue` extends that checked rank shape
+  to arbitrary `Long` keys. Values, heap keys, priorities, and the
+  open-addressed index table are region-owned arrays; `put` uses the same
+  checked value-store guard as the dense-key queue. This is standalone
+  hash-keyed rank state, not yet a stream-window close-discipline integration.
 - `RiftRegion.StreamWindowIndexedRank` composes dense-key ranking with
   stream-bucket child regions. Bucket-owned rank entries are unlinked before
   the child bucket closes, close-with-entry callbacks let operators clean side
@@ -283,6 +288,10 @@ Current checked compiler probes:
 | `regionIndexedPriorityQueueCannotStoreHeapObject` | indexed priority-queue `put` stores direct heap object | fails | Confirms the `put` lowering guard covers indexed ranking containers. |
 | `regionIndexedPriorityQueueCanStoreHeapRoot` | indexed priority queue stores explicit `HeapRoot` handles | compiles | Covers durable heap metadata through keyed ranking containers. |
 | `regionIndexedPriorityQueueCannotStoreInnerScopedValue` | outer indexed priority queue stores value allocated in inner region | fails | Confirms owner tokens still prevent cross-region storage for keyed ranking state. |
+| `regionLongIndexedPriorityQueueCanUpdateLexicographicPriority` | long-key indexed priority queue stores region objects, fetches by key, and updates Q1-style lexicographic priority | compiles | Adds standalone hash-keyed rank state for packed stream keys without dense remapping. |
+| `regionLongIndexedPriorityQueueCannotStoreHeapObject` | long-key lexicographic `put` stores direct heap object | fails | Confirms the value-argument guard covers long-key and multi-priority `put`. |
+| `regionLongIndexedPriorityQueueCanStoreHeapRoot` | long-key indexed priority queue stores explicit `HeapRoot` handles | compiles | Covers durable heap metadata through hash-keyed ranking containers. |
+| `regionLongIndexedPriorityQueueCannotStoreInnerScopedValue` | outer long-key indexed priority queue stores value allocated in inner region | fails | Confirms owner tokens still prevent cross-region storage for hash-keyed ranking state. |
 | `streamingResetRegionArrayEpochCompiles` | reset epoch processes a region-owned array of ordinary records | compiles | Models sort/dataflow epoch records through the supported checked array shape. |
 | `topwordBufferCanStoreRecordsWithRootedMetadata` | top-word-style buffer stores records that carry rooted heap metadata | compiles | Covers durable heap metadata via `HeapRoot` inside a higher-level checked buffer. |
 | `graphChiSubintervalCanUseRootedHeapVertexMetadata` | GraphChi-style subinterval record refers to durable heap vertex metadata through `HeapRoot` | compiles | Covers the safe data/control split for graph updates. |

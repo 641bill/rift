@@ -113,7 +113,7 @@ Current reliable evidence:
   rank-object churn but opened one child region per active route, raising 100k
   checked RSS to `113721344` bytes.
 - Phase 7 checked API evidence has started. The targeted Scala-next compiler
-  suite passed 72/72 for the current `Scoped`/`Streaming` API slice, including
+  suite passed 76/76 for the current `Scoped`/`Streaming` API slice, including
   for-loop allocation, nested scoped regions, local higher-order consumers, and
   direct escape/reset rejection. Returned function values are now rejected
   conservatively because returned closures can hide region-local captures.
@@ -135,7 +135,12 @@ Current reliable evidence:
   primitive array, and heap values are rejected unless explicitly rooted.
   `RiftRegion.RegionIndexedPriorityQueue` adds durable dense-key ranking state:
   one ordinary Scala object can be created per key, fetched, mutated, and
-  re-ranked without allocating a new rank object on every refresh. Raw
+  re-ranked without allocating a new rank object on every refresh.
+  `RiftRegion.RegionLongIndexedPriorityQueue` is the hash-keyed counterpart:
+  it keeps arbitrary `Long` keys, values, heap priorities, and open-addressed
+  index state in region-owned arrays, so route-style packed keys do not need a
+  benchmark-specific dense remapping layer before entering checked rank state.
+  Raw
   `RiftRegion.childStreaming` plus the
   preferred `RiftRegion.childWindow` wrapper are now first checked
   multi-region building blocks: a child streaming-region handle cannot escape
@@ -157,8 +162,9 @@ Current reliable evidence:
   owns each dense key, and bucket close removes those tracked keys from
   parent-owned rank state before closing the child region. The compiler guard
   rejects direct unrooted heap stores through both `putWindowRank` and
-  `putWindowRankInBucket`; the focused compiler suite is now `72/72`, and the
-  native checked runtime suite is `23/23`. The Q1
+  `putWindowRankInBucket`; standalone dense-key and long-key checked rank
+  queues use the same owner-token value-store guard. The focused compiler
+  suite is now `76/76`, and the native checked runtime suite is `25/25`. The Q1
   checked-processing probe uses path-dependent bucket event nodes to keep
   child-owned values local before closing the child region at bucket eviction.
   The focused `CheckedRegionBufferMatrix`
@@ -183,7 +189,8 @@ Current reliable evidence:
   although checked uses less RSS and only `0.352 ms` measured Rift operation
   time. The lexicographic priority API now supports Q1-style
   count/time/sequence/key tie-breakers without changing the bucket-close
-  discipline. The earlier entry-cleanup step improved the previous auto-cleanup median
+  discipline, and the long-key queue removes the dense-key remapping blocker
+  for route-keyed ranking. The earlier entry-cleanup step improved the previous auto-cleanup median
   (`313.572 ms` checked) but remained slower than the earlier manual-cleanup
   median (`254.050 ms`). Treat these as API/safety evidence and
   overhead diagnostics rather than speed claims.
@@ -840,9 +847,10 @@ Interpretation:
   and slower than the earlier manual-cleanup path. The follow-up
   remove-with-value close primitive simplifies framework unlinking and validates
   already-popped-key cleanup, but did not produce a measured speedup. The
-  lexicographic priority API removes one Q1 integration blocker, but hash-keyed
-  state and lower-overhead checked rank containers remain open before direct
-  application integration.
+  lexicographic priority API removes one Q1 integration blocker. Standalone
+  long-key indexed rank state now removes the dense-key remapping blocker, but
+  stream-window integration and lower-overhead checked rank containers remain
+  open before direct application integration.
   Hash-key collections, checked Q1/Q2 CPU overhead work, and
   stronger safe API boundaries are still needed before it can support a final
   application claim.
