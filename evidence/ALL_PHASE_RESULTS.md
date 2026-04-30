@@ -1273,7 +1273,7 @@ artifacts are available or reproduced.
 | StreamFlex stream latency | Throughput and per-event latency/deadline-miss workloads | Pressure rerun shows Rift throughput around `330 ms` vs heap `634 ms`; Streaming has zero deadline misses in that run. | Does not run StreamIt/Ovm kernels or model scheduler/queueing delay. |
 | Yak control/data split | Wordcount, graphstep, grouped sort, top-word/filter, GraphChi-style subintervals, and promotion/escape epoch workloads with durable heap control state | No-escape pressure rerun shows raw Rift and `yak-runtime` both beat heap and remove measured heap GC. Grouped sort gives a modest HPZone-vs-heap win (`227.393 ms` vs `237.354 ms`) with little heap GC. Top-word/filter is stronger: Streaming is `262.980 ms` vs heap `311.527 ms` and improved SafeZone `271.273 ms`. GraphChi-style subintervals show Streaming at `236.388 ms` vs heap `302.599 ms`, but improved SafeZone remains faster at `228.252 ms`. The corrected runtime-promotion proxy records 10M barrier checks, 10k remembered refs, and 20k promoted objects, but Yak-runtime is slower than heap: `513.465 ms` vs `424.768 ms`. | Not distributed Yak; sort/topword/graphchi are local Hyracks/Hadoop/GraphChi-shaped methodology probes, and promotion is a memory-API-level proxy with object-specific `RuntimePromoter`, not real JVM field barriers, stack scanning, STW coordination, or generic object movement. |
 | Stancu transaction accounting | Warehouse transaction-shaped object graph with durable heap state | Boundary sweep confirms a Rift-vs-heap win only when transaction regions are coarse enough: at 200k transactions, 64 tx/region gives Streaming `38.844 ms` vs heap `43.189 ms`. | Not SPECjbb2005 or static analysis; SafeZone remains faster. |
-| NEXMark-lite streaming | Deterministic auction stream with Q0 passthrough, Q1 currency conversion, Q2 selection, Q5 hot-items window, and Q8 new-user/new-auction window join | 1M medians show Q1 checked `374.767 ms` vs heap `384.595 ms` and Streaming `371.404 ms`; Q2 checked `287.808 ms` vs heap `297.053 ms`; generic Q8 checked `291.832 ms` vs heap `322.210 ms`. The focused Q8 `StreamJoinWindow` API is lower-GC/lower-RSS but slower than the fair specialized heap join (`23.021 ms` vs `17.441 ms`). Q5 is not a win; diagnostics show identical operation counts and about `45 ms` of top-auction scans in every 1M mode. | Local methodology benchmark, not exact Apache Beam NEXMark. Real-data follow-ups are not implemented yet. |
+| NEXMark-lite streaming | Deterministic auction stream with Q0 passthrough, Q1 currency conversion, Q2 selection, Q5 hot-items window, and Q8 new-user/new-auction window join | 1M medians show Q1 checked `374.767 ms` vs heap `384.595 ms` and Streaming `371.404 ms`; Q2 checked `287.808 ms` vs heap `297.053 ms`; generic Q8 checked `291.832 ms` vs heap `322.210 ms`. The focused Q8 `StreamJoinWindow` API is lower-GC/lower-RSS but slower than the fair specialized heap join; the packed-count follow-up narrows that row to `20.987 ms` checked vs `17.393 ms` heap. Q5 is not a win; diagnostics show identical operation counts and about `45 ms` of top-auction scans in every 1M mode. | Local methodology benchmark, not exact Apache Beam NEXMark. Real-data follow-ups are not implemented yet. |
 
 ### NEXMark-Lite Stream Matrix, 2026-04-30
 
@@ -1306,9 +1306,9 @@ Focused Q8 join API follow-up:
 | Mode | Median ms | GC ms | Rift op ms | Region objects | Peak RSS bytes | Interpretation |
 |---|---:|---:|---:|---:|---:|---|
 | heap | 327.102 | 27.578 | 0.000 | 0 | 146669568 | generic heap runner |
-| heap-join-api | 17.441 | 0.000 | 0.000 | 0 | 146407424 | fair specialized heap control |
+| heap-join-api | 17.393 | 0.000 | 0.000 | 0 | 146391040 | fair specialized heap control, packed follow-up run |
 | rift-checked | 312.551 | 8.867 | 0.139 | 300000 | 149733376 | generic checked runner |
-| rift-checked-join-api | 23.021 | 0.000 | 0.065 | 300002 | 124174336 | reusable checked API; lower GC/RSS but slower than specialized heap |
+| rift-checked-join-api | 20.987 | 0.000 | 0.062 | 300002 | 124157952 | packed reusable checked API; lower GC/RSS but slower than specialized heap |
 
 Q5 diagnostic follow-up:
 
@@ -2334,10 +2334,10 @@ Status:
   hot-items is not yet a window-aggregate win (`355.100 ms` checked versus
   `350.941 ms` heap).
 - The Q8 `StreamJoinWindow` follow-up is framework progress, not a speed claim:
-  at 1M it gives checked `23.021 ms`, zero measured GC, and lower RSS
-  (`124174336` bytes), but the fair specialized heap join control is faster at
-  `17.441 ms`. The earlier generic Q8 checked win remains valid only against
-  the generic heap runner.
+  the packed-count path improves the 1M checked API row to `20.987 ms`, zero
+  measured GC, and lower RSS (`124157952` bytes), but the fair specialized heap
+  join control is faster at `17.393 ms`. The earlier generic Q8 checked win
+  remains valid only against the generic heap runner.
 - The Q5 diagnostic follow-up confirms identical window operation counts and
   about `45 ms` of top-auction scans in every 1M mode. Clean 1M checked remains
   slower (`393.415 ms`) than heap (`361.882 ms`), so Q5 should drive

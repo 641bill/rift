@@ -9,8 +9,8 @@ Active implementation branch for this update:
 `feature/rift`
 
 Implementation commit at this update:
-`d9d6826d7`
-(`Add NEXMark checked join window follow-up`)
+`b74240dc16`
+(`Optimize checked join-window count path`)
 
 Latest implementation checkpoint:
 `NexmarkRegionMatrix` adds the first non-DEBS NEXMark-style stream-processing
@@ -39,6 +39,11 @@ This checkpoint completed both requested pre-real-data follow-ups:
   numbers proved too optimistic against the generic heap runner. This is now a
   do-not-redo lesson: any API that specializes the query loop needs an equally
   specialized heap control.
+- The latest checkpoint adds packed-count Q8 join-window fast paths:
+  `putJoinLeftInBucketAndCounts`, `putJoinRightInBucketAndCounts`,
+  `removeJoinLeftAndCounts`, and `removeJoinRightAndCounts`. These reduce
+  repeated count lookups in the checked Q8 API and narrow the 1M gap, but the
+  API still does not pass the fair speed gate.
 
 Validation for the NEXMark-lite checkpoint:
 
@@ -46,7 +51,7 @@ Validation for the NEXMark-lite checkpoint:
   modes.
 - 100k and 1M 3-run medians matched checksum/output count across all modes.
 - `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile` passed.
-- After `StreamJoinWindow`, `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"` passed `93/93`.
+- After packed `StreamJoinWindow` counts, `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"` passed `94/94`.
 - After `StreamJoinWindow`, `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionCheckedTest"` passed `37/37`.
 
 Current NEXMark-lite 1M medians:
@@ -64,9 +69,9 @@ Focused Q8 join API 1M medians:
 | Mode | Median ms | GC ms | Rift op ms | RSS bytes | Interpretation |
 |---|---:|---:|---:|---:|---|
 | heap | `327.102` | `27.578` | `0.000` | `146669568` | generic heap runner |
-| heap-join-api | `17.441` | `0.000` | `0.000` | `146407424` | fair specialized heap control |
+| heap-join-api | `17.393` | `0.000` | `0.000` | `146391040` | fair specialized heap control, packed follow-up run |
 | rift-checked | `312.551` | `8.867` | `0.139` | `149733376` | generic checked runner |
-| rift-checked-join-api | `23.021` | `0.000` | `0.065` | `124174336` | lower GC/RSS, slower than specialized heap |
+| rift-checked-join-api | `20.987` | `0.000` | `0.062` | `124157952` | packed checked API; lower GC/RSS, slower than specialized heap |
 
 Q5 follow-up:
 
