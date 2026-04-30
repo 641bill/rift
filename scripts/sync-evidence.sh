@@ -23,6 +23,7 @@ cp -f "$FORK/sandbox/CHECKED_REGION_INDEXED_PRIORITY_QUEUE_MATRIX.md" "$DEST/" 2
 cp -f "$FORK/sandbox/CHECKED_STREAM_WINDOW_RANK_MATRIX.md" "$DEST/" 2>/dev/null || true
 cp -f "$FORK/sandbox/TABLERANK_PROFILE.md" "$DEST/" 2>/dev/null || true
 cp -f "$FORK/sandbox/CHECKED_APPEND_WINDOW_MATRIX.md" "$DEST/" 2>/dev/null || true
+cp -f "$FORK/sandbox/CHECKED_WINDOW_FOLD_MATRIX.md" "$DEST/" 2>/dev/null || true
 cp -f "$FORK/sandbox/NEXMARK_REGION_MATRIX.md" "$DEST/" 2>/dev/null || true
 cp -f "$FORK/sandbox/SN_WIN_ENVELOPE.md" "$DEST/" 2>/dev/null || true
 

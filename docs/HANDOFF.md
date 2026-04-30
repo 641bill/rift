@@ -9,10 +9,47 @@ Active implementation branch for this update:
 `feature/rift`
 
 Implementation commit at this update:
-`b74240dc16`
-(`Optimize checked join-window count path`)
+`53decb9e40`
+(`Add checked stream-window fold matrix`)
 
 Latest implementation checkpoint:
+`RiftRegion.StreamWindowFold[T]` adds an experimental checked additive
+stream-window fold primitive, backed by parent-owned primitive aggregate
+tables and child-bucket region records. The implementation lives in
+`scala-native-rift/nativelib/src/main/scala-next/scala/scalanative/memory/RiftRegion.scala`;
+the focused matrix lives in
+`scala-native-rift/sandbox/src/main/scala-next/CheckedWindowFoldMatrix.scala`
+and is run by `scala-native-rift/sandbox/run_checked_window_fold_matrix.sh`.
+
+The focused gate failed, so Common Crawl WET, NEXMark Q5 fold integration, and
+DEBS fold integration remain blocked:
+
+| Scale | Mode | Median ms | GC ms | Rift op ms | RSS bytes | Interpretation |
+|---:|---|---:|---:|---:|---:|---|
+| 100k | heap | `9.263` | `0.000` | `0.000` | `21102592` | fair heap control |
+| 100k | rift-checked | `11.999` | `0.000` | `0.060` | `14958592` | lower RSS, slower elapsed |
+| 1M | heap | `103.244` | `11.910` | `0.000` | `75022336` | fair heap control |
+| 1M | rift-checked | `118.726` | `0.000` | `0.175` | `40402944` | zero measured GC and lower RSS, but failed speed gate |
+| 1M | rift-trusted-hp | `104.919` | `0.000` | `0.117` | `46841856` | close to heap, not a win |
+| 1M | rift-trusted-streaming | `106.088` | `0.000` | `0.120` | `46956544` | close to heap, not a win |
+
+Validation for the fold checkpoint:
+
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile` passed.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"` passed `96/96`.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionCheckedTest"` passed `38/38`.
+- 20k smoke, 100k 3-run, and 1M 3-run `CheckedWindowFoldMatrix` rows matched checksum across all modes.
+
+Interpretation:
+
+- The memory-management direction is useful: checked fold removes measured GC
+  and cuts 1M RSS from `75022336` to `40402944` bytes.
+- The elapsed gate fails: checked fold is `118.726 ms` versus heap
+  `103.244 ms`.
+- The next implementation step should profile/reduce checked aggregate-table
+  overhead before using this API in Common Crawl WET or NEXMark Q5.
+
+Previous NEXMark checkpoint:
 `NexmarkRegionMatrix` adds the first non-DEBS NEXMark-style stream-processing
 ladder. The benchmark lives in
 `scala-native-rift/sandbox/src/main/scala-next/NexmarkRegionMatrix.scala` and
