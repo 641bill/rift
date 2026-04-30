@@ -9,8 +9,60 @@ Active implementation branch for this update:
 `feature/rift`
 
 Implementation commit at this update:
-`53decb9e40`
-(`Add checked stream-window fold matrix`)
+`45056d799`
+(`Add SafeZone and Common Crawl stream detectors`)
+
+Current checkpoint:
+SafeZone controls were added to `NexmarkRegionMatrix`, and a generated
+Common Crawl WET-shaped detector was added under
+`scala-native-rift/sandbox/src/main/scala-next/CommonCrawlWetMatrix.scala`.
+This checkpoint is compiled, smoke-tested, benchmarked, and committed in the
+implementation repo.
+
+Files added or changed:
+
+- `scala-native-rift/sandbox/src/main/scala-next/NexmarkRegionMatrix.scala`
+- `scala-native-rift/sandbox/run_nexmark_region_matrix.sh`
+- `scala-native-rift/sandbox/NEXMARK_REGION_MATRIX.md`
+- `scala-native-rift/sandbox/src/main/scala-next/CommonCrawlWetMatrix.scala`
+- `scala-native-rift/sandbox/run_common_crawl_wet_matrix.sh`
+- `scala-native-rift/sandbox/COMMON_CRAWL_WET_MATRIX.md`
+- `scala-native-rift/sandbox/SN_WIN_ENVELOPE.md`
+- `evidence/COMMON_CRAWL_WET_MATRIX.md`
+- `evidence/NEXMARK_REGION_MATRIX.md`
+- `evidence/SN_WIN_ENVELOPE.md`
+- `evidence/ALL_PHASE_RESULTS.md`
+- `scripts/sync-evidence.sh`
+
+Validation for this checkpoint:
+
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile` passed.
+- NEXMark SafeZone 20k smoke matched checksum/output count for Q1/Q5/Q8 across
+  `heap`, `safezone`, `rift-hp`, and `rift-streaming`.
+- NEXMark SafeZone 100k follow-up matched checksum/output count for Q1/Q5/Q8
+  across `heap`, `safezone`, `rift-checked`, `rift-hp`, and
+  `rift-streaming`.
+- Common Crawl WET-shaped 5k smoke matched checksum/output count for Q0/Q1
+  across `heap`, `safezone`, `rift-hp`, and `rift-streaming`.
+- Common Crawl WET-shaped 100k Q1 3-run medians matched checksum/output count
+  in default-bucket and small-bucket controls.
+
+New evidence:
+
+| Matrix | Scale | Main result | Interpretation |
+|---|---:|---|---|
+| NEXMark SafeZone Q1 | 100k | heap `55.559 ms`, SafeZone `59.649 ms`, checked `57.332 ms`, HPZone `55.319 ms` | SafeZone lowers RSS/GC but is slower than heap/Rift here. |
+| NEXMark SafeZone Q5 | 100k | heap `35.520 ms`, SafeZone `34.986 ms`, checked `35.629 ms` | Near-tie; aggregate/top-scan shape has little memory-management ceiling. |
+| NEXMark SafeZone Q8 | 100k | heap `31.893 ms`, SafeZone `31.138 ms`, checked `30.577 ms` | SafeZone is competitive; Rift remains slightly faster. |
+| Common Crawl WET q1 default buckets | 100k pages / 13.7M records | heap `452.840 ms` with `160.268 ms` GC; HPZone `427.984 ms`, Streaming `428.040 ms` | Object-heavy tokenization stresses Immix and gives a modest trusted Rift win, not a strong case-study result. |
+| Common Crawl WET q1 small buckets | 100k pages / 13.7M records | heap `384.951 ms`; HPZone `425.050 ms`, Streaming `423.951 ms` | Tighter natural lifetimes make heap fastest; do not force Common Crawl into a headline claim. |
+
+Current conclusion:
+Common Crawl WET is useful as a memory-pressure detector, but the generated
+workload does not yet justify a checked-Rift application story. The next
+benchmark candidate should be Wikimedia-style pageview/clickstream aggregation,
+unless a real WET file plus a cheap checked page/token append API changes this
+result.
 
 Latest implementation checkpoint:
 `RiftRegion.StreamWindowFold[T]` adds an experimental checked additive

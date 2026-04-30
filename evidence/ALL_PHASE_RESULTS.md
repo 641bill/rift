@@ -63,6 +63,7 @@ For performance numbers, use the following rule of thumb:
 | Phase 6 Yak-style control/data split | `evidence/YAK_REGION_MATRIX.md` |
 | Phase 6 Stancu-style transaction accounting | `evidence/STANCU_REGION_MATRIX.md` |
 | Phase 6 NEXMark-lite streaming | `evidence/NEXMARK_REGION_MATRIX.md` |
+| Phase 6 Common Crawl WET-shaped detector | `evidence/COMMON_CRAWL_WET_MATRIX.md` |
 | Phase 6 pipeline / parallel collections | `evidence/PIPELINE_PARCOLL_COMPARISON.md` |
 | Phase 7 checked stream-window rank | `evidence/CHECKED_STREAM_WINDOW_RANK_MATRIX.md` |
 | Phase 7 TableRank profile | `evidence/TABLERANK_PROFILE.md` |
@@ -1261,6 +1262,7 @@ Sources:
 - `evidence/YAK_REGION_MATRIX.md`
 - `evidence/STANCU_REGION_MATRIX.md`
 - `evidence/NEXMARK_REGION_MATRIX.md`
+- `evidence/COMMON_CRAWL_WET_MATRIX.md`
 
 These are local methodology reproductions. They do not claim the original
 Broom/Naiad, StreamFlex/Ovm, Yak/Hyracks/Hadoop/GraphChi, or Stancu/SPECjbb2005
@@ -1275,6 +1277,7 @@ artifacts are available or reproduced.
 | Yak control/data split | Wordcount, graphstep, grouped sort, top-word/filter, GraphChi-style subintervals, and promotion/escape epoch workloads with durable heap control state | No-escape pressure rerun shows raw Rift and `yak-runtime` both beat heap and remove measured heap GC. Grouped sort gives a modest HPZone-vs-heap win (`227.393 ms` vs `237.354 ms`) with little heap GC. Top-word/filter is stronger: Streaming is `262.980 ms` vs heap `311.527 ms` and improved SafeZone `271.273 ms`. GraphChi-style subintervals show Streaming at `236.388 ms` vs heap `302.599 ms`, but improved SafeZone remains faster at `228.252 ms`. The corrected runtime-promotion proxy records 10M barrier checks, 10k remembered refs, and 20k promoted objects, but Yak-runtime is slower than heap: `513.465 ms` vs `424.768 ms`. | Not distributed Yak; sort/topword/graphchi are local Hyracks/Hadoop/GraphChi-shaped methodology probes, and promotion is a memory-API-level proxy with object-specific `RuntimePromoter`, not real JVM field barriers, stack scanning, STW coordination, or generic object movement. |
 | Stancu transaction accounting | Warehouse transaction-shaped object graph with durable heap state | Boundary sweep confirms a Rift-vs-heap win only when transaction regions are coarse enough: at 200k transactions, 64 tx/region gives Streaming `38.844 ms` vs heap `43.189 ms`. | Not SPECjbb2005 or static analysis; SafeZone remains faster. |
 | NEXMark-lite streaming | Deterministic auction stream with Q0 passthrough, Q1 currency conversion, Q2 selection, Q5 hot-items window, and Q8 new-user/new-auction window join | 1M medians show Q1 checked `374.767 ms` vs heap `384.595 ms` and Streaming `371.404 ms`; Q2 checked `287.808 ms` vs heap `297.053 ms`; generic Q8 checked `291.832 ms` vs heap `322.210 ms`. The focused Q8 `StreamJoinWindow` API is lower-GC/lower-RSS but slower than the fair specialized heap join; the packed-count follow-up narrows that row to `20.987 ms` checked vs `17.393 ms` heap. Q5 is not a win; diagnostics show identical operation counts and about `45 ms` of top-auction scans in every 1M mode. | Local methodology benchmark, not exact Apache Beam NEXMark. Real-data follow-ups are not implemented yet. |
+| Common Crawl WET-shaped tokenization | Generated page/line/token stream with bucket-owned ordinary Scala records | Default 100k tokenization stresses heap (`160.268 ms` GC, `408010752` RSS bytes). Trusted Rift removes measured GC, lowers RSS to about `344.7 MB`, and improves elapsed modestly (`427.984 ms` HPZone vs heap `452.840 ms`). A smaller-bucket control makes heap fastest (`384.951 ms` vs Streaming `423.951 ms`) and collapses heap RSS. | Generated WET-shaped input only, no checked mode yet, and small-bucket control weakens the case-study story. |
 | Checked window-fold operator | Additive per-key stream-window aggregate with child-bucket ordinary Scala records and parent-owned primitive metadata | Checked mode removes measured GC and cuts 1M RSS (`40402944` bytes vs heap `75022336` bytes), but fails elapsed gate: `118.726 ms` checked vs `103.244 ms` heap. | Focused framework profile only; blocks Common Crawl WET and NEXMark Q5 fold integration until overhead is reduced. |
 
 ### NEXMark-Lite Stream Matrix, 2026-04-30
@@ -1324,6 +1327,43 @@ Q5 diagnostic follow-up:
 The diagnostic rows are not headline timings. They show Q5 performs the same
 window operations in every mode and that top-auction scans are a shared cost,
 not a Rift-specific explanation for the checked loss.
+
+### Common Crawl WET-Shaped Detector, 2026-04-30
+
+Source: `evidence/COMMON_CRAWL_WET_MATRIX.md`
+
+This is a generated WET-shaped object stream, not a real Common Crawl artifact
+run. It deliberately removes file I/O and decompression to expose allocation
+pressure from page, line, and token objects.
+
+100k default-bucket tokenization:
+
+| Mode | Median ms | GC ms | Rift op ms | Region objects | Peak RSS bytes | Interpretation |
+|---|---:|---:|---:|---:|---:|---|
+| heap | 452.840 | 160.268 | 0.000 | 0 | 408010752 | GC/RSS pressure is real. |
+| safezone | 1706.540 | 0.000 | 0.000 | 0 | 345309184 | Not competitive at this scale. |
+| rift-hp | 427.984 | 0.000 | 1.145 | 13700000 | 344670208 | Modest trusted elapsed win, much lower GC/RSS. |
+| rift-streaming | 428.040 | 0.000 | 1.125 | 13700000 | 344752128 | Same as HPZone. |
+
+100k small-bucket control:
+
+| Mode | Median ms | GC ms | Rift op ms | Region objects | Peak RSS bytes | Interpretation |
+|---|---:|---:|---:|---:|---:|---|
+| heap | 384.951 | 94.533 | 0.000 | 0 | 21364736 | Heap improves when token lifetimes are short. |
+| safezone | 411.583 | 1.771 | 0.000 | 0 | 22806528 | Lower GC, slower elapsed. |
+| rift-hp | 425.050 | 2.346 | 0.969 | 13700000 | 22740992 | No elapsed win under tighter lifetimes. |
+| rift-streaming | 423.951 | 2.307 | 1.003 | 13700000 | 22740992 | No elapsed win under tighter lifetimes. |
+
+Interpretation:
+
+- Common Crawl-style tokenization can stress Scala Native heap allocation.
+- The generated default-bucket row is a modest trusted Rift win, not a strong
+  checked-system result.
+- The small-bucket control is the important caveat: if the logical program
+  exposes shorter lifetimes to heap too, heap recovers much of the gap.
+- Next real-data candidate should be Wikimedia pageview/clickstream
+  aggregation unless a real WET file plus a checked page/token append API
+  changes the result.
 
 ### Checked Dataflow Operators, 2026-04-26
 
