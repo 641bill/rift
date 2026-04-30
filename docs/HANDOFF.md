@@ -4437,6 +4437,71 @@ Safe next action:
    remains the largest checked-vs-heap gap in the current bounded rows.
 3. Keep TableRank and Q1 ranking integration gated out.
 
+### 2026-04-30 Update: StreamAppendWindow Prepend-Cursor Probe
+
+Active implementation repo:
+
+- `/Users/siyaoliu/rift/scala-native-rift` on `feature/rift`
+
+What changed:
+
+- Added experimental `RiftRegion.prependWindow` for order-insensitive
+  append-window buckets.
+- Extended the compiler guard so `prependWindow` rejects direct unrooted heap
+  values the same way `appendWindow` does.
+- Added focused matrix modes `heap-prepend` and
+  `rift-checked-api-prepend-cursor`.
+- Added compiler and runtime tests for prepend-window use and direct heap
+  rejection.
+- DEBS Q1/Q2 code was not changed.
+
+Validation:
+
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile`
+  passed.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"`
+  passed `91/91`.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionCheckedTest"`
+  passed `36/36`.
+- Focused 20k, 100k, and 1M prepend matrix rows matched checksums.
+
+Focused prepend rows:
+
+| Input | Mode | Median elapsed ms | GC ms | RSS MiB | Rift op ms | Region objects |
+|---:|---|---:|---:|---:|---:|---:|
+| 20k | heap-prepend | 1.428 | 0.000 | 5.9 | 0.000 | 0 |
+| 20k | rift-checked-api-prepend-cursor | 1.541 | 0.000 | 5.8 | 0.050 | 20000 |
+| 100k | heap-prepend | 2.870 | 0.000 | 20.3 | 0.000 | 0 |
+| 100k | rift-checked-api-prepend-cursor | 3.610 | 0.000 | 15.0 | 0.008 | 100000 |
+| 1M | heap-prepend | 36.700 | 11.147 | 71.5 | 0.000 | 0 |
+| 1M | rift-checked-api-prepend-cursor | 34.943 | 0.000 | 45.3 | 0.076 | 1000000 |
+
+Same-binary 1M append-vs-prepend comparison:
+
+| Mode | Median elapsed ms | GC ms | RSS MiB | Rift op ms |
+|---|---:|---:|---:|---:|
+| heap | 36.746 | 11.394 | 71.5 | 0.000 |
+| rift-checked-api-cursor | 34.597 | 0.000 | 45.3 | 0.075 |
+| heap-prepend | 36.836 | 11.367 | 71.5 | 0.000 |
+| rift-checked-api-prepend-cursor | 34.662 | 0.000 | 45.3 | 0.076 |
+
+Interpretation:
+
+- `prependWindow` is a valid general checked operator for unordered/head-insert
+  buckets and clears the same 1M threshold as append cursor.
+- It does not beat the existing append-cursor shape in the focused matrix.
+  The same-binary rows are effectively tied.
+- Do not integrate `prependWindow` into DEBS yet. This probe says the current
+  DEBS Q1/Q2 issue is not simply tail-update overhead.
+
+Safe next action:
+
+1. Keep `prependWindow` as framework/control evidence.
+2. Do not migrate DEBS to prepend unless a path specifically needs unordered
+   head insertion or a new focused result shows a real advantage.
+3. Move next to checked Q1 process overhead or deeper append-window/live-payload
+   attribution.
+
 ## Unsafe Assumptions To Avoid
 
 - "Rift already has final DEBS application proof." It does not. The current

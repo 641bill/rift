@@ -1929,6 +1929,12 @@ Interpretation:
   `37.494 ms`), but the all-mode 1M rerun had a noisy/non-winning cursor row
   and RSS was unchanged. Treat cursor reuse as a small cleanup, not as a new
   speed result.
+- `prependWindow` adds an order-insensitive/head-insert append-window sibling
+  with the same checked guard as `appendWindow`. It clears its matching 1M
+  focused gate (`34.943 ms` versus heap-prepend `36.700 ms`), but the
+  same-binary append-vs-prepend comparison is effectively tied (`34.597 ms`
+  append cursor versus `34.662 ms` prepend cursor). Treat it as
+  framework/control evidence, not a DEBS integration trigger.
 - Opt-in `CHECKED_APPEND_API_DIAG=1` counters after bucket/region caching show
   the 1M API path doing `40` actual bucket lookups, `999960` current-bucket
   hits, `40` bucket opens, `1000000` appends, `40` close buckets, `1000000`
