@@ -1,6 +1,6 @@
 # Rift Project Handoff
 
-Date: 2026-04-30
+Date: 2026-05-01
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -9,27 +9,30 @@ Active implementation branch for this update:
 `feature/rift`
 
 Implementation commit at this update:
-`45056d799`
-(`Add SafeZone and Common Crawl stream detectors`)
+`a81aa5a78`
+(`Label SafeZone roots baselines and add stream ladder`)
 
 Current checkpoint:
-SafeZone controls were added to `NexmarkRegionMatrix`, and a generated
-Common Crawl WET-shaped detector was added under
-`scala-native-rift/sandbox/src/main/scala-next/CommonCrawlWetMatrix.scala`.
-This checkpoint is compiled, smoke-tested, benchmarked, and committed in the
-implementation repo.
+The SafeZone provenance issue has been corrected in the NEXMark and Common
+Crawl runners. Script-level modes now distinguish `safezone-current`
+(`SAFEZONE_ROOTS_MODE=0`) from `safezone-improved`
+(`SAFEZONE_ROOTS_MODE=1`) while preserving the underlying binary mode
+`safezone`. Corrected 100k controls show improved SafeZone is a serious
+baseline and rules out generated Common Crawl WET tokenization as the next
+Rift case-study target. A new stream benchmark ladder selects Wikimedia
+pageview/clickstream as the next candidate.
 
 Files added or changed:
 
-- `scala-native-rift/sandbox/src/main/scala-next/NexmarkRegionMatrix.scala`
 - `scala-native-rift/sandbox/run_nexmark_region_matrix.sh`
 - `scala-native-rift/sandbox/NEXMARK_REGION_MATRIX.md`
-- `scala-native-rift/sandbox/src/main/scala-next/CommonCrawlWetMatrix.scala`
 - `scala-native-rift/sandbox/run_common_crawl_wet_matrix.sh`
 - `scala-native-rift/sandbox/COMMON_CRAWL_WET_MATRIX.md`
+- `scala-native-rift/sandbox/STREAM_BENCHMARK_LADDER.md`
 - `scala-native-rift/sandbox/SN_WIN_ENVELOPE.md`
 - `evidence/COMMON_CRAWL_WET_MATRIX.md`
 - `evidence/NEXMARK_REGION_MATRIX.md`
+- `evidence/STREAM_BENCHMARK_LADDER.md`
 - `evidence/SN_WIN_ENVELOPE.md`
 - `evidence/ALL_PHASE_RESULTS.md`
 - `scripts/sync-evidence.sh`
@@ -37,32 +40,30 @@ Files added or changed:
 Validation for this checkpoint:
 
 - `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile` passed.
-- NEXMark SafeZone 20k smoke matched checksum/output count for Q1/Q5/Q8 across
-  `heap`, `safezone`, `rift-hp`, and `rift-streaming`.
-- NEXMark SafeZone 100k follow-up matched checksum/output count for Q1/Q5/Q8
-  across `heap`, `safezone`, `rift-checked`, `rift-hp`, and
-  `rift-streaming`.
+- NEXMark corrected SafeZone 100k follow-up matched checksum/output count for
+  Q1/Q5/Q8 across `heap`, `safezone-current`, `safezone-improved`,
+  `rift-checked`, `rift-hp`, and `rift-streaming`.
 - Common Crawl WET-shaped 5k smoke matched checksum/output count for Q0/Q1
-  across `heap`, `safezone`, `rift-hp`, and `rift-streaming`.
-- Common Crawl WET-shaped 100k Q1 3-run medians matched checksum/output count
-  in default-bucket and small-bucket controls.
+  across `heap`, current SafeZone, `rift-hp`, and `rift-streaming`.
+- Common Crawl WET-shaped corrected 100k Q1 3-run medians matched checksum and
+  output count in default-bucket and small-bucket controls across `heap`,
+  `safezone-current`, `safezone-improved`, `rift-hp`, and `rift-streaming`.
 
 New evidence:
 
 | Matrix | Scale | Main result | Interpretation |
 |---|---:|---|---|
-| NEXMark SafeZone Q1 | 100k | heap `55.559 ms`, SafeZone `59.649 ms`, checked `57.332 ms`, HPZone `55.319 ms` | SafeZone lowers RSS/GC but is slower than heap/Rift here. |
-| NEXMark SafeZone Q5 | 100k | heap `35.520 ms`, SafeZone `34.986 ms`, checked `35.629 ms` | Near-tie; aggregate/top-scan shape has little memory-management ceiling. |
-| NEXMark SafeZone Q8 | 100k | heap `31.893 ms`, SafeZone `31.138 ms`, checked `30.577 ms` | SafeZone is competitive; Rift remains slightly faster. |
-| Common Crawl WET q1 default buckets | 100k pages / 13.7M records | heap `452.840 ms` with `160.268 ms` GC; HPZone `427.984 ms`, Streaming `428.040 ms` | Object-heavy tokenization stresses Immix and gives a modest trusted Rift win, not a strong case-study result. |
-| Common Crawl WET q1 small buckets | 100k pages / 13.7M records | heap `384.951 ms`; HPZone `425.050 ms`, Streaming `423.951 ms` | Tighter natural lifetimes make heap fastest; do not force Common Crawl into a headline claim. |
+| NEXMark Q1 roots control | 100k | heap `54.378 ms`, current SafeZone `57.561 ms`, improved SafeZone `54.777 ms`, HPZone `53.008 ms` | Improved SafeZone closes the old SafeZone gap; trusted Rift is modestly fastest. |
+| NEXMark Q5 roots control | 100k | heap `33.043 ms`, improved SafeZone `32.435 ms`, HPZone `32.865 ms`, checked `34.993 ms` | Improved SafeZone is fastest; Q5 remains non-winning for checked Rift. |
+| NEXMark Q8 roots control | 100k | heap `29.598 ms`, improved SafeZone `29.919 ms`, Streaming `28.766 ms`, checked `29.146 ms` | Near-tie; Streaming is slightly fastest. |
+| Common Crawl WET q1 default buckets | 100k pages / 13.7M records | heap `427.942 ms` with `149.149 ms` GC; improved SafeZone `381.006 ms`; Streaming `403.935 ms` | Heap pressure is real, but improved SafeZone beats trusted Rift. |
+| Common Crawl WET q1 small buckets | 100k pages / 13.7M records | heap `386.807 ms`; improved SafeZone `381.109 ms`; HPZone `406.536 ms`, Streaming `419.779 ms` | Tighter lifetimes keep improved SafeZone fastest and heap competitive. |
 
 Current conclusion:
-Common Crawl WET is useful as a memory-pressure detector, but the generated
-workload does not yet justify a checked-Rift application story. The next
-benchmark candidate should be Wikimedia-style pageview/clickstream aggregation,
-unless a real WET file plus a cheap checked page/token append API changes this
-result.
+Common Crawl WET is useful as a memory-pressure detector, but the corrected
+improved SafeZone control means the generated workload is not a Rift case-study
+candidate. The next benchmark candidate is Wikimedia-style pageview/clickstream
+aggregation, with generated TSV-shaped input first and real TSV support second.
 
 Latest implementation checkpoint:
 `RiftRegion.StreamWindowFold[T]` adds an experimental checked additive
