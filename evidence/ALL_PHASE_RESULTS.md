@@ -1,6 +1,6 @@
 # Rift All-Phase Results Rollup
 
-Date: 2026-04-29
+Date: 2026-04-30
 
 This file gathers the current numeric and validation evidence across all
 roadmap phases. It is a rollup, not the primary raw log. Prefer the source files
@@ -62,6 +62,7 @@ For performance numbers, use the following rule of thumb:
 | Phase 6 StreamFlex-style stream latency | `evidence/STREAMFLEX_REGION_MATRIX.md` |
 | Phase 6 Yak-style control/data split | `evidence/YAK_REGION_MATRIX.md` |
 | Phase 6 Stancu-style transaction accounting | `evidence/STANCU_REGION_MATRIX.md` |
+| Phase 6 NEXMark-lite streaming | `evidence/NEXMARK_REGION_MATRIX.md` |
 | Phase 6 pipeline / parallel collections | `evidence/PIPELINE_PARCOLL_COMPARISON.md` |
 | Phase 7 checked stream-window rank | `evidence/CHECKED_STREAM_WINDOW_RANK_MATRIX.md` |
 | Phase 7 TableRank profile | `evidence/TABLERANK_PROFILE.md` |
@@ -89,7 +90,7 @@ For performance numbers, use the following rule of thumb:
 | Phase 3: runtime-only evaluation | Done enough for current claim | Validated with caveats | Same-layout GCBench/ListOfLists runtime medians |
 | Phase 4: topology/layout decomposition | Done enough to move on | Validated/provisional mix | Layout, topology, targeted runtime follow-up, safety finding |
 | Phase 5: application evidence | In progress | Bounded-sample medians plus diagnostic attribution, safe-API probes, single-run full-month controls, full-month heap/checked medians, and SafeZone DEBS controls | DEBS correctness, 100k/1M trusted medians, opt-in GC heap allocation attribution, Q1 checked-output output-equivalence, Q1 checked-processing output-equivalence, Q2 checked-processing output-equivalence, checked RunBoth 100k/1M medians plus attribution, 3-run Commix control, first full-month output-equivalence control, post-pool-cap checked full-month run, post-pool-cap same-run full-month heap/checked control, trusted full-month Streaming control, checked `ChildBucket` same-order full-month 3-run median, active-memory diagnostics, region-family attribution, Q1 rank lifetime narrowing, post-fix full-month heap/checked median, checked Q1 window-rank arenas, reusable checked `StreamBucketArena` migration, checked `StreamWindowIndexedRank`, `putWindowRankInBucket` auto cleanup, entry-cleanup callbacks, lexicographic checked rank priorities, long-key stream-window rank matrix, Q2 CPU substep diagnostics, 100k SafeZone controls, and 1M current/improved SafeZone medians |
-| Phase 6: literature-aligned methodology evidence | Started | Validated methodology medians with caveats | Broom-style dataflow including checked SELECT/AGGREGATE/JOIN modes, StreamFlex-style latency/throughput, Yak-style control/data plus grouped sort, top-word/filter, GraphChi-style subintervals, and runtime promotion proxy, Stancu-style transaction accounting, plus the Scala Native win-envelope synthesis |
+| Phase 6: literature-aligned methodology evidence | Started | Validated methodology medians with caveats | Broom-style dataflow including checked SELECT/AGGREGATE/JOIN modes, StreamFlex-style latency/throughput, Yak-style control/data plus grouped sort, top-word/filter, GraphChi-style subintervals, and runtime promotion proxy, Stancu-style transaction accounting, NEXMark-lite Q0/Q1/Q2/Q5 stream queries, plus the Scala Native win-envelope synthesis |
 | Phase 6b: Broom / parallel collections API evidence | Open | Provisional surrogate only | amordo comparison and Rift raw-array surrogate |
 | Phase 7: capture-checked safe API | Started | Compiler-probe, runtime-smoke, focused checked-container benchmark, checked dataflow evidence, and DEBS-shaped checked probes | 88 targeted checked-API compiler probes, checked child-window, child-bucket, stream-bucket-arena, stream-window-rank, window-rank auto-cleanup, entry-cleanup, lexicographic rank-priority, standalone long-key rank, long-key stream-window-rank, fused TableRank, and reusable StreamAppendWindow runtime probes, `CheckedRegionBufferMatrix`, `CheckedRegionPriorityQueueMatrix`, `CheckedRegionIndexedPriorityQueueMatrix`, `CheckedStreamWindowRankMatrix`, `CheckedAppendWindowMatrix`, Dataflow SELECT/AGGREGATE/JOIN `rift-checked`, Q1 checked-output, Q1 checked-processing, Q2 checked-processing, checked RunBoth `rift-checked` medians, plus Phase 4 safety finding |
 | Phase 8: native GC/region integration hardening | Started | Runtime/API smoke evidence, no benchmark data | Explicit `HeapRoot` path, static module/immutable-val path, direct unrooted heap-constructor/alias/field-selection/array-store rejection, owner-token ObjectBuffer/RegionBuffer heap-store rejection, mutable static-var rejection, mutable-head heap-retagging rejection, and explicit `{region}` constructor-field/array reuse |
@@ -106,7 +107,7 @@ For performance numbers, use the following rule of thumb:
 | Phase 3 | Reran same-layout runtime matrices. | Rift has credible allocator/runtime wins on allocation-heavy linked structures. |
 | Phase 4 | Split allocator effects from layout/topology effects. | Layout and reference topology can dominate allocator choice; mixed region/GC references require a safety story. |
 | Phase 5 | Built DEBS Q1/Q2 runners and progressively moved structured-lifetime state into regions; added checked Q1 output/ranking, checked Q1 processing, checked Q2 processing probes, active-memory diagnostics, region-family attribution, Q1 window-rank arenas, reusable checked `StreamBucketArena`, checked `StreamWindowIndexedRank`, auto-cleanup and entry-cleanup for bucket-owned rank keys, lexicographic checked rank priorities, Q2 CPU substep diagnostics, and a closeable SafeZone Q1/Q2 control mode. | Current DEBS evidence shows bounded-sample elapsed/RSS wins and much lower heap allocation pressure. Full-month heap/checked medians are now near-tied after fixing one wrong checked lifetime: Q1 rank object graphs were parent-lived instead of bucket-lived. The Q1 window-rank arena further reduces rank churn and gives a single-run full-month RSS win, `StreamBucketArena` generalizes the bucket lifetime primitive, and `StreamWindowIndexedRank` is the first dense-key rank/window collection. Auto cleanup strengthens the close boundary but adds CPU overhead versus manual cleanup; entry cleanup removes duplicate checked-side bucket key lists and improves that overhead, but not enough for a speed win. Lexicographic rank priorities remove the single-priority ordering limitation for Q1-style tie-breaks. Bounded Q2 same-operation overhead is not reproduced by the new perturbing substep diagnostic. Long-key stream-window rank and fused TableRank state now exist, but TableRank is backed out of DEBS Q1 because the focused 1M gate failed. Q1 application integration, CPU overhead, I/O, optional SafeZone full-month controls, and stronger checked boundaries still keep this short of final application proof. |
-| Phase 6 | Built methodology harnesses for Broom/StreamFlex/Yak/Stancu comparison axes. | These support the broader research story but are not exact reproductions of closed or unavailable artifacts. |
+| Phase 6 | Built methodology harnesses for Broom/StreamFlex/Yak/Stancu comparison axes, then added the first NEXMark-lite stream-processing matrix. | These support the broader research story but are not exact reproductions of closed or unavailable artifacts. NEXMark-lite is the first broader non-DEBS application-style ladder: Q1/Q2 show modest 1M elapsed wins and lower GC, while Q5 is not yet a window-aggregate win. |
 | Phase 7 | Added checked `scoped`/`streaming` API probes using Scala capture checking, then moved from buffers to ranking, stream-window ranking, and cheap append/window operators. | Source-level safety evidence is started. The stream-window rank matrix validates the general bucket-region object pattern, auto-removes bucket-owned rank keys before close, reports removed entries for side-table cleanup, and now supports lexicographic priorities. `StreamWindowLongIndexedRank` extends that pattern to arbitrary `Long` keys using region-owned owner tables. `StreamWindowTableRank` fuses lookup/value/priority/heap/bucket state into one parent-owned table and now has opt-in diagnostics, bucket-close fast removal, and directional heap repair. Checksums match, but the 1M TableRank gate fails; container CPU/memory overhead and application integration remain open. `CheckedAppendWindowMatrix` shows a simpler checked child-bucket operator can beat heap at 1M while remaining non-winning at 100k. The first reusable per-entry `StreamAppendWindow` close API failed the 1M gate, but cached bucket/region use plus `StreamAppendCursor` close now clears the focused 1M API gate. Checked Q1 event-window entries now use this cursor-close API and match heap output on sample/100k controls plus a 1M 3-run RunBoth control; the 1M median is heap `4559.928 ms` versus checked `4514.165 ms`, with RSS `153.8 MiB` versus `91.7 MiB`. Checked Q2 profit/empty-window entries now also use `StreamAppendWindow` cursor close and match output through 1M medians, but the 1M elapsed median is a near tie and checked RSS rises to `142.4 MiB`. |
 | Phase 8 | Added explicit heap-root handles and conservative mixed-reference rejection. | Region memory is not GC-scanned, so region-to-heap references need roots or static rejection. |
 | Phase 9 | Reserved for Lean mechanization. | No proof result yet. |
@@ -1258,6 +1259,7 @@ Sources:
 - `evidence/STREAMFLEX_REGION_MATRIX.md`
 - `evidence/YAK_REGION_MATRIX.md`
 - `evidence/STANCU_REGION_MATRIX.md`
+- `evidence/NEXMARK_REGION_MATRIX.md`
 
 These are local methodology reproductions. They do not claim the original
 Broom/Naiad, StreamFlex/Ovm, Yak/Hyracks/Hadoop/GraphChi, or Stancu/SPECjbb2005
@@ -1271,6 +1273,32 @@ artifacts are available or reproduced.
 | StreamFlex stream latency | Throughput and per-event latency/deadline-miss workloads | Pressure rerun shows Rift throughput around `330 ms` vs heap `634 ms`; Streaming has zero deadline misses in that run. | Does not run StreamIt/Ovm kernels or model scheduler/queueing delay. |
 | Yak control/data split | Wordcount, graphstep, grouped sort, top-word/filter, GraphChi-style subintervals, and promotion/escape epoch workloads with durable heap control state | No-escape pressure rerun shows raw Rift and `yak-runtime` both beat heap and remove measured heap GC. Grouped sort gives a modest HPZone-vs-heap win (`227.393 ms` vs `237.354 ms`) with little heap GC. Top-word/filter is stronger: Streaming is `262.980 ms` vs heap `311.527 ms` and improved SafeZone `271.273 ms`. GraphChi-style subintervals show Streaming at `236.388 ms` vs heap `302.599 ms`, but improved SafeZone remains faster at `228.252 ms`. The corrected runtime-promotion proxy records 10M barrier checks, 10k remembered refs, and 20k promoted objects, but Yak-runtime is slower than heap: `513.465 ms` vs `424.768 ms`. | Not distributed Yak; sort/topword/graphchi are local Hyracks/Hadoop/GraphChi-shaped methodology probes, and promotion is a memory-API-level proxy with object-specific `RuntimePromoter`, not real JVM field barriers, stack scanning, STW coordination, or generic object movement. |
 | Stancu transaction accounting | Warehouse transaction-shaped object graph with durable heap state | Boundary sweep confirms a Rift-vs-heap win only when transaction regions are coarse enough: at 200k transactions, 64 tx/region gives Streaming `38.844 ms` vs heap `43.189 ms`. | Not SPECjbb2005 or static analysis; SafeZone remains faster. |
+| NEXMark-lite streaming | Deterministic auction stream with Q0 passthrough, Q1 currency conversion, Q2 selection, and Q5 hot-items window | 1M medians show Q1 checked `374.767 ms` vs heap `384.595 ms` and Streaming `371.404 ms`; Q2 checked `287.808 ms` vs heap `297.053 ms`. Q0 is a near tie, and Q5 is not a win (`355.100 ms` checked vs `350.941 ms` heap). | Local methodology benchmark, not exact Apache Beam NEXMark. Q8 joins and real-data follow-ups are not implemented yet. |
+
+### NEXMark-Lite Stream Matrix, 2026-04-30
+
+Source: `evidence/NEXMARK_REGION_MATRIX.md`
+
+Configuration:
+
+- deterministic local auction stream over ordinary Scala data objects;
+- `NEXMARK_EVENTS=1000000`;
+- `NEXMARK_EVENTS_PER_BUCKET=25000`;
+- `NEXMARK_WINDOW_BUCKETS=8`;
+- runs `3`, warmups `1`;
+- heap/Rift modes share the same generated events, checksums, and output
+  counts; only allocation placement and lifetime policy differ.
+
+| Query | Heap ms | Checked ms | HPZone ms | Streaming ms | Main interpretation |
+|---|---:|---:|---:|---:|---|
+| q0 passthrough | 197.059 | 197.494 | 194.113 | 196.232 | Near tie; region placement lowers GC/RSS but passthrough has little elapsed ceiling. |
+| q1 currency conversion | 384.595 | 374.767 | 384.774 | 371.404 | Best first NEXMark-lite win; checked and Streaming reduce GC from `54.943 ms` to about `7-8 ms`. |
+| q2 selection | 297.053 | 287.808 | 294.806 | 305.249 | Checked wins elapsed and lowers GC, but checked RSS is higher than heap. |
+| q5 hot items | 350.941 | 355.100 | 356.015 | 356.588 | Not a win yet; live window state/top scanning dominate despite lower GC. |
+
+This is the first broader non-DEBS stream-processing ladder. It supports
+continuing with reusable append/map/filter/window operators, but it does not
+justify claiming that all stream windows win under Rift.
 
 ### Checked Dataflow Operators, 2026-04-26
 
@@ -2275,6 +2303,12 @@ Status:
   with GC `0.000 ms` versus heap `11.149 ms`, RSS `47.5 MB` versus `75.0 MB`,
   and only `0.074 ms` of Rift operation time. At 100k, heap remains faster,
   so this is a threshold result rather than a universal checked-region win.
+- `NEXMARK_REGION_MATRIX.md` is now the first broader non-DEBS ladder for that
+  envelope. At 1M, Q1 conversion gives checked `374.767 ms` and Streaming
+  `371.404 ms` versus heap `384.595 ms`; Q2 selection gives checked
+  `287.808 ms` versus heap `297.053 ms`. Q0 passthrough is a near tie, and Q5
+  hot-items is not yet a window-aggregate win (`355.100 ms` checked versus
+  `350.941 ms` heap).
 - The first reusable API version of that shape, `StreamAppendWindow`, failed
   the focused 1M gate. After removing no-callback bucket-lookup delegation,
   `rift-checked-api` still measured `66.023 ms` versus same-run heap

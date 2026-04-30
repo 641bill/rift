@@ -12,6 +12,38 @@ Implementation commit at this update:
 `e7bc1dadb`
 (`Use append-window cursor for checked Q1 events`)
 
+Latest implementation checkpoint:
+`NexmarkRegionMatrix` adds the first non-DEBS NEXMark-style stream-processing
+ladder. The benchmark lives in
+`scala-native-rift/sandbox/src/main/scala-next/NexmarkRegionMatrix.scala` and
+is run by `scala-native-rift/sandbox/run_nexmark_region_matrix.sh`. It covers
+Q0 passthrough, Q1 bid currency conversion, Q2 low-output selection, and Q5
+hot-auction windowing over deterministic ordinary Scala `Person`/`Auction`/`Bid`
+style records. Modes are `heap`, `rift-checked`, `rift-hp`, and
+`rift-streaming`; SafeZone and Q8 joins are intentionally deferred.
+
+Validation for the NEXMark-lite checkpoint:
+
+- 20k smoke matched checksum/output count across all four queries and all four
+  modes.
+- 100k and 1M 3-run medians matched checksum/output count across all modes.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile` passed.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"` passed `91/91`.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionCheckedTest"` passed `36/36`.
+
+Current NEXMark-lite 1M medians:
+
+| Query | Heap | Checked | HPZone | Streaming | Interpretation |
+|---|---:|---:|---:|---:|---|
+| q0 passthrough | `197.059 ms` | `197.494 ms` | `194.113 ms` | `196.232 ms` | near tie; GC/RSS reduction but little elapsed ceiling |
+| q1 conversion | `384.595 ms` | `374.767 ms` | `384.774 ms` | `371.404 ms` | first broader stream-map win |
+| q2 selection | `297.053 ms` | `287.808 ms` | `294.806 ms` | `305.249 ms` | checked elapsed/GC win, but checked RSS is higher than heap |
+| q5 hot items | `350.941 ms` | `355.100 ms` | `356.015 ms` | `356.588 ms` | not a window-aggregate win yet |
+
+Treat this as local methodology evidence, not exact Apache Beam NEXMark. The
+next NEXMark step is a Q8-style join or a focused Q5 window-aggregate
+profile, not DEBS/TableRank reintegration.
+
 Status: active research fork. The Phase 5 input-boundary checkpoint, reusable
 ranking backend, Q2 bounded cell-table checkpoint, Q1 primitive route-table
 checkpoint, Q2 latest-empty taxi-table checkpoint, Q2 array-backed ranking
