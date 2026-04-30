@@ -9,8 +9,8 @@ Active implementation branch for this update:
 `feature/rift`
 
 Implementation commit at this update:
-`e7bc1dadb`
-(`Use append-window cursor for checked Q1 events`)
+`d9d6826d7`
+(`Add NEXMark checked join window follow-up`)
 
 Latest implementation checkpoint:
 `NexmarkRegionMatrix` adds the first non-DEBS NEXMark-style stream-processing
@@ -20,8 +20,25 @@ is run by `scala-native-rift/sandbox/run_nexmark_region_matrix.sh`. It covers
 Q0 passthrough, Q1 bid currency conversion, Q2 low-output selection, Q5
 hot-auction windowing, and Q8 new-user/new-auction window joins over
 deterministic ordinary Scala `Person`/`Auction`/`Bid` style records. Modes are
-`heap`, `rift-checked`, `rift-hp`, and `rift-streaming`; SafeZone is
-intentionally deferred.
+`heap`, `rift-checked`, `rift-hp`, and `rift-streaming`; the focused Q8
+follow-up adds Q8-only `heap-join-api` and `rift-checked-join-api` modes.
+SafeZone is intentionally deferred.
+
+This checkpoint completed both requested pre-real-data follow-ups:
+
+- `RiftRegion.StreamJoinWindow[T]` factors the Q8 two-sided join/window shape
+  into a checked API over child-bucket append windows. It owns parent-region
+  primitive left/right count arrays and appends ordinary Scala records through
+  checked `putJoinLeftInBucket`, `putJoinRightInBucket`, and
+  `putJoinOutputInBucket` methods. The compiler guard rejects direct unrooted
+  heap values passed through those methods.
+- `NEXMARK_Q5_DIAG=1` adds opt-in Q5 counters for append/remove counts,
+  closed buckets, sample scans, top-scan entries/time, and final live records.
+  Diagnostic elapsed rows are not headline evidence.
+- A fair specialized heap Q8 join control was added after the first Q8 API
+  numbers proved too optimistic against the generic heap runner. This is now a
+  do-not-redo lesson: any API that specializes the query loop needs an equally
+  specialized heap control.
 
 Validation for the NEXMark-lite checkpoint:
 
@@ -29,8 +46,8 @@ Validation for the NEXMark-lite checkpoint:
   modes.
 - 100k and 1M 3-run medians matched checksum/output count across all modes.
 - `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile` passed.
-- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"` passed `91/91`.
-- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionCheckedTest"` passed `36/36`.
+- After `StreamJoinWindow`, `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"` passed `93/93`.
+- After `StreamJoinWindow`, `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionCheckedTest"` passed `37/37`.
 
 Current NEXMark-lite 1M medians:
 
@@ -42,9 +59,30 @@ Current NEXMark-lite 1M medians:
 | q5 hot items | `350.941 ms` | `355.100 ms` | `356.015 ms` | `356.588 ms` | not a window-aggregate win yet |
 | q8 window join | `322.210 ms` | `291.832 ms` | `305.338 ms` | `305.410 ms` | strongest NEXMark-lite checked win so far |
 
-Treat this as local methodology evidence, not exact Apache Beam NEXMark. The
-next NEXMark step is either a focused Q8 join-buffer/operator API or a focused
-Q5 window-aggregate profile, not DEBS/TableRank reintegration.
+Focused Q8 join API 1M medians:
+
+| Mode | Median ms | GC ms | Rift op ms | RSS bytes | Interpretation |
+|---|---:|---:|---:|---:|---|
+| heap | `327.102` | `27.578` | `0.000` | `146669568` | generic heap runner |
+| heap-join-api | `17.441` | `0.000` | `0.000` | `146407424` | fair specialized heap control |
+| rift-checked | `312.551` | `8.867` | `0.139` | `149733376` | generic checked runner |
+| rift-checked-join-api | `23.021` | `0.000` | `0.065` | `124174336` | lower GC/RSS, slower than specialized heap |
+
+Q5 follow-up:
+
+- Clean 1M control after diagnostics: heap `361.882 ms`, checked
+  `393.415 ms`, HPZone `364.071 ms`, Streaming `369.280 ms`.
+- Diagnostic 1M counters match across modes: `1000000` adds/removes,
+  `40` closed buckets, `123` samples, `8060928` top-scan entries, final live
+  records `0`.
+- Top scan time is about `45 ms` in every mode, so the Q5 checked loss is
+  checked per-entry/window-container CPU and live-window footprint, not region
+  open/close cost or top scanning alone.
+
+Treat all of this as local methodology evidence, not exact Apache Beam
+NEXMark. The next step should reduce reusable checked operator overhead or
+design a fair heap/Rift Q5 aggregate-maintenance API before moving to
+Wikimedia/Linear Road/Common Crawl.
 
 Status: active research fork. The Phase 5 input-boundary checkpoint, reusable
 ranking backend, Q2 bounded cell-table checkpoint, Q1 primitive route-table
