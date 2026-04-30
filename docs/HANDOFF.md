@@ -9,8 +9,8 @@ Active implementation branch for this update:
 `feature/rift`
 
 Implementation commit at this update:
-`a81aa5a78`
-(`Label SafeZone roots baselines and add stream ladder`)
+`7083c5c78`
+(`Add Wikimedia stream region matrix`)
 
 Current checkpoint:
 The SafeZone provenance issue has been corrected in the NEXMark and Common
@@ -19,8 +19,11 @@ Crawl runners. Script-level modes now distinguish `safezone-current`
 (`SAFEZONE_ROOTS_MODE=1`) while preserving the underlying binary mode
 `safezone`. Corrected 100k controls show improved SafeZone is a serious
 baseline and rules out generated Common Crawl WET tokenization as the next
-Rift case-study target. A new stream benchmark ladder selects Wikimedia
-pageview/clickstream as the next candidate.
+Rift case-study target. A new stream benchmark ladder selected Wikimedia
+pageview/clickstream next; the generated Wikimedia matrix is now implemented
+and shows a mixed result. Q2 clickstream is promising at 1M, but the 10M
+single-run scale check is a near-tie, so generated Wikimedia should stay as
+ladder evidence rather than a headline case study.
 
 Files added or changed:
 
@@ -28,10 +31,14 @@ Files added or changed:
 - `scala-native-rift/sandbox/NEXMARK_REGION_MATRIX.md`
 - `scala-native-rift/sandbox/run_common_crawl_wet_matrix.sh`
 - `scala-native-rift/sandbox/COMMON_CRAWL_WET_MATRIX.md`
+- `scala-native-rift/sandbox/src/main/scala-next/WikimediaRegionMatrix.scala`
+- `scala-native-rift/sandbox/run_wikimedia_region_matrix.sh`
+- `scala-native-rift/sandbox/WIKIMEDIA_REGION_MATRIX.md`
 - `scala-native-rift/sandbox/STREAM_BENCHMARK_LADDER.md`
 - `scala-native-rift/sandbox/SN_WIN_ENVELOPE.md`
 - `evidence/COMMON_CRAWL_WET_MATRIX.md`
 - `evidence/NEXMARK_REGION_MATRIX.md`
+- `evidence/WIKIMEDIA_REGION_MATRIX.md`
 - `evidence/STREAM_BENCHMARK_LADDER.md`
 - `evidence/SN_WIN_ENVELOPE.md`
 - `evidence/ALL_PHASE_RESULTS.md`
@@ -48,6 +55,12 @@ Validation for this checkpoint:
 - Common Crawl WET-shaped corrected 100k Q1 3-run medians matched checksum and
   output count in default-bucket and small-bucket controls across `heap`,
   `safezone-current`, `safezone-improved`, `rift-hp`, and `rift-streaming`.
+- Wikimedia generated TSV-shaped 20k smoke matched checksum/output count across
+  Q0/Q1/Q2 and all modes.
+- Wikimedia generated TSV-shaped 100k and 1M 3-run medians matched
+  checksum/output count across Q0/Q1/Q2 and all modes.
+- Wikimedia 10M Q2 single-run scale check matched checksum/output count across
+  all modes.
 
 New evidence:
 
@@ -58,14 +71,17 @@ New evidence:
 | NEXMark Q8 roots control | 100k | heap `29.598 ms`, improved SafeZone `29.919 ms`, Streaming `28.766 ms`, checked `29.146 ms` | Near-tie; Streaming is slightly fastest. |
 | Common Crawl WET q1 default buckets | 100k pages / 13.7M records | heap `427.942 ms` with `149.149 ms` GC; improved SafeZone `381.006 ms`; Streaming `403.935 ms` | Heap pressure is real, but improved SafeZone beats trusted Rift. |
 | Common Crawl WET q1 small buckets | 100k pages / 13.7M records | heap `386.807 ms`; improved SafeZone `381.109 ms`; HPZone `406.536 ms`, Streaming `419.779 ms` | Tighter lifetimes keep improved SafeZone fastest and heap competitive. |
+| Wikimedia Q2 clickstream | 1M events / 2M records | heap `159.746 ms`, improved SafeZone `147.936 ms`, HPZone `147.163 ms`; heap GC `35.238 ms`, HPZone GC `2.206 ms` | Promising generated row, but not a 10% win over improved SafeZone. |
+| Wikimedia Q2 clickstream | 10M events / 20M records, single run | heap `1459.438 ms`, improved SafeZone `1473.088 ms`, HPZone `1462.015 ms` | Lower GC, but elapsed is a near-tie; not a headline case study. |
 
 Current conclusion:
-Common Crawl WET is useful as a memory-pressure detector, but the corrected
-improved SafeZone control means the generated workload is not a Rift case-study
-candidate. The next benchmark candidate is Wikimedia-style pageview/clickstream
-aggregation, with generated TSV-shaped input first and real TSV support second.
+Common Crawl WET and generated Wikimedia are useful memory-pressure detectors,
+but neither currently clears the case-study gate against heap and improved
+SafeZone. The next benchmark candidate should be Linear Road-style position
+reports, toll outputs, and latency/deadline metrics unless real Wikimedia TSV
+input changes the result.
 
-Latest implementation checkpoint:
+Prior checked-operator checkpoint:
 `RiftRegion.StreamWindowFold[T]` adds an experimental checked additive
 stream-window fold primitive, backed by parent-owned primitive aggregate
 tables and child-bucket region records. The implementation lives in
