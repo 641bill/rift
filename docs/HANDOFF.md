@@ -302,7 +302,10 @@ entries now use that cursor-close API and match heap output on sample/100k
 Q1 and RunBoth controls plus a 1M 3-run RunBoth control. The 1M median is
 heap `4559.928 ms` versus checked `4514.165 ms`, with RSS `153.8 MiB` versus
 `91.7 MiB`. Treat this as bounded application-path evidence, not final
-full-DEBS proof.
+full-DEBS proof. The follow-up Q2 profit/empty-window migration uses the same
+cursor-close API and matches output through 1M medians, but the 1M elapsed
+median is a near tie and checked RSS rises to `142.4 MiB`, so it is API
+unification rather than a stronger speed result.
 
 A recent Phase 5 diagnostic checkpoint adds opt-in Q2 CPU substep timers
 behind `DEBS2015_Q2_CPU_DIAGNOSTICS=1`. Heap and checked Q2 now emit matching
@@ -4300,6 +4303,81 @@ Safe next action:
    logical ranking algorithm.
 3. Keep Q1 TableRank/ranking integration gated out until the focused rank gate
    passes.
+
+### 2026-04-30 Update: Q2 StreamAppendWindow Cursor Integration
+
+Active implementation repo:
+
+- `/Users/siyaoliu/rift/scala-native-rift` on `feature/rift`
+
+What changed:
+
+- Migrated checked Q2 profit-window and empty-taxi-window entries in
+  `sandbox/src/main/scala-next/debs2015/Debs2015Q2CheckedProcessingRun.scala`
+  from local `ProfitBucket`/`EmptyBucket` linked lists to
+  `RiftRegion.StreamAppendWindow`.
+- `ProfitEntry` and `EmptyEntry` are now ordinary Scala classes extending
+  `RiftRegion.StreamAppendNode`, allocated in the current stream-bucket child
+  region and appended through `RiftRegion.appendWindow`.
+- Q2 eviction now consumes expired profit/empty buckets through
+  `closeAppendWindowBucketsBeforeWithCursor`; end-of-run cleanup uses
+  `closeAllAppendWindowBucketsWithCursor`.
+- Q2 median heaps, taxi-id table, ranking heap, top-10 cache, and output
+  semantics were not changed.
+- This mirrors the checked Q1 event-window cursor shape, but for Q2's
+  append/fold/window-entry paths.
+
+Validation:
+
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile`
+  passed.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest" "tests3_next/testOnly scala.scalanative.memory.RiftRegionCheckedTest"`
+  passed `89/89` compiler probes and `35/35` runtime tests.
+- Q2 checked-processing sample output matched heap.
+- Q2 checked-processing 100k output matched heap in
+  `/tmp/debs2015-q2-checked-processing-appendwindow-100k`.
+- RunBoth sample output matched heap for `rift-hp`, `rift-streaming`, and
+  `rift-checked` in `/tmp/debs2015-runboth-q2-appendwindow-sample`.
+- RunBoth 100k output matched heap for `rift-checked` in
+  `/tmp/debs2015-runboth-q2-appendwindow-100k`.
+- RunBoth 1M output matched heap for `rift-checked` in all three median runs:
+  `/tmp/debs2015-runboth-q2-appendwindow-1m-single`,
+  `/tmp/debs2015-runboth-q2-appendwindow-1m-run2`, and
+  `/tmp/debs2015-runboth-q2-appendwindow-1m-run3`.
+
+100k single-run RunBoth rows:
+
+| Mode | Elapsed ms | GC ms | Rift op ms | Q1 process ms | Q2 process ms | Q1 outputs | Q2 outputs |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| heap | 487.948 | 9.023 | 0.000 | 142.167 | 116.391 | 5942 | 3246 |
+| rift-checked | 494.789 | 2.241 | 1.713 | 158.695 | 124.979 | 5942 | 3246 |
+
+1M 3-run RunBoth median rows:
+
+| Mode | Elapsed ms | Throughput eps | GC ms | RSS MiB | Rift op ms | Q1 process ms | Q2 process ms | Q1 window raw MiB | Q2 profit raw MiB | Q2 empty raw MiB |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| heap | 4993.892 | 200244.609 | 21.009 | 153.8 | 0.000 | 1518.053 | 1343.606 | 0.0 | 0.0 | 0.0 |
+| rift-checked | 4995.946 | 200162.297 | 20.637 | 142.4 | 8.072 | 1631.084 | 1330.543 | 99.9 | 37.5 | 29.9 |
+
+Interpretation:
+
+- This is a reusable-operator checkpoint, not a stronger DEBS speed claim.
+- The same checked append/window cursor primitive now covers checked Q1 event
+  entries and checked Q2 profit/empty entries.
+- The 1M elapsed median is effectively tied. Checked Q2 process is slightly
+  lower than heap in the median row, but checked Q1 process is still higher.
+- RSS remains below heap but is much higher than the previous Q1-only
+  append-window checkpoint. The migration is useful for API unification and
+  safety-boundary coverage, not as a standalone performance win.
+
+Safe next action:
+
+1. Investigate the checked RSS/footprint regression from moving Q2 windows to
+   `StreamAppendWindow`; compare stream-bucket metadata and native mapping
+   reuse against the previous local-bucket implementation.
+2. If keeping the migration, look for a lower-footprint append-window bucket
+   representation before migrating more DEBS paths.
+3. Keep Q1 TableRank/ranking integration gated out.
 
 ## Unsafe Assumptions To Avoid
 

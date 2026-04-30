@@ -74,6 +74,13 @@ RunBoth control. The 1M median is heap `4559.928 ms` versus checked
 `4514.165 ms`, with RSS `153.8 MiB` versus `91.7 MiB`. Treat that as bounded
 application-path evidence, not final full-DEBS proof. DEBS Q1 ranking remains
 out of scope until rank/table-maintenance primitives clear their own gates.
+Checked Q2 profit/empty-window entries now also use the same cursor-close API
+and match heap output through a 1M 3-run control, but this is API
+generalization rather than a new speed win: the 1M median is heap
+`4993.892 ms` versus checked `4995.946 ms`, and checked RSS rises to
+`142.4 MiB`. The next safe direction is to understand the append-window
+footprint/regression or reduce checked Q1 process overhead before migrating
+more DEBS paths.
 
 Phase 0 is not "final." It is complete enough for GCBench and ListOfLists, but
 not for a final pipeline or application story.
