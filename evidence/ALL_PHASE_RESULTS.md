@@ -1921,8 +1921,14 @@ Interpretation:
 - `rift-checked-api-cursor` is the first reusable `StreamAppendWindow` shape to
   pass the focused 1M API gate: it beats same-run heap, is within 1.15x of
   same-run manual checked, keeps RSS below heap and level with manual checked,
-  and keeps Rift op time below `1 ms`. This is still framework evidence only;
-  DEBS was intentionally untouched.
+  and keeps Rift op time below `1 ms`. This is the framework gate that justified
+  controlled Q1/Q2 append-window integration; it does not justify TableRank or
+  ranking integration.
+- A cursor-object reuse follow-up keeps correctness and still clears the cursor
+  API gate in a 1M confirmation subset (`35.527 ms` versus same-run heap
+  `37.494 ms`), but the all-mode 1M rerun had a noisy/non-winning cursor row
+  and RSS was unchanged. Treat cursor reuse as a small cleanup, not as a new
+  speed result.
 - Opt-in `CHECKED_APPEND_API_DIAG=1` counters after bucket/region caching show
   the 1M API path doing `40` actual bucket lookups, `999960` current-bucket
   hits, `40` bucket opens, `1000000` appends, `40` close buckets, `1000000`
@@ -2047,6 +2053,40 @@ Interpretation:
   although still lower than heap in these rows.
 - The next operator step should investigate append-window bucket footprint or
   checked Q1 process overhead before migrating more paths.
+
+Cursor-reuse DEBS control:
+
+What changed:
+
+- `StreamAppendWindow` now reuses one owned `StreamAppendCursor` object instead
+  of allocating a fresh cursor per closed bucket.
+- Public API signatures and DEBS Q1/Q2 logic did not change.
+
+Validation:
+
+- `sandbox3_next/compile` passed.
+- `RiftRegionCheckedCompilerTest` passed `89/89`.
+- `RiftRegionCheckedTest` passed `35/35`.
+- Focused append-window smoke/100k/1M runs matched checksums.
+- RunBoth 100k and 1M heap/checked controls matched Q1/Q2 output after
+  stripping only latency columns.
+
+1M 3-run RunBoth median rows after cursor reuse:
+
+| Mode | Elapsed ms | Throughput eps | GC ms | RSS MiB | Rift op ms | Q1 process ms | Q2 process ms | Q1 window raw MiB | Q2 profit raw MiB | Q2 empty raw MiB |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| heap | 5219.189 | 191600.637 | 21.819 | 153.8 | 0.000 | 1606.540 | 1472.710 | 0.0 | 0.0 | 0.0 |
+| rift-checked | 5349.444 | 186935.328 | 21.593 | 142.4 | 9.747 | 1760.174 | 1528.867 | 99.9 | 37.5 | 29.9 |
+
+Interpretation:
+
+- Cursor-object reuse is neutral/negative on bounded DEBS. It removes a small
+  heap allocation source but does not address the current application limit.
+- Checked RSS remains `142.4 MiB`, essentially unchanged from the Q2
+  append-window checkpoint. The RSS increase after Q2 integration is not caused
+  by per-bucket cursor allocation.
+- The next useful step remains append-window footprint/metadata analysis or
+  checked Q1 process overhead reduction, not more cursor tuning.
 
 Open work:
 

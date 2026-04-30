@@ -4379,6 +4379,64 @@ Safe next action:
    representation before migrating more DEBS paths.
 3. Keep Q1 TableRank/ranking integration gated out.
 
+### 2026-04-30 Update: StreamAppendWindow Cursor-Reuse Control
+
+Active implementation repo:
+
+- `/Users/siyaoliu/rift/scala-native-rift` on `feature/rift`
+
+What changed:
+
+- `StreamAppendWindow` now owns one reusable `StreamAppendCursor` object.
+- `closeAppendWindowBucketsBeforeWithCursor` and
+  `closeAllAppendWindowBucketsWithCursor` reset that cursor for each closed
+  bucket, instead of allocating a fresh cursor object per bucket.
+- Public API signatures, DEBS Q1/Q2 logic, TableRank, and ranking code were not
+  changed.
+
+Validation:
+
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile`
+  passed.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"`
+  passed `89/89`.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionCheckedTest"`
+  passed `35/35`.
+- Focused `CheckedAppendWindowMatrix` smoke, 100k, and 1M runs matched
+  checksums. The 1M all-mode run had a noisy/non-winning cursor row, but a
+  confirmation subset still cleared the cursor API gate:
+  `rift-checked-api-cursor` `35.527 ms` versus heap `37.494 ms` and manual
+  checked `33.286 ms`.
+- RunBoth 100k and 1M heap/checked controls matched Q1/Q2 outputs after
+  stripping only latency columns.
+
+1M RunBoth 3-run median after cursor reuse:
+
+| Mode | Elapsed ms | Throughput eps | GC ms | RSS MiB | Rift op ms | Q1 process ms | Q2 process ms | Q1 window raw MiB | Q2 profit raw MiB | Q2 empty raw MiB |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| heap | 5219.189 | 191600.637 | 21.819 | 153.8 | 0.000 | 1606.540 | 1472.710 | 0.0 | 0.0 | 0.0 |
+| rift-checked | 5349.444 | 186935.328 | 21.593 | 142.4 | 9.747 | 1760.174 | 1528.867 | 99.9 | 37.5 | 29.9 |
+
+Interpretation:
+
+- Cursor-object reuse is correctness-valid but neutral/negative on bounded
+  DEBS. It is a small framework cleanup, not a new application performance
+  claim.
+- The checked RSS median remains essentially unchanged from the Q2
+  append-window checkpoint (`142.4 MiB`), so per-bucket cursor object
+  allocation was not the checked RSS regression driver.
+- The next useful implementation direction remains append-window footprint
+  analysis or checked Q1 process overhead reduction. Do not migrate more DEBS
+  paths just because cursor reuse is now implemented.
+
+Safe next action:
+
+1. Profile/inspect append-window bucket footprint and parent metadata before
+   changing more DEBS paths.
+2. Separately investigate checked Q1 process overhead, because Q1 process time
+   remains the largest checked-vs-heap gap in the current bounded rows.
+3. Keep TableRank and Q1 ranking integration gated out.
+
 ## Unsafe Assumptions To Avoid
 
 - "Rift already has final DEBS application proof." It does not. The current
