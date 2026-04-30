@@ -299,8 +299,10 @@ per-entry close API did not pass, but cached bucket/region use plus
 `StreamAppendCursor` close clears the focused 1M API gate
 (`34.708 ms` versus same-run heap `35.705 ms`). Checked Q1 event-window
 entries now use that cursor-close API and match heap output on sample/100k
-Q1 and RunBoth controls. Treat this as a correctness/control integration, not
-as a new DEBS median.
+Q1 and RunBoth controls plus a 1M 3-run RunBoth control. The 1M median is
+heap `4559.928 ms` versus checked `4514.165 ms`, with RSS `153.8 MiB` versus
+`91.7 MiB`. Treat this as bounded application-path evidence, not final
+full-DEBS proof.
 
 A recent Phase 5 diagnostic checkpoint adds opt-in Q2 CPU substep timers
 behind `DEBS2015_Q2_CPU_DIAGNOSTICS=1`. Heap and checked Q2 now emit matching
@@ -4260,24 +4262,44 @@ Validation:
 | RunBoth | heap | 979.461 | 15.857 | 0.000 | 291.974 | 249.467 | 5942 | 3246 |
 | RunBoth | rift-checked | 872.828 | 3.350 | 2.606 | 288.270 | 196.571 | 5942 | 3246 |
 
+1M 3-run RunBoth control:
+
+- Input: `/tmp/debs2015-month1-1000000.csv`.
+- Modes: `heap rift-checked`.
+- Output validation: all three runs diffed Q1 and Q2 checked output against
+  heap after stripping only the latency column.
+- Run directories:
+  `/tmp/debs2015-runboth-q1-appendcursor-1m-run{1,2,3}`.
+
+Median rows:
+
+| Mode | Elapsed ms | Throughput eps | GC ms | RSS MiB | Rift op ms | Q1 process ms | Q1 change ms | Q2 process ms | Region objects | Q1 window raw MiB |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| heap | 4559.928 | 219301.708 | 19.893 | 153.8 | 0.000 | 1389.540 | 109.034 | 1192.661 | 0 | 0.0 |
+| rift-checked | 4514.165 | 221524.921 | 10.297 | 91.7 | 6.888 | 1507.776 | 81.145 | 1113.035 | 5940011 | 99.9 |
+
 Interpretation:
 
 - This is the first DEBS application use of the passing append-window
-  cursor-close shape, but it is a correctness/control checkpoint, not a new
-  median-backed DEBS result.
+  cursor-close shape. It now has a bounded 1M median-backed control, but it is
+  still not final full-DEBS evidence.
 - The heap/Rift logical program remains aligned: route counts, ranking, output
   semantics, and Q2 are unchanged; only checked Q1 event-window allocation and
   close discipline moved to the reusable region-backed primitive.
 - The single-run 100k RunBoth row is directionally favorable for checked Rift,
   but it should not replace the existing 3-run bounded medians.
+- The 1M median shows the current useful envelope and limit: checked Rift moves
+  `5.94M` Q1 event-window Scala objects through regions with low region
+  bookkeeping and much lower RSS, but Q1 process time remains higher than heap.
 
 Safe next action:
 
-1. Run a 1M heap/`rift-checked` RunBoth median/control for this Q1 event-window
-   integration if performance evidence is needed.
-2. Otherwise migrate another append/fold/window-entry path that matches the
+1. Migrate another append/fold/window-entry path that matches the
    cheap cursor-close shape.
-3. Keep Q1 TableRank/ranking integration gated out.
+2. If staying on Q1, reduce checked Q1 process overhead without changing the
+   logical ranking algorithm.
+3. Keep Q1 TableRank/ranking integration gated out until the focused rank gate
+   passes.
 
 ## Unsafe Assumptions To Avoid
 
@@ -4325,7 +4347,7 @@ Safe next action:
   1M gate." Too broad. The old per-entry `StreamAppendWindow` close API still
   misses the strict gate. The passing reusable shape is specifically cached
   bucket/region use plus cursor close. It now has a Q1 event-window DEBS
-  correctness/control integration, but not a median-backed application claim.
+  1M median-backed bounded control, but not final full-DEBS proof.
 - "The Q1 checked-output probe proves checked DEBS processing." It does not.
   It only checks transient output/ranking materialization; the Q1 window and
   rank maintenance engine is still heap in both probe modes.
