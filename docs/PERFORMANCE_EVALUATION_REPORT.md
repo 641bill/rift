@@ -31,6 +31,11 @@ beat GC":
 - Real/preloaded Wikimedia, real Common Crawl WET, official Linear Road, Yahoo,
   RIoTBench, and most generated stream probes are ceiling or near-tie controls:
   heap or improved SafeZone often wins elapsed time even when Rift lowers GC.
+- The new UnsafeZone-HP headline core/prior sweep shows that SafeZone internals
+  with root registration disabled usually beat current Rift HPZone on
+  linked/prior-work local harnesses, while only slightly improving over
+  improved SafeZone. This is strong runtime-substrate evidence, not a safety
+  claim.
 
 The next report revision should replace this scaffold with clean-sweep rows
 from `cache/perf-eval/<run-id>/` and update the claim language accordingly.
@@ -44,6 +49,7 @@ Latest harness validation:
 | `2026-05-01-headline-core-prior-checked-rerun` | headline | `preflight core prior checked` | Passed; tracked summary in `evidence/HEADLINE_CORE_PRIOR_CHECKED_RERUN_2026_05_01.md` | Current rerun evidence |
 | `2026-05-01-headline-streams` | headline | `preflight streams` | Passed; tracked summary in `evidence/HEADLINE_STREAMS_2026_05_01.md` | Current stream headline leg |
 | `2026-05-01-headline-debs-1m` | headline | `preflight debs` | Passed on `/tmp/debs2015-month1-1000000.csv`; tracked summary in `evidence/HEADLINE_DEBS_1M_2026_05_01.md` | Bounded DEBS 1M single-run leg |
+| `2026-05-01-unsafezone-core-prior` | headline | `preflight core prior` | Passed; tracked summary in `evidence/HEADLINE_UNSAFEZONE_CORE_PRIOR_2026_05_01.md` | Current UnsafeZone-HP core/prior leg |
 
 The smoke run validates harness wiring only. The headline rows above are the
 current evidence for their respective suites.
@@ -57,6 +63,7 @@ Baseline modes:
 | `heap` | Scala Native Immix. |
 | `safezone-current` | SafeZone with `SAFEZONE_ROOTS_MODE=0`. |
 | `safezone-improved` | SafeZone with `SAFEZONE_ROOTS_MODE=1`. |
+| `unsafezone-hp` | Benchmark-only SafeZone no-root mode: `SAFEZONE_ROOTS_MODE=3`, `SAFEZONE_PAGE_SIZE=32768`. Unsafe. |
 | `rift-hp` | Trusted Rift HPZone. |
 | `rift-streaming` | Trusted Rift StreamingZone. |
 | `rift-checked` | Checked Rift API path where a checked operator exists. |
@@ -83,6 +90,11 @@ claim. In the rerun, GCBench is heap `211.413 ms`, improved SafeZone
 `15165.020 ms`, improved SafeZone `9853.992 ms`, and HPZone `12210.485 ms`.
 Rift still wins flat ListOfLists (`1567.144 ms` versus heap `1749.780 ms`),
 but it does not currently beat improved SafeZone on the linked headline row.
+The UnsafeZone-HP follow-up strengthens the substrate diagnosis: no-root
+SafeZone with 32 KiB pages is fastest on GCBench runtime (`206.636 ms`) and
+linked ListOfLists (`9818.653 ms`), while current Rift HPZone is `236.393 ms`
+and `12400.062 ms` respectively. Rift HPZone still wins flat ListOfLists in
+that same leg (`1540.958 ms`).
 
 ### Prior-Work Methodology
 
@@ -94,6 +106,12 @@ lose to improved SafeZone, and JOIN is won by heap. StreamFlex keeps a latency
 story because region modes remove deadline misses, but they do not win elapsed
 time in the clean subset. Yak/Stancu rows are mostly improved-SafeZone wins.
 These are local methodology reproductions, not exact artifact reproductions.
+UnsafeZone-HP is fastest or tied-fastest across the clean Dataflow rows
+(`21.957` / `39.434` / `22.359 ms` for SELECT/AGGREGATE/JOIN), Yak topword
+(`58.686 ms`), and Stancu (`33.335 ms`), but it is unsafe and only slightly
+ahead of improved SafeZone. That suggests future Rift runtime work should learn
+from or reuse SafeZone allocator/pool mechanics rather than tuning the current
+standalone HPZone backend alone.
 
 ### Checked Operators
 
@@ -152,8 +170,8 @@ or ceiling results.
 
 ## Remaining Report Work
 
-The core/prior/checked, stream, and bounded DEBS 1M legs have now run. The
-remaining report work is:
+The core/prior/checked, stream, bounded DEBS 1M, and UnsafeZone-HP core/prior
+legs have now run. The remaining report work is:
 
 1. Convert the current tracked summaries into final thesis tables.
 2. Decide whether to run a full-month DEBS rerun under the same quiet-machine

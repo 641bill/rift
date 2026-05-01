@@ -9,8 +9,8 @@ Active implementation branch for this update:
 `feature/rift`
 
 Implementation commit at this update:
-`b74658903584f30474f6ce0c1fec21164b95dbab`
-(`Add stream GC benchmark probes`)
+`31fa902e00696f4f64008e5ee1fecafab78c3696`
+(`Add UnsafeZone HP benchmark baseline`)
 
 Previous checkpoint:
 The real-input stream benchmark ladder has now been wired, measured, and
@@ -52,6 +52,32 @@ label `unsafezone-hp` maps to binary mode `safezone` with
 Streaming reset. Existing root modes `0`, `1`, and `2` are unchanged. This is
 unsafe by design and should not be treated as a user-facing API or safety
 claim. Tracked evidence: `evidence/UNSAFEZONE_HP_BASELINE_MATRIX.md`.
+
+The first clean UnsafeZone-HP core/prior headline sweep has now run and is
+tracked in `evidence/HEADLINE_UNSAFEZONE_CORE_PRIOR_2026_05_01.md`:
+
+```sh
+cd /Users/siyaoliu/rift
+RIFT_EVAL_RUN_ID=2026-05-01-unsafezone-core-prior \
+RIFT_EVAL_SCALE=headline \
+RIFT_EVAL_SUITES="preflight core prior" \
+bash scripts/run-performance-evaluation.sh
+```
+
+This completed successfully with raw logs under
+`cache/perf-eval/2026-05-01-unsafezone-core-prior/`. The main result is that
+UnsafeZone-HP usually beats improved SafeZone slightly and beats current Rift
+HPZone on linked/prior-work local harnesses: GCBench runtime `206.636 ms`,
+linked ListOfLists `9818.653 ms`, Dataflow SELECT/AGGREGATE/JOIN
+`21.957` / `39.434` / `22.359 ms`, Yak topword `58.686 ms`, and Stancu
+`33.335 ms`. Current Rift HPZone still wins flat ListOfLists (`1540.958 ms`
+versus heap `1748.743 ms` and unsafezone-hp `1766.060 ms`). Treat this as
+runtime-substrate evidence, not safety evidence: rootless SafeZone is unsafe.
+
+One harness issue was fixed after this run: the parent evaluation runner now
+passes `STREAMFLEX_OUTPUT_DIR`, `YAK_OUTPUT_DIR`, and `STANCU_OUTPUT_DIR`, so
+future prior-work runs keep their summary TSVs under the run directory instead
+of writing them to `/tmp`.
 
 Latest execution checkpoint:
 
@@ -200,6 +226,7 @@ Files added or changed:
 - `evidence/SN_WIN_ENVELOPE.md`
 - `evidence/ALL_PHASE_RESULTS.md`
 - `evidence/UNSAFEZONE_HP_BASELINE_MATRIX.md`
+- `evidence/HEADLINE_UNSAFEZONE_CORE_PRIOR_2026_05_01.md`
 - `evidence/PERF_EVAL_RUNBOOK.md`
 - `evidence/EVALUATION_SUMMARY_TABLES.md`
 - `evidence/HEADLINE_STREAMS_2026_05_01.md`
@@ -218,6 +245,10 @@ Validation for this checkpoint:
 - The comprehensive evaluation runner has now completed clean headline legs for
   `core prior checked`, `streams`, and bounded 1M `debs`. The full-month DEBS
   control has not been rerun under this exact sweep discipline.
+- The comprehensive evaluation runner has also completed a clean headline
+  `preflight core prior` leg with UnsafeZone-HP included. The resulting core
+  and prior-work tables are now tracked, and the summary-output routing bug for
+  future prior-work runs is fixed.
 - NEXMark corrected SafeZone 100k follow-up matched checksum/output count for
   Q1/Q5/Q8 across `heap`, `safezone-current`, `safezone-improved`,
   `rift-checked`, `rift-hp`, and `rift-streaming`.

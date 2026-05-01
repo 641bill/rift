@@ -22,9 +22,12 @@ DEBS bounded 1M leg: `evidence/HEADLINE_DEBS_1M_2026_05_01.md`, run id
 `2026-05-01-headline-debs-1m`.
 
 UnsafeZone-HP baseline checkpoint:
-`evidence/UNSAFEZONE_HP_BASELINE_MATRIX.md`. This is currently smoke evidence
-only. It adds `SAFEZONE_ROOTS_MODE=3 SAFEZONE_PAGE_SIZE=32768` as a
-benchmark-only SafeZone no-root baseline; no headline medians exist yet.
+`evidence/UNSAFEZONE_HP_BASELINE_MATRIX.md`. First clean core/prior headline
+medians with this mode are in
+`evidence/HEADLINE_UNSAFEZONE_CORE_PRIOR_2026_05_01.md`, run id
+`2026-05-01-unsafezone-core-prior`. It uses
+`SAFEZONE_ROOTS_MODE=3 SAFEZONE_PAGE_SIZE=32768` as a benchmark-only SafeZone
+no-root baseline.
 
 | Area | Main result | Interpretation |
 |---|---|---|
@@ -35,7 +38,7 @@ benchmark-only SafeZone no-root baseline; no headline medians exist yet.
 | StreamFlex | region modes remove deadline misses, but SafeZone/heap win elapsed | Keep as latency-control evidence, not throughput win. |
 | Yak/Stancu | improved SafeZone wins most rows; dynamic Yak-style proxy remains negative | Rift-vs-heap wins are not enough for final claims. |
 | Checked operators | manual AppendWindow wins; prepend cursor wins its fair control; RegionBuffer/cursor/fold/rank do not clear speed gates | Focus on cheaper checked operator implementations before application claims. |
-| UnsafeZone-HP | GCBench 1-run smoke: unsafezone-hp `250.579 ms`; NEXMark Q3 20k smoke matched output and ran `5.659 ms` | Mode wiring works and root mode `3` is accepted; use only as a substrate-comparison smoke until headline medians are run. |
+| UnsafeZone-HP | clean core/prior medians: GCBench `206.636 ms`, linked ListOfLists `9818.653 ms`, Dataflow SELECT `21.957 ms`, Yak topword `58.686 ms`, Stancu `33.335 ms` | SafeZone no-root internals usually beat improved SafeZone slightly and beat current Rift HPZone on linked/prior-work rows; still unsafe/substrate evidence only. |
 
 The older seeded tables below are retained for provenance and comparison, but
 this clean subset should be treated as the current headline evidence for
@@ -54,6 +57,15 @@ versus heap `315.715 ms` and improved SafeZone `302.668 ms`. The DEBS bounded
 1M leg is a single-run correctness/control row: trusted Streaming is
 `4681.292 ms` versus heap `4987.579 ms`, while checked is `4882.562 ms`.
 
+The UnsafeZone-HP core/prior leg adds a new runtime-substrate result:
+`unsafezone-hp` is fastest on GCBench runtime (`206.636 ms`), GCBench topology
+A/B (`195.087 ms` / `190.631 ms`), linked ListOfLists (`9818.653 ms`),
+Dataflow SELECT/AGGREGATE/JOIN (`21.957` / `39.434` / `22.359 ms`), most
+Yak-shaped rows, and StreamFlex throughput. The improvement over improved
+SafeZone is usually small, which means root mode `1` already captures most of
+the SafeZone fix. Current Rift HPZone still wins flat ListOfLists
+(`1540.958 ms` vs heap `1748.743 ms` and unsafezone-hp `1766.060 ms`).
+
 ## Classification Legend
 
 | Label | Meaning |
@@ -71,22 +83,23 @@ versus heap `315.715 ms` and improved SafeZone `302.668 ms`. The DEBS bounded
 
 | Benchmark | Scale | Best Rift | Heap | Improved SafeZone | Classification | Rerun status |
 |---|---:|---:|---:|---:|---|---|
-| GCBench | 5-run median | HPZone `161.641 ms` | `203.514 ms` | `223.770 ms` | Runtime allocator win | Pending clean sweep rerun |
-| ListOfLists linked | 5-run median | HPZone `6951.331 ms` | `15085.511 ms` | `10132.854 ms` | Runtime + topology win | Pending clean sweep rerun |
-| ListOfLists flat | 3-run median | HPZone `1515.091 ms` | `1766.295 ms` | not headline | Layout/topology win | Pending clean sweep rerun |
-| Pipeline surrogate | 5-run median | HPZone `5.089 ms` | `4.924 ms` | `5.055 ms` | CPU-bound ceiling | Keep as surrogate only |
+| GCBench | 5-run median | HPZone `236.393 ms` | `213.817 ms` | `213.239 ms`; unsafezone-hp `206.636 ms` | Unsafe substrate control | Clean UnsafeZone core/prior sweep |
+| ListOfLists linked | 5-run median | HPZone `12400.062 ms` | `15191.230 ms` | `9914.397 ms`; unsafezone-hp `9818.653 ms` | Runtime + topology; SafeZone-family win | Clean UnsafeZone core/prior sweep |
+| ListOfLists flat | 5-run median | HPZone `1540.958 ms` | `1748.743 ms` | `1769.278 ms`; unsafezone-hp `1766.060 ms` | Layout/topology win for Rift HPZone | Clean UnsafeZone core/prior sweep |
+| ListOfLists chunked | 5-run median | HPZone `2640.031 ms` | `2585.021 ms` | `2433.118 ms`; unsafezone-hp `2430.496 ms` | SafeZone-family topology win | Clean UnsafeZone core/prior sweep |
+| Pipeline surrogate | 5-run median | HPZone `46.293 ms`, Streaming `45.648 ms` | `35.077 ms` | `34.660 ms`; unsafezone-hp `34.417 ms` | CPU-bound ceiling | Clean UnsafeZone core/prior sweep |
 
 ## Prior-Work Methodology
 
 | Benchmark | Scale | Best Rift / checked row | Heap | Improved SafeZone | Classification | Rerun status |
 |---|---:|---:|---:|---:|---|---|
-| Broom-style Dataflow SELECT | 10 x 100k docs | checked `18.865 ms` | `36.868 ms` | recorded in source pack | Checked operator win | Pending clean sweep rerun |
-| Broom-style Dataflow AGGREGATE | 10 x 100k docs | checked `36.003 ms` | `51.474 ms` | recorded in source pack | Checked operator win | Pending clean sweep rerun |
-| Broom-style Dataflow JOIN | 10 x 100k docs | checked `18.736 ms` | `32.170 ms` | recorded in source pack | Checked operator win | Pending clean sweep rerun |
-| StreamFlex pressure | throughput row | Streaming `329.896 ms` | `634.472 ms` | recorded in source pack | Region-friendly latency/throughput win | Pending clean sweep rerun |
-| Yak top-word/filter | 40 x 250k records | Streaming `262.980 ms` | `311.527 ms` | `271.273 ms` | Region-friendly operator win | Pending clean sweep rerun |
-| Yak GraphChi-style | 40 x 16 x 15625 edges | Streaming `236.388 ms` | `302.599 ms` | `228.252 ms` | Rift beats heap, not improved SafeZone | Pending clean sweep rerun |
-| Stancu-style tx boundary | 200k tx, 64/region | Streaming `38.844 ms` | `43.189 ms` | SafeZone faster | Boundary-sensitive allocator win | Pending clean sweep rerun |
+| Broom-style Dataflow SELECT | local docs | checked `24.413 ms`; HPZone `27.588 ms` | `28.258 ms` | `22.501 ms`; unsafezone-hp `21.957 ms` | Rift checked beats heap, SafeZone-family wins | Clean UnsafeZone core/prior sweep |
+| Broom-style Dataflow AGGREGATE | local docs | checked `44.146 ms`; HPZone `49.106 ms` | `48.849 ms` | `40.124 ms`; unsafezone-hp `39.434 ms` | SafeZone-family win | Clean UnsafeZone core/prior sweep |
+| Broom-style Dataflow JOIN | local docs | checked `24.935 ms`; HPZone `26.832 ms` | `29.122 ms` | `22.784 ms`; unsafezone-hp `22.359 ms` | Rift checked beats heap, SafeZone-family wins | Clean UnsafeZone core/prior sweep |
+| StreamFlex pressure | throughput row | Streaming `46.108 ms`, HPZone `46.436 ms` | `42.712 ms` | `39.920 ms`; unsafezone-hp `39.591 ms` | SafeZone-family throughput win; Rift removes misses but loses elapsed | Clean UnsafeZone core/prior sweep |
+| Yak top-word/filter | local methodology | Streaming `68.959 ms`, HPZone `68.848 ms` | `70.370 ms` | `59.286 ms`; unsafezone-hp `58.686 ms` | SafeZone-family win | Clean UnsafeZone core/prior sweep |
+| Yak GraphChi-style | local methodology | Streaming `47.907 ms`, HPZone `47.554 ms` | `42.384 ms` | `35.456 ms`; unsafezone-hp `35.008 ms` | SafeZone-family win; Rift loses | Clean UnsafeZone core/prior sweep |
+| Stancu-style tx boundary | 200k tx, 64/region | Streaming `51.478 ms`, HPZone `51.380 ms` | `44.141 ms` | `33.720 ms`; unsafezone-hp `33.335 ms` | SafeZone-family win; Rift loses | Clean UnsafeZone core/prior sweep |
 
 ## Checked Operator Costs
 

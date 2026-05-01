@@ -141,9 +141,9 @@ run_core() {
 
 run_prior_work() {
   run_logged dataflow "$FORK" env DATAFLOW_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" zsh sandbox/run_dataflow_region_matrix.sh
-  run_logged streamflex "$FORK" env STREAMFLEX_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" zsh sandbox/run_streamflex_region_instrumented_matrix.sh
-  run_logged yak "$FORK" env YAK_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" zsh sandbox/run_yak_region_instrumented_matrix.sh
-  run_logged stancu "$FORK" env STANCU_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" zsh sandbox/run_stancu_region_instrumented_matrix.sh
+  run_logged streamflex "$FORK" env STREAMFLEX_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" STREAMFLEX_OUTPUT_DIR="$SUMMARY_DIR/streamflex" zsh sandbox/run_streamflex_region_instrumented_matrix.sh
+  run_logged yak "$FORK" env YAK_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" YAK_OUTPUT_DIR="$SUMMARY_DIR/yak" zsh sandbox/run_yak_region_instrumented_matrix.sh
+  run_logged stancu "$FORK" env STANCU_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" STANCU_OUTPUT_DIR="$SUMMARY_DIR/stancu" zsh sandbox/run_stancu_region_instrumented_matrix.sh
 }
 
 run_checked() {
