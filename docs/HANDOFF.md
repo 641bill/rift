@@ -9,8 +9,8 @@ Active implementation branch for this update:
 `feature/rift`
 
 Implementation commit at this update:
-`7083c5c78`
-(`Add Wikimedia stream region matrix`)
+`0263f0ed7`
+(`Add Linear Road stream region matrix`)
 
 Current checkpoint:
 The SafeZone provenance issue has been corrected in the NEXMark and Common
@@ -23,7 +23,10 @@ Rift case-study target. A new stream benchmark ladder selected Wikimedia
 pageview/clickstream next; the generated Wikimedia matrix is now implemented
 and shows a mixed result. Q2 clickstream is promising at 1M, but the 10M
 single-run scale check is a near-tie, so generated Wikimedia should stay as
-ladder evidence rather than a headline case study.
+ladder evidence rather than a headline case study. The generated Linear Road
+methodology matrix is now also implemented; it removes measured GC in Rift
+q1/q2, but heap remains fastest at 1M, so it is a ceiling result rather than a
+case-study win.
 
 Files added or changed:
 
@@ -34,11 +37,15 @@ Files added or changed:
 - `scala-native-rift/sandbox/src/main/scala-next/WikimediaRegionMatrix.scala`
 - `scala-native-rift/sandbox/run_wikimedia_region_matrix.sh`
 - `scala-native-rift/sandbox/WIKIMEDIA_REGION_MATRIX.md`
+- `scala-native-rift/sandbox/src/main/scala-next/LinearRoadRegionMatrix.scala`
+- `scala-native-rift/sandbox/run_linear_road_region_matrix.sh`
+- `scala-native-rift/sandbox/LINEAR_ROAD_REGION_MATRIX.md`
 - `scala-native-rift/sandbox/STREAM_BENCHMARK_LADDER.md`
 - `scala-native-rift/sandbox/SN_WIN_ENVELOPE.md`
 - `evidence/COMMON_CRAWL_WET_MATRIX.md`
 - `evidence/NEXMARK_REGION_MATRIX.md`
 - `evidence/WIKIMEDIA_REGION_MATRIX.md`
+- `evidence/LINEAR_ROAD_REGION_MATRIX.md`
 - `evidence/STREAM_BENCHMARK_LADDER.md`
 - `evidence/SN_WIN_ENVELOPE.md`
 - `evidence/ALL_PHASE_RESULTS.md`
@@ -61,6 +68,12 @@ Validation for this checkpoint:
   checksum/output count across Q0/Q1/Q2 and all modes.
 - Wikimedia 10M Q2 single-run scale check matched checksum/output count across
   all modes.
+- Linear Road generated 20k smoke matched checksum/output count across Q0/Q1/Q2
+  and all modes.
+- Linear Road generated 100k and 1M 3-run medians matched checksum/output count
+  across Q0/Q1/Q2 and all modes.
+- No Linear Road 10M scale check was run because no 1M row cleared the
+  continuation gate.
 
 New evidence:
 
@@ -73,13 +86,15 @@ New evidence:
 | Common Crawl WET q1 small buckets | 100k pages / 13.7M records | heap `386.807 ms`; improved SafeZone `381.109 ms`; HPZone `406.536 ms`, Streaming `419.779 ms` | Tighter lifetimes keep improved SafeZone fastest and heap competitive. |
 | Wikimedia Q2 clickstream | 1M events / 2M records | heap `159.746 ms`, improved SafeZone `147.936 ms`, HPZone `147.163 ms`; heap GC `35.238 ms`, HPZone GC `2.206 ms` | Promising generated row, but not a 10% win over improved SafeZone. |
 | Wikimedia Q2 clickstream | 10M events / 20M records, single run | heap `1459.438 ms`, improved SafeZone `1473.088 ms`, HPZone `1462.015 ms` | Lower GC, but elapsed is a near-tie; not a headline case study. |
+| Linear Road Q1 tolls | 1M events / 2M records | heap `170.464 ms`, improved SafeZone `196.138 ms`, HPZone `191.896 ms`; heap GC `24.819 ms`, HPZone GC `0.000 ms` | Rift removes GC and beats improved SafeZone, but heap remains fastest. |
+| Linear Road Q2 accidents | 1M events / 2M records | heap `194.520 ms`, improved SafeZone `215.808 ms`, HPZone `203.793 ms`; heap GC `27.604 ms`, HPZone GC `0.000 ms` | Same ceiling result: lower GC, no elapsed win over heap. |
 
 Current conclusion:
-Common Crawl WET and generated Wikimedia are useful memory-pressure detectors,
-but neither currently clears the case-study gate against heap and improved
-SafeZone. The next benchmark candidate should be Linear Road-style position
-reports, toll outputs, and latency/deadline metrics unless real Wikimedia TSV
-input changes the result.
+Common Crawl WET, generated Wikimedia, and generated Linear Road are useful
+memory-pressure detectors, but none currently clears the case-study gate
+against heap and improved SafeZone. The next step should be either real input
+for an already promising generated shape, especially Wikimedia TSV, or focused
+checked-operator overhead work.
 
 Prior checked-operator checkpoint:
 `RiftRegion.StreamWindowFold[T]` adds an experimental checked additive

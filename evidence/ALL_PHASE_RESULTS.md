@@ -65,6 +65,7 @@ For performance numbers, use the following rule of thumb:
 | Phase 6 NEXMark-lite streaming | `evidence/NEXMARK_REGION_MATRIX.md` |
 | Phase 6 Common Crawl WET-shaped detector | `evidence/COMMON_CRAWL_WET_MATRIX.md` |
 | Phase 6 Wikimedia pageview/clickstream detector | `evidence/WIKIMEDIA_REGION_MATRIX.md` |
+| Phase 6 Linear Road methodology detector | `evidence/LINEAR_ROAD_REGION_MATRIX.md` |
 | Stream benchmark ladder | `evidence/STREAM_BENCHMARK_LADDER.md` |
 | Phase 6 pipeline / parallel collections | `evidence/PIPELINE_PARCOLL_COMPARISON.md` |
 | Phase 7 checked stream-window rank | `evidence/CHECKED_STREAM_WINDOW_RANK_MATRIX.md` |
@@ -94,7 +95,7 @@ For performance numbers, use the following rule of thumb:
 | Phase 3: runtime-only evaluation | Done enough for current claim | Validated with caveats | Same-layout GCBench/ListOfLists runtime medians |
 | Phase 4: topology/layout decomposition | Done enough to move on | Validated/provisional mix | Layout, topology, targeted runtime follow-up, safety finding |
 | Phase 5: application evidence | In progress | Bounded-sample medians plus diagnostic attribution, safe-API probes, single-run full-month controls, full-month heap/checked medians, and SafeZone DEBS controls | DEBS correctness, 100k/1M trusted medians, opt-in GC heap allocation attribution, Q1 checked-output output-equivalence, Q1 checked-processing output-equivalence, Q2 checked-processing output-equivalence, checked RunBoth 100k/1M medians plus attribution, 3-run Commix control, first full-month output-equivalence control, post-pool-cap checked full-month run, post-pool-cap same-run full-month heap/checked control, trusted full-month Streaming control, checked `ChildBucket` same-order full-month 3-run median, active-memory diagnostics, region-family attribution, Q1 rank lifetime narrowing, post-fix full-month heap/checked median, checked Q1 window-rank arenas, reusable checked `StreamBucketArena` migration, checked `StreamWindowIndexedRank`, `putWindowRankInBucket` auto cleanup, entry-cleanup callbacks, lexicographic checked rank priorities, long-key stream-window rank matrix, Q2 CPU substep diagnostics, 100k SafeZone controls, and 1M current/improved SafeZone medians |
-| Phase 6: literature-aligned methodology evidence | Started | Validated methodology medians with caveats | Broom-style dataflow including checked SELECT/AGGREGATE/JOIN modes, StreamFlex-style latency/throughput, Yak-style control/data plus grouped sort, top-word/filter, GraphChi-style subintervals, and runtime promotion proxy, Stancu-style transaction accounting, NEXMark-lite Q0/Q1/Q2/Q5/Q8 stream queries, Common Crawl and Wikimedia generated stream detectors, plus the Scala Native win-envelope synthesis |
+| Phase 6: literature-aligned methodology evidence | Started | Validated methodology medians with caveats | Broom-style dataflow including checked SELECT/AGGREGATE/JOIN modes, StreamFlex-style latency/throughput, Yak-style control/data plus grouped sort, top-word/filter, GraphChi-style subintervals, and runtime promotion proxy, Stancu-style transaction accounting, NEXMark-lite Q0/Q1/Q2/Q5/Q8 stream queries, Common Crawl, Wikimedia, and Linear Road generated stream detectors, plus the Scala Native win-envelope synthesis |
 | Phase 6b: Broom / parallel collections API evidence | Open | Provisional surrogate only | amordo comparison and Rift raw-array surrogate |
 | Phase 7: capture-checked safe API | Started | Compiler-probe, runtime-smoke, focused checked-container benchmark, checked dataflow evidence, and DEBS-shaped checked probes | 96 targeted checked-API compiler probes, checked child-window, child-bucket, stream-bucket-arena, stream-window-rank, window-rank auto-cleanup, entry-cleanup, lexicographic rank-priority, standalone long-key rank, long-key stream-window-rank, fused TableRank, reusable StreamAppendWindow, StreamJoinWindow, and StreamWindowFold runtime probes, `CheckedRegionBufferMatrix`, `CheckedRegionPriorityQueueMatrix`, `CheckedRegionIndexedPriorityQueueMatrix`, `CheckedStreamWindowRankMatrix`, `CheckedAppendWindowMatrix`, `CheckedWindowFoldMatrix`, Dataflow SELECT/AGGREGATE/JOIN `rift-checked`, Q1 checked-output, Q1 checked-processing, Q2 checked-processing, checked RunBoth `rift-checked` medians, plus Phase 4 safety finding |
 | Phase 8: native GC/region integration hardening | Started | Runtime/API smoke evidence, no benchmark data | Explicit `HeapRoot` path, static module/immutable-val path, direct unrooted heap-constructor/alias/field-selection/array-store rejection, owner-token ObjectBuffer/RegionBuffer heap-store rejection, mutable static-var rejection, mutable-head heap-retagging rejection, and explicit `{region}` constructor-field/array reuse |
@@ -111,7 +112,7 @@ For performance numbers, use the following rule of thumb:
 | Phase 3 | Reran same-layout runtime matrices. | Rift has credible allocator/runtime wins on allocation-heavy linked structures. |
 | Phase 4 | Split allocator effects from layout/topology effects. | Layout and reference topology can dominate allocator choice; mixed region/GC references require a safety story. |
 | Phase 5 | Built DEBS Q1/Q2 runners and progressively moved structured-lifetime state into regions; added checked Q1 output/ranking, checked Q1 processing, checked Q2 processing probes, active-memory diagnostics, region-family attribution, Q1 window-rank arenas, reusable checked `StreamBucketArena`, checked `StreamWindowIndexedRank`, auto-cleanup and entry-cleanup for bucket-owned rank keys, lexicographic checked rank priorities, Q2 CPU substep diagnostics, and a closeable SafeZone Q1/Q2 control mode. | Current DEBS evidence shows bounded-sample elapsed/RSS wins and much lower heap allocation pressure. Full-month heap/checked medians are now near-tied after fixing one wrong checked lifetime: Q1 rank object graphs were parent-lived instead of bucket-lived. The Q1 window-rank arena further reduces rank churn and gives a single-run full-month RSS win, `StreamBucketArena` generalizes the bucket lifetime primitive, and `StreamWindowIndexedRank` is the first dense-key rank/window collection. Auto cleanup strengthens the close boundary but adds CPU overhead versus manual cleanup; entry cleanup removes duplicate checked-side bucket key lists and improves that overhead, but not enough for a speed win. Lexicographic rank priorities remove the single-priority ordering limitation for Q1-style tie-breaks. Bounded Q2 same-operation overhead is not reproduced by the new perturbing substep diagnostic. Long-key stream-window rank and fused TableRank state now exist, but TableRank is backed out of DEBS Q1 because the focused 1M gate failed. Q1 application integration, CPU overhead, I/O, optional SafeZone full-month controls, and stronger checked boundaries still keep this short of final application proof. |
-| Phase 6 | Built methodology harnesses for Broom/StreamFlex/Yak/Stancu comparison axes, then added NEXMark-lite, Common Crawl WET-shaped, and Wikimedia pageview/clickstream stream-processing probes. | These support the broader research story but are not exact reproductions of closed or unavailable artifacts. NEXMark-lite Q1/Q2 show modest 1M elapsed wins and lower GC, generic Q8 is a checked join-window win, the reusable Q8 `StreamJoinWindow` API is lower-GC/lower-RSS but slower than a fair specialized heap control, and Q5 remains checked-container/window-overhead evidence rather than a window-aggregate win. Common Crawl and generated Wikimedia detect heap allocation pressure but do not clear the case-study gate against improved SafeZone/heap, so the next ladder candidate is Linear Road-style latency/toll processing. |
+| Phase 6 | Built methodology harnesses for Broom/StreamFlex/Yak/Stancu comparison axes, then added NEXMark-lite, Common Crawl WET-shaped, Wikimedia pageview/clickstream, and Linear Road-shaped stream-processing probes. | These support the broader research story but are not exact reproductions of closed or unavailable artifacts. NEXMark-lite Q1/Q2 show modest 1M elapsed wins and lower GC, generic Q8 is a checked join-window win, the reusable Q8 `StreamJoinWindow` API is lower-GC/lower-RSS but slower than a fair specialized heap control, and Q5 remains checked-container/window-overhead evidence rather than a window-aggregate win. Common Crawl, generated Wikimedia, and generated Linear Road detect heap allocation pressure but do not clear the case-study gate against improved SafeZone/heap. |
 | Phase 7 | Added checked `scoped`/`streaming` API probes using Scala capture checking, then moved from buffers to ranking, stream-window ranking, and cheap append/window operators. | Source-level safety evidence is started. The stream-window rank matrix validates the general bucket-region object pattern, auto-removes bucket-owned rank keys before close, reports removed entries for side-table cleanup, and now supports lexicographic priorities. `StreamWindowLongIndexedRank` extends that pattern to arbitrary `Long` keys using region-owned owner tables. `StreamWindowTableRank` fuses lookup/value/priority/heap/bucket state into one parent-owned table and now has opt-in diagnostics, bucket-close fast removal, and directional heap repair. Checksums match, but the 1M TableRank gate fails; container CPU/memory overhead and application integration remain open. `CheckedAppendWindowMatrix` shows a simpler checked child-bucket operator can beat heap at 1M while remaining non-winning at 100k. The first reusable per-entry `StreamAppendWindow` close API failed the 1M gate, but cached bucket/region use plus `StreamAppendCursor` close now clears the focused 1M API gate. `StreamWindowFold` adds a reusable additive aggregate API and lowers RSS/GC, but fails its 1M focused gate (`118.726 ms` checked versus `103.244 ms` heap), so Common Crawl WET and NEXMark Q5 fold integration remain blocked. Checked Q1 event-window entries now use the cursor-close API and match heap output on sample/100k controls plus a 1M 3-run RunBoth control; the 1M median is heap `4559.928 ms` versus checked `4514.165 ms`, with RSS `153.8 MiB` versus `91.7 MiB`. Checked Q2 profit/empty-window entries now also use `StreamAppendWindow` cursor close and match output through 1M medians, but the 1M elapsed median is a near tie and checked RSS rises to `142.4 MiB`. |
 | Phase 8 | Added explicit heap-root handles and conservative mixed-reference rejection. | Region memory is not GC-scanned, so region-to-heap references need roots or static rejection. |
 | Phase 9 | Reserved for Lean mechanization. | No proof result yet. |
@@ -1281,6 +1282,7 @@ artifacts are available or reproduced.
 | NEXMark-lite streaming | Deterministic auction stream with Q0 passthrough, Q1 currency conversion, Q2 selection, Q5 hot-items window, and Q8 new-user/new-auction window join | 1M medians show Q1 checked `374.767 ms` vs heap `384.595 ms` and Streaming `371.404 ms`; Q2 checked `287.808 ms` vs heap `297.053 ms`; generic Q8 checked `291.832 ms` vs heap `322.210 ms`. The focused Q8 `StreamJoinWindow` API is lower-GC/lower-RSS but slower than the fair specialized heap join; the packed-count follow-up narrows that row to `20.987 ms` checked vs `17.393 ms` heap. Q5 is not a win; diagnostics show identical operation counts and about `45 ms` of top-auction scans in every 1M mode. | Local methodology benchmark, not exact Apache Beam NEXMark. Real-data follow-ups are not implemented yet. |
 | Common Crawl WET-shaped tokenization | Generated page/line/token stream with bucket-owned ordinary Scala records | Corrected default 100k tokenization stresses heap (`149.149 ms` GC, `408305664` RSS bytes). Trusted Rift removes measured GC and lowers RSS, but improved SafeZone is fastest (`381.006 ms` vs Streaming `403.935 ms`). A smaller-bucket control keeps improved SafeZone fastest and makes heap competitive. | Generated WET-shaped input only, no checked mode yet, and corrected improved SafeZone control rules it out as the next case study. |
 | Wikimedia generated pageview/clickstream | Generated TSV-shaped pageview/count/clickstream event buckets | Q2 clickstream is promising at 1M: HPZone `147.163 ms` vs heap `159.746 ms` and improved SafeZone `147.936 ms`, with GC `2.206 ms` vs heap `35.238 ms`. The 10M single-run Q2 scale check weakens the story: heap `1459.438 ms`, HPZone `1462.015 ms`, improved SafeZone `1473.088 ms`. | Generated input only, no checked mode, and no 10% win over improved SafeZone. Keep as ladder evidence, not a case study. |
+| Linear Road generated position/toll stream | Generated position reports, toll outputs, and accident/congestion candidate objects with durable heap primitive metadata | At 1M, heap is fastest for q1 tolls (`170.464 ms` vs HPZone `191.896 ms`) and q2 accidents (`194.520 ms` vs HPZone `203.793 ms`) despite heap GC. q0 is a near-tie where improved SafeZone wins (`92.615 ms`). | Generated methodology only, no checked mode, and not a Rift case-study win. |
 | Checked window-fold operator | Additive per-key stream-window aggregate with child-bucket ordinary Scala records and parent-owned primitive metadata | Checked mode removes measured GC and cuts 1M RSS (`40402944` bytes vs heap `75022336` bytes), but fails elapsed gate: `118.726 ms` checked vs `103.244 ms` heap. | Focused framework profile only; blocks Common Crawl WET and NEXMark Q5 fold integration until overhead is reduced. |
 
 ### NEXMark-Lite Stream Matrix, 2026-04-30
@@ -1375,9 +1377,8 @@ Interpretation:
 - The small-bucket control is the important caveat: if the logical program
   exposes shorter lifetimes to heap too, heap and improved SafeZone recover
   much of the gap.
-- Next real-data candidate should be Wikimedia pageview/clickstream
-  aggregation unless a real WET file plus a checked page/token append API
-  changes the result.
+- Revisit Common Crawl only if a real WET file plus a checked page/token append
+  API changes the result.
 
 ### Wikimedia Generated Pageview/Clickstream Detector, 2026-05-01
 
@@ -1410,9 +1411,34 @@ Interpretation:
   measured GC substantially.
 - The elapsed result is not strong enough for a case-study claim: the 10M Q2
   scale check is a near-tie, and Q0/Q1 do not win.
-- Next stream-benchmark search should move to Linear Road-style position
-  reports, toll outputs, and latency/deadline metrics unless real Wikimedia TSV
-  input changes the result.
+- Revisit generated Wikimedia only with real TSV input or a stronger checked
+  operator; generated input alone does not clear the case-study gate.
+
+### Linear Road Generated Methodology Detector, 2026-05-01
+
+Source: `evidence/LINEAR_ROAD_REGION_MATRIX.md`
+
+This is a generated Linear Road-shaped stream, not an exact Linear Road
+artifact run. It tests position reports, toll-output objects, and
+accident/congestion candidate objects with durable vehicle/segment metadata
+kept in heap primitive arrays.
+
+1M medians:
+
+| Query | Heap ms | Improved SafeZone ms | Best Rift ms | Heap GC ms | Best Rift GC ms | Interpretation |
+|---|---:|---:|---:|---:|---:|---|
+| q0 reports | 93.798 | 92.615 | HPZone `94.908` | 10.413 | 0.000 | Near-tie; improved SafeZone fastest. |
+| q1 tolls | 170.464 | 196.138 | HPZone `191.896` | 24.819 | 0.000 | Rift beats improved SafeZone but not heap. |
+| q2 accidents | 194.520 | 215.808 | HPZone `203.793` | 27.604 | 0.000 | Rift beats improved SafeZone but not heap. |
+
+Interpretation:
+
+- Linear Road-shaped generated streams remove measured GC in Rift, but heap is
+  still fastest for q1/q2 at 1M.
+- Region modes do not improve q1/q2 RSS at the default bucket size; live
+  bucket-retained position/output objects dominate.
+- This is useful negative evidence for the stream-benchmark ladder. Do not tune
+  Linear Road-specific code into a benchmark claim.
 
 ### Checked Dataflow Operators, 2026-04-26
 
