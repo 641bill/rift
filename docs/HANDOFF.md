@@ -9,24 +9,19 @@ Active implementation branch for this update:
 `feature/rift`
 
 Implementation commit at this update:
-`0263f0ed7`
-(`Add Linear Road stream region matrix`)
+`5ddf861de`
+(`Record real stream input medians`)
 
 Current checkpoint:
-The SafeZone provenance issue has been corrected in the NEXMark and Common
-Crawl runners. Script-level modes now distinguish `safezone-current`
-(`SAFEZONE_ROOTS_MODE=0`) from `safezone-improved`
-(`SAFEZONE_ROOTS_MODE=1`) while preserving the underlying binary mode
-`safezone`. Corrected 100k controls show improved SafeZone is a serious
-baseline and rules out generated Common Crawl WET tokenization as the next
-Rift case-study target. A new stream benchmark ladder selected Wikimedia
-pageview/clickstream next; the generated Wikimedia matrix is now implemented
-and shows a mixed result. Q2 clickstream is promising at 1M, but the 10M
-single-run scale check is a near-tie, so generated Wikimedia should stay as
-ladder evidence rather than a headline case study. The generated Linear Road
-methodology matrix is now also implemented; it removes measured GC in Rift
-q1/q2, but heap remains fastest at 1M, so it is a ceiling result rather than a
-case-study win.
+The real-input stream benchmark ladder has now been wired, measured, and
+recorded. NEXMark Beam-default generated-profile rows show the only new
+positive signal: Q1 has a useful trusted-region win and Q8 has a modest checked
+win. The real/preloaded Wikimedia, Common Crawl WET, and Linear Road rows are
+ceiling results under the current probes: heap is fastest and measured timed GC
+is `0.000 ms` in the timed sections. These rows should stay as regression and
+win-envelope evidence, not application case-study claims. The next engineering
+step should return to focused checked-operator overhead reduction, with
+NEXMark Beam-default Q1/Q8 retained as application-profile checks.
 
 Files added or changed:
 
@@ -49,6 +44,7 @@ Files added or changed:
 - `evidence/STREAM_BENCHMARK_LADDER.md`
 - `evidence/SN_WIN_ENVELOPE.md`
 - `evidence/ALL_PHASE_RESULTS.md`
+- `docs/ROADMAP.md`
 - `scripts/sync-evidence.sh`
 
 Validation for this checkpoint:
@@ -74,6 +70,16 @@ Validation for this checkpoint:
   across Q0/Q1/Q2 and all modes.
 - No Linear Road 10M scale check was run because no 1M row cleared the
   continuation gate.
+- NEXMark Beam-default 100k 3-run medians matched checksum/output count across
+  Q0/Q1/Q2/Q5/Q8 and all modes; the 1M Q1/Q2/Q8 subset also matched.
+- Wikimedia real `clickstream-enwiki-2026-03.tsv.gz` Q2 100k and 1M 3-run
+  medians matched checksum/output count across heap, current/improved SafeZone,
+  HPZone, and Streaming.
+- Common Crawl decompressed WET Q1 tokenization 10k and larger-shard rows
+  matched checksum/output count across all modes. The 50k request loaded only
+  `21425` usable pages and should not be treated as headline 50k evidence.
+- Linear Road official `datafile3hours.dat` Q0/Q1/Q2 100k and 1M 3-run
+  medians matched checksum/output count across all modes.
 
 New evidence:
 
@@ -88,13 +94,19 @@ New evidence:
 | Wikimedia Q2 clickstream | 10M events / 20M records, single run | heap `1459.438 ms`, improved SafeZone `1473.088 ms`, HPZone `1462.015 ms` | Lower GC, but elapsed is a near-tie; not a headline case study. |
 | Linear Road Q1 tolls | 1M events / 2M records | heap `170.464 ms`, improved SafeZone `196.138 ms`, HPZone `191.896 ms`; heap GC `24.819 ms`, HPZone GC `0.000 ms` | Rift removes GC and beats improved SafeZone, but heap remains fastest. |
 | Linear Road Q2 accidents | 1M events / 2M records | heap `194.520 ms`, improved SafeZone `215.808 ms`, HPZone `203.793 ms`; heap GC `27.604 ms`, HPZone GC `0.000 ms` | Same ceiling result: lower GC, no elapsed win over heap. |
+| NEXMark Beam-default Q1 | 1M generated-profile events | heap `579.038 ms`, improved SafeZone `561.787 ms`, checked `557.251 ms`, HPZone `538.451 ms` | Best new positive row; generated Beam-default profile, not Beam runner evidence. |
+| NEXMark Beam-default Q8 | 1M generated-profile events | heap `331.599 ms`, improved SafeZone `326.569 ms`, checked `315.545 ms` | Modest checked win; below case-study margin. |
+| Wikimedia real enwiki Q2 | 1M events / 2M outputs | heap `126.800 ms`, improved SafeZone `149.062 ms`, Streaming `157.449 ms`; all GC `0.000 ms` | Real TSV row is heap-fastest and not GC-bound. |
+| Common Crawl real WET Q1 | 10k pages / 349709 token records | heap `12.079 ms`, improved SafeZone `16.093 ms`, Streaming `15.651 ms`; all GC `0.000 ms` | Real WET preloaded row is heap-fastest. |
+| Linear Road official Q1/Q2 | 1M events / 2M outputs | q1 heap `162.668 ms` vs HPZone `180.277 ms`; q2 heap `167.811 ms` vs Streaming `198.863 ms`; all GC `0.000 ms` | Official preloaded input is a ceiling result. |
 
 Current conclusion:
-Common Crawl WET, generated Wikimedia, and generated Linear Road are useful
-memory-pressure detectors, but none currently clears the case-study gate
-against heap and improved SafeZone. The next step should be either real input
-for an already promising generated shape, especially Wikimedia TSV, or focused
-checked-operator overhead work.
+Common Crawl WET, generated/real Wikimedia, and generated/official Linear Road
+are useful memory-pressure detectors and regression controls, but none
+currently clears the case-study gate against heap and improved SafeZone.
+NEXMark Beam-default Q1/Q8 are useful positive profile rows, but still
+generated-profile evidence. The next step should be focused checked-operator
+overhead work, not more application-specific tuning.
 
 Benchmark data-source checkpoint:
 Real input/source bundles have now been downloaded into ignored local cache
