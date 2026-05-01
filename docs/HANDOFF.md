@@ -96,9 +96,9 @@ New evidence:
 | Linear Road Q2 accidents | 1M events / 2M records | heap `194.520 ms`, improved SafeZone `215.808 ms`, HPZone `203.793 ms`; heap GC `27.604 ms`, HPZone GC `0.000 ms` | Same ceiling result: lower GC, no elapsed win over heap. |
 | NEXMark Beam-default Q1 | 1M generated-profile events | heap `579.038 ms`, improved SafeZone `561.787 ms`, checked `557.251 ms`, HPZone `538.451 ms` | Best new positive row; generated Beam-default profile, not Beam runner evidence. |
 | NEXMark Beam-default Q8 | 1M generated-profile events | heap `331.599 ms`, improved SafeZone `326.569 ms`, checked `315.545 ms` | Modest checked win; below case-study margin. |
-| Wikimedia real enwiki Q2 | 1M events / 2M outputs | heap `126.800 ms`, improved SafeZone `149.062 ms`, Streaming `157.449 ms`; all GC `0.000 ms` | Real TSV row is heap-fastest and not GC-bound. |
-| Common Crawl real WET Q1 | 10k pages / 349709 token records | heap `12.079 ms`, improved SafeZone `16.093 ms`, Streaming `15.651 ms`; all GC `0.000 ms` | Real WET preloaded row is heap-fastest. |
-| Linear Road official Q1/Q2 | 1M events / 2M outputs | q1 heap `162.668 ms` vs HPZone `180.277 ms`; q2 heap `167.811 ms` vs Streaming `198.863 ms`; all GC `0.000 ms` | Official preloaded input is a ceiling result. |
+| Wikimedia real enwiki Q2 | 1M events / 2M outputs | heap `126.800 ms`, improved SafeZone `149.062 ms`, Streaming `157.449 ms`; median GC `0.000 ms` | Real TSV row is heap-fastest; one heap timed run collected `67.236 ms`, but the median is zero. |
+| Common Crawl real WET Q1 | 10k pages / 349709 token records | heap `12.079 ms`, improved SafeZone `16.093 ms`, Streaming `15.651 ms`; median GC `0.000 ms` | Real WET preloaded row is heap-fastest. |
+| Linear Road official Q1/Q2 | 1M events / 2M outputs | q1 heap `162.668 ms` vs HPZone `180.277 ms`; q2 heap `167.811 ms` vs Streaming `198.863 ms`; median GC `0.000 ms` | Official preloaded input is a ceiling result; each 1M heap query had one collection outlier. |
 
 Current conclusion:
 Common Crawl WET, generated/real Wikimedia, and generated/official Linear Road
