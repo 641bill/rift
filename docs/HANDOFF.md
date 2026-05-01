@@ -9,10 +9,10 @@ Active implementation branch for this update:
 `feature/rift`
 
 Implementation commit at this update:
-`5ddf861de`
-(`Record real stream input medians`)
+working tree on top of `2bea33226`
+(`Clarify median GC in real input results`)
 
-Current checkpoint:
+Previous checkpoint:
 The real-input stream benchmark ladder has now been wired, measured, and
 recorded. NEXMark Beam-default generated-profile rows show the only new
 positive signal: Q1 has a useful trusted-region win and Q8 has a modest checked
@@ -22,6 +22,19 @@ is `0.000 ms` in the timed sections. These rows should stay as regression and
 win-envelope evidence, not application case-study claims. The next engineering
 step should return to focused checked-operator overhead reduction, with
 NEXMark Beam-default Q1/Q8 retained as application-profile checks.
+
+Current checkpoint:
+The stream-GC refocus plan is implemented but not committed. DaCapo,
+Renaissance, and SPECjbb2015 are now explicitly de-prioritized as primary Rift
+evidence because their lifetimes are not stream-structured. The active search
+space is GC-heavy stream/dataflow workloads with page, batch, window, epoch, or
+operator close boundaries. The implementation adds max-GC/outlier reporting to
+existing stream matrices, expands NEXMark with Q3/Q4/Q9/Q11, adds a
+Yahoo-style ad-stream matrix, and adds a first RIoTBench-style IoT
+ETL/statistics matrix. The new application-style probes are useful controls,
+but the strongest next engineering direction is still checked operator
+overhead reduction, with NEXMark Q3/Q8, Yahoo Q2, and RIoTBench q1 retained as
+profile/regression rows.
 
 Files added or changed:
 
@@ -35,8 +48,18 @@ Files added or changed:
 - `scala-native-rift/sandbox/src/main/scala-next/LinearRoadRegionMatrix.scala`
 - `scala-native-rift/sandbox/run_linear_road_region_matrix.sh`
 - `scala-native-rift/sandbox/LINEAR_ROAD_REGION_MATRIX.md`
+- `scala-native-rift/sandbox/src/main/scala-next/YahooAdRegionMatrix.scala`
+- `scala-native-rift/sandbox/run_yahoo_ad_region_matrix.sh`
+- `scala-native-rift/sandbox/YAHOO_AD_REGION_MATRIX.md`
+- `scala-native-rift/sandbox/src/main/scala-next/RiotBenchRegionMatrix.scala`
+- `scala-native-rift/sandbox/run_riotbench_region_matrix.sh`
+- `scala-native-rift/sandbox/RIOTBENCH_REGION_MATRIX.md`
+- `scala-native-rift/sandbox/STREAM_GC_BENCHMARK_CANDIDATES.md`
 - `scala-native-rift/sandbox/STREAM_BENCHMARK_LADDER.md`
 - `scala-native-rift/sandbox/SN_WIN_ENVELOPE.md`
+- `evidence/YAHOO_AD_REGION_MATRIX.md`
+- `evidence/RIOTBENCH_REGION_MATRIX.md`
+- `evidence/STREAM_GC_BENCHMARK_CANDIDATES.md`
 - `evidence/COMMON_CRAWL_WET_MATRIX.md`
 - `evidence/NEXMARK_REGION_MATRIX.md`
 - `evidence/WIKIMEDIA_REGION_MATRIX.md`
@@ -78,8 +101,20 @@ Validation for this checkpoint:
 - Common Crawl decompressed WET Q1 tokenization 10k and larger-shard rows
   matched checksum/output count across all modes. The 50k request loaded only
   `21425` usable pages and should not be treated as headline 50k evidence.
+- Post-refocus Common Crawl real WET Q0 parse 10k medians matched
+  checksum/output count and recorded max-GC/runs-with-GC; heap was fastest and
+  max timed GC was zero.
 - Linear Road official `datafile3hours.dat` Q0/Q1/Q2 100k and 1M 3-run
   medians matched checksum/output count across all modes.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile` passed
+  after adding the Yahoo and RIoTBench-style matrices.
+- Yahoo-style ad stream 20k smoke matched checksum/output count across all
+  modes/queries; 100k 3-run medians matched across all modes/queries; 1M Q2
+  3-run medians matched across all modes.
+- Expanded NEXMark Beam-default 1M rows matched checksum/output count for
+  Q0/Q3/Q4/Q5/Q9/Q11 in the recorded runs.
+- RIoTBench-style IoT 20k smoke matched checksum/output count across all modes
+  and queries; 100k 3-run medians also matched across all modes and queries.
 
 New evidence:
 
@@ -96,17 +131,23 @@ New evidence:
 | Linear Road Q2 accidents | 1M events / 2M records | heap `194.520 ms`, improved SafeZone `215.808 ms`, HPZone `203.793 ms`; heap GC `27.604 ms`, HPZone GC `0.000 ms` | Same ceiling result: lower GC, no elapsed win over heap. |
 | NEXMark Beam-default Q1 | 1M generated-profile events | heap `579.038 ms`, improved SafeZone `561.787 ms`, checked `557.251 ms`, HPZone `538.451 ms` | Best new positive row; generated Beam-default profile, not Beam runner evidence. |
 | NEXMark Beam-default Q8 | 1M generated-profile events | heap `331.599 ms`, improved SafeZone `326.569 ms`, checked `315.545 ms` | Modest checked win; below case-study margin. |
+| NEXMark Beam-default Q0 | 1M generated-profile events | heap `548.184 ms`, improved SafeZone `482.774 ms`, checked `497.319 ms`, HPZone `467.895 ms` | Strong trusted stream-object row; checked beats heap but not improved SafeZone. |
+| NEXMark Beam-default Q3 | 1M generated-profile events | heap `304.190 ms`, improved SafeZone `293.586 ms`, checked `287.169 ms` | Best new checked expanded-query row. |
+| NEXMark Beam-default Q11 | 1M generated-profile events | heap `255.418 ms`, improved SafeZone `237.400 ms`, checked `240.065 ms`, HPZone `226.862 ms` | Trusted session-window win; checked not better than improved SafeZone. |
+| Yahoo-style ad Q2 | 1M generated/preloaded events | heap `104.512 ms`, improved SafeZone `108.173 ms`, HPZone `105.216 ms`, Streaming `105.961 ms` | Cuts median GC from `6.253 ms` to `2.1-2.4 ms`, but heap elapsed is still slightly fastest. |
+| RIoTBench-style q1 | 100k generated sensor events | heap `16.643 ms`, improved SafeZone `13.980 ms`, HPZone `14.516 ms`, Streaming `14.445 ms` | Heap GC pressure exists and Rift beats heap, but improved SafeZone remains the stronger baseline. |
 | Wikimedia real enwiki Q2 | 1M events / 2M outputs | heap `126.800 ms`, improved SafeZone `149.062 ms`, Streaming `157.449 ms`; median GC `0.000 ms` | Real TSV row is heap-fastest; one heap timed run collected `67.236 ms`, but the median is zero. |
 | Common Crawl real WET Q1 | 10k pages / 349709 token records | heap `12.079 ms`, improved SafeZone `16.093 ms`, Streaming `15.651 ms`; median GC `0.000 ms` | Real WET preloaded row is heap-fastest. |
 | Linear Road official Q1/Q2 | 1M events / 2M outputs | q1 heap `162.668 ms` vs HPZone `180.277 ms`; q2 heap `167.811 ms` vs Streaming `198.863 ms`; median GC `0.000 ms` | Official preloaded input is a ceiling result; each 1M heap query had one collection outlier. |
 
 Current conclusion:
-Common Crawl WET, generated/real Wikimedia, and generated/official Linear Road
-are useful memory-pressure detectors and regression controls, but none
-currently clears the case-study gate against heap and improved SafeZone.
-NEXMark Beam-default Q1/Q8 are useful positive profile rows, but still
-generated-profile evidence. The next step should be focused checked-operator
-overhead work, not more application-specific tuning.
+Common Crawl WET, generated/real Wikimedia, generated/official Linear Road,
+Yahoo-style ad stream, and RIoTBench-style IoT are useful memory-pressure
+detectors and regression controls, but none currently clears the case-study
+gate against heap and improved SafeZone. NEXMark Beam-default Q3/Q8 are the
+useful checked profile rows, while Q0/Q1/Q11 are trusted-runtime profile rows;
+all are still generated-profile evidence. The next step should be focused
+checked-operator overhead work, not more application-specific tuning.
 
 Benchmark data-source checkpoint:
 Real input/source bundles have now been downloaded into ignored local cache
