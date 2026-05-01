@@ -37,6 +37,16 @@ UnsafeZone-HP stream leg:
 `evidence/HEADLINE_UNSAFEZONE_STREAMS_2026_05_01.md`, run id
 `2026-05-01-unsafezone-streams`.
 
+SafeZone cost-decomposition scaffold:
+`evidence/SAFEZONE_COST_MATRIX.md`. This is the required next measurement
+before SafeZone-family optimization or a checked SafeZone-HP backend. It
+records `SAFEZONE_TRACE=1` pool counters alongside benchmark medians/RSS.
+
+Common Crawl-like expansion:
+`evidence/COMMON_CRAWL_LIKE_MATRIX.md`. The WET-shaped runner now includes
+`q2-domain-window` and `q3-parser-scratch`; current rows are smoke validation
+only, not headline evidence.
+
 | Area | Main result | Interpretation |
 |---|---|---|
 | GCBench | heap `221.514 ms`, improved SafeZone `211.699 ms`, HPZone `245.217 ms` | Older HPZone GCBench win did not reproduce in this clean subset. |
@@ -49,6 +59,7 @@ UnsafeZone-HP stream leg:
 | UnsafeZone-HP | clean core/prior medians: GCBench `206.636 ms`, linked ListOfLists `9818.653 ms`, Dataflow SELECT `21.957 ms`, Yak topword `58.686 ms`, Stancu `33.335 ms` | SafeZone no-root internals usually beat improved SafeZone slightly and beat current Rift HPZone on linked/prior-work rows; still unsafe/substrate evidence only. |
 | UnsafeZone-HP streams | Beam-default q0 `468.617 ms`, q3 unsafe `296.480 ms` vs checked `292.371 ms`, Common Crawl q1 `3971.051 ms`, Wikimedia q2 `155.768 ms` | UnsafeZone-HP is often the best SafeZone-family stream row, but still mostly only slightly ahead of improved SafeZone; it does not create a large safe Rift case-study win. |
 | UnsafeZone-HP DEBS 1M | normal bounded RunBoth: unsafezone-hp `4639.791 ms`, heap `4861.406 ms`, improved SafeZone `5341.010 ms`, Streaming `4663.529 ms`, checked `4844.738 ms` | UnsafeZone-HP is fastest in the normal single-run row; instrumented row is a near-tie with trusted Rift. This is unsafe bounded control evidence, not a final checked application claim. |
+| SafeZone cost matrix | scaffold and smoke only | Cost counters now exist for root-mode/page-size decomposition. Do not optimize SafeZone or add `rift-checked-safezone-hp` until this has headline rows. |
 
 The older seeded tables below are retained for provenance and comparison, but
 this clean subset should be treated as the current headline evidence for

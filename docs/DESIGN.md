@@ -34,6 +34,15 @@ compiler lowering, baseline corrections, benchmark harnesses, and DEBS scaffold
 exist. The capture-checked safe API, region-heavy DEBS path, region-backed
 parallel collections, and Lean proof are still open.
 
+The latest UnsafeZone-HP evidence adds a possible backend direction, not a new
+user-facing mode. Rootless SafeZone with 32 KiB pages is useful as a lower-bound
+substrate probe, but it is unsafe without Rift-style static checks. The
+intended next prototype is therefore `rift-checked-safezone-hp`: reuse or learn
+from SafeZone allocator/pool mechanics only when capture/provenance checks prove
+that GC root registration or region scanning is unnecessary. Unsupported
+mixed-reference cases should be rejected in v1 rather than silently falling
+back to a different backend.
+
 ## 2. Evidence Levels
 
 Use these labels in all claims:

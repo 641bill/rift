@@ -9,8 +9,11 @@ Active implementation branch for this update:
 `feature/rift`
 
 Implementation commit at this update:
-`31fa902e00696f4f64008e5ee1fecafab78c3696`
-(`Add UnsafeZone HP benchmark baseline`)
+`d4be27a43407d79ef92a850ec084f84c8d46e23a`
+(`Record UnsafeZone HP DEBS interpretation`)
+
+Active uncommitted update:
+SafeZone cost-decomposition scaffold plus Common Crawl-like query expansion.
 
 Previous checkpoint:
 The real-input stream benchmark ladder has now been wired, measured, and
@@ -122,6 +125,58 @@ SafeZone `5341.010 ms`, Rift HPZone `4738.989 ms`, Rift Streaming
 Streaming `4691.125 ms`, Rift HPZone `4694.310 ms`, unsafezone-hp
 `4720.234 ms`, heap `4705.254 ms`. Treat this as bounded runtime-substrate
 evidence and correctness control, not a full-month or checked-API win.
+
+The post-UnsafeZone measurement scaffold is now implemented. The new
+`sandbox/run_safezone_cost_matrix.sh` runner builds selected native benchmark
+mains, runs SafeZone-family configurations with `SAFEZONE_TRACE=1`, and writes
+benchmark results plus SafeZone pool trace counters to a TSV. It is documented
+in `evidence/SAFEZONE_COST_MATRIX.md`. Use it before optimizing either
+SafeZone internals or a checked SafeZone-derived backend: the goal is to
+separate root add/remove cost, page-size effects, reclaim/sort bookkeeping,
+and general allocator/pool mechanics.
+
+The Common Crawl WET-shaped matrix now includes `q2-domain-window` and
+`q3-parser-scratch` in addition to `q0-parse` and `q1-tokenize`. This expansion
+is documented in `evidence/COMMON_CRAWL_LIKE_MATRIX.md`. These rows are
+object-pressure probes only; checked modes remain blocked until a focused
+checked append/scratch/window operator clears its gate.
+
+`evidence/SAFEZONE_HP_BACKEND_PROTOTYPE.md` records the intended
+`rift-checked-safezone-hp` direction. No checked SafeZone-HP backend code has
+been added yet. The v1 rule should reject unsupported mixed-reference cases
+rather than falling back silently, so performance rows are not accidentally
+mixed with rootful or unsafe behavior.
+
+Validation for this active update:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile
+ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"
+ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionCheckedTest"
+
+COMMON_CRAWL_WET_PAGES=2000 \
+COMMON_CRAWL_WET_BENCHMARK_RUNS=1 \
+COMMON_CRAWL_WET_WARMUPS=0 \
+COMMON_CRAWL_WET_QUERIES="q2-domain-window q3-parser-scratch" \
+COMMON_CRAWL_WET_MODES="heap safezone-improved unsafezone-hp rift-hp" \
+COMMON_CRAWL_WET_OUTPUT_DIR=/tmp/common-crawl-like-smoke \
+zsh sandbox/run_common_crawl_wet_matrix.sh
+
+SAFEZONE_COST_BUILD=0 \
+SAFEZONE_COST_RUNS=1 \
+SAFEZONE_COST_BENCHES="common-crawl-q1" \
+SAFEZONE_COST_CONFIGS="improved-default:1: unsafe-hp-32k:3:32768" \
+SAFEZONE_COST_COMMON_CRAWL_PAGES=2000 \
+SAFEZONE_COST_OUTPUT_DIR=/tmp/safezone-cost-smoke \
+zsh sandbox/run_safezone_cost_matrix.sh
+```
+
+The compile passed, the checked compiler suite remains `96/96`, and the
+checked runtime suite remains `38/38`. The Common Crawl smoke matched
+checksums/output counts across modes. The SafeZone cost smoke produced trace
+rows for improved SafeZone and UnsafeZone-HP; at this tiny scale it is a
+format/mechanics check only, not headline evidence.
 
 Latest execution checkpoint:
 

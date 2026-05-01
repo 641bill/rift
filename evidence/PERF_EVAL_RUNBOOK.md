@@ -113,6 +113,7 @@ That directory is ignored by git. Only curated summaries belong in
 | `core` | GCBench, ListOfLists, pipeline surrogate | Runtime-only and topology/layout baselines. |
 | `prior` | Dataflow/Broom, StreamFlex, Yak, Stancu | Literature-methodology comparison. |
 | `checked` | RegionBuffer, priority queues, window rank, append window, fold | Checked operator cost and readiness gates. |
+| `safezone-cost` | SafeZone-family root-mode/page-size cost matrix | Decompose root bookkeeping, reclaim, page-size, and allocation costs before backend changes. |
 | `streams` | NEXMark, Yahoo, RIoTBench, Wikimedia, Common Crawl WET, Linear Road | Stream/dataflow win-envelope search. |
 | `debs` | DEBS RunBoth sample and instrumented matrices | Downstream application validation. |
 

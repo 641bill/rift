@@ -97,6 +97,17 @@ building reusable region-backed stream/join/window operators, but every
 specialized API needs a fair heap counterpart and a focused passing gate before
 it becomes performance evidence or feeds Common Crawl WET.
 
+Current post-UnsafeZone direction:
+SafeZone-family internals are now a serious runtime-substrate candidate, but
+the next step is measurement, not a rewrite. `SAFEZONE_COST_MATRIX.md` and
+`sandbox/run_safezone_cost_matrix.sh` decompose root bookkeeping, page-size,
+reclaim/sort, and page/chunk allocation costs for SafeZone-family modes.
+`SAFEZONE_HP_BACKEND_PROTOTYPE.md` records `rift-checked-safezone-hp` as the
+intended prototype direction after those measurements. The checked backend is
+not implemented yet and must reject unsupported mixed-reference cases in v1.
+Common Crawl WET-shaped q2/q3 probes have been added as object-heavy stream
+detectors; they are not case-study evidence until headline medians exist.
+
 Phase 0 is not "final." It is complete enough for GCBench and ListOfLists, but
 not for a final pipeline or application story.
 

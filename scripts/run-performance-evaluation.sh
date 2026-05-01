@@ -155,6 +155,10 @@ run_checked() {
   run_logged checked-window-fold "$FORK" env CHECKED_FOLD_EVENTS="$RIFT_EVAL_EVENTS" CHECKED_FOLD_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" CHECKED_FOLD_OUTPUT_DIR="$SUMMARY_DIR/checked-window-fold" zsh sandbox/run_checked_window_fold_matrix.sh
 }
 
+run_safezone_cost() {
+  run_logged safezone-cost "$FORK" env SAFEZONE_COST_RUNS="$RIFT_EVAL_RUNS" SAFEZONE_COST_COMMON_CRAWL_PAGES="$RIFT_EVAL_EVENTS" SAFEZONE_COST_OUTPUT_DIR="$SUMMARY_DIR/safezone-cost" zsh sandbox/run_safezone_cost_matrix.sh
+}
+
 run_streams() {
   run_logged nexmark-local "$FORK" env NEXMARK_EVENTS="$RIFT_EVAL_EVENTS" NEXMARK_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" NEXMARK_OUTPUT_DIR="$SUMMARY_DIR/nexmark-local" zsh sandbox/run_nexmark_region_matrix.sh
   run_logged nexmark-beam-default "$FORK" env NEXMARK_BEAM_DEFAULTS=1 NEXMARK_EVENTS="$RIFT_EVAL_EVENTS" NEXMARK_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" NEXMARK_OUTPUT_DIR="$SUMMARY_DIR/nexmark-beam-default" zsh sandbox/run_nexmark_region_matrix.sh
@@ -189,6 +193,9 @@ main() {
   fi
   if suite_enabled checked; then
     run_checked
+  fi
+  if suite_enabled safezone-cost; then
+    run_safezone_cost
   fi
   if suite_enabled streams; then
     run_streams
