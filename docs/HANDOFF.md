@@ -96,6 +96,38 @@ against heap and improved SafeZone. The next step should be either real input
 for an already promising generated shape, especially Wikimedia TSV, or focused
 checked-operator overhead work.
 
+Benchmark data-source checkpoint:
+Real input/source bundles have now been downloaded into ignored local cache
+storage and recorded in `evidence/BENCHMARK_DATA_SOURCES.md`. The local data
+root is `/Users/siyaoliu/rift/cache/benchmark-data`. Downloaded artifacts
+include a Wikimedia March 2026 pageviews hour, Swedish and English Wikimedia
+March 2026 clickstream TSVs, Common Crawl April 2026 WET/WAT/WARC path lists,
+one real Common Crawl WET shard, and the official Linear Road MITSIM, data
+driver, test-data, and validator bundles. The official Apache Beam `2.73.0`
+source release is also downloaded and SHA-512 verified; it contains the Java
+NEXMark generator/configuration under `sdks/java/testing/nexmark`.
+
+The first Scala Native input-wiring pass is now implemented:
+
+- `NEXMARK_BEAM_DEFAULTS=1` switches `NexmarkRegionMatrix` to a Beam-default
+  generated profile and records `NEXMARK_BEAM_SOURCE`.
+- `WIKIMEDIA_INPUT` plus `WIKIMEDIA_INPUT_KIND=pageviews|clickstream` preloads
+  real Wikimedia rows.
+- `COMMON_CRAWL_WET_INPUT` preloads real WET conversion records. Use the
+  decompressed `.warc.wet` sample from the cache; the compressed shard remains
+  provenance because Common Crawl WET is a concatenated gzip stream.
+- `LINEAR_ROAD_INPUT` preloads official Linear Road Data Driver `.dat` position
+  reports.
+
+Validation for this wiring pass:
+
+| Matrix | Input | Smoke |
+|---|---|---|
+| NEXMark | `NEXMARK_BEAM_DEFAULTS=1`, 20k Q1 | heap/HPZone matched checksum/output count |
+| Wikimedia | real `clickstream-svwiki-2026-03.tsv.gz`, 20k Q2 | heap/HPZone matched checksum/output count |
+| Common Crawl WET | decompressed first April 2026 WET shard, 100 pages Q1 | heap/HPZone matched checksum/output count |
+| Linear Road | official `datafile20seconds.dat`, Q1 | heap/HPZone matched checksum/output count |
+
 Prior checked-operator checkpoint:
 `RiftRegion.StreamWindowFold[T]` adds an experimental checked additive
 stream-window fold primitive, backed by parent-owned primitive aggregate
