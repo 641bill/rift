@@ -21,6 +21,10 @@ Stream headline leg: `evidence/HEADLINE_STREAMS_2026_05_01.md`, run id
 DEBS bounded 1M leg: `evidence/HEADLINE_DEBS_1M_2026_05_01.md`, run id
 `2026-05-01-headline-debs-1m`.
 
+UnsafeZone-HP DEBS bounded 1M leg:
+`evidence/HEADLINE_UNSAFEZONE_DEBS_1M_2026_05_01.md`, run id
+`2026-05-01-unsafezone-debs-1m`.
+
 UnsafeZone-HP baseline checkpoint:
 `evidence/UNSAFEZONE_HP_BASELINE_MATRIX.md`. First clean core/prior headline
 medians with this mode are in
@@ -44,6 +48,7 @@ UnsafeZone-HP stream leg:
 | Checked operators | manual AppendWindow wins; prepend cursor wins its fair control; RegionBuffer/cursor/fold/rank do not clear speed gates | Focus on cheaper checked operator implementations before application claims. |
 | UnsafeZone-HP | clean core/prior medians: GCBench `206.636 ms`, linked ListOfLists `9818.653 ms`, Dataflow SELECT `21.957 ms`, Yak topword `58.686 ms`, Stancu `33.335 ms` | SafeZone no-root internals usually beat improved SafeZone slightly and beat current Rift HPZone on linked/prior-work rows; still unsafe/substrate evidence only. |
 | UnsafeZone-HP streams | Beam-default q0 `468.617 ms`, q3 unsafe `296.480 ms` vs checked `292.371 ms`, Common Crawl q1 `3971.051 ms`, Wikimedia q2 `155.768 ms` | UnsafeZone-HP is often the best SafeZone-family stream row, but still mostly only slightly ahead of improved SafeZone; it does not create a large safe Rift case-study win. |
+| UnsafeZone-HP DEBS 1M | normal bounded RunBoth: unsafezone-hp `4639.791 ms`, heap `4861.406 ms`, improved SafeZone `5341.010 ms`, Streaming `4663.529 ms`, checked `4844.738 ms` | UnsafeZone-HP is fastest in the normal single-run row; instrumented row is a near-tie with trusted Rift. This is unsafe bounded control evidence, not a final checked application claim. |
 
 The older seeded tables below are retained for provenance and comparison, but
 this clean subset should be treated as the current headline evidence for
@@ -131,6 +136,7 @@ direction, not a user-facing unsafe-region claim.
 |---|---:|---:|---:|---:|---|---|
 | DEBS RunBoth checked | full month, 3-run median | checked `66.804 s` | `67.122 s` | full-month pending | Near-tie, memory validation | Rerun only after clean sweep setup |
 | DEBS RunBoth bounded 1M | single run | Streaming `4681.292 ms`, checked `4882.562 ms` | `4987.579 ms` | not run in this leg | Trusted win, checked modest win, correctness control | Current bounded single-run |
+| DEBS RunBoth bounded 1M with UnsafeZone-HP | single run | unsafezone-hp `4639.791 ms`; Streaming `4663.529 ms`; checked `4844.738 ms` | `4861.406 ms` | improved SafeZone `5341.010 ms` | Unsafe substrate/control win; trusted Streaming close | Clean UnsafeZone DEBS leg |
 | NEXMark Beam Q0 | 1M generated-profile | Streaming `475.161 ms`, checked `481.436 ms` | `521.508 ms` | `478.500 ms` | Trusted stream-object win; checked beats heap but not improved SafeZone | Clean stream sweep |
 | NEXMark Beam Q1 | 1M generated-profile | Streaming `919.670 ms`, checked `945.372 ms` | `950.341 ms` | `929.887 ms` | Trusted modest win; checked does not win | Clean stream sweep |
 | NEXMark Beam Q2 | 1M generated-profile | Streaming `563.282 ms`, checked `572.005 ms` | `586.607 ms` | `576.228 ms` | Modest trusted/checked stream row | Clean stream sweep |

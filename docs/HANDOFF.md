@@ -103,6 +103,26 @@ unsafezone-hp `3971.051 ms` versus heap `4743.205 ms`, improved SafeZone
 `4028.067 ms`, and Rift HPZone `4322.349 ms`. This strengthens the
 SafeZone-substrate hypothesis, not a user-facing unsafe-region claim.
 
+The bounded DEBS 1M UnsafeZone-HP leg has also run and is tracked in
+`evidence/HEADLINE_UNSAFEZONE_DEBS_1M_2026_05_01.md`:
+
+```sh
+cd /Users/siyaoliu/rift
+DEBS2015_BOTH_INPUT=/tmp/debs2015-month1-1000000.csv \
+RIFT_EVAL_RUN_ID=2026-05-01-unsafezone-debs-1m \
+RIFT_EVAL_SCALE=headline \
+RIFT_EVAL_SUITES="preflight debs" \
+bash scripts/run-performance-evaluation.sh
+```
+
+Outputs matched for Q1/Q2 in both normal and instrumented legs. Normal
+single-run row: unsafezone-hp `4639.791 ms`, heap `4861.406 ms`, improved
+SafeZone `5341.010 ms`, Rift HPZone `4738.989 ms`, Rift Streaming
+`4663.529 ms`, checked `4844.738 ms`. Instrumented row is close: Rift
+Streaming `4691.125 ms`, Rift HPZone `4694.310 ms`, unsafezone-hp
+`4720.234 ms`, heap `4705.254 ms`. Treat this as bounded runtime-substrate
+evidence and correctness control, not a full-month or checked-API win.
+
 Latest execution checkpoint:
 
 ```sh
@@ -252,6 +272,7 @@ Files added or changed:
 - `evidence/UNSAFEZONE_HP_BASELINE_MATRIX.md`
 - `evidence/HEADLINE_UNSAFEZONE_CORE_PRIOR_2026_05_01.md`
 - `evidence/HEADLINE_UNSAFEZONE_STREAMS_2026_05_01.md`
+- `evidence/HEADLINE_UNSAFEZONE_DEBS_1M_2026_05_01.md`
 - `evidence/PERF_EVAL_RUNBOOK.md`
 - `evidence/EVALUATION_SUMMARY_TABLES.md`
 - `evidence/HEADLINE_STREAMS_2026_05_01.md`
@@ -277,6 +298,9 @@ Validation for this checkpoint:
 - The comprehensive evaluation runner has completed a clean headline
   `preflight streams` leg with UnsafeZone-HP included. Stream summaries are now
   self-contained under the run directory and tracked in the parent evidence.
+- The comprehensive evaluation runner has completed a bounded DEBS 1M
+  `preflight debs` leg with UnsafeZone-HP included. Outputs matched; the row is
+  single-run bounded evidence.
 - NEXMark corrected SafeZone 100k follow-up matched checksum/output count for
   Q1/Q5/Q8 across `heap`, `safezone-current`, `safezone-improved`,
   `rift-checked`, `rift-hp`, and `rift-streaming`.

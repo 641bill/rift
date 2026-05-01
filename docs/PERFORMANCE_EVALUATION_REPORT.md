@@ -39,6 +39,9 @@ beat GC":
 - The UnsafeZone-HP stream sweep repeats that pattern: UnsafeZone-HP is often
   best or near-best among stream rows, but it still mostly edges improved
   SafeZone by small margins rather than creating a large safe-Rift case study.
+- The bounded DEBS 1M UnsafeZone-HP row is the strongest application-shaped
+  substrate signal so far: unsafezone-hp is fastest in the normal single run,
+  with trusted Streaming close and checked Rift still heap-adjacent.
 
 The next report revision should replace this scaffold with clean-sweep rows
 from `cache/perf-eval/<run-id>/` and update the claim language accordingly.
@@ -54,6 +57,7 @@ Latest harness validation:
 | `2026-05-01-headline-debs-1m` | headline | `preflight debs` | Passed on `/tmp/debs2015-month1-1000000.csv`; tracked summary in `evidence/HEADLINE_DEBS_1M_2026_05_01.md` | Bounded DEBS 1M single-run leg |
 | `2026-05-01-unsafezone-core-prior` | headline | `preflight core prior` | Passed; tracked summary in `evidence/HEADLINE_UNSAFEZONE_CORE_PRIOR_2026_05_01.md` | Current UnsafeZone-HP core/prior leg |
 | `2026-05-01-unsafezone-streams` | headline | `preflight streams` | Passed; tracked summary in `evidence/HEADLINE_UNSAFEZONE_STREAMS_2026_05_01.md` | Current UnsafeZone-HP stream leg |
+| `2026-05-01-unsafezone-debs-1m` | headline | `preflight debs` | Passed on `/tmp/debs2015-month1-1000000.csv`; tracked summary in `evidence/HEADLINE_UNSAFEZONE_DEBS_1M_2026_05_01.md` | Current UnsafeZone-HP bounded DEBS leg |
 
 The smoke run validates harness wiring only. The headline rows above are the
 current evidence for their respective suites.
@@ -156,6 +160,15 @@ unsafezone-hp is `3971.051 ms`, improved SafeZone `4028.067 ms`, Rift HPZone
 internals as a runtime substrate to learn from, not toward shipping unsafe
 no-root zones.
 
+The bounded DEBS UnsafeZone follow-up gives one stronger application-shaped
+row, still single-run: normal RunBoth reports unsafezone-hp `4639.791 ms`,
+Rift Streaming `4663.529 ms`, Rift HPZone `4738.989 ms`, checked
+`4844.738 ms`, heap `4861.406 ms`, and improved SafeZone `5341.010 ms`.
+Instrumented RunBoth is closer and has trusted Rift slightly ahead:
+Streaming `4691.125 ms`, HPZone `4694.310 ms`, heap `4705.254 ms`, and
+unsafezone-hp `4720.234 ms`. This is runtime-substrate evidence; checked
+operator overhead still blocks a clean safe-Rift application claim.
+
 ## Acceptance Criteria For Claims
 
 A benchmark can be a serious Rift case study only if:
@@ -186,8 +199,9 @@ or ceiling results.
 
 ## Remaining Report Work
 
-The core/prior/checked, stream, bounded DEBS 1M, UnsafeZone-HP core/prior, and
-UnsafeZone-HP stream legs have now run. The remaining report work is:
+The core/prior/checked, stream, bounded DEBS 1M, UnsafeZone-HP core/prior,
+UnsafeZone-HP stream, and UnsafeZone-HP bounded DEBS legs have now run. The
+remaining report work is:
 
 1. Convert the current tracked summaries into final thesis tables.
 2. Decide whether to run a full-month DEBS rerun under the same quiet-machine
