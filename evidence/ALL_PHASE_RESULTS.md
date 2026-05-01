@@ -76,6 +76,9 @@ For performance numbers, use the following rule of thumb:
 | Phase 7 checked append-window operator | `evidence/CHECKED_APPEND_WINDOW_MATRIX.md` |
 | Phase 7 checked window-fold operator | `evidence/CHECKED_WINDOW_FOLD_MATRIX.md` |
 | Scala Native win-envelope synthesis | `evidence/SN_WIN_ENVELOPE.md` |
+| Comprehensive evaluation runbook | `evidence/PERF_EVAL_RUNBOOK.md` |
+| Comprehensive evaluation summary tables | `evidence/EVALUATION_SUMMARY_TABLES.md` |
+| Performance evaluation report scaffold | `docs/PERFORMANCE_EVALUATION_REPORT.md` |
 | Current roadmap status | `docs/ROADMAP.md` |
 | Handoff / caveats | `docs/HANDOFF.md` |
 

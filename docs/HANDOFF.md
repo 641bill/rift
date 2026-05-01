@@ -9,8 +9,8 @@ Active implementation branch for this update:
 `feature/rift`
 
 Implementation commit at this update:
-working tree on top of `2bea33226`
-(`Clarify median GC in real input results`)
+`b74658903584f30474f6ce0c1fec21164b95dbab`
+(`Add stream GC benchmark probes`)
 
 Previous checkpoint:
 The real-input stream benchmark ladder has now been wired, measured, and
@@ -24,7 +24,7 @@ step should return to focused checked-operator overhead reduction, with
 NEXMark Beam-default Q1/Q8 retained as application-profile checks.
 
 Current checkpoint:
-The stream-GC refocus plan is implemented but not committed. DaCapo,
+The stream-GC refocus plan is implemented and checkpointed. DaCapo,
 Renaissance, and SPECjbb2015 are now explicitly de-prioritized as primary Rift
 evidence because their lifetimes are not stream-structured. The active search
 space is GC-heavy stream/dataflow workloads with page, batch, window, epoch, or
@@ -35,6 +35,15 @@ ETL/statistics matrix. The new application-style probes are useful controls,
 but the strongest next engineering direction is still checked operator
 overhead reduction, with NEXMark Q3/Q8, Yahoo Q2, and RIoTBench q1 retained as
 profile/regression rows.
+
+The comprehensive performance-evaluation package is now added in the parent
+repo. It does not claim a new headline sweep has been run. Instead, it makes
+the sweep executable and reportable: `scripts/run-performance-evaluation.sh`
+records environment/SHAs and runs the selected suites into ignored
+`cache/perf-eval/<run-id>/` logs, `evidence/PERF_EVAL_RUNBOOK.md` defines the
+run discipline and gates, `evidence/EVALUATION_SUMMARY_TABLES.md` seeds compact
+tables from current evidence, and `docs/PERFORMANCE_EVALUATION_REPORT.md`
+provides the report scaffold for a clean thesis-grade rerun.
 
 Files added or changed:
 
@@ -67,12 +76,22 @@ Files added or changed:
 - `evidence/STREAM_BENCHMARK_LADDER.md`
 - `evidence/SN_WIN_ENVELOPE.md`
 - `evidence/ALL_PHASE_RESULTS.md`
+- `evidence/PERF_EVAL_RUNBOOK.md`
+- `evidence/EVALUATION_SUMMARY_TABLES.md`
+- `docs/PERFORMANCE_EVALUATION_REPORT.md`
 - `docs/ROADMAP.md`
 - `scripts/sync-evidence.sh`
+- `scripts/run-performance-evaluation.sh`
 
 Validation for this checkpoint:
 
 - `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile` passed.
+- The same compile was rerun before committing the stream-GC benchmark probes.
+  It passed on `/Users/siyaoliu/rift/scala-native-rift` at commit
+  `b74658903584f30474f6ce0c1fec21164b95dbab`.
+- The comprehensive evaluation package has not run a full headline sweep yet.
+  Its runner defaults to `RIFT_EVAL_SUITES=preflight` so a full sweep must be
+  requested explicitly.
 - NEXMark corrected SafeZone 100k follow-up matched checksum/output count for
   Q1/Q5/Q8 across `heap`, `safezone-current`, `safezone-improved`,
   `rift-checked`, `rift-hp`, and `rift-streaming`.
