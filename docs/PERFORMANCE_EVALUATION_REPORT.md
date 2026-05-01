@@ -11,19 +11,26 @@ is ready to be filled from a clean sweep run using
 Current evidence supports a narrower and stronger claim than "regions always
 beat GC":
 
-- Rift has credible runtime wins on allocation-heavy linked structures
-  (`GCBench`, linked `ListOfLists`).
-- Rift has strong local methodology wins on Broom/Dataflow and StreamFlex-like
-  dataflow/latency shapes.
+- Older baseline rows showed runtime wins on `GCBench` and linked
+  `ListOfLists`, but the clean 2026-05-01 rerun weakened that claim: improved
+  SafeZone now wins those rows while Rift still wins flat ListOfLists.
+- Older Broom/Dataflow and StreamFlex-like rows were strong, but the clean
+  rerun also narrows those claims: checked Dataflow SELECT/AGGREGATE beat heap
+  but lose to improved SafeZone, JOIN is heap-fastest, and StreamFlex is mainly
+  latency-control evidence.
 - Checked Rift can be fast when the operator shape is simple
   (`RegionBuffer`, `AppendWindow` cursor).
 - Checked Rift still loses on heavier rank/table/fold containers
   (`TableRank`, long-key stream-window rank, additive fold).
 - NEXMark Beam-default Q3/Q8 are the best current checked stream rows, but
-  they are generated-profile methodology evidence, not Beam runner evidence.
-- Real/preloaded Wikimedia, Common Crawl WET, and official Linear Road rows are
-  ceiling controls so far: heap is usually fastest and timed GC is often zero
-  in the measured section.
+  they are generated-profile methodology evidence, not Beam runner evidence,
+  and the clean Q3 margin is below the `>=10%` case-study gate.
+- Generated Common Crawl WET-shaped tokenization is now the clearest GC-heavy
+  stream detector: heap spends about `1.56 s` in timed GC at 1M generated
+  pages. Rift beats heap and cuts GC, but improved SafeZone is still faster.
+- Real/preloaded Wikimedia, real Common Crawl WET, official Linear Road, Yahoo,
+  RIoTBench, and most generated stream probes are ceiling or near-tie controls:
+  heap or improved SafeZone often wins elapsed time even when Rift lowers GC.
 
 The next report revision should replace this scaffold with clean-sweep rows
 from `cache/perf-eval/<run-id>/` and update the claim language accordingly.
@@ -35,9 +42,11 @@ Latest harness validation:
 | `2026-05-01-smoke-streams` | smoke | `preflight streams` | Passed; 7 stream summary TSVs produced | Harness validation only |
 | `2026-05-01-headline-core-prior-checked` | headline | `preflight core prior checked` | Passed; tracked summary in `evidence/HEADLINE_CORE_PRIOR_CHECKED_2026_05_01.md` | Current clean headline subset |
 | `2026-05-01-headline-core-prior-checked-rerun` | headline | `preflight core prior checked` | Passed; tracked summary in `evidence/HEADLINE_CORE_PRIOR_CHECKED_RERUN_2026_05_01.md` | Current rerun evidence |
+| `2026-05-01-headline-streams` | headline | `preflight streams` | Passed; tracked summary in `evidence/HEADLINE_STREAMS_2026_05_01.md` | Current stream headline leg |
+| `2026-05-01-headline-debs-1m` | headline | `preflight debs` | Passed on `/tmp/debs2015-month1-1000000.csv`; tracked summary in `evidence/HEADLINE_DEBS_1M_2026_05_01.md` | Bounded DEBS 1M single-run leg |
 
-This smoke run validated the evaluation runner and the current stream-matrix
-result extraction. It should not be used as headline performance evidence.
+The smoke run validates harness wiring only. The headline rows above are the
+current evidence for their respective suites.
 
 ## Experimental Method
 
@@ -100,11 +109,18 @@ current clean environment.
 ### Stream/Application Benchmarks
 
 DEBS full-month checked is currently a near-tie with memory-pressure
-improvement, not a large speedup. NEXMark Beam-default Q3/Q8 are the best
-checked stream rows. Yahoo Q2 and RIoTBench q1 are useful profile controls but
-do not beat improved SafeZone strongly enough. Real Wikimedia/Common
-Crawl/Linear Road rows are parked as ceiling controls unless future operators
-change their allocation shape.
+improvement, not a large speedup. The clean bounded 1M DEBS single-run leg has
+trusted Streaming at `4681.292 ms` versus heap `4987.579 ms`; checked is
+`4882.562 ms`. The best checked stream row in the clean stream leg is NEXMark
+Beam-default Q3: checked `295.166 ms`, heap `315.715 ms`, improved SafeZone
+`302.668 ms`. Q8 is a checked near-tie with improved SafeZone (`457.518 ms`
+versus `457.725 ms`). Generated Common Crawl WET-shaped Q1 tokenization is
+the clearest GC-heavy detector: heap `4770.503 ms` with `1559.601 ms` GC,
+HPZone `4301.536 ms` with `20.543 ms` GC, but improved SafeZone wins elapsed
+at `4066.435 ms`. Yahoo, RIoTBench, generated Wikimedia, generated Linear
+Road, real Wikimedia/Common Crawl/Linear Road, and NEXMark Q11 are controls
+where heap or improved SafeZone wins or the gap is too small for a case-study
+claim.
 
 ## Acceptance Criteria For Claims
 
@@ -134,17 +150,17 @@ or ceiling results.
 - Improved SafeZone is a moving and strong baseline; beating old SafeZone is
   not sufficient.
 
-## Pending Clean-Sweep Sections
+## Remaining Report Work
 
-Fill these after running the runbook:
+The core/prior/checked, stream, and bounded DEBS 1M legs have now run. The
+remaining report work is:
 
-1. Environment table.
-2. Core runtime baseline tables.
-3. Prior-work methodology tables.
-4. Checked-operator gate table.
-5. Existing stream/application table.
-6. New candidate benchmark table.
-7. Final win-envelope and next API plan.
+1. Convert the current tracked summaries into final thesis tables.
+2. Decide whether to run a full-month DEBS rerun under the same quiet-machine
+   discipline.
+3. Add only targeted follow-up benchmarks for repeated winning shapes.
+4. Finalize the win-envelope and next API plan around cheaper checked
+   operators, not benchmark-specific rewrites.
 
 Use `evidence/EVALUATION_SUMMARY_TABLES.md` for compact tables and the
 individual result packs for detailed command provenance.

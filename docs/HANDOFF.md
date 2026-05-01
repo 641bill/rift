@@ -99,6 +99,37 @@ loses, linked ListOfLists HPZone still loses to improved SafeZone while beating
 heap, Dataflow checked still loses to improved SafeZone, and AppendWindow
 manual/prepend-cursor remain the clearest checked wins.
 
+The missing headline stream and bounded DEBS legs have now also run:
+
+```sh
+cd /Users/siyaoliu/rift
+RIFT_EVAL_RUN_ID=2026-05-01-headline-streams \
+RIFT_EVAL_SCALE=headline \
+RIFT_EVAL_SUITES="preflight streams" \
+bash scripts/run-performance-evaluation.sh
+
+DEBS2015_BOTH_INPUT=/tmp/debs2015-month1-1000000.csv \
+RIFT_EVAL_RUN_ID=2026-05-01-headline-debs-1m \
+RIFT_EVAL_SCALE=headline \
+RIFT_EVAL_SUITES="preflight debs" \
+bash scripts/run-performance-evaluation.sh
+```
+
+Tracked summaries:
+`evidence/HEADLINE_STREAMS_2026_05_01.md` and
+`evidence/HEADLINE_DEBS_1M_2026_05_01.md`. The stream leg passed all matrix
+checksums/output-count checks. The DEBS leg completed both normal and
+instrumented RunBoth scripts and reported output equality. The strongest new
+stream finding is not a clean Rift case-study win: generated Common Crawl
+WET-shaped Q1 tokenization is genuinely GC-heavy (`1559.601 ms` heap GC at 1M
+generated pages), and Rift beats heap while cutting GC to about `20.5 ms`, but
+improved SafeZone is still faster. The best checked stream row remains
+NEXMark Beam-default Q3: checked `295.166 ms` versus heap `315.715 ms` and
+improved SafeZone `302.668 ms`, below the `>=10%` case-study gate. The
+bounded DEBS 1M single run has trusted Streaming `4681.292 ms`, heap
+`4987.579 ms`, and checked `4882.562 ms`; use it as bounded correctness/control
+evidence, not as a median or full-month replacement.
+
 Files added or changed:
 
 - `scala-native-rift/sandbox/run_nexmark_region_matrix.sh`
@@ -132,6 +163,8 @@ Files added or changed:
 - `evidence/ALL_PHASE_RESULTS.md`
 - `evidence/PERF_EVAL_RUNBOOK.md`
 - `evidence/EVALUATION_SUMMARY_TABLES.md`
+- `evidence/HEADLINE_STREAMS_2026_05_01.md`
+- `evidence/HEADLINE_DEBS_1M_2026_05_01.md`
 - `docs/PERFORMANCE_EVALUATION_REPORT.md`
 - `docs/ROADMAP.md`
 - `scripts/sync-evidence.sh`
@@ -143,10 +176,9 @@ Validation for this checkpoint:
 - The same compile was rerun before committing the stream-GC benchmark probes.
   It passed on `/Users/siyaoliu/rift/scala-native-rift` at commit
   `b74658903584f30474f6ce0c1fec21164b95dbab`.
-- The comprehensive evaluation package has not run a full headline sweep yet.
-  Its runner defaults to `RIFT_EVAL_SUITES=preflight`; the stream smoke suite
-  passed, but the core/prior/checked/DEBS headline sweep still needs to be run
-  explicitly.
+- The comprehensive evaluation runner has now completed clean headline legs for
+  `core prior checked`, `streams`, and bounded 1M `debs`. The full-month DEBS
+  control has not been rerun under this exact sweep discipline.
 - NEXMark corrected SafeZone 100k follow-up matched checksum/output count for
   Q1/Q5/Q8 across `heap`, `safezone-current`, `safezone-improved`,
   `rift-checked`, `rift-hp`, and `rift-streaming`.

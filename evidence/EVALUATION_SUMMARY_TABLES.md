@@ -15,6 +15,12 @@ Run id: `2026-05-01-headline-core-prior-checked`
 Superseding rerun: `evidence/HEADLINE_CORE_PRIOR_CHECKED_RERUN_2026_05_01.md`
 with run id `2026-05-01-headline-core-prior-checked-rerun`.
 
+Stream headline leg: `evidence/HEADLINE_STREAMS_2026_05_01.md`, run id
+`2026-05-01-headline-streams`.
+
+DEBS bounded 1M leg: `evidence/HEADLINE_DEBS_1M_2026_05_01.md`, run id
+`2026-05-01-headline-debs-1m`.
+
 | Area | Main result | Interpretation |
 |---|---|---|
 | GCBench | heap `221.514 ms`, improved SafeZone `211.699 ms`, HPZone `245.217 ms` | Older HPZone GCBench win did not reproduce in this clean subset. |
@@ -33,6 +39,14 @@ The rerun removed the obvious linked ListOfLists heap outlier but preserved the
 main rankings: improved SafeZone remains the strongest baseline for GCBench,
 linked/chunked ListOfLists, Dataflow, Yak, and Stancu rows; Rift remains clearly
 useful on flat ListOfLists, manual AppendWindow, and prepend cursor.
+
+The stream leg adds one genuinely GC-heavy detector row: generated Common Crawl
+WET-shaped tokenization spends `1559.601 ms` in heap GC at 1M generated pages.
+Rift cuts GC and beats heap there, but improved SafeZone remains faster. The
+best checked stream row is NEXMark Beam-default Q3: checked Rift `295.166 ms`
+versus heap `315.715 ms` and improved SafeZone `302.668 ms`. The DEBS bounded
+1M leg is a single-run correctness/control row: trusted Streaming is
+`4681.292 ms` versus heap `4987.579 ms`, while checked is `4882.562 ms`.
 
 ## Classification Legend
 
@@ -84,13 +98,16 @@ useful on flat ListOfLists, manual AppendWindow, and prepend cursor.
 | Benchmark | Scale | Best Rift / checked row | Heap | Improved SafeZone | Classification | Rerun status |
 |---|---:|---:|---:|---:|---|---|
 | DEBS RunBoth checked | full month, 3-run median | checked `66.804 s` | `67.122 s` | full-month pending | Near-tie, memory validation | Rerun only after clean sweep setup |
-| NEXMark Beam Q0 | 1M generated-profile | HPZone `467.895 ms` | `548.184 ms` | `482.774 ms` | Trusted stream-object win | Pending clean sweep rerun |
-| NEXMark Beam Q1 | 1M generated-profile | HPZone `538.451 ms`, checked `557.251 ms` | `579.038 ms` | `561.787 ms` | Promising stream-map row | Pending clean sweep rerun |
-| NEXMark Beam Q3 | 1M generated-profile | checked `287.169 ms` | `304.190 ms` | `293.586 ms` | Best checked stream row | Pending clean sweep rerun |
-| NEXMark Beam Q8 | 1M generated-profile | checked `315.545 ms` | `331.599 ms` | `326.569 ms` | Modest checked join/window win | Pending clean sweep rerun |
-| NEXMark Beam Q11 | 1M generated-profile | HPZone `226.862 ms` | `255.418 ms` | `237.400 ms` | Trusted session-window win | Pending clean sweep rerun |
-| Yahoo Q2 | 1M generated/preloaded | HPZone `105.216 ms` | `104.512 ms` | `108.173 ms` | Cuts GC but heap elapsed wins | Keep as control |
-| RIoTBench q1 | 100k generated | HPZone `14.516 ms`, Streaming `14.445 ms` | `16.643 ms` | `13.980 ms` | Heap pressure, SafeZone stronger | Needs real input |
+| DEBS RunBoth bounded 1M | single run | Streaming `4681.292 ms`, checked `4882.562 ms` | `4987.579 ms` | not run in this leg | Trusted win, checked modest win, correctness control | Current bounded single-run |
+| NEXMark Beam Q0 | 1M generated-profile | Streaming `475.161 ms`, checked `481.436 ms` | `521.508 ms` | `478.500 ms` | Trusted stream-object win; checked beats heap but not improved SafeZone | Clean stream sweep |
+| NEXMark Beam Q1 | 1M generated-profile | Streaming `919.670 ms`, checked `945.372 ms` | `950.341 ms` | `929.887 ms` | Trusted modest win; checked does not win | Clean stream sweep |
+| NEXMark Beam Q2 | 1M generated-profile | Streaming `563.282 ms`, checked `572.005 ms` | `586.607 ms` | `576.228 ms` | Modest trusted/checked stream row | Clean stream sweep |
+| NEXMark Beam Q3 | 1M generated-profile | checked `295.166 ms` | `315.715 ms` | `302.668 ms` | Best checked stream row, below 10% gate | Clean stream sweep |
+| NEXMark Beam Q8 | 1M generated-profile | checked `457.518 ms` | `470.798 ms` | `457.725 ms` | Checked near-tie with improved SafeZone | Clean stream sweep |
+| NEXMark Beam Q11 | 1M generated-profile | HPZone `228.741 ms` | `218.774 ms` | `229.557 ms` | Heap wins elapsed; region rows reduce GC only | Clean stream sweep |
+| Common Crawl WET-shaped Q1 | 1M generated pages / 137M token records | HPZone `4301.536 ms` | `4770.503 ms` | `4066.435 ms` | GC-heavy detector; Rift beats heap but not improved SafeZone | Clean stream sweep |
+| Yahoo Q2 | 1M generated/preloaded | Streaming `106.415 ms` | `105.802 ms` | `106.425 ms` | Near-tie; cuts GC but heap elapsed wins | Clean stream sweep |
+| RIoTBench q1 | 1M generated | Streaming `148.019 ms` | `135.750 ms` | `147.638 ms` | Heap wins in clean 1M row; earlier 100k positive weakened | Clean stream sweep |
 | Wikimedia real clickstream | 1M events | Streaming `157.449 ms` | `126.800 ms` | `149.062 ms` | Real-input CPU ceiling | Parked control |
 | Common Crawl real WET Q1 | 10k pages | Streaming `15.651 ms` | `12.079 ms` | `16.093 ms` | Real-input CPU ceiling | Parked control |
 | Linear Road official Q1 | 1M events | HPZone `180.277 ms` | `162.668 ms` | recorded in source pack | Real-input CPU ceiling | Parked control |
