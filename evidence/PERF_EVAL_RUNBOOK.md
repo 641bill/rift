@@ -46,6 +46,19 @@ that override only for exploratory rows that will not become headline results.
 | Headline | `RIFT_EVAL_SCALE=headline RIFT_EVAL_SUITES="preflight core prior checked streams debs"` | Main 1M-level thesis sweep. |
 | Full | `RIFT_EVAL_SCALE=full RIFT_EVAL_SUITES="streams"` | Only for candidates that pass the 1M gate. |
 
+Latest smoke validation:
+
+```sh
+RIFT_EVAL_RUN_ID=2026-05-01-smoke-streams \
+RIFT_EVAL_SCALE=smoke \
+RIFT_EVAL_SUITES="preflight streams" \
+bash scripts/run-performance-evaluation.sh
+```
+
+This completed and produced stream summary files under
+`cache/perf-eval/2026-05-01-smoke-streams/`. Use it only as harness
+validation, not performance evidence.
+
 Example:
 
 ```sh

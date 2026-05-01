@@ -28,6 +28,15 @@ beat GC":
 The next report revision should replace this scaffold with clean-sweep rows
 from `cache/perf-eval/<run-id>/` and update the claim language accordingly.
 
+Latest harness validation:
+
+| Run id | Scale | Suites | Result | Evidence status |
+|---|---|---|---|---|
+| `2026-05-01-smoke-streams` | smoke | `preflight streams` | Passed; 7 stream summary TSVs produced | Harness validation only |
+
+This smoke run validated the evaluation runner and the current stream-matrix
+result extraction. It should not be used as headline performance evidence.
+
 ## Experimental Method
 
 Baseline modes:

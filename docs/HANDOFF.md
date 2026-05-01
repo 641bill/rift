@@ -45,6 +45,24 @@ run discipline and gates, `evidence/EVALUATION_SUMMARY_TABLES.md` seeds compact
 tables from current evidence, and `docs/PERFORMANCE_EVALUATION_REPORT.md`
 provides the report scaffold for a clean thesis-grade rerun.
 
+Latest execution checkpoint:
+
+```sh
+cd /Users/siyaoliu/rift
+RIFT_EVAL_RUN_ID=2026-05-01-smoke-streams \
+RIFT_EVAL_SCALE=smoke \
+RIFT_EVAL_SUITES="preflight streams" \
+bash scripts/run-performance-evaluation.sh
+```
+
+This passed. It compiled the sandbox and ran the smoke stream suite for
+NEXMark local, NEXMark Beam-default profile, Yahoo-style ad stream,
+RIoTBench-style IoT, Wikimedia, Common Crawl WET-shaped, and Linear Road-shaped
+matrices. The run wrote ignored raw logs and summaries under
+`cache/perf-eval/2026-05-01-smoke-streams/`. Checksums/output counts matched
+within each query/matrix. Treat this as harness validation only; it is not
+headline performance evidence.
+
 Files added or changed:
 
 - `scala-native-rift/sandbox/run_nexmark_region_matrix.sh`
@@ -90,8 +108,9 @@ Validation for this checkpoint:
   It passed on `/Users/siyaoliu/rift/scala-native-rift` at commit
   `b74658903584f30474f6ce0c1fec21164b95dbab`.
 - The comprehensive evaluation package has not run a full headline sweep yet.
-  Its runner defaults to `RIFT_EVAL_SUITES=preflight` so a full sweep must be
-  requested explicitly.
+  Its runner defaults to `RIFT_EVAL_SUITES=preflight`; the stream smoke suite
+  passed, but the core/prior/checked/DEBS headline sweep still needs to be run
+  explicitly.
 - NEXMark corrected SafeZone 100k follow-up matched checksum/output count for
   Q1/Q5/Q8 across `heap`, `safezone-current`, `safezone-improved`,
   `rift-checked`, `rift-hp`, and `rift-streaming`.
