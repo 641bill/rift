@@ -71,6 +71,12 @@ bash scripts/run-performance-evaluation.sh
 This completed and is summarized in
 `evidence/HEADLINE_CORE_PRIOR_CHECKED_2026_05_01.md`.
 
+It was rerun with the same suites as
+`2026-05-01-headline-core-prior-checked-rerun` and summarized in
+`evidence/HEADLINE_CORE_PRIOR_CHECKED_RERUN_2026_05_01.md`. Prefer the rerun
+for current core/prior/checked interpretation because it removed the obvious
+linked ListOfLists heap outlier.
+
 Do not routinely run all expensive pathological controls in one monolithic
 job. The current-SafeZone linked/topology ListOfLists rows are valid but
 dominated wall-clock time. Prefer separate jobs for:

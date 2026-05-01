@@ -52,6 +52,7 @@ For performance numbers, use the following rule of thumb:
 
 | Area | Source |
 |---|---|
+| 2026-05-01 clean core/prior/checked rerun | `evidence/HEADLINE_CORE_PRIOR_CHECKED_RERUN_2026_05_01.md` |
 | 2026-05-01 clean core/prior/checked headline subset | `evidence/HEADLINE_CORE_PRIOR_CHECKED_2026_05_01.md` |
 | Phase 0 baselines | `evidence/PHASE0_BASELINES.md` |
 | Phase 1 bootstrap allocator | `/Users/siyaoliu/rift/rift-bootstrap/bench/microbench/results.md` |

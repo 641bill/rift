@@ -81,6 +81,24 @@ subset is manual AppendWindow (`33.754 ms` vs heap `38.671 ms`), with
 prepend-cursor also winning its fair heap-prepend control. Treat older
 core/prior/checked positives as provenance until revalidated or explained.
 
+The same subset was rerun after the user reduced visible background work:
+
+```sh
+cd /Users/siyaoliu/rift
+RIFT_EVAL_RUN_ID=2026-05-01-headline-core-prior-checked-rerun \
+RIFT_EVAL_SCALE=headline \
+RIFT_EVAL_SUITES="preflight core prior checked" \
+bash scripts/run-performance-evaluation.sh
+```
+
+Tracked summary:
+`evidence/HEADLINE_CORE_PRIOR_CHECKED_RERUN_2026_05_01.md`. The rerun removed
+the obvious linked ListOfLists heap outlier from the first run, but it did not
+restore the older positive runtime/methodology claims. GCBench HPZone still
+loses, linked ListOfLists HPZone still loses to improved SafeZone while beating
+heap, Dataflow checked still loses to improved SafeZone, and AppendWindow
+manual/prepend-cursor remain the clearest checked wins.
+
 Files added or changed:
 
 - `scala-native-rift/sandbox/run_nexmark_region_matrix.sh`

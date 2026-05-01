@@ -12,6 +12,9 @@ Source: `evidence/HEADLINE_CORE_PRIOR_CHECKED_2026_05_01.md`
 
 Run id: `2026-05-01-headline-core-prior-checked`
 
+Superseding rerun: `evidence/HEADLINE_CORE_PRIOR_CHECKED_RERUN_2026_05_01.md`
+with run id `2026-05-01-headline-core-prior-checked-rerun`.
+
 | Area | Main result | Interpretation |
 |---|---|---|
 | GCBench | heap `221.514 ms`, improved SafeZone `211.699 ms`, HPZone `245.217 ms` | Older HPZone GCBench win did not reproduce in this clean subset. |
@@ -25,6 +28,11 @@ Run id: `2026-05-01-headline-core-prior-checked`
 The older seeded tables below are retained for provenance and comparison, but
 this clean subset should be treated as the current headline evidence for
 `core`, `prior`, and `checked` until another clean sweep supersedes it.
+
+The rerun removed the obvious linked ListOfLists heap outlier but preserved the
+main rankings: improved SafeZone remains the strongest baseline for GCBench,
+linked/chunked ListOfLists, Dataflow, Yak, and Stancu rows; Rift remains clearly
+useful on flat ListOfLists, manual AppendWindow, and prepend cursor.
 
 ## Classification Legend
 
