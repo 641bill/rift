@@ -37,13 +37,12 @@ overhead reduction, with NEXMark Q3/Q8, Yahoo Q2, and RIoTBench q1 retained as
 profile/regression rows.
 
 The comprehensive performance-evaluation package is now added in the parent
-repo. It does not claim a new headline sweep has been run. Instead, it makes
-the sweep executable and reportable: `scripts/run-performance-evaluation.sh`
-records environment/SHAs and runs the selected suites into ignored
-`cache/perf-eval/<run-id>/` logs, `evidence/PERF_EVAL_RUNBOOK.md` defines the
-run discipline and gates, `evidence/EVALUATION_SUMMARY_TABLES.md` seeds compact
-tables from current evidence, and `docs/PERFORMANCE_EVALUATION_REPORT.md`
-provides the report scaffold for a clean thesis-grade rerun.
+repo. `scripts/run-performance-evaluation.sh` records environment/SHAs and
+runs the selected suites into ignored `cache/perf-eval/<run-id>/` logs,
+`evidence/PERF_EVAL_RUNBOOK.md` defines the run discipline and gates,
+`evidence/EVALUATION_SUMMARY_TABLES.md` seeds compact tables from current
+evidence, and `docs/PERFORMANCE_EVALUATION_REPORT.md` provides the report
+scaffold. A stream smoke and a first clean headline subset have now run.
 
 Latest execution checkpoint:
 
@@ -62,6 +61,25 @@ matrices. The run wrote ignored raw logs and summaries under
 `cache/perf-eval/2026-05-01-smoke-streams/`. Checksums/output counts matched
 within each query/matrix. Treat this as harness validation only; it is not
 headline performance evidence.
+
+The first headline subset also passed:
+
+```sh
+cd /Users/siyaoliu/rift
+RIFT_EVAL_RUN_ID=2026-05-01-headline-core-prior-checked \
+RIFT_EVAL_SCALE=headline \
+RIFT_EVAL_SUITES="preflight core prior checked" \
+bash scripts/run-performance-evaluation.sh
+```
+
+Tracked summary: `evidence/HEADLINE_CORE_PRIOR_CHECKED_2026_05_01.md`.
+This run materially weakens several older positive rows: GCBench HPZone did
+not beat heap/improved SafeZone, linked ListOfLists HPZone beat heap but lost
+to improved SafeZone, Dataflow checked SELECT/AGGREGATE beat heap but lost to
+improved SafeZone, and JOIN was won by heap. The clearest checked win in this
+subset is manual AppendWindow (`33.754 ms` vs heap `38.671 ms`), with
+prepend-cursor also winning its fair heap-prepend control. Treat older
+core/prior/checked positives as provenance until revalidated or explained.
 
 Files added or changed:
 

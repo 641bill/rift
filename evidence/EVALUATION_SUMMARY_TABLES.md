@@ -6,6 +6,26 @@ Status: seeded summary pack for the comprehensive evaluation. Rows below are
 current checked-in evidence before the next clean headline sweep unless marked
 pending rerun.
 
+## Clean Headline Subset: 2026-05-01
+
+Source: `evidence/HEADLINE_CORE_PRIOR_CHECKED_2026_05_01.md`
+
+Run id: `2026-05-01-headline-core-prior-checked`
+
+| Area | Main result | Interpretation |
+|---|---|---|
+| GCBench | heap `221.514 ms`, improved SafeZone `211.699 ms`, HPZone `245.217 ms` | Older HPZone GCBench win did not reproduce in this clean subset. |
+| ListOfLists linked | heap `15842.502 ms`, improved SafeZone `10046.087 ms`, HPZone `12579.297 ms` | Rift beats heap but not improved SafeZone; current SafeZone remains pathological at `137223.310 ms`. |
+| ListOfLists flat | heap `1770.286 ms`, HPZone `1571.557 ms` | Rift still wins on flat layout. |
+| Dataflow checked | checked SELECT/AGGREGATE beat heap, but improved SafeZone is faster; JOIN heap wins | Local Broom-style evidence is weaker in this clean subset. |
+| StreamFlex | region modes remove deadline misses, but SafeZone/heap win elapsed | Keep as latency-control evidence, not throughput win. |
+| Yak/Stancu | improved SafeZone wins most rows; dynamic Yak-style proxy remains negative | Rift-vs-heap wins are not enough for final claims. |
+| Checked operators | manual AppendWindow wins; prepend cursor wins its fair control; RegionBuffer/cursor/fold/rank do not clear speed gates | Focus on cheaper checked operator implementations before application claims. |
+
+The older seeded tables below are retained for provenance and comparison, but
+this clean subset should be treated as the current headline evidence for
+`core`, `prior`, and `checked` until another clean sweep supersedes it.
+
 ## Classification Legend
 
 | Label | Meaning |

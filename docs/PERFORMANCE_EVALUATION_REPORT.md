@@ -33,6 +33,7 @@ Latest harness validation:
 | Run id | Scale | Suites | Result | Evidence status |
 |---|---|---|---|---|
 | `2026-05-01-smoke-streams` | smoke | `preflight streams` | Passed; 7 stream summary TSVs produced | Harness validation only |
+| `2026-05-01-headline-core-prior-checked` | headline | `preflight core prior checked` | Passed; tracked summary in `evidence/HEADLINE_CORE_PRIOR_CHECKED_2026_05_01.md` | Current clean headline subset |
 
 This smoke run validated the evaluation runner and the current stream-matrix
 result extraction. It should not be used as headline performance evidence.
@@ -66,25 +67,33 @@ Headline measurements should use:
 ### Runtime And Topology
 
 GCBench and linked ListOfLists remain the strongest runtime/topology baseline
-rows. Current medians are HPZone `161.641 ms` vs heap `203.514 ms` for
-GCBench, and HPZone `6951.331 ms` vs heap `15085.511 ms` for linked
-ListOfLists. These should be rerun in the clean sweep with improved SafeZone
-and current SafeZone retained.
+rows historically, but the clean 2026-05-01 headline subset weakens the Rift
+runtime claim. In that run, GCBench is heap `221.514 ms`, improved SafeZone
+`211.699 ms`, and HPZone `245.217 ms`. Linked ListOfLists is heap
+`15842.502 ms`, improved SafeZone `10046.087 ms`, and HPZone `12579.297 ms`.
+Rift still wins flat ListOfLists (`1571.557 ms` versus heap `1770.286 ms`),
+but it does not currently beat improved SafeZone on the linked headline row.
 
 ### Prior-Work Methodology
 
 The current Broom-style Dataflow checked rows are strong: SELECT `18.865 ms`
 vs heap `36.868 ms`, AGGREGATE `36.003 ms` vs heap `51.474 ms`, and JOIN
-`18.736 ms` vs heap `32.170 ms`. StreamFlex-style pressure and Yak
-top-word/filter also show useful Rift wins. These are local methodology
-reproductions, not exact artifact reproductions.
+`18.736 ms` vs heap `32.170 ms` in older evidence. The clean 2026-05-01
+headline subset is weaker: checked SELECT/AGGREGATE beat heap but lose to
+improved SafeZone, and JOIN is won by heap. StreamFlex keeps a latency story
+because region modes remove deadline misses, but they do not win elapsed time
+in the clean subset. These are local methodology reproductions, not exact
+artifact reproductions.
 
 ### Checked Operators
 
 Checked `RegionBuffer` and `AppendWindow` cursor are positive API evidence.
 `TableRank`, long-key stream-window rank, and additive `StreamWindowFold` are
-negative or gated results. This distinction matters: application benchmarks
-should only use checked operators that passed focused gates.
+negative or gated results. The clean 2026-05-01 subset narrows the positive
+checked story further: manual AppendWindow still wins, prepend cursor wins its
+fair heap-prepend control, but RegionBuffer and append cursor do not win
+elapsed time. Application benchmarks should only use checked operators that
+pass focused gates in the current clean environment.
 
 ### Stream/Application Benchmarks
 

@@ -59,6 +59,27 @@ This completed and produced stream summary files under
 `cache/perf-eval/2026-05-01-smoke-streams/`. Use it only as harness
 validation, not performance evidence.
 
+Latest headline subset:
+
+```sh
+RIFT_EVAL_RUN_ID=2026-05-01-headline-core-prior-checked \
+RIFT_EVAL_SCALE=headline \
+RIFT_EVAL_SUITES="preflight core prior checked" \
+bash scripts/run-performance-evaluation.sh
+```
+
+This completed and is summarized in
+`evidence/HEADLINE_CORE_PRIOR_CHECKED_2026_05_01.md`.
+
+Do not routinely run all expensive pathological controls in one monolithic
+job. The current-SafeZone linked/topology ListOfLists rows are valid but
+dominated wall-clock time. Prefer separate jobs for:
+
+- `core` with full pathological controls;
+- `prior checked` for methodology and checked API gates;
+- `streams`;
+- `debs`.
+
 Example:
 
 ```sh
