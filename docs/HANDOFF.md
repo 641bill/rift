@@ -44,6 +44,15 @@ runs the selected suites into ignored `cache/perf-eval/<run-id>/` logs,
 evidence, and `docs/PERFORMANCE_EVALUATION_REPORT.md` provides the report
 scaffold. A stream smoke and a first clean headline subset have now run.
 
+UnsafeZone-HP has now been implemented as a benchmark-only substrate control.
+SafeZone root mode `3` disables page/chunk root add/remove, and benchmark
+label `unsafezone-hp` maps to binary mode `safezone` with
+`SAFEZONE_ROOTS_MODE=3 SAFEZONE_PAGE_SIZE=32768`. There is intentionally no
+`unsafezone-streaming` mode yet because SafeZone close/reclaim is not Rift
+Streaming reset. Existing root modes `0`, `1`, and `2` are unchanged. This is
+unsafe by design and should not be treated as a user-facing API or safety
+claim. Tracked evidence: `evidence/UNSAFEZONE_HP_BASELINE_MATRIX.md`.
+
 Latest execution checkpoint:
 
 ```sh
@@ -130,6 +139,31 @@ bounded DEBS 1M single run has trusted Streaming `4681.292 ms`, heap
 `4987.579 ms`, and checked `4882.562 ms`; use it as bounded correctness/control
 evidence, not as a median or full-month replacement.
 
+UnsafeZone-HP validation checkpoint:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile
+GCBENCH_BENCHMARK_RUNS=1 zsh sandbox/run_gcbench_runtime_matrix.sh
+NEXMARK_EVENTS=20000 \
+NEXMARK_BENCHMARK_RUNS=1 \
+NEXMARK_QUERIES=q3 \
+NEXMARK_MODES="heap safezone-current safezone-improved unsafezone-hp rift-hp" \
+NEXMARK_OUTPUT_DIR=/tmp/nexmark-unsafezone-smoke \
+zsh sandbox/run_nexmark_region_matrix.sh
+DEBS2015_BOTH_MODES="heap safezone-current safezone-improved unsafezone-hp rift-hp" \
+DEBS2015_BOTH_OUTPUT_DIR=/tmp/debs2015-unsafezone-sample \
+zsh bench/debs2015/run_both_sample_matrix.sh
+```
+
+These passed. GCBench confirmed root mode `3` plus 32 KiB pages and produced a
+single-run smoke row: unsafezone-hp `250.579 ms` versus heap `267.363 ms`,
+improved SafeZone `263.200 ms`, and Rift HPZone `291.065 ms`. NEXMark Q3 20k
+matched checksum/output count across all tested modes and recorded
+unsafezone-hp `5.659 ms`. DEBS RunBoth sample matched heap output for Q1 and
+Q2 after stripping latency. These are smoke rows only; run headline medians
+before using UnsafeZone-HP for claims.
+
 Files added or changed:
 
 - `scala-native-rift/sandbox/run_nexmark_region_matrix.sh`
@@ -151,6 +185,10 @@ Files added or changed:
 - `scala-native-rift/sandbox/STREAM_GC_BENCHMARK_CANDIDATES.md`
 - `scala-native-rift/sandbox/STREAM_BENCHMARK_LADDER.md`
 - `scala-native-rift/sandbox/SN_WIN_ENVELOPE.md`
+- `scala-native-rift/sandbox/UNSAFEZONE_HP_BASELINE_MATRIX.md`
+- `scala-native-rift/nativelib/src/main/resources/scala-native/zone/MemoryPool.c`
+- `scala-native-rift/nativelib/src/main/resources/scala-native/zone/MemoryPool.h`
+- `scala-native-rift/nativelib/src/main/resources/scala-native/zone/LargeMemoryPool.c`
 - `evidence/YAHOO_AD_REGION_MATRIX.md`
 - `evidence/RIOTBENCH_REGION_MATRIX.md`
 - `evidence/STREAM_GC_BENCHMARK_CANDIDATES.md`
@@ -161,6 +199,7 @@ Files added or changed:
 - `evidence/STREAM_BENCHMARK_LADDER.md`
 - `evidence/SN_WIN_ENVELOPE.md`
 - `evidence/ALL_PHASE_RESULTS.md`
+- `evidence/UNSAFEZONE_HP_BASELINE_MATRIX.md`
 - `evidence/PERF_EVAL_RUNBOOK.md`
 - `evidence/EVALUATION_SUMMARY_TABLES.md`
 - `evidence/HEADLINE_STREAMS_2026_05_01.md`

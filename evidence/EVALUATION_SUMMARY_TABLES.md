@@ -21,6 +21,11 @@ Stream headline leg: `evidence/HEADLINE_STREAMS_2026_05_01.md`, run id
 DEBS bounded 1M leg: `evidence/HEADLINE_DEBS_1M_2026_05_01.md`, run id
 `2026-05-01-headline-debs-1m`.
 
+UnsafeZone-HP baseline checkpoint:
+`evidence/UNSAFEZONE_HP_BASELINE_MATRIX.md`. This is currently smoke evidence
+only. It adds `SAFEZONE_ROOTS_MODE=3 SAFEZONE_PAGE_SIZE=32768` as a
+benchmark-only SafeZone no-root baseline; no headline medians exist yet.
+
 | Area | Main result | Interpretation |
 |---|---|---|
 | GCBench | heap `221.514 ms`, improved SafeZone `211.699 ms`, HPZone `245.217 ms` | Older HPZone GCBench win did not reproduce in this clean subset. |
@@ -30,6 +35,7 @@ DEBS bounded 1M leg: `evidence/HEADLINE_DEBS_1M_2026_05_01.md`, run id
 | StreamFlex | region modes remove deadline misses, but SafeZone/heap win elapsed | Keep as latency-control evidence, not throughput win. |
 | Yak/Stancu | improved SafeZone wins most rows; dynamic Yak-style proxy remains negative | Rift-vs-heap wins are not enough for final claims. |
 | Checked operators | manual AppendWindow wins; prepend cursor wins its fair control; RegionBuffer/cursor/fold/rank do not clear speed gates | Focus on cheaper checked operator implementations before application claims. |
+| UnsafeZone-HP | GCBench 1-run smoke: unsafezone-hp `250.579 ms`; NEXMark Q3 20k smoke matched output and ran `5.659 ms` | Mode wiring works and root mode `3` is accepted; use only as a substrate-comparison smoke until headline medians are run. |
 
 The older seeded tables below are retained for provenance and comparison, but
 this clean subset should be treated as the current headline evidence for
@@ -53,6 +59,7 @@ versus heap `315.715 ms` and improved SafeZone `302.668 ms`. The DEBS bounded
 | Label | Meaning |
 |---|---|
 | Runtime allocator win | Rift improves allocation/reclaim without changing topology. |
+| Unsafe substrate control | SafeZone allocator/pool mechanics with GC roots disabled; useful for diagnosis, not a safe user-facing mode. |
 | Layout/topology win | Object graph shape or layout is the main effect. |
 | Region-friendly operator win | Stream/dataflow data has structured lifetime and region placement wins. |
 | Checked operator win | Checked API beats or nearly matches heap with lower GC/RSS. |

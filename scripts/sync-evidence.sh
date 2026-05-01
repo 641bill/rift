@@ -32,6 +32,7 @@ cp -f "$FORK/sandbox/YAHOO_AD_REGION_MATRIX.md" "$DEST/" 2>/dev/null || true
 cp -f "$FORK/sandbox/RIOTBENCH_REGION_MATRIX.md" "$DEST/" 2>/dev/null || true
 cp -f "$FORK/sandbox/STREAM_BENCHMARK_LADDER.md" "$DEST/" 2>/dev/null || true
 cp -f "$FORK/sandbox/STREAM_GC_BENCHMARK_CANDIDATES.md" "$DEST/" 2>/dev/null || true
+cp -f "$FORK/sandbox/UNSAFEZONE_HP_BASELINE_MATRIX.md" "$DEST/" 2>/dev/null || true
 cp -f "$FORK/sandbox/SN_WIN_ENVELOPE.md" "$DEST/" 2>/dev/null || true
 
 cp -f "$FORK/bench/debs2015/RESULTS.md" "$DEST/DEBS_RESULTS.md" 2>/dev/null || true

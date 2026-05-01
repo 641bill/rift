@@ -10,6 +10,12 @@ Latest clean-sweep update: `evidence/HEADLINE_STREAMS_2026_05_01.md` and
 `evidence/HEADLINE_DEBS_1M_2026_05_01.md` supersede older generated stream
 profile rows where they overlap.
 
+UnsafeZone-HP checkpoint: `evidence/UNSAFEZONE_HP_BASELINE_MATRIX.md` adds a
+benchmark-only SafeZone no-root control (`SAFEZONE_ROOTS_MODE=3`,
+`SAFEZONE_PAGE_SIZE=32768`). Current evidence is smoke-only. Use it to decide
+whether SafeZone internals are a better runtime substrate after root
+bookkeeping is removed; do not treat it as a safe user-facing mode.
+
 ## Purpose
 
 The next useful Scala Native question is not "can one more TableRank patch make
@@ -45,6 +51,7 @@ live window payload still dominate.
 | Benchmark / result pack | Main scale | Best current Rift row | Heap / Immix row | Classification | Evidence status |
 |---|---:|---:|---:|---|---|
 | GCBench | 5-run median | HPZone `161.641 ms` | heap `203.514 ms` | Runtime allocator win | Validated local baseline |
+| UnsafeZone-HP GCBench smoke | 1-run smoke | unsafezone-hp `250.579 ms` | heap `267.363 ms`; improved SafeZone `263.200 ms`; Rift HPZone `291.065 ms` | Unsafe substrate control | Provisional smoke only |
 | ListOfLists linked | 5-run median | HPZone `6951.331 ms` | heap `15085.511 ms` | Runtime + topology win | Validated local baseline |
 | ListOfLists flat | 3-run layout median | HPZone `1515.091 ms` | heap `1766.295 ms` | Layout/topology win | Validated enough for Phase 4 |
 | Pipeline surrogate | 5-run median | HPZone `5.089 ms` | heap `4.924 ms` | CPU-bound/no GC ceiling | Surrogate, not tracked-source evidence |

@@ -56,6 +56,7 @@ For performance numbers, use the following rule of thumb:
 | 2026-05-01 clean core/prior/checked headline subset | `evidence/HEADLINE_CORE_PRIOR_CHECKED_2026_05_01.md` |
 | 2026-05-01 headline stream sweep | `evidence/HEADLINE_STREAMS_2026_05_01.md` |
 | 2026-05-01 bounded DEBS 1M sweep | `evidence/HEADLINE_DEBS_1M_2026_05_01.md` |
+| UnsafeZone-HP baseline smoke | `evidence/UNSAFEZONE_HP_BASELINE_MATRIX.md` |
 | Phase 0 baselines | `evidence/PHASE0_BASELINES.md` |
 | Phase 1 bootstrap allocator | `/Users/siyaoliu/rift/rift-bootstrap/bench/microbench/results.md` |
 | Phase 4 layout | `evidence/PHASE4_LAYOUT.md` |
@@ -109,6 +110,7 @@ For performance numbers, use the following rule of thumb:
 | Phase 6b: Broom / parallel collections API evidence | Open | Provisional surrogate only | amordo comparison and Rift raw-array surrogate |
 | Phase 7: capture-checked safe API | Started | Compiler-probe, runtime-smoke, focused checked-container benchmark, checked dataflow evidence, and DEBS-shaped checked probes | 96 targeted checked-API compiler probes, checked child-window, child-bucket, stream-bucket-arena, stream-window-rank, window-rank auto-cleanup, entry-cleanup, lexicographic rank-priority, standalone long-key rank, long-key stream-window-rank, fused TableRank, reusable StreamAppendWindow, StreamJoinWindow, and StreamWindowFold runtime probes, `CheckedRegionBufferMatrix`, `CheckedRegionPriorityQueueMatrix`, `CheckedRegionIndexedPriorityQueueMatrix`, `CheckedStreamWindowRankMatrix`, `CheckedAppendWindowMatrix`, `CheckedWindowFoldMatrix`, Dataflow SELECT/AGGREGATE/JOIN `rift-checked`, Q1 checked-output, Q1 checked-processing, Q2 checked-processing, checked RunBoth `rift-checked` medians, plus Phase 4 safety finding |
 | Phase 8: native GC/region integration hardening | Started | Runtime/API smoke evidence, no benchmark data | Explicit `HeapRoot` path, static module/immutable-val path, direct unrooted heap-constructor/alias/field-selection/array-store rejection, owner-token ObjectBuffer/RegionBuffer heap-store rejection, mutable static-var rejection, mutable-head heap-retagging rejection, and explicit `{region}` constructor-field/array reuse |
+| Runtime substrate control: UnsafeZone-HP | Smoke only | Provisional | SafeZone no-root mode `SAFEZONE_ROOTS_MODE=3` with 32 KiB pages, wired through key matrices for future headline comparison |
 | Phase 9: Lean mechanization | Open | No data | None |
 | Phase 10: writing | Not started beyond notes | No data | None |
 
