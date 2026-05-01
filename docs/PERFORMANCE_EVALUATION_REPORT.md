@@ -36,6 +36,9 @@ beat GC":
   linked/prior-work local harnesses, while only slightly improving over
   improved SafeZone. This is strong runtime-substrate evidence, not a safety
   claim.
+- The UnsafeZone-HP stream sweep repeats that pattern: UnsafeZone-HP is often
+  best or near-best among stream rows, but it still mostly edges improved
+  SafeZone by small margins rather than creating a large safe-Rift case study.
 
 The next report revision should replace this scaffold with clean-sweep rows
 from `cache/perf-eval/<run-id>/` and update the claim language accordingly.
@@ -50,6 +53,7 @@ Latest harness validation:
 | `2026-05-01-headline-streams` | headline | `preflight streams` | Passed; tracked summary in `evidence/HEADLINE_STREAMS_2026_05_01.md` | Current stream headline leg |
 | `2026-05-01-headline-debs-1m` | headline | `preflight debs` | Passed on `/tmp/debs2015-month1-1000000.csv`; tracked summary in `evidence/HEADLINE_DEBS_1M_2026_05_01.md` | Bounded DEBS 1M single-run leg |
 | `2026-05-01-unsafezone-core-prior` | headline | `preflight core prior` | Passed; tracked summary in `evidence/HEADLINE_UNSAFEZONE_CORE_PRIOR_2026_05_01.md` | Current UnsafeZone-HP core/prior leg |
+| `2026-05-01-unsafezone-streams` | headline | `preflight streams` | Passed; tracked summary in `evidence/HEADLINE_UNSAFEZONE_STREAMS_2026_05_01.md` | Current UnsafeZone-HP stream leg |
 
 The smoke run validates harness wiring only. The headline rows above are the
 current evidence for their respective suites.
@@ -140,6 +144,18 @@ Road, real Wikimedia/Common Crawl/Linear Road, and NEXMark Q11 are controls
 where heap or improved SafeZone wins or the gap is too small for a case-study
 claim.
 
+The UnsafeZone-HP stream follow-up keeps the same NEXMark direction but
+clarifies the substrate story. On Beam-default q0, unsafezone-hp is
+`468.617 ms` versus heap `520.052 ms` and improved SafeZone `481.133 ms`. On
+q3, checked Rift remains the best row at `292.371 ms` versus unsafezone-hp
+`296.480 ms`, heap `316.626 ms`, and improved SafeZone `297.962 ms`. On q8,
+checked Rift is `450.904 ms` versus unsafezone-hp `460.822 ms` and improved
+SafeZone `462.599 ms`. Common Crawl WET-shaped q1 remains GC-heavy:
+unsafezone-hp is `3971.051 ms`, improved SafeZone `4028.067 ms`, Rift HPZone
+`4322.349 ms`, and heap `4743.205 ms`. The result points toward SafeZone
+internals as a runtime substrate to learn from, not toward shipping unsafe
+no-root zones.
+
 ## Acceptance Criteria For Claims
 
 A benchmark can be a serious Rift case study only if:
@@ -170,8 +186,8 @@ or ceiling results.
 
 ## Remaining Report Work
 
-The core/prior/checked, stream, bounded DEBS 1M, and UnsafeZone-HP core/prior
-legs have now run. The remaining report work is:
+The core/prior/checked, stream, bounded DEBS 1M, UnsafeZone-HP core/prior, and
+UnsafeZone-HP stream legs have now run. The remaining report work is:
 
 1. Convert the current tracked summaries into final thesis tables.
 2. Decide whether to run a full-month DEBS rerun under the same quiet-machine

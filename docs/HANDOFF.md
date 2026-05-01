@@ -79,6 +79,30 @@ passes `STREAMFLEX_OUTPUT_DIR`, `YAK_OUTPUT_DIR`, and `STANCU_OUTPUT_DIR`, so
 future prior-work runs keep their summary TSVs under the run directory instead
 of writing them to `/tmp`.
 
+The first UnsafeZone-HP stream headline sweep has also run and is tracked in
+`evidence/HEADLINE_UNSAFEZONE_STREAMS_2026_05_01.md`:
+
+```sh
+cd /Users/siyaoliu/rift
+RIFT_EVAL_RUN_ID=2026-05-01-unsafezone-streams \
+RIFT_EVAL_SCALE=headline \
+RIFT_EVAL_SUITES="preflight streams" \
+bash scripts/run-performance-evaluation.sh
+```
+
+This completed successfully after rerunning with permission for sbt's
+user-level boot lock. Raw logs and summary TSVs are under
+`cache/perf-eval/2026-05-01-unsafezone-streams/`. The pattern matches the
+core/prior sweep: UnsafeZone-HP is often the best SafeZone-family stream row
+and sometimes best overall, but usually only slightly ahead of improved
+SafeZone. Important rows: NEXMark Beam-default q0 unsafezone-hp `468.617 ms`
+versus heap `520.052 ms` and improved SafeZone `481.133 ms`; NEXMark q3
+checked `292.371 ms` versus unsafezone-hp `296.480 ms`; NEXMark q8 checked
+`450.904 ms` versus unsafezone-hp `460.822 ms`; Common Crawl WET-shaped q1
+unsafezone-hp `3971.051 ms` versus heap `4743.205 ms`, improved SafeZone
+`4028.067 ms`, and Rift HPZone `4322.349 ms`. This strengthens the
+SafeZone-substrate hypothesis, not a user-facing unsafe-region claim.
+
 Latest execution checkpoint:
 
 ```sh
@@ -227,6 +251,7 @@ Files added or changed:
 - `evidence/ALL_PHASE_RESULTS.md`
 - `evidence/UNSAFEZONE_HP_BASELINE_MATRIX.md`
 - `evidence/HEADLINE_UNSAFEZONE_CORE_PRIOR_2026_05_01.md`
+- `evidence/HEADLINE_UNSAFEZONE_STREAMS_2026_05_01.md`
 - `evidence/PERF_EVAL_RUNBOOK.md`
 - `evidence/EVALUATION_SUMMARY_TABLES.md`
 - `evidence/HEADLINE_STREAMS_2026_05_01.md`
@@ -249,6 +274,9 @@ Validation for this checkpoint:
   `preflight core prior` leg with UnsafeZone-HP included. The resulting core
   and prior-work tables are now tracked, and the summary-output routing bug for
   future prior-work runs is fixed.
+- The comprehensive evaluation runner has completed a clean headline
+  `preflight streams` leg with UnsafeZone-HP included. Stream summaries are now
+  self-contained under the run directory and tracked in the parent evidence.
 - NEXMark corrected SafeZone 100k follow-up matched checksum/output count for
   Q1/Q5/Q8 across `heap`, `safezone-current`, `safezone-improved`,
   `rift-checked`, `rift-hp`, and `rift-streaming`.

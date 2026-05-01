@@ -29,6 +29,10 @@ medians with this mode are in
 `SAFEZONE_ROOTS_MODE=3 SAFEZONE_PAGE_SIZE=32768` as a benchmark-only SafeZone
 no-root baseline.
 
+UnsafeZone-HP stream leg:
+`evidence/HEADLINE_UNSAFEZONE_STREAMS_2026_05_01.md`, run id
+`2026-05-01-unsafezone-streams`.
+
 | Area | Main result | Interpretation |
 |---|---|---|
 | GCBench | heap `221.514 ms`, improved SafeZone `211.699 ms`, HPZone `245.217 ms` | Older HPZone GCBench win did not reproduce in this clean subset. |
@@ -39,6 +43,7 @@ no-root baseline.
 | Yak/Stancu | improved SafeZone wins most rows; dynamic Yak-style proxy remains negative | Rift-vs-heap wins are not enough for final claims. |
 | Checked operators | manual AppendWindow wins; prepend cursor wins its fair control; RegionBuffer/cursor/fold/rank do not clear speed gates | Focus on cheaper checked operator implementations before application claims. |
 | UnsafeZone-HP | clean core/prior medians: GCBench `206.636 ms`, linked ListOfLists `9818.653 ms`, Dataflow SELECT `21.957 ms`, Yak topword `58.686 ms`, Stancu `33.335 ms` | SafeZone no-root internals usually beat improved SafeZone slightly and beat current Rift HPZone on linked/prior-work rows; still unsafe/substrate evidence only. |
+| UnsafeZone-HP streams | Beam-default q0 `468.617 ms`, q3 unsafe `296.480 ms` vs checked `292.371 ms`, Common Crawl q1 `3971.051 ms`, Wikimedia q2 `155.768 ms` | UnsafeZone-HP is often the best SafeZone-family stream row, but still mostly only slightly ahead of improved SafeZone; it does not create a large safe Rift case-study win. |
 
 The older seeded tables below are retained for provenance and comparison, but
 this clean subset should be treated as the current headline evidence for
@@ -65,6 +70,13 @@ Yak-shaped rows, and StreamFlex throughput. The improvement over improved
 SafeZone is usually small, which means root mode `1` already captures most of
 the SafeZone fix. Current Rift HPZone still wins flat ListOfLists
 (`1540.958 ms` vs heap `1748.743 ms` and unsafezone-hp `1766.060 ms`).
+
+The UnsafeZone-HP stream leg extends that pattern to stream probes. It is best
+or near-best on NEXMark Beam-default q0/q1/q4, Common Crawl WET-shaped q0/q1,
+Wikimedia generated q0/q1/q2, and Linear Road q2. It still rarely beats
+improved SafeZone by more than a few percent, and current Rift HPZone/Streaming
+lose many of those same rows. The useful conclusion is runtime-substrate
+direction, not a user-facing unsafe-region claim.
 
 ## Classification Legend
 
@@ -131,6 +143,20 @@ the SafeZone fix. Current Rift HPZone still wins flat ListOfLists
 | Wikimedia real clickstream | 1M events | Streaming `157.449 ms` | `126.800 ms` | `149.062 ms` | Real-input CPU ceiling | Parked control |
 | Common Crawl real WET Q1 | 10k pages | Streaming `15.651 ms` | `12.079 ms` | `16.093 ms` | Real-input CPU ceiling | Parked control |
 | Linear Road official Q1 | 1M events | HPZone `180.277 ms` | `162.668 ms` | recorded in source pack | Real-input CPU ceiling | Parked control |
+
+## UnsafeZone-HP Stream Follow-Up
+
+| Benchmark | Query | heap | improved SafeZone | unsafezone-hp | Best Rift | Classification |
+|---|---|---:|---:|---:|---:|---|
+| NEXMark Beam | q0 | 520.052 | 481.133 | 468.617 | HPZone `472.017` | Unsafe substrate stream win |
+| NEXMark Beam | q3 | 316.626 | 297.962 | 296.480 | checked `292.371` | Best checked stream row, below gate |
+| NEXMark Beam | q8 | 467.213 | 462.599 | 460.822 | checked `450.904` | Checked near-case-study row, below gate |
+| NEXMark Beam | q11 | 218.200 | 226.184 | 223.644 | HPZone `226.909` | Heap wins elapsed |
+| Common Crawl WET-shaped | q1 tokenization | 4743.205 | 4028.067 | 3971.051 | HPZone `4322.349` | GC-heavy, Unsafe/SafeZone win |
+| Yahoo-style ad | q2 campaign window | 105.148 | 106.104 | 105.802 | HPZone `106.331` | Heap near-tie/win |
+| RIoTBench-style | q0 parse | 113.022 | 111.307 | 109.020 | HPZone `111.418` | Unsafe modest win |
+| Wikimedia generated | q2 clickstream | 160.500 | 159.147 | 155.768 | Streaming `162.253` | Unsafe wins; current Rift loses |
+| Linear Road generated | q2 accidents | 206.491 | 205.889 | 201.977 | HPZone `209.727` | Unsafe modest win; current Rift loses |
 
 ## New Candidate Ladder
 
