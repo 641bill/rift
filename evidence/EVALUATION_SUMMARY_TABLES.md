@@ -47,7 +47,9 @@ Common Crawl-like expansion:
 `q2-domain-window` and `q3-parser-scratch`; 100k/1M generated follow-up rows
 now exist for heap, SafeZone-family labels, UnsafeZone-HP, and trusted Rift.
 The 2026-05-02 q1/q2 rerun after Rift fast-allocation counter cleanup
-supersedes the earlier q1/q2 ordering.
+supersedes the earlier q1/q2 ordering. The checked `StreamAppendWindow`
+q1/q2 follow-up validates safe record placement but does not clear the
+application-scale performance gate.
 
 | Area | Main result | Interpretation |
 |---|---|---|
@@ -62,7 +64,7 @@ supersedes the earlier q1/q2 ordering.
 | UnsafeZone-HP streams | Beam-default q0 `468.617 ms`, q3 unsafe `296.480 ms` vs checked `292.371 ms`, Common Crawl q1 `3971.051 ms`, Wikimedia q2 `155.768 ms` | UnsafeZone-HP is often the best SafeZone-family stream row, but still mostly only slightly ahead of improved SafeZone; it does not create a large safe Rift case-study win. |
 | UnsafeZone-HP DEBS 1M | normal bounded RunBoth: unsafezone-hp `4639.791 ms`, heap `4861.406 ms`, improved SafeZone `5341.010 ms`, Streaming `4663.529 ms`, checked `4844.738 ms` | UnsafeZone-HP is fastest in the normal single-run row; instrumented row is a near-tie with trusted Rift. This is unsafe bounded control evidence, not a final checked application claim. |
 | SafeZone cost matrix | improved-32k beats or matches unsafe-hp-32k on GCBench, linked ListOfLists, flat ListOfLists, and trace-mode Common Crawl q1; non-trace q1/q2 make unsafezone-hp competitive again | Root coalescing plus 32 KiB pages, not rootless mode alone, is the leading SafeZone-family direction. Keep rootless UnsafeZone-HP as a lower-bound comparator, not the only checked-backend target. |
-| Common Crawl-like q1/q2/q3 | 1M q1 heap GC `1580.847 ms`, q2 heap GC `1561.851 ms`; q1 Rift HPZone `4386.590 ms` vs improved-32k `4608.641 ms`; q2 Rift Streaming `4164.288 ms` vs improved-32k `4425.273 ms`; q3 heap wins `10330.962 ms` | q1/q2 are GC-heavy stream-object wins after removing default per-allocation Rift byte-counter atomics; q3 is a negative scratch-shape control. These are elapsed/GC wins, not RSS wins, and checked modes are still absent. |
+| Common Crawl-like q1/q2/q3 | 1M q1 heap GC `1580.847 ms`, q2 heap GC `1561.851 ms`; q1 Rift HPZone `4386.590 ms` vs improved-32k `4608.641 ms`; q2 Rift Streaming `4164.288 ms` vs improved-32k `4425.273 ms`; q3 heap wins `10330.962 ms`; checked RSS rerun q1 `5088.712 ms`, q2 `5061.479 ms` | q1/q2 are GC-heavy trusted stream-object wins after removing default per-allocation Rift byte-counter atomics; q3 is a negative scratch-shape control. Checked q1/q2 beat heap and match output, but miss the gate against improved SafeZone/trusted Rift, so they are checked-overhead evidence rather than application wins. |
 
 The older seeded tables below are retained for provenance and comparison, but
 this clean subset should be treated as the current headline evidence for
@@ -113,7 +115,11 @@ cleanup changes the q1/q2 ordering further: 1M q1 `rift-hp` is `4386.590 ms`
 and q2 `rift-streaming` is `4164.288 ms`, beating improved-32k and
 UnsafeZone-HP. This makes Common Crawl-like q1/q2 the strongest current
 trusted-Rift GC-heavy stream rows, while keeping SafeZone-family internals
-relevant for backend comparison.
+relevant for backend comparison. The checked `StreamAppendWindow` follow-up is
+correct but slower: in the RSS-complete 1M rerun, q1 `rift-checked` is
+`5088.712 ms` versus heap `5670.270 ms`, improved-32k `4644.747 ms`, and
+trusted HPZone `4403.007 ms`; q2 `rift-checked` is `5061.479 ms` versus heap
+`5342.373 ms`, improved-32k `4444.954 ms`, and trusted HPZone `4258.549 ms`.
 
 ## Classification Legend
 
@@ -175,8 +181,8 @@ relevant for backend comparison.
 | NEXMark Beam Q3 | 1M generated-profile | checked `295.166 ms` | `315.715 ms` | `302.668 ms` | Best checked stream row, below 10% gate | Clean stream sweep |
 | NEXMark Beam Q8 | 1M generated-profile | checked `457.518 ms` | `470.798 ms` | `457.725 ms` | Checked near-tie with improved SafeZone | Clean stream sweep |
 | NEXMark Beam Q11 | 1M generated-profile | HPZone `228.741 ms` | `218.774 ms` | `229.557 ms` | Heap wins elapsed; region rows reduce GC only | Clean stream sweep |
-| Common Crawl WET-shaped Q1 | 1M generated pages / 137M token records | HPZone `4386.590 ms`, Streaming `4395.599 ms` | `5466.535 ms` | improved-32k `4608.641 ms` | GC-heavy trusted-Rift win after fast-allocation counter cleanup; not RSS win | 2026-05-02 follow-up |
-| Common Crawl WET-shaped Q2 | 1M generated pages / 137M token records | Streaming `4164.288 ms`, HPZone `4176.919 ms` | `5267.784 ms` | improved-32k `4425.273 ms` | GC-heavy trusted-Rift stream/window win after counter cleanup; checked absent | 2026-05-02 follow-up |
+| Common Crawl WET-shaped Q1 | 1M generated pages / 137M token records | HPZone `4386.590 ms`, Streaming `4395.599 ms`; checked RSS rerun `5088.712 ms` | `5466.535 ms`; RSS rerun `5670.270 ms` | improved-32k `4608.641 ms`; RSS rerun `4644.747 ms` | GC-heavy trusted-Rift win after fast-allocation counter cleanup; checked beats heap but misses improved-SafeZone/trusted gate | 2026-05-02 follow-up |
+| Common Crawl WET-shaped Q2 | 1M generated pages / 137M token records | Streaming `4164.288 ms`, HPZone `4176.919 ms`; checked RSS rerun `5061.479 ms` | `5267.784 ms`; RSS rerun `5342.373 ms` | improved-32k `4425.273 ms`; RSS rerun `4444.954 ms` | GC-heavy trusted-Rift stream/window win after counter cleanup; checked beats heap modestly but misses improved-SafeZone/trusted gate | 2026-05-02 follow-up |
 | Yahoo Q2 | 1M generated/preloaded | Streaming `106.415 ms` | `105.802 ms` | `106.425 ms` | Near-tie; cuts GC but heap elapsed wins | Clean stream sweep |
 | RIoTBench q1 | 1M generated | Streaming `148.019 ms` | `135.750 ms` | `147.638 ms` | Heap wins in clean 1M row; earlier 100k positive weakened | Clean stream sweep |
 | Wikimedia real clickstream | 1M events | Streaming `157.449 ms` | `126.800 ms` | `149.062 ms` | Real-input CPU ceiling | Parked control |
@@ -206,8 +212,8 @@ status, but they do not replace real WET input controls.
 
 | Query | Heap | Improved SafeZone | Improved 32K | UnsafeZone-HP | Best Rift | Classification |
 |---|---:|---:|---:|---:|---:|---|
-| q1 tokenization | `5531.233 ms`; GC `1575.099 ms` | `4709.218 ms` | `4674.258 ms` | `4665.711 ms` | HPZone `4966.111 ms` | GC-heavy detector; SafeZone-family win, Rift trails. |
-| q2 domain-window | `5344.266 ms`; GC `1606.364 ms` | `4546.604 ms` | `4471.463 ms` | `4511.995 ms` | HPZone `4738.091 ms` | GC-heavy detector; improved-32k best. |
+| q1 tokenization | `5466.535 ms`; GC `1580.847 ms` | n/a in fast-counter row | `4608.641 ms` | `4640.245 ms` | HPZone `4386.590 ms`; checked RSS rerun `5088.712 ms` | Trusted GC-heavy win; checked beats heap but fails improved-SafeZone/trusted gate. |
+| q2 domain-window | `5267.784 ms`; GC `1561.851 ms` | n/a in fast-counter row | `4425.273 ms` | `4437.924 ms` | Streaming `4164.288 ms`; checked RSS rerun `5061.479 ms` | Trusted GC-heavy win; checked beats heap modestly but fails improved-SafeZone/trusted gate. |
 | q3 parser-scratch | `10330.962 ms`; GC `859.220 ms` | `27715.527 ms` | `26535.424 ms` | `11065.693 ms` | Streaming `11206.504 ms` | Negative scratch-shape control; heap wins elapsed. |
 
 ## SafeZone Cost Decomposition

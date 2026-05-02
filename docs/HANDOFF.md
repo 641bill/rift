@@ -8,18 +8,88 @@ Active worktree for this update:
 Active implementation branch for this update:
 `feature/rift`
 
-Implementation commit at this update:
+Implementation commit at start of this update:
 `41b848de79600c1a8938b9417cbfdeed47e42f6c`
 (`Reduce Rift allocation stats overhead`)
 
-Parent evidence commit at this update:
-this document's parent commit records the Common Crawl-like q1/q2 follow-up.
+Parent evidence commit at start of this update:
+`36542ad` (`Record Rift fast allocation counter follow-up`)
 
 Active update:
-Rift fast-allocation counter cleanup implemented and measured on Common
-Crawl-like q1/q2.
+Checked Common Crawl-like q1/q2 `StreamAppendWindow` follow-up implemented and
+measured after the Rift fast-allocation counter cleanup.
 
 Latest checkpoint:
+`CommonCrawlWetMatrix` now has an opt-in `rift-checked` mode for q1/q2. It
+allocates ordinary page/line/token `CheckedRecord` objects in checked
+child-bucket regions and retains them through the reusable
+`RiftRegion.StreamAppendWindow` cursor API. A helper that hid the region
+provenance of a checked record was rejected by the compiler, so the final
+implementation appends records immediately at the allocation site; keep that as
+positive owner-token safety evidence.
+
+The checked q1/q2 100k and 1M rows match heap checksum/output count. The 1M
+RSS-complete rerun shows checked q1 at `5088.712 ms` versus heap
+`5670.270 ms`, improved SafeZone-32k `4644.747 ms`, and trusted HPZone
+`4403.007 ms`. Checked q2 is `5061.479 ms` versus heap `5342.373 ms`,
+improved SafeZone-32k `4444.954 ms`, and trusted HPZone `4258.549 ms`. Heap GC
+is about `1.6-1.7 s`; checked GC is about `20-25 ms`; checked Rift op time is
+about `11 ms`.
+
+A separate 2k q0/q3 smoke also matched heap checksum/output count, confirming
+the new checked runner paths compile and execute outside the q1/q2 headline
+rows.
+
+Interpretation: checked Common Crawl-like q1/q2 validates safe placement of
+`137000000` ordinary stream records into checked regions and beats heap, but it
+does not clear the case-study gate because improved SafeZone and trusted Rift
+are much faster. The remaining gap is checked `StreamAppendWindow`
+append/cursor/container overhead in hot loops, not region allocation or
+close/reclaim. Do not use these rows as checked application-speed claims.
+
+Validation for this checked follow-up:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile
+ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest" "tests3_next/testOnly scala.scalanative.memory.RiftRegionCheckedTest"
+
+COMMON_CRAWL_WET_PAGES=2000 \
+COMMON_CRAWL_WET_BENCHMARK_RUNS=1 \
+COMMON_CRAWL_WET_WARMUPS=0 \
+COMMON_CRAWL_WET_QUERIES="q1-tokenize q2-domain-window" \
+COMMON_CRAWL_WET_MODES="heap rift-hp rift-checked" \
+COMMON_CRAWL_WET_OUTPUT_DIR=/Users/siyaoliu/rift/cache/common-crawl-like-checked-smoke-2026-05-02 \
+zsh sandbox/run_common_crawl_wet_matrix.sh
+
+COMMON_CRAWL_WET_BUILD=0 \
+COMMON_CRAWL_WET_PAGES=2000 \
+COMMON_CRAWL_WET_BENCHMARK_RUNS=1 \
+COMMON_CRAWL_WET_WARMUPS=0 \
+COMMON_CRAWL_WET_QUERIES="q0-parse q3-parser-scratch" \
+COMMON_CRAWL_WET_MODES="heap rift-checked" \
+COMMON_CRAWL_WET_OUTPUT_DIR=/Users/siyaoliu/rift/cache/common-crawl-like-checked-smoke-q0q3-2026-05-02 \
+zsh sandbox/run_common_crawl_wet_matrix.sh
+
+COMMON_CRAWL_WET_PAGES=100000 \
+COMMON_CRAWL_WET_BENCHMARK_RUNS=3 \
+COMMON_CRAWL_WET_WARMUPS=1 \
+COMMON_CRAWL_WET_QUERIES="q1-tokenize q2-domain-window" \
+COMMON_CRAWL_WET_MODES="heap safezone-improved-32k unsafezone-hp rift-hp rift-streaming rift-checked" \
+COMMON_CRAWL_WET_OUTPUT_DIR=/Users/siyaoliu/rift/cache/common-crawl-like-checked-2026-05-02-100k \
+zsh sandbox/run_common_crawl_wet_matrix.sh
+
+COMMON_CRAWL_WET_BUILD=0 \
+COMMON_CRAWL_WET_PAGES=1000000 \
+COMMON_CRAWL_WET_BENCHMARK_RUNS=3 \
+COMMON_CRAWL_WET_WARMUPS=1 \
+COMMON_CRAWL_WET_QUERIES="q1-tokenize q2-domain-window" \
+COMMON_CRAWL_WET_MODES="heap safezone-improved-32k unsafezone-hp rift-hp rift-streaming rift-checked" \
+COMMON_CRAWL_WET_OUTPUT_DIR=/Users/siyaoliu/rift/cache/common-crawl-like-checked-2026-05-02-1m-rss \
+zsh sandbox/run_common_crawl_wet_matrix.sh
+```
+
+Previous checkpoint:
 The previous Common Crawl-like q1/q2 results were distorted by Rift's default
 per-allocation global allocated-byte statistics. `RiftRuntime.c` now keeps
 allocation counts and total raw bytes locally on the region fast path and
@@ -200,9 +270,10 @@ and general allocator/pool mechanics.
 
 The Common Crawl WET-shaped matrix now includes `q2-domain-window` and
 `q3-parser-scratch` in addition to `q0-parse` and `q1-tokenize`. This expansion
-is documented in `evidence/COMMON_CRAWL_LIKE_MATRIX.md`. These rows are
-object-pressure probes only; checked modes remain blocked until a focused
-checked append/scratch/window operator clears its gate.
+is documented in `evidence/COMMON_CRAWL_LIKE_MATRIX.md`. The later checked
+q1/q2 follow-up uses the focused `StreamAppendWindow` cursor API and validates
+safe record placement at scale, but misses the application performance gate
+against improved SafeZone and trusted Rift.
 
 `evidence/SAFEZONE_HP_BACKEND_PROTOTYPE.md` records the intended
 `rift-checked-safezone-hp` direction. No checked SafeZone-HP backend code has
