@@ -34,14 +34,18 @@ compiler lowering, baseline corrections, benchmark harnesses, and DEBS scaffold
 exist. The capture-checked safe API, region-heavy DEBS path, region-backed
 parallel collections, and Lean proof are still open.
 
-The latest UnsafeZone-HP evidence adds a possible backend direction, not a new
-user-facing mode. Rootless SafeZone with 32 KiB pages is useful as a lower-bound
-substrate probe, but it is unsafe without Rift-style static checks. The
-intended next prototype is therefore `rift-checked-safezone-hp`: reuse or learn
-from SafeZone allocator/pool mechanics only when capture/provenance checks prove
-that GC root registration or region scanning is unnecessary. Unsupported
-mixed-reference cases should be rejected in v1 rather than silently falling
-back to a different backend.
+The latest UnsafeZone-HP and SafeZone cost evidence adds a backend direction,
+not a new user-facing mode. Rootless SafeZone with 32 KiB pages is useful as an
+unsafe lower-bound substrate probe, but it is not automatically the best next
+backend: the first traced cost matrix shows improved SafeZone with 32 KiB pages
+matching or beating rootless UnsafeZone-HP on several key rows, and generated
+Common Crawl q1 exposes a severe rootless `unsafe-hp-32k` pathology. The
+intended next prototype is therefore a checked SafeZone-family backend, not
+necessarily a rootless one: reuse or learn from SafeZone allocator/pool
+mechanics only when capture/provenance checks prove that GC root registration
+or region scanning is unnecessary, and otherwise prefer improved-root or
+chunk-root configurations. Unsupported mixed-reference cases should be rejected
+in v1 rather than silently falling back to a different backend.
 
 ## 2. Evidence Levels
 

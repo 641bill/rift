@@ -37,10 +37,10 @@ UnsafeZone-HP stream leg:
 `evidence/HEADLINE_UNSAFEZONE_STREAMS_2026_05_01.md`, run id
 `2026-05-01-unsafezone-streams`.
 
-SafeZone cost-decomposition scaffold:
-`evidence/SAFEZONE_COST_MATRIX.md`. This is the required next measurement
-before SafeZone-family optimization or a checked SafeZone-HP backend. It
-records `SAFEZONE_TRACE=1` pool counters alongside benchmark medians/RSS.
+SafeZone cost-decomposition headline:
+`evidence/SAFEZONE_COST_MATRIX.md`, run id `2026-05-01-safezone-cost`. It
+records `SAFEZONE_TRACE=1` pool counters alongside benchmark medians/RSS and
+supersedes the earlier scaffold-only status.
 
 Common Crawl-like expansion:
 `evidence/COMMON_CRAWL_LIKE_MATRIX.md`. The WET-shaped runner now includes
@@ -59,7 +59,7 @@ only, not headline evidence.
 | UnsafeZone-HP | clean core/prior medians: GCBench `206.636 ms`, linked ListOfLists `9818.653 ms`, Dataflow SELECT `21.957 ms`, Yak topword `58.686 ms`, Stancu `33.335 ms` | SafeZone no-root internals usually beat improved SafeZone slightly and beat current Rift HPZone on linked/prior-work rows; still unsafe/substrate evidence only. |
 | UnsafeZone-HP streams | Beam-default q0 `468.617 ms`, q3 unsafe `296.480 ms` vs checked `292.371 ms`, Common Crawl q1 `3971.051 ms`, Wikimedia q2 `155.768 ms` | UnsafeZone-HP is often the best SafeZone-family stream row, but still mostly only slightly ahead of improved SafeZone; it does not create a large safe Rift case-study win. |
 | UnsafeZone-HP DEBS 1M | normal bounded RunBoth: unsafezone-hp `4639.791 ms`, heap `4861.406 ms`, improved SafeZone `5341.010 ms`, Streaming `4663.529 ms`, checked `4844.738 ms` | UnsafeZone-HP is fastest in the normal single-run row; instrumented row is a near-tie with trusted Rift. This is unsafe bounded control evidence, not a final checked application claim. |
-| SafeZone cost matrix | scaffold and smoke only | Cost counters now exist for root-mode/page-size decomposition. Do not optimize SafeZone or add `rift-checked-safezone-hp` until this has headline rows. |
+| SafeZone cost matrix | improved-32k beats or matches unsafe-hp-32k on GCBench, linked ListOfLists, flat ListOfLists, and Common Crawl q1; Common Crawl q1 unsafe-hp-32k is pathological at `227556.451 ms` | Root coalescing plus 32 KiB pages, not rootless mode alone, is the leading SafeZone-family direction. Do not build checked backend on rootless UnsafeZone-HP until the q1 pathology is explained. |
 
 The older seeded tables below are retained for provenance and comparison, but
 this clean subset should be treated as the current headline evidence for
@@ -93,6 +93,16 @@ Wikimedia generated q0/q1/q2, and Linear Road q2. It still rarely beats
 improved SafeZone by more than a few percent, and current Rift HPZone/Streaming
 lose many of those same rows. The useful conclusion is runtime-substrate
 direction, not a user-facing unsafe-region claim.
+
+The SafeZone cost leg narrows the substrate direction. Current SafeZone's
+large cliffs are still root-removal cliffs, but improved roots already remove
+most of that cost. `SAFEZONE_PAGE_SIZE=32768` is a major factor: in traced
+GCBench, `improved-32k` is `662.399 ms` versus `unsafe-hp-32k` at
+`665.224 ms`; in linked ListOfLists, `improved-32k` is `32080.248 ms` versus
+`unsafe-hp-32k` at `32970.802 ms`. Generated Common Crawl q1 is the warning
+row: `unsafe-hp-32k` slows to `227556.451 ms` while `improved-32k` is
+`8079.502 ms`, despite matching output and low root/reclaim counters. Treat
+`unsafezone-hp` as a lower-bound control, not the next checked backend target.
 
 ## Classification Legend
 
@@ -174,6 +184,20 @@ direction, not a user-facing unsafe-region claim.
 | RIoTBench-style | q0 parse | 113.022 | 111.307 | 109.020 | HPZone `111.418` | Unsafe modest win |
 | Wikimedia generated | q2 clickstream | 160.500 | 159.147 | 155.768 | Streaming `162.253` | Unsafe wins; current Rift loses |
 | Linear Road generated | q2 accidents | 206.491 | 205.889 | 201.977 | HPZone `209.727` | Unsafe modest win; current Rift loses |
+
+## SafeZone Cost Decomposition
+
+Source: `evidence/SAFEZONE_COST_MATRIX.md`, run id
+`2026-05-01-safezone-cost`. These rows were collected with `SAFEZONE_TRACE=1`,
+so they are diagnostic cost rows rather than normal elapsed headline rows.
+
+| Benchmark | Best traced config | Current-default cost signal | Interpretation |
+|---|---:|---:|---|
+| GCBench | improved-32k `662.399 ms` | root remove `2168.263 ms` | 32 KiB pages plus improved roots match unsafe no-root. |
+| ListOfLists linked | improved-32k `32080.248 ms` | root remove `627735.229 ms` | Current root removal is catastrophic; improved-32k beats unsafe-hp-32k. |
+| ListOfLists flat | improved-32k `1692.936 ms` | no SafeZone claims/roots | Flat row is not root-bookkeeping-bound. |
+| Dataflow SELECT/AGG/JOIN | unsafe-hp-32k `55.972` / `87.080` / `54.506 ms` | root remove `83.366 ms` shared | Unsafe and improved-32k are close; chunk roots also competitive. |
+| Common Crawl q1 generated | improved-32k `8079.502 ms` | root remove `1326310.264 ms` | Root coalescing fixes current mode, while unsafe-hp-32k is a severe pathology. |
 
 ## New Candidate Ladder
 

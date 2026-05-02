@@ -9,11 +9,15 @@ Active implementation branch for this update:
 `feature/rift`
 
 Implementation commit at this update:
-`d4be27a43407d79ef92a850ec084f84c8d46e23a`
-(`Record UnsafeZone HP DEBS interpretation`)
+`cec5c0e31a25fce91946f6d37e9bf59d789fb3c8`
+(`Add SafeZone cost matrix scaffold`)
 
-Active uncommitted update:
-SafeZone cost-decomposition scaffold plus Common Crawl-like query expansion.
+Parent evidence commit at this update:
+`b80cde3ea1d7d63b8b27f159fbb157c9895c89ee`
+(`Record SafeZone cost decomposition plan`)
+
+Active update:
+SafeZone cost-decomposition headline run completed and recorded.
 
 Previous checkpoint:
 The real-input stream benchmark ladder has now been wired, measured, and
@@ -177,6 +181,46 @@ checked runtime suite remains `38/38`. The Common Crawl smoke matched
 checksums/output counts across modes. The SafeZone cost smoke produced trace
 rows for improved SafeZone and UnsafeZone-HP; at this tiny scale it is a
 format/mechanics check only, not headline evidence.
+
+SafeZone cost headline checkpoint:
+
+```sh
+cd /Users/siyaoliu/rift
+RIFT_EVAL_RUN_ID=2026-05-01-safezone-cost \
+RIFT_EVAL_SCALE=headline \
+RIFT_EVAL_SUITES="preflight safezone-cost" \
+bash scripts/run-performance-evaluation.sh
+```
+
+This completed successfully with raw logs under
+`cache/perf-eval/2026-05-01-safezone-cost/` and summary TSV at
+`cache/perf-eval/2026-05-01-safezone-cost/summaries/safezone-cost/summary.tsv`.
+Tracked interpretation is in `evidence/SAFEZONE_COST_MATRIX.md`.
+
+Main findings:
+
+- Current SafeZone's cliff is still per-page root removal. In traced linked
+  ListOfLists, current root removal records `627735.229 ms`; improved mode
+  reduces that to `116.420 ms`.
+- `SAFEZONE_PAGE_SIZE=32768` explains much of the UnsafeZone-HP improvement.
+  In GCBench, both `unsafe-hp-32k` and `improved-32k` cut claim calls from
+  `215240` to `53790`, and `improved-32k` is slightly faster
+  (`662.399 ms`) than `unsafe-hp-32k` (`665.224 ms`) in the traced row.
+- Linked ListOfLists also favors `improved-32k` (`32080.248 ms`) over
+  `unsafe-hp-32k` (`32970.802 ms`) in the traced row.
+- Generated Common Crawl q1 exposes a serious `unsafe-hp-32k` pathology:
+  `227556.451 ms` despite low root/reclaim counters and matching output,
+  while `improved-32k` is `8079.502 ms`. Do not assume rootless 32 KiB
+  SafeZone is always the best substrate.
+- Chunk-root mode is competitive on Dataflow/Common Crawl and should remain a
+  safer intermediate candidate.
+
+Decision from this run: do not implement `rift-checked-safezone-hp` on top of
+rootless UnsafeZone-HP yet. First rerun focused non-trace controls for
+`improved-32k`, `chunk-default`, and `unsafe-hp-32k` on Common Crawl-like
+q1/q2/q3, and inspect the q1 unsafe pathology. The leading safe backend
+candidate is now improved SafeZone with explicit 32 KiB/page-size or chunk-root
+configuration, not blindly rootless UnsafeZone-HP.
 
 Latest execution checkpoint:
 
