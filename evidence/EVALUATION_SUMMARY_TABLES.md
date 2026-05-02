@@ -46,6 +46,8 @@ Common Crawl-like expansion:
 `evidence/COMMON_CRAWL_LIKE_MATRIX.md`. The WET-shaped runner now includes
 `q2-domain-window` and `q3-parser-scratch`; 100k/1M generated follow-up rows
 now exist for heap, SafeZone-family labels, UnsafeZone-HP, and trusted Rift.
+The 2026-05-02 q1/q2 rerun after Rift fast-allocation counter cleanup
+supersedes the earlier q1/q2 ordering.
 
 | Area | Main result | Interpretation |
 |---|---|---|
@@ -60,7 +62,7 @@ now exist for heap, SafeZone-family labels, UnsafeZone-HP, and trusted Rift.
 | UnsafeZone-HP streams | Beam-default q0 `468.617 ms`, q3 unsafe `296.480 ms` vs checked `292.371 ms`, Common Crawl q1 `3971.051 ms`, Wikimedia q2 `155.768 ms` | UnsafeZone-HP is often the best SafeZone-family stream row, but still mostly only slightly ahead of improved SafeZone; it does not create a large safe Rift case-study win. |
 | UnsafeZone-HP DEBS 1M | normal bounded RunBoth: unsafezone-hp `4639.791 ms`, heap `4861.406 ms`, improved SafeZone `5341.010 ms`, Streaming `4663.529 ms`, checked `4844.738 ms` | UnsafeZone-HP is fastest in the normal single-run row; instrumented row is a near-tie with trusted Rift. This is unsafe bounded control evidence, not a final checked application claim. |
 | SafeZone cost matrix | improved-32k beats or matches unsafe-hp-32k on GCBench, linked ListOfLists, flat ListOfLists, and trace-mode Common Crawl q1; non-trace q1/q2 make unsafezone-hp competitive again | Root coalescing plus 32 KiB pages, not rootless mode alone, is the leading SafeZone-family direction. Keep rootless UnsafeZone-HP as a lower-bound comparator, not the only checked-backend target. |
-| Common Crawl-like q1/q2/q3 | 1M q1 heap GC `1575.099 ms`, q2 heap GC `1606.364 ms`; q1 unsafezone-hp `4665.711 ms`, q2 improved-32k `4471.463 ms`; q3 heap wins `10330.962 ms` | q1/q2 are GC-heavy stream detectors where SafeZone-family modes win; q3 is a negative scratch-shape control. Current Rift HP/Streaming trail SafeZone-family modes. |
+| Common Crawl-like q1/q2/q3 | 1M q1 heap GC `1580.847 ms`, q2 heap GC `1561.851 ms`; q1 Rift HPZone `4386.590 ms` vs improved-32k `4608.641 ms`; q2 Rift Streaming `4164.288 ms` vs improved-32k `4425.273 ms`; q3 heap wins `10330.962 ms` | q1/q2 are GC-heavy stream-object wins after removing default per-allocation Rift byte-counter atomics; q3 is a negative scratch-shape control. These are elapsed/GC wins, not RSS wins, and checked modes are still absent. |
 
 The older seeded tables below are retained for provenance and comparison, but
 this clean subset should be treated as the current headline evidence for
@@ -106,7 +108,12 @@ row: `unsafe-hp-32k` slows to `227556.451 ms` while `improved-32k` is
 `unsafezone-hp` as a lower-bound control, not the next checked backend target.
 The follow-up non-trace Common Crawl-like q1/q2 run did not reproduce the
 unsafe trace pathology: q1 `unsafezone-hp` is `4665.711 ms` and q2 is
-`4511.995 ms`, close to the best safe rows.
+`4511.995 ms`, close to the best safe rows. A later Rift fast-path counter
+cleanup changes the q1/q2 ordering further: 1M q1 `rift-hp` is `4386.590 ms`
+and q2 `rift-streaming` is `4164.288 ms`, beating improved-32k and
+UnsafeZone-HP. This makes Common Crawl-like q1/q2 the strongest current
+trusted-Rift GC-heavy stream rows, while keeping SafeZone-family internals
+relevant for backend comparison.
 
 ## Classification Legend
 
@@ -168,7 +175,8 @@ unsafe trace pathology: q1 `unsafezone-hp` is `4665.711 ms` and q2 is
 | NEXMark Beam Q3 | 1M generated-profile | checked `295.166 ms` | `315.715 ms` | `302.668 ms` | Best checked stream row, below 10% gate | Clean stream sweep |
 | NEXMark Beam Q8 | 1M generated-profile | checked `457.518 ms` | `470.798 ms` | `457.725 ms` | Checked near-tie with improved SafeZone | Clean stream sweep |
 | NEXMark Beam Q11 | 1M generated-profile | HPZone `228.741 ms` | `218.774 ms` | `229.557 ms` | Heap wins elapsed; region rows reduce GC only | Clean stream sweep |
-| Common Crawl WET-shaped Q1 | 1M generated pages / 137M token records | HPZone `4301.536 ms` | `4770.503 ms` | `4066.435 ms` | GC-heavy detector; Rift beats heap but not improved SafeZone | Clean stream sweep |
+| Common Crawl WET-shaped Q1 | 1M generated pages / 137M token records | HPZone `4386.590 ms`, Streaming `4395.599 ms` | `5466.535 ms` | improved-32k `4608.641 ms` | GC-heavy trusted-Rift win after fast-allocation counter cleanup; not RSS win | 2026-05-02 follow-up |
+| Common Crawl WET-shaped Q2 | 1M generated pages / 137M token records | Streaming `4164.288 ms`, HPZone `4176.919 ms` | `5267.784 ms` | improved-32k `4425.273 ms` | GC-heavy trusted-Rift stream/window win after counter cleanup; checked absent | 2026-05-02 follow-up |
 | Yahoo Q2 | 1M generated/preloaded | Streaming `106.415 ms` | `105.802 ms` | `106.425 ms` | Near-tie; cuts GC but heap elapsed wins | Clean stream sweep |
 | RIoTBench q1 | 1M generated | Streaming `148.019 ms` | `135.750 ms` | `147.638 ms` | Heap wins in clean 1M row; earlier 100k positive weakened | Clean stream sweep |
 | Wikimedia real clickstream | 1M events | Streaming `157.449 ms` | `126.800 ms` | `149.062 ms` | Real-input CPU ceiling | Parked control |
@@ -183,7 +191,8 @@ unsafe trace pathology: q1 `unsafezone-hp` is `4665.711 ms` and q2 is
 | NEXMark Beam | q3 | 316.626 | 297.962 | 296.480 | checked `292.371` | Best checked stream row, below gate |
 | NEXMark Beam | q8 | 467.213 | 462.599 | 460.822 | checked `450.904` | Checked near-case-study row, below gate |
 | NEXMark Beam | q11 | 218.200 | 226.184 | 223.644 | HPZone `226.909` | Heap wins elapsed |
-| Common Crawl WET-shaped | q1 tokenization | 4743.205 | 4028.067 | 3971.051 | HPZone `4322.349` | GC-heavy, Unsafe/SafeZone win |
+| Common Crawl WET-shaped | q1 tokenization | 5466.535 | 4608.641 | 4640.245 | HPZone `4386.590` | Fast-allocation counter cleanup makes Rift fastest |
+| Common Crawl WET-shaped | q2 domain window | 5267.784 | 4425.273 | 4437.924 | Streaming `4164.288` | Fast-allocation counter cleanup makes Rift fastest |
 | Yahoo-style ad | q2 campaign window | 105.148 | 106.104 | 105.802 | HPZone `106.331` | Heap near-tie/win |
 | RIoTBench-style | q0 parse | 113.022 | 111.307 | 109.020 | HPZone `111.418` | Unsafe modest win |
 | Wikimedia generated | q2 clickstream | 160.500 | 159.147 | 155.768 | Streaming `162.253` | Unsafe wins; current Rift loses |

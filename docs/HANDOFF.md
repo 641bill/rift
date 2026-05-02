@@ -1,6 +1,6 @@
 # Rift Project Handoff
 
-Date: 2026-05-01
+Date: 2026-05-02
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -9,15 +9,74 @@ Active implementation branch for this update:
 `feature/rift`
 
 Implementation commit at this update:
-`cec5c0e31a25fce91946f6d37e9bf59d789fb3c8`
-(`Add SafeZone cost matrix scaffold`)
+`41b848de79600c1a8938b9417cbfdeed47e42f6c`
+(`Reduce Rift allocation stats overhead`)
 
 Parent evidence commit at this update:
-`b80cde3ea1d7d63b8b27f159fbb157c9895c89ee`
-(`Record SafeZone cost decomposition plan`)
+this document's parent commit records the Common Crawl-like q1/q2 follow-up.
 
 Active update:
-SafeZone cost-decomposition headline run completed and recorded.
+Rift fast-allocation counter cleanup implemented and measured on Common
+Crawl-like q1/q2.
+
+Latest checkpoint:
+The previous Common Crawl-like q1/q2 results were distorted by Rift's default
+per-allocation global allocated-byte statistics. `RiftRuntime.c` now keeps
+allocation counts and total raw bytes locally on the region fast path and
+flushes total bytes at close/reset. Precise active allocated-byte
+current/peak counters are opt-in with `RIFT_PRECISE_ALLOC_STATS=1`.
+
+The focused Common Crawl-like 100k and 1M q1/q2 reruns matched checksums and
+output counts across heap, improved SafeZone-32k, UnsafeZone-HP, Rift HP, and
+Rift Streaming. At 1M, q1 `rift-hp` is `4386.590 ms` versus heap
+`5466.535 ms`, improved-32k `4608.641 ms`, and unsafezone-hp `4640.245 ms`.
+q2 `rift-streaming` is `4164.288 ms` versus heap `5267.784 ms`,
+improved-32k `4425.273 ms`, and unsafezone-hp `4437.924 ms`. Heap GC is about
+`1.56-1.58 s`; Rift/SafeZone-family GC is about `20-31 ms`. Rift allocated
+`137000000` region objects and `6576000000` raw region bytes in each 1M q1/q2
+row, with about `10-11 ms` measured Rift op time.
+
+This is now the strongest trusted-Rift GC-heavy stream evidence. It is not an
+RSS win at 1M: heap RSS is lower than the region-family rows in these
+measurements. The precise-stats control confirms the diagnosis: 100k q1
+`rift-hp` is `439.129 ms` by default but `473.750 ms` with
+`RIFT_PRECISE_ALLOC_STATS=1`. Keep precise active-byte stats for diagnostics,
+not headline timing.
+
+Validation for the 2026-05-02 update:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile
+ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionTest" "tests3_next/testOnly scala.scalanative.memory.RiftRegionCheckedTest"
+
+COMMON_CRAWL_WET_PAGES=100000 \
+COMMON_CRAWL_WET_BENCHMARK_RUNS=3 \
+COMMON_CRAWL_WET_WARMUPS=1 \
+COMMON_CRAWL_WET_QUERIES="q1-tokenize q2-domain-window" \
+COMMON_CRAWL_WET_MODES="heap safezone-improved-32k unsafezone-hp rift-hp rift-streaming" \
+COMMON_CRAWL_WET_OUTPUT_DIR=/Users/siyaoliu/rift/cache/common-crawl-like-fastalloc-2026-05-02-100k \
+zsh sandbox/run_common_crawl_wet_matrix.sh
+
+COMMON_CRAWL_WET_BUILD=0 \
+COMMON_CRAWL_WET_PAGES=1000000 \
+COMMON_CRAWL_WET_BENCHMARK_RUNS=3 \
+COMMON_CRAWL_WET_WARMUPS=1 \
+COMMON_CRAWL_WET_QUERIES="q1-tokenize q2-domain-window" \
+COMMON_CRAWL_WET_MODES="heap safezone-improved-32k unsafezone-hp rift-hp rift-streaming" \
+COMMON_CRAWL_WET_OUTPUT_DIR=/Users/siyaoliu/rift/cache/common-crawl-like-fastalloc-2026-05-02-1m \
+zsh sandbox/run_common_crawl_wet_matrix.sh
+
+RIFT_PRECISE_ALLOC_STATS=1 \
+COMMON_CRAWL_WET_BUILD=0 \
+COMMON_CRAWL_WET_PAGES=100000 \
+COMMON_CRAWL_WET_BENCHMARK_RUNS=3 \
+COMMON_CRAWL_WET_WARMUPS=1 \
+COMMON_CRAWL_WET_QUERIES="q1-tokenize" \
+COMMON_CRAWL_WET_MODES="rift-hp" \
+COMMON_CRAWL_WET_OUTPUT_DIR=/Users/siyaoliu/rift/cache/common-crawl-like-precise-stats-2026-05-02-100k \
+zsh sandbox/run_common_crawl_wet_matrix.sh
+```
 
 Previous checkpoint:
 The real-input stream benchmark ladder has now been wired, measured, and
@@ -151,7 +210,7 @@ been added yet. The v1 rule should reject unsupported mixed-reference cases
 rather than falling back silently, so performance rows are not accidentally
 mixed with rootful or unsafe behavior.
 
-Validation for this active update:
+Validation for the SafeZone-cost scaffold update:
 
 ```sh
 cd /Users/siyaoliu/rift/scala-native-rift
@@ -247,14 +306,20 @@ Key 1M rows:
 
 | Query | Heap | Best SafeZone family | Best current Rift | Interpretation |
 |---|---:|---:|---:|---|
-| q1-tokenize | `5531.233 ms`, GC `1575.099 ms` | unsafezone-hp `4665.711 ms`; improved-32k `4674.258 ms` | HPZone `4966.111 ms` | GC-heavy, SafeZone-family win; Rift trails despite low op time. |
-| q2-domain-window | `5344.266 ms`, GC `1606.364 ms` | improved-32k `4471.463 ms`; unsafezone-hp `4511.995 ms` | HPZone `4738.091 ms` | GC-heavy, improved-32k best. |
+| q1-tokenize, 2026-05-01 | `5531.233 ms`, GC `1575.099 ms` | unsafezone-hp `4665.711 ms`; improved-32k `4674.258 ms` | HPZone `4966.111 ms` | Superseded for Rift ordering by the 2026-05-02 fast-counter cleanup. |
+| q2-domain-window, 2026-05-01 | `5344.266 ms`, GC `1606.364 ms` | improved-32k `4471.463 ms`; unsafezone-hp `4511.995 ms` | HPZone `4738.091 ms` | Superseded for Rift ordering by the 2026-05-02 fast-counter cleanup. |
+| q1-tokenize, 2026-05-02 | `5466.535 ms`, GC `1580.847 ms` | improved-32k `4608.641 ms`; unsafezone-hp `4640.245 ms` | HPZone `4386.590 ms` | GC-heavy trusted-Rift win after removing default per-allocation byte-counter atomics. |
+| q2-domain-window, 2026-05-02 | `5267.784 ms`, GC `1561.851 ms` | improved-32k `4425.273 ms`; unsafezone-hp `4437.924 ms` | Streaming `4164.288 ms` | GC-heavy trusted-Rift stream/window win after counter cleanup. |
 | q3-parser-scratch | `10330.962 ms`, GC `859.220 ms` | unsafezone-hp `11065.693 ms` | Streaming `11206.504 ms` | Negative scratch-shape control; heap wins elapsed. |
 
 The trace-mode `unsafe-hp-32k` q1 pathology did not reproduce in non-trace q1
-or q2. Treat it as an instrumentation-sensitive warning. Common Crawl q1/q2 are
-important GC-heavy stream detectors, but they currently argue for learning from
-SafeZone-family internals rather than for current Rift HP/Streaming as-is.
+or q2. Treat it as an instrumentation-sensitive warning. The 2026-05-02
+counter cleanup changes the q1/q2 conclusion: Common Crawl-like q1/q2 now
+argue that current Rift's allocator fast path can beat improved SafeZone on
+large token/window streams when diagnostic allocation-byte atomics are out of
+the default fast path. SafeZone-family internals remain important comparison
+and possible backend material, but no longer dominate this particular
+workload.
 
 Latest execution checkpoint:
 
