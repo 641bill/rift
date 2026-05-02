@@ -105,16 +105,16 @@ UnsafeZone-HP. `SAFEZONE_COST_MATRIX.md` and
 reclaim/sort, and page/chunk allocation costs for SafeZone-family modes. The
 headline diagnostic run shows current SafeZone root removal is the old cliff,
 but improved roots plus 32 KiB pages match or beat `unsafe-hp-32k` on traced
-GCBench, linked ListOfLists, flat ListOfLists, and Common Crawl q1. The
-`unsafe-hp-32k` Common Crawl q1 row is pathological, so the checked backend
-should not target rootless SafeZone-HP until that is explained. The leading
-prototype direction is now improved SafeZone with explicit 32 KiB/page-size or
-chunk-root configuration, with rootless UnsafeZone-HP retained as an unsafe
-lower-bound control. `SAFEZONE_HP_BACKEND_PROTOTYPE.md` records the checked
-SafeZone-family direction; the checked backend is not implemented yet and must
-reject unsupported mixed-reference cases in v1. Common Crawl WET-shaped q2/q3
-probes have been added as object-heavy stream detectors; they are not
-case-study evidence until headline medians exist.
+GCBench, linked ListOfLists, flat ListOfLists, and trace-mode Common Crawl q1.
+The `unsafe-hp-32k` Common Crawl q1 pathology does not reproduce in non-trace
+q1/q2, so it is an instrumentation-sensitive warning rather than a normal-run
+result. The leading prototype direction is now improved SafeZone with explicit
+32 KiB/page-size or chunk-root configuration, with rootless UnsafeZone-HP
+retained as an unsafe lower-bound control. `SAFEZONE_HP_BACKEND_PROTOTYPE.md`
+records the checked SafeZone-family direction; the checked backend is not
+implemented yet and must reject unsupported mixed-reference cases in v1. Common
+Crawl WET-shaped q2/q3 probes now have 100k/1M generated medians: q2 is a
+GC-heavy SafeZone-family win, while q3 is a negative scratch-shape control.
 
 Phase 0 is not "final." It is complete enough for GCBench and ListOfLists, but
 not for a final pipeline or application story.

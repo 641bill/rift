@@ -44,8 +44,8 @@ supersedes the earlier scaffold-only status.
 
 Common Crawl-like expansion:
 `evidence/COMMON_CRAWL_LIKE_MATRIX.md`. The WET-shaped runner now includes
-`q2-domain-window` and `q3-parser-scratch`; current rows are smoke validation
-only, not headline evidence.
+`q2-domain-window` and `q3-parser-scratch`; 100k/1M generated follow-up rows
+now exist for heap, SafeZone-family labels, UnsafeZone-HP, and trusted Rift.
 
 | Area | Main result | Interpretation |
 |---|---|---|
@@ -59,7 +59,8 @@ only, not headline evidence.
 | UnsafeZone-HP | clean core/prior medians: GCBench `206.636 ms`, linked ListOfLists `9818.653 ms`, Dataflow SELECT `21.957 ms`, Yak topword `58.686 ms`, Stancu `33.335 ms` | SafeZone no-root internals usually beat improved SafeZone slightly and beat current Rift HPZone on linked/prior-work rows; still unsafe/substrate evidence only. |
 | UnsafeZone-HP streams | Beam-default q0 `468.617 ms`, q3 unsafe `296.480 ms` vs checked `292.371 ms`, Common Crawl q1 `3971.051 ms`, Wikimedia q2 `155.768 ms` | UnsafeZone-HP is often the best SafeZone-family stream row, but still mostly only slightly ahead of improved SafeZone; it does not create a large safe Rift case-study win. |
 | UnsafeZone-HP DEBS 1M | normal bounded RunBoth: unsafezone-hp `4639.791 ms`, heap `4861.406 ms`, improved SafeZone `5341.010 ms`, Streaming `4663.529 ms`, checked `4844.738 ms` | UnsafeZone-HP is fastest in the normal single-run row; instrumented row is a near-tie with trusted Rift. This is unsafe bounded control evidence, not a final checked application claim. |
-| SafeZone cost matrix | improved-32k beats or matches unsafe-hp-32k on GCBench, linked ListOfLists, flat ListOfLists, and Common Crawl q1; Common Crawl q1 unsafe-hp-32k is pathological at `227556.451 ms` | Root coalescing plus 32 KiB pages, not rootless mode alone, is the leading SafeZone-family direction. Do not build checked backend on rootless UnsafeZone-HP until the q1 pathology is explained. |
+| SafeZone cost matrix | improved-32k beats or matches unsafe-hp-32k on GCBench, linked ListOfLists, flat ListOfLists, and trace-mode Common Crawl q1; non-trace q1/q2 make unsafezone-hp competitive again | Root coalescing plus 32 KiB pages, not rootless mode alone, is the leading SafeZone-family direction. Keep rootless UnsafeZone-HP as a lower-bound comparator, not the only checked-backend target. |
+| Common Crawl-like q1/q2/q3 | 1M q1 heap GC `1575.099 ms`, q2 heap GC `1606.364 ms`; q1 unsafezone-hp `4665.711 ms`, q2 improved-32k `4471.463 ms`; q3 heap wins `10330.962 ms` | q1/q2 are GC-heavy stream detectors where SafeZone-family modes win; q3 is a negative scratch-shape control. Current Rift HP/Streaming trail SafeZone-family modes. |
 
 The older seeded tables below are retained for provenance and comparison, but
 this clean subset should be treated as the current headline evidence for
@@ -103,6 +104,9 @@ GCBench, `improved-32k` is `662.399 ms` versus `unsafe-hp-32k` at
 row: `unsafe-hp-32k` slows to `227556.451 ms` while `improved-32k` is
 `8079.502 ms`, despite matching output and low root/reclaim counters. Treat
 `unsafezone-hp` as a lower-bound control, not the next checked backend target.
+The follow-up non-trace Common Crawl-like q1/q2 run did not reproduce the
+unsafe trace pathology: q1 `unsafezone-hp` is `4665.711 ms` and q2 is
+`4511.995 ms`, close to the best safe rows.
 
 ## Classification Legend
 
@@ -184,6 +188,18 @@ row: `unsafe-hp-32k` slows to `227556.451 ms` while `improved-32k` is
 | RIoTBench-style | q0 parse | 113.022 | 111.307 | 109.020 | HPZone `111.418` | Unsafe modest win |
 | Wikimedia generated | q2 clickstream | 160.500 | 159.147 | 155.768 | Streaming `162.253` | Unsafe wins; current Rift loses |
 | Linear Road generated | q2 accidents | 206.491 | 205.889 | 201.977 | HPZone `209.727` | Unsafe modest win; current Rift loses |
+
+## Common Crawl-Like Follow-Up
+
+Source: `evidence/COMMON_CRAWL_LIKE_MATRIX.md`. Rows below are generated
+WET-shaped 1M, 3-run medians. They supersede the earlier smoke-only q2/q3
+status, but they do not replace real WET input controls.
+
+| Query | Heap | Improved SafeZone | Improved 32K | UnsafeZone-HP | Best Rift | Classification |
+|---|---:|---:|---:|---:|---:|---|
+| q1 tokenization | `5531.233 ms`; GC `1575.099 ms` | `4709.218 ms` | `4674.258 ms` | `4665.711 ms` | HPZone `4966.111 ms` | GC-heavy detector; SafeZone-family win, Rift trails. |
+| q2 domain-window | `5344.266 ms`; GC `1606.364 ms` | `4546.604 ms` | `4471.463 ms` | `4511.995 ms` | HPZone `4738.091 ms` | GC-heavy detector; improved-32k best. |
+| q3 parser-scratch | `10330.962 ms`; GC `859.220 ms` | `27715.527 ms` | `26535.424 ms` | `11065.693 ms` | Streaming `11206.504 ms` | Negative scratch-shape control; heap wins elapsed. |
 
 ## SafeZone Cost Decomposition
 

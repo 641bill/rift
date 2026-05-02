@@ -208,19 +208,53 @@ Main findings:
   (`662.399 ms`) than `unsafe-hp-32k` (`665.224 ms`) in the traced row.
 - Linked ListOfLists also favors `improved-32k` (`32080.248 ms`) over
   `unsafe-hp-32k` (`32970.802 ms`) in the traced row.
-- Generated Common Crawl q1 exposes a serious `unsafe-hp-32k` pathology:
-  `227556.451 ms` despite low root/reclaim counters and matching output,
-  while `improved-32k` is `8079.502 ms`. Do not assume rootless 32 KiB
-  SafeZone is always the best substrate.
+- Generated Common Crawl q1 exposes a serious trace-mode `unsafe-hp-32k`
+  pathology: `227556.451 ms` despite low root/reclaim counters and matching
+  output, while `improved-32k` is `8079.502 ms`.
 - Chunk-root mode is competitive on Dataflow/Common Crawl and should remain a
   safer intermediate candidate.
 
 Decision from this run: do not implement `rift-checked-safezone-hp` on top of
-rootless UnsafeZone-HP yet. First rerun focused non-trace controls for
-`improved-32k`, `chunk-default`, and `unsafe-hp-32k` on Common Crawl-like
-q1/q2/q3, and inspect the q1 unsafe pathology. The leading safe backend
-candidate is now improved SafeZone with explicit 32 KiB/page-size or chunk-root
-configuration, not blindly rootless UnsafeZone-HP.
+rootless UnsafeZone-HP alone. The leading safe backend candidate is improved
+SafeZone with explicit 32 KiB/page-size or chunk-root configuration, with
+rootless UnsafeZone-HP kept as the unsafe lower-bound comparator.
+
+Common Crawl-like non-trace follow-up:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+COMMON_CRAWL_WET_PAGES=100000 \
+COMMON_CRAWL_WET_BENCHMARK_RUNS=3 \
+COMMON_CRAWL_WET_WARMUPS=1 \
+COMMON_CRAWL_WET_QUERIES="q1-tokenize q2-domain-window q3-parser-scratch" \
+COMMON_CRAWL_WET_MODES="heap safezone-improved safezone-improved-32k safezone-chunk unsafezone-hp rift-hp rift-streaming" \
+COMMON_CRAWL_WET_OUTPUT_DIR=/Users/siyaoliu/rift/cache/common-crawl-like-2026-05-01-100k \
+zsh sandbox/run_common_crawl_wet_matrix.sh
+
+COMMON_CRAWL_WET_PAGES=1000000 \
+COMMON_CRAWL_WET_BENCHMARK_RUNS=3 \
+COMMON_CRAWL_WET_WARMUPS=1 \
+COMMON_CRAWL_WET_QUERIES="q1-tokenize q2-domain-window q3-parser-scratch" \
+COMMON_CRAWL_WET_MODES="heap safezone-improved safezone-improved-32k safezone-chunk unsafezone-hp rift-hp rift-streaming" \
+COMMON_CRAWL_WET_OUTPUT_DIR=/Users/siyaoliu/rift/cache/common-crawl-like-2026-05-01-1m \
+zsh sandbox/run_common_crawl_wet_matrix.sh
+```
+
+All rows matched checksums/output counts. Summaries are recorded in
+`evidence/COMMON_CRAWL_LIKE_MATRIX.md`.
+
+Key 1M rows:
+
+| Query | Heap | Best SafeZone family | Best current Rift | Interpretation |
+|---|---:|---:|---:|---|
+| q1-tokenize | `5531.233 ms`, GC `1575.099 ms` | unsafezone-hp `4665.711 ms`; improved-32k `4674.258 ms` | HPZone `4966.111 ms` | GC-heavy, SafeZone-family win; Rift trails despite low op time. |
+| q2-domain-window | `5344.266 ms`, GC `1606.364 ms` | improved-32k `4471.463 ms`; unsafezone-hp `4511.995 ms` | HPZone `4738.091 ms` | GC-heavy, improved-32k best. |
+| q3-parser-scratch | `10330.962 ms`, GC `859.220 ms` | unsafezone-hp `11065.693 ms` | Streaming `11206.504 ms` | Negative scratch-shape control; heap wins elapsed. |
+
+The trace-mode `unsafe-hp-32k` q1 pathology did not reproduce in non-trace q1
+or q2. Treat it as an instrumentation-sensitive warning. Common Crawl q1/q2 are
+important GC-heavy stream detectors, but they currently argue for learning from
+SafeZone-family internals rather than for current Rift HP/Streaming as-is.
 
 Latest execution checkpoint:
 

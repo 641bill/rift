@@ -27,10 +27,10 @@ trace counters for root modes and page sizes. The result narrows the backend
 direction: current SafeZone root removal is the old cliff, improved root
 coalescing fixes most of it, and 32 KiB pages explain much of UnsafeZone-HP's
 advantage. `improved-32k` matches or beats `unsafe-hp-32k` on several key
-traced rows, while generated Common Crawl q1 exposes a severe
-`unsafe-hp-32k` pathology. `evidence/SAFEZONE_HP_BACKEND_PROTOTYPE.md`
-captures the intended checked SafeZone-family direction, but no checked
-SafeZone-HP backend code exists yet.
+traced rows, while generated Common Crawl q1 exposes a severe trace-mode
+`unsafe-hp-32k` pathology that does not reproduce in non-trace q1/q2.
+`evidence/SAFEZONE_HP_BACKEND_PROTOTYPE.md` captures the intended checked
+SafeZone-family direction, but no checked SafeZone-HP backend code exists yet.
 
 ## Purpose
 
@@ -101,9 +101,9 @@ live window payload still dominate.
 | NEXMark Beam-default Q8 | 1M generated-profile events | checked `457.518 ms` | heap `470.798 ms`; improved SafeZone `457.725 ms` | Checked near-tie with improved SafeZone | Clean generated Beam-default profile |
 | NEXMark Beam-default Q11 | 1M generated-profile events | HPZone `228.741 ms`, checked `234.401 ms` | heap `218.774 ms`; improved SafeZone `229.557 ms` | Heap wins elapsed; region rows lower GC only | Clean generated Beam-default profile |
 | UnsafeZone-HP stream follow-up | 1M generated/profile stream rows | NEXMark q3 checked `292.371 ms`, q8 checked `450.904 ms`; Common Crawl q1 HPZone `4322.349 ms` | unsafezone-hp q0/q1/q4/q5/q8/q11 often near-best; heap Common Crawl q1 `4743.205 ms`; improved SafeZone Common Crawl q1 `4028.067 ms` | UnsafeZone-HP is often best SafeZone-family stream row, but current Rift still rarely beats improved SafeZone by a case-study margin | Clean UnsafeZone stream sweep |
-| SafeZone cost decomposition | trace-instrumented 3-run diagnostic | improved-32k GCBench `662.399 ms`, linked ListOfLists `32080.248 ms`, Common Crawl q1 `8079.502 ms` | unsafe-hp-32k GCBench `665.224 ms`, linked ListOfLists `32970.802 ms`, Common Crawl q1 `227556.451 ms` | Improved 32 KiB SafeZone and chunk roots are safer backend candidates than blindly rootless UnsafeZone-HP | Diagnostic cost run, not normal elapsed headline |
+| SafeZone cost decomposition | trace-instrumented 3-run diagnostic plus non-trace q1/q2 follow-up | improved-32k GCBench `662.399 ms`, linked ListOfLists `32080.248 ms`, non-trace q2 `4471.463 ms` | unsafe-hp-32k GCBench `665.224 ms`, linked ListOfLists `32970.802 ms`, trace q1 `227556.451 ms`, non-trace q1 `4665.711 ms` | Improved 32 KiB SafeZone and chunk roots are safer backend candidates; rootless remains unsafe lower-bound comparator | Diagnostic cost run plus Common Crawl-like follow-up |
 | Common Crawl WET-shaped tokenization | 1M generated pages / 137M token records | HPZone `4301.536 ms`, Streaming `4327.405 ms` | heap `4770.503 ms`; improved SafeZone `4066.435 ms` | GC-heavy detector; Rift beats heap but improved SafeZone wins | Clean generated input only; not a Rift case-study win |
-| Common Crawl WET-shaped q2/q3 expansion | smoke only | q2/q3 checksums match across heap, SafeZone-family, and Rift HPZone | headline rows pending | New object-heavy probes for domain-window aggregation and parser scratch | Implemented scaffold; not evidence yet |
+| Common Crawl WET-shaped q2/q3 expansion | 1M generated pages / 137M token records | q2 best SafeZone improved-32k `4471.463 ms`; q3 best Rift Streaming `11206.504 ms` | q2 heap `5344.266 ms` with `1606.364 ms` GC; q3 heap `10330.962 ms` with `859.220 ms` GC | q2 is GC-heavy SafeZone-family win; q3 is negative scratch-shape control where heap wins elapsed | Generated input, checked modes absent |
 | Common Crawl WET small-bucket control | 100k pages / 13.7M records | Streaming `419.779 ms` | heap `386.807 ms`; improved SafeZone `381.109 ms` | Heap/SafeZone recover with tighter lifetimes | Generated input; not a case-study row |
 | Common Crawl real WET tokenization | 10k requested pages / 349709 token records | Streaming `15.651 ms` | heap `12.079 ms`; improved SafeZone `16.093 ms` | Real preloaded WET is CPU/live-input-bound, not GC-bound | Real preloaded input; no parser/decompression timing |
 | Common Crawl real WET tokenization larger shard row | 50k requested, 21425 actual pages / 752797 token records | HPZone `32.809 ms`, Streaming `33.103 ms` | heap `26.452 ms`; improved SafeZone `30.730 ms` | Heap wins; median timed GC zero | Real preloaded input; actual page count below request |

@@ -39,13 +39,14 @@ not a new user-facing mode. Rootless SafeZone with 32 KiB pages is useful as an
 unsafe lower-bound substrate probe, but it is not automatically the best next
 backend: the first traced cost matrix shows improved SafeZone with 32 KiB pages
 matching or beating rootless UnsafeZone-HP on several key rows, and generated
-Common Crawl q1 exposes a severe rootless `unsafe-hp-32k` pathology. The
-intended next prototype is therefore a checked SafeZone-family backend, not
-necessarily a rootless one: reuse or learn from SafeZone allocator/pool
-mechanics only when capture/provenance checks prove that GC root registration
-or region scanning is unnecessary, and otherwise prefer improved-root or
-chunk-root configurations. Unsupported mixed-reference cases should be rejected
-in v1 rather than silently falling back to a different backend.
+Common Crawl q1 exposes a severe trace-mode `unsafe-hp-32k` pathology that does
+not reproduce in non-trace q1/q2. The intended next prototype is therefore a
+checked SafeZone-family backend, not necessarily a rootless one: reuse or learn
+from SafeZone allocator/pool mechanics only when capture/provenance checks prove
+that GC root registration or region scanning is unnecessary, and otherwise
+prefer improved-root or chunk-root configurations. Unsupported mixed-reference
+cases should be rejected in v1 rather than silently falling back to a different
+backend.
 
 ## 2. Evidence Levels
 
