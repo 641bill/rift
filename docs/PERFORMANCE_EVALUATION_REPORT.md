@@ -1,214 +1,413 @@
-# Rift Performance Evaluation Report
+# Rift Project And Performance Evaluation Report
 
-Date: 2026-05-01
+Date: 2026-05-03
+Last updated: 2026-05-05 16:15:34 CEST
 
-Status: working report scaffold plus current evidence summary. This document
-is ready to be filled from a clean sweep run using
-`evidence/PERF_EVAL_RUNBOOK.md`.
+Status: presentation-ready working report. This document is the single
+high-level artifact to read before presenting or planning the next engineering
+step. It summarizes the design, implementation status, benchmark evidence,
+runtime-overhead story, wins, losses, and open work. Individual evidence files
+remain the source of detailed command provenance.
 
-## Executive Summary
+Benchmark guide: `docs/BENCHMARK_CATALOG.md` describes what each benchmark is
+meant to measure and which rows are generated, real-input, focused, or
+ceiling/control evidence.
 
-Current evidence supports a narrower and stronger claim than "regions always
-beat GC":
+## 1. Executive Summary
 
-- Older baseline rows showed runtime wins on `GCBench` and linked
-  `ListOfLists`, but the clean 2026-05-01 rerun weakened that claim: improved
-  SafeZone now wins those rows while Rift still wins flat ListOfLists.
-- Older Broom/Dataflow and StreamFlex-like rows were strong, but the clean
-  rerun also narrows those claims: checked Dataflow SELECT/AGGREGATE beat heap
-  but lose to improved SafeZone, JOIN is heap-fastest, and StreamFlex is mainly
-  latency-control evidence.
-- Checked Rift can be fast when the operator shape is simple
-  (`RegionBuffer`, `AppendWindow` cursor).
-- Checked Rift still loses on heavier rank/table/fold containers
-  (`TableRank`, long-key stream-window rank, additive fold).
-- NEXMark Beam-default Q3/Q8 are the best current checked stream rows, but
-  they are generated-profile methodology evidence, not Beam runner evidence,
-  and the clean Q3 margin is below the `>=10%` case-study gate.
-- Generated Common Crawl WET-shaped tokenization is now the clearest GC-heavy
-  stream detector: heap spends about `1.56 s` in timed GC at 1M generated
-  pages. Rift beats heap and cuts GC, but improved SafeZone is still faster.
-- Real/preloaded Wikimedia, real Common Crawl WET, official Linear Road, Yahoo,
-  RIoTBench, and most generated stream probes are ceiling or near-tie controls:
-  heap or improved SafeZone often wins elapsed time even when Rift lowers GC.
-- The new UnsafeZone-HP headline core/prior sweep shows that SafeZone internals
-  with root registration disabled usually beat current Rift HPZone on
-  linked/prior-work local harnesses, while only slightly improving over
-  improved SafeZone. This is strong runtime-substrate evidence, not a safety
-  claim.
-- The UnsafeZone-HP stream sweep repeats that pattern: UnsafeZone-HP is often
-  best or near-best among stream rows, but it still mostly edges improved
-  SafeZone by small margins rather than creating a large safe-Rift case study.
-- The bounded DEBS 1M UnsafeZone-HP row is the strongest application-shaped
-  substrate signal so far: unsafezone-hp is fastest in the normal single run,
-  with trusted Streaming close and checked Rift still heap-adjacent.
+Rift targets a specific regime: ordinary Scala Native objects whose lifetimes
+are page-, batch-, window-, transaction-, or epoch-structured. The intended
+programming model is not "rewrite benchmarks into primitive arrays"; it is:
 
-The next report revision should replace this scaffold with clean-sweep rows
-from `cache/perf-eval/<run-id>/` and update the claim language accordingly.
+- keep durable or unpredictable control state on the Scala Native Immix heap;
+- allocate structured-lifetime stream/data objects in regions;
+- reclaim those objects in bulk;
+- use static capture/lifetime/rooting checks to remove runtime memory-safety
+  bookkeeping that would otherwise erase the win.
 
-Latest harness validation:
+The current evidence is mixed but useful:
 
-| Run id | Scale | Suites | Result | Evidence status |
-|---|---|---|---|---|
-| `2026-05-01-smoke-streams` | smoke | `preflight streams` | Passed; 7 stream summary TSVs produced | Harness validation only |
-| `2026-05-01-headline-core-prior-checked` | headline | `preflight core prior checked` | Passed; tracked summary in `evidence/HEADLINE_CORE_PRIOR_CHECKED_2026_05_01.md` | Current clean headline subset |
-| `2026-05-01-headline-core-prior-checked-rerun` | headline | `preflight core prior checked` | Passed; tracked summary in `evidence/HEADLINE_CORE_PRIOR_CHECKED_RERUN_2026_05_01.md` | Current rerun evidence |
-| `2026-05-01-headline-streams` | headline | `preflight streams` | Passed; tracked summary in `evidence/HEADLINE_STREAMS_2026_05_01.md` | Current stream headline leg |
-| `2026-05-01-headline-debs-1m` | headline | `preflight debs` | Passed on `/tmp/debs2015-month1-1000000.csv`; tracked summary in `evidence/HEADLINE_DEBS_1M_2026_05_01.md` | Bounded DEBS 1M single-run leg |
-| `2026-05-01-unsafezone-core-prior` | headline | `preflight core prior` | Passed; tracked summary in `evidence/HEADLINE_UNSAFEZONE_CORE_PRIOR_2026_05_01.md` | Current UnsafeZone-HP core/prior leg |
-| `2026-05-01-unsafezone-streams` | headline | `preflight streams` | Passed; tracked summary in `evidence/HEADLINE_UNSAFEZONE_STREAMS_2026_05_01.md` | Current UnsafeZone-HP stream leg |
-| `2026-05-01-unsafezone-debs-1m` | headline | `preflight debs` | Passed on `/tmp/debs2015-month1-1000000.csv`; tracked summary in `evidence/HEADLINE_UNSAFEZONE_DEBS_1M_2026_05_01.md` | Current UnsafeZone-HP bounded DEBS leg |
-
-The smoke run validates harness wiring only. The headline rows above are the
-current evidence for their respective suites.
-
-## Experimental Method
-
-Baseline modes:
-
-| Mode | Meaning |
+| Result class | Current conclusion |
 |---|---|
-| `heap` | Scala Native Immix. |
-| `safezone-current` | SafeZone with `SAFEZONE_ROOTS_MODE=0`. |
-| `safezone-improved` | SafeZone with `SAFEZONE_ROOTS_MODE=1`. |
-| `unsafezone-hp` | Benchmark-only SafeZone no-root mode: `SAFEZONE_ROOTS_MODE=3`, `SAFEZONE_PAGE_SIZE=32768`. Unsafe. |
-| `rift-hp` | Trusted Rift HPZone. |
-| `rift-streaming` | Trusted Rift StreamingZone. |
-| `rift-checked` | Checked Rift API path where a checked operator exists. |
-| `commix` | Included where supported and meaningful. |
+| Runtime substrate | SafeZone-family allocator/pool mechanics are strong. Improved SafeZone and rootless SafeZone often beat current standalone Rift HPZone on linked/prior-work rows. |
+| Trusted Rift | `rift-trusted-hp` / `rift-trusted-streaming` win on the best generated GC-heavy stream detector: Common Crawl WET-shaped q1/q2. |
+| Checked Rift | Checked APIs can be fast for simple append/window shapes. The new page/token append operator now clears the generated Common Crawl-shaped q1/q2 gate, while rank/fold/table containers still add too much CPU overhead. |
+| Safe checked backend | `rift-checked-safezone-improved-32k` improves focused checked append/window. The page/token SafeZone-backed variant is fastest on generated Common Crawl-shaped q1/q2, but it is still generated stressor evidence rather than real-input proof. |
+| Real-input stream evidence | Current real/preloaded WET, Wikimedia, Linear Road, Yahoo, and RIoTBench rows mostly have low/zero median GC or heap wins. They are ceiling controls, not final Rift case studies. |
+| Strongest memory-pressure row | Generated Common Crawl WET-shaped q1/q2 creates heavy stream object churn: heap spends about `1.55-1.59 s` in timed GC at 1M pages. Trusted Rift beats heap and improved SafeZone after fast-path cleanup; the new checked page/token operator then beats current checked by `16.2-18.5%` and clears the generated q1/q2 gate. |
 
-Headline measurements should use:
+The strongest current claim is:
 
-- clean parent and child repositories;
-- recorded SHAs, OS, CPU, memory, Java version, and Scala Native branch;
-- smoke runs before medians;
-- 100k 3-run medians;
-- 1M 5-run medians for headline candidates;
-- full-input runs only after 1M gates pass;
-- allocation attribution only after non-attribution medians are stable.
+> Rift can remove most GC time for epochal, object-heavy stream workloads, and
+> trusted Rift backends can beat heap on those workloads. The first cheap
+> checked page/token operator now shows that static lifetime ownership can also
+> remove enough runtime overhead to win on the generated Common Crawl-shaped
+> q1/q2 stressor. The remaining research problem is making that result hold for
+> real-input GC-heavy streams and broader checked operators.
 
-## Current Evidence By Category
+The project still does not have a final checked application result on a
+real-input GC-heavy stream benchmark.
+
+## 2. Design Target
+
+Rift is a hybrid region-GC memory system for Scala Native. It is motivated by
+systems such as Broom, StreamFlex, Yak, Tofte-Talpin/MLKit-style regions,
+typed region+GC systems, and Stancu-style RegionScope work, but the target
+combination is Scala-specific:
+
+| Axis | Rift target |
+|---|---|
+| Runtime performance | Bulk reclaim epochal data without tracing each object. |
+| Static safety | Reject escaping region values, illegal heap retention, closure escape, outer-to-inner lifetime bugs, and use-after-close/reset. |
+| Ergonomics | Keep heap and Rift benchmark programs logically identical; use minimal lifetime/allocation annotations. |
+| Higher-order Scala | Support closures and ordinary Scala object graphs, not only primitive records. |
+| Native compatibility | Avoid moving objects and avoid requiring GC scans of region memory in v1. |
+| Mixed references | Allow safe cases through static rules or explicit `HeapRoot`; reject unsupported cases instead of dynamic promotion/barriers. |
+| Proof path | Preserve a small capture/lifetime discipline that can be mechanized later. |
+
+The current implementation has three layers:
+
+| Layer | Role |
+|---|---|
+| Trusted region backends | `rift-trusted-hp`, `rift-trusted-streaming`; useful for measuring backend potential without user-level checked proof. |
+| Checked Rift API | `rift-checked-rift`; ordinary objects allocated through checked region APIs and owner-token operators. |
+| Checked SafeZone-backed prototype | `rift-checked-safezone-improved-32k`; same checked surface, SafeZone-family object allocation backend. |
+
+## 3. Canonical Memory Modes
+
+Use these reporting names in presentation tables. Older raw labels remain
+accepted by scripts and appear in detailed source packs.
+
+| Reporting name | Raw/common aliases | Meaning |
+|---|---|---|
+| `gc-heap` | `heap`, `heap-immix` | Normal Scala Native Immix heap. |
+| `region-scoped-rooted` | `safezone-improved`, `safezone-improved-32k` | SafeZone-family scoped regions with coalesced GC-root bookkeeping. |
+| `region-scoped-rootless` | `safezone-rootless-32k`, `unsafezone-hp` | SafeZone-family scoped regions with root tracking disabled; unsafe lower-bound only. |
+| `region-hp-rootless` | `rift-trusted-hp`, `rift-hp`, HPZone | Trusted Rift HP backend without checked user-level proof. |
+| `region-stream-rootless` | `rift-trusted-streaming`, `rift-streaming` | Trusted Rift streaming/reset backend without checked user-level proof. |
+| `checked-region-stream` | `rift-checked-rift`, `rift-checked` | Checked Rift API over the Rift backend. |
+| `checked-region-scoped` | `rift-checked-safezone-improved-32k`, `rift-checked-safezone-32k` | Checked Rift API over rooted SafeZone-family scoped allocation. |
+| `checked-page-token` | `rift-checked-page-token`, `rift-checked-safezone-page-token` | Operator-owned checked page/event/bucket append fast path. |
+
+Detailed taxonomy: `docs/MEMORY_MODE_TAXONOMY.md`.
+
+## 4. What Has Been Implemented
+
+| Area | Status | Notes |
+|---|---|---|
+| Rift runtime backends | Implemented | HP and Streaming trusted modes exist and are benchmarked. |
+| SafeZone root modes | Implemented | Current, improved, chunk-root, and rootless benchmark mode are available. |
+| Checked object allocation | Implemented | Scala 3 checked API allocates ordinary Scala objects in regions. |
+| Mixed-reference rules | Partial | Static/immutable heap metadata and explicit `HeapRoot` supported; full root-free SafeZone policy is not proven. |
+| Checked stream operators | Partial | AppendWindow/cursor works; Join/Fold/Rank/TableRank exist but many fail performance gates. |
+| Checked SafeZone-backed backend | Implemented as benchmark prototype | `RiftRegion.streamingSafeZone(...)`; object allocation/close supported, raw allocation/reset unsupported. |
+| Canonical benchmark labels | Implemented for key matrices | Checked AppendWindow and Common Crawl WET-shaped runners accept new names and old aliases. |
+| Cheap checked operator families | Started | `PageTokenMapFilter` and `RegionList` are now real reusable APIs with passing safety probes and focused wins. `EpochFold` is implemented and correct but failed the first Dataflow AGGREGATE speed gate. EpochBuffer and TransactionRegion remain open. |
+| Performance report package | In progress | This report now consolidates the main evidence; individual packs remain backing data. |
+
+## 5. Runtime Overhead Removal
+
+The key design principle is: when static safety proves a memory-management fact,
+the runtime should not pay a second dynamic cost for that same fact.
+
+### Why Region Allocation Is Not Automatically Free
+
+Bulk close/reset avoids tracing and per-object reclamation, but every mode still
+pays to construct each ordinary Scala object. Object construction includes
+object header and RTTI setup, zero/init work, constructor execution, and field
+stores. Current checked region allocation also reaches the backend through an
+`allocImpl` method path rather than the same intrinsic fast path as normal heap
+allocation. That means an uncapped Immix heap can win median elapsed time when
+it grows to a large RSS and rarely collects, even though region rows remove GC
+tails.
+
+Operator/query CPU is separate from GC tracing. In the stream matrices it
+means bucket lookup/open, append/link writes, cursor close, linked-record
+traversal, aggregation, output/checksum work, and any ranking/table
+maintenance. Regions do not trace those records at close, but the benchmark
+must still traverse them when computing q1/q2 answers. The new
+`ObjectAllocationLoweringMatrix` isolates allocation/object-construction cost
+from those operator/query costs.
+
+The first retained-buffer allocation-lowering rows showed a checked gap, but
+that gap was partly self-inflicted: the checked rows retained records through
+the generic `RegionBuffer` API. The refined retained-region-array matrix uses
+`Array[T^{region}]^{region}` in checked rows. With that fairer retention shape,
+checked rows are fastest even at 100k (`1.576 ms` checked Rift and `1.395 ms`
+checked SafeZone-backed versus heap `1.691 ms`). At 1M, checked Rift is
+`16.100 ms`, checked SafeZone-backed is `14.347 ms`, and heap is `20.429 ms`
+with `5.745 ms` median timed GC. At 10M, heap becomes GC/RSS-bound: heap is
+`271.121 ms` with `105.807 ms` median timed GC and about `971 MB` RSS, while
+trusted Rift HP is `199.627 ms` with about `404 MB` RSS. Checked Rift is
+`165.774 ms`; checked SafeZone-backed allocation is `143.319 ms`.
+Interpretation: allocation/reclaim is not the dominant checked cost in this
+focused shape; generic checked containers and application traversal are now
+more likely to explain checked overhead in larger workloads.
+
+### Already Removed Or Avoided
+
+| Static fact / design decision | Runtime overhead removed or avoided | Evidence / impact |
+|---|---|---|
+| Region values cannot escape checked lifetime APIs. | No runtime escape table and no Yak-style promotion barrier. | Compiler probes reject direct escape/closure escape/use-after-reset cases. |
+| Heap cannot retain region values through checked APIs. | No dynamic heap-to-region tracking table in current checked paths. | Negative compiler probes cover direct retention patterns. |
+| Diagnostics are opt-in. | Rift allocation byte counters were moved off the per-allocation global-atomic hot path. | Common Crawl-like q1/q2 ordering moved in favor of trusted Rift after fast-path cleanup. |
+| SafeZone root bookkeeping was the old cliff. | Improved roots mode coalesces root add/remove. | Current SafeZone pathology disappears in improved mode on GCBench/ListOfLists/Common Crawl-like rows. |
+| Append-window close has structured bucket ownership. | Cursor close avoids per-entry close callback dispatch. | Focused AppendWindow cursor rows pass the 1M gate; SafeZone-backed cursor row is fastest focused checked row. |
+| Page/token append has operator-owned bucket lifetime. | `StreamPageTokenAppendWindow` avoids per-record child-bucket `checkOpen`, per-record child-region lookup, and stale-current `isOpen` checks in that owned path. | Focused 1M page-token rows pass; generated Common Crawl-shaped q1/q2 checked rows improve by `16.2-18.5%` versus current checked. |
+| Fixed-chunk append was tested as an array/chunk variant. | `StreamChunkAppendWindow` stores records in region-owned object-array chunks. | Correct, but the focused 1M gate failed: `rift-checked-chunk-token` is `34.273 ms` versus page-token `28.452 ms`; use as negative/control evidence. |
+| Rootless SafeZone lower-bound is explicit. | `safezone-rootless-32k` skips SafeZone page/chunk root registration. | Useful substrate lower bound only; not a safe user-facing mode. |
+
+### Not Yet Removed
+
+| Remaining runtime cost | Why it remains | Next condition for removal |
+|---|---|---|
+| Defensive `isOpen` / `checkOpen` in generic checked hot paths | They also protect direct low-level misuse and current runtime tests. | Removed only in the new page/token owned path; fold/join/rank need equivalent stale-token probes before similar removal. |
+| SafeZone roots in `rift-checked-safezone-improved-32k` | This is the safe prototype backend; rootless checked policy is not proven. | Prove/reject unrooted region-to-heap cases and add root-free lowering only for eligible checked code. |
+| Checked owner-token/operator dispatch | It is part of the current API implementation, not required by region memory itself. | Specialize cheap page/token/window append operators and measure focused gates. |
+| Rank/table/fold container maintenance | These are algorithmic container costs, not allocator costs. | Redesign only if the same shape recurs in winning workloads. |
+
+Detailed matrix: `evidence/CHECKED_OVERHEAD_REMOVAL_MATRIX.md`.
+
+### What "Page/Token Append" Means
+
+`StreamPageTokenAppendWindow` is not about lexical tokens specifically. It is a
+checked operator-owned append path for workloads shaped like "one page, event,
+bucket, or window owns many short-lived records." The caller asks the operator
+for the current child region when entering a page/bucket, allocates ordinary
+Scala record objects in that child region, and appends those records through
+the operator. Because user code does not receive reusable raw bucket tokens for
+the hot append path, the operator can maintain the invariant that the current
+bucket is open and clear it during close. That static/structured ownership is
+what justifies removing per-record defensive checks while keeping the lower
+level APIs defensive.
+
+## 6. Representative Results
+
+All numbers below are medians unless labeled otherwise. They are compiled from
+the tracked evidence packs; use the source files for full commands and raw
+caveats.
 
 ### Runtime And Topology
 
-GCBench and linked ListOfLists were historically the strongest runtime/topology
-rows, but the 2026-05-01 headline subset and rerun weaken the Rift runtime
-claim. In the rerun, GCBench is heap `211.413 ms`, improved SafeZone
-`219.924 ms`, and HPZone `244.039 ms`. Linked ListOfLists is heap
-`15165.020 ms`, improved SafeZone `9853.992 ms`, and HPZone `12210.485 ms`.
-Rift still wins flat ListOfLists (`1567.144 ms` versus heap `1749.780 ms`),
-but it does not currently beat improved SafeZone on the linked headline row.
-The UnsafeZone-HP follow-up strengthens the substrate diagnosis: no-root
-SafeZone with 32 KiB pages is fastest on GCBench runtime (`206.636 ms`) and
-linked ListOfLists (`9818.653 ms`), while current Rift HPZone is `236.393 ms`
-and `12400.062 ms` respectively. Rift HPZone still wins flat ListOfLists in
-that same leg (`1540.958 ms`).
+| Benchmark | `heap-immix` | Best safe baseline | Best Rift/trusted | Interpretation |
+|---|---:|---:|---:|---|
+| GCBench runtime | `213.817 ms` | `safezone-improved` `213.239 ms`; `safezone-rootless-32k` `206.636 ms` | HPZone `236.393 ms` | SafeZone-family substrate wins; old HPZone win weakened. |
+| ListOfLists linked | `15191.230 ms` | `safezone-improved` `9914.397 ms`; rootless `9818.653 ms` | HPZone `12400.062 ms` | Region-friendly topology, but SafeZone-family beats current Rift backend. |
+| ListOfLists flat | `1748.743 ms` | `safezone-improved` `1769.278 ms` | HPZone `1540.958 ms` | Rift HPZone wins when layout is flat/contiguous. |
+| Pipeline surrogate | `35.077 ms` | `safezone-improved` `34.660 ms` | Streaming `45.648 ms` | CPU-bound ceiling; not a Rift target. |
 
-### Prior-Work Methodology
+### Prior-Work Methodology Rows
 
-The current Broom-style Dataflow checked rows are strong: SELECT `18.865 ms`
-vs heap `36.868 ms`, AGGREGATE `36.003 ms` vs heap `51.474 ms`, and JOIN
-`18.736 ms` vs heap `32.170 ms` in older evidence. The clean 2026-05-01
-headline subset and rerun are weaker: checked SELECT/AGGREGATE beat heap but
-lose to improved SafeZone, and JOIN is won by heap. StreamFlex keeps a latency
-story because region modes remove deadline misses, but they do not win elapsed
-time in the clean subset. Yak/Stancu rows are mostly improved-SafeZone wins.
-These are local methodology reproductions, not exact artifact reproductions.
-UnsafeZone-HP is fastest or tied-fastest across the clean Dataflow rows
-(`21.957` / `39.434` / `22.359 ms` for SELECT/AGGREGATE/JOIN), Yak topword
-(`58.686 ms`), and Stancu (`33.335 ms`), but it is unsafe and only slightly
-ahead of improved SafeZone. That suggests future Rift runtime work should learn
-from or reuse SafeZone allocator/pool mechanics rather than tuning the current
-standalone HPZone backend alone.
+| Benchmark | `heap-immix` | `safezone-improved` / rootless | Best Rift/checked | Interpretation |
+|---|---:|---:|---:|---|
+| Broom Dataflow SELECT | `28.258 ms` | improved `22.501 ms`; rootless `21.957 ms` | checked `24.413 ms` | Checked beats heap; SafeZone-family wins. |
+| Broom Dataflow AGGREGATE | `48.849 ms` | improved `40.124 ms`; rootless `39.434 ms` | checked `44.146 ms` | Checked beats heap; SafeZone-family wins. |
+| Broom Dataflow JOIN | `29.122 ms` | improved `22.784 ms`; rootless `22.359 ms` | checked `24.935 ms` | Checked beats heap; SafeZone-family wins. |
+| Yak topword | `70.370 ms` | improved `59.286 ms`; rootless `58.686 ms` | Streaming `68.959 ms` | SafeZone-family substrate is strongest. |
+| Stancu transaction boundary | `44.141 ms` | improved `33.720 ms`; rootless `33.335 ms` | HPZone `51.380 ms` | Current Rift backend loses; SafeZone mechanics matter. |
 
-### Checked Operators
+These are local methodology reproductions unless original artifacts are used.
+They compare shapes, not exact published systems.
 
-Checked `RegionBuffer` and `AppendWindow` cursor are positive API evidence.
-`TableRank`, long-key stream-window rank, and additive `StreamWindowFold` are
-negative or gated results. The clean 2026-05-01 subset narrows the positive
-checked story further: manual AppendWindow still wins, prepend cursor wins its
-fair heap-prepend control, but RegionBuffer and append cursor do not win
-elapsed time. The rerun confirms this narrower checked story. Application
-benchmarks should only use checked operators that pass focused gates in the
-current clean environment.
+### Cheap Operator Family Checkpoint
 
-### Stream/Application Benchmarks
+These focused 1M-shape 3-run rows from
+`evidence/CHEAP_OPERATOR_FAMILY_MATRIX.md` show which cheap-operator directions
+are worth taking into the clean comprehensive sweep. RSS rows are now recorded;
+they still need a committed/clean rerun before being treated as final headline
+evidence.
 
-DEBS full-month checked is currently a near-tie with memory-pressure
-improvement, not a large speedup. The clean bounded 1M DEBS single-run leg has
-trusted Streaming at `4681.292 ms` versus heap `4987.579 ms`; checked is
-`4882.562 ms`. The best checked stream row in the clean stream leg is NEXMark
-Beam-default Q3: checked `295.166 ms`, heap `315.715 ms`, improved SafeZone
-`302.668 ms`. Q8 is a checked near-tie with improved SafeZone (`457.518 ms`
-versus `457.725 ms`). Generated Common Crawl WET-shaped Q1 tokenization is
-the clearest GC-heavy detector: heap `4770.503 ms` with `1559.601 ms` GC,
-HPZone `4301.536 ms` with `20.543 ms` GC, but improved SafeZone wins elapsed
-at `4066.435 ms`. Yahoo, RIoTBench, generated Wikimedia, generated Linear
-Road, real Wikimedia/Common Crawl/Linear Road, and NEXMark Q11 are controls
-where heap or improved SafeZone wins or the gap is too small for a case-study
-claim.
+| Operator family | Row | Heap / baseline | New checked row | Interpretation |
+|---|---|---:|---:|---|
+| `PageTokenMapFilter` | Dataflow SELECT | heap `27.872 ms`; improved SafeZone `23.025 ms`; current checked `20.844 ms` | scoped-backend page-token `18.214 ms`; Rift page-token `19.881 ms` | Gate passes: real reusable SELECT/filter/project API, with scoped backend fastest and lower RSS than heap in the RSS rerun. |
+| `EpochFold` | Dataflow AGGREGATE | older exact-array checked aggregate `38.399 ms` / RSS `46825472`; heap `61.585 ms` / RSS `40091648` | true reusable `EpochFold` `91.938 ms` | Correct but failed speed gate. Keep as negative/gated operator evidence; do not headline until optimized. |
+| `RegionList` | ListOfLists linked | earlier heap `14822.115 ms` / RSS `575930368`; scoped rooted `9812.764 ms`; HP `9547.748 ms` | reusable checked builder `5927.385 ms` | Gate passes strongly for linked topology with shared lifetime; this is now a real reusable API row, not benchmark-local code. |
 
-The UnsafeZone-HP stream follow-up keeps the same NEXMark direction but
-clarifies the substrate story. On Beam-default q0, unsafezone-hp is
-`468.617 ms` versus heap `520.052 ms` and improved SafeZone `481.133 ms`. On
-q3, checked Rift remains the best row at `292.371 ms` versus unsafezone-hp
-`296.480 ms`, heap `316.626 ms`, and improved SafeZone `297.962 ms`. On q8,
-checked Rift is `450.904 ms` versus unsafezone-hp `460.822 ms` and improved
-SafeZone `462.599 ms`. Common Crawl WET-shaped q1 remains GC-heavy:
-unsafezone-hp is `3971.051 ms`, improved SafeZone `4028.067 ms`, Rift HPZone
-`4322.349 ms`, and heap `4743.205 ms`. The result points toward SafeZone
-internals as a runtime substrate to learn from, not toward shipping unsafe
-no-root zones.
+This checkpoint supports the updated design framing: Rift is the checked
+stream-region programming model and operator library, while SafeZone-derived
+and Rift-native runtimes are backend choices. It does not imply that DEBS
+ranking/median paths should be moved now; those remain stateful/indexed
+operator problems with separate gates.
 
-The bounded DEBS UnsafeZone follow-up gives one stronger application-shaped
-row, still single-run: normal RunBoth reports unsafezone-hp `4639.791 ms`,
-Rift Streaming `4663.529 ms`, Rift HPZone `4738.989 ms`, checked
-`4844.738 ms`, heap `4861.406 ms`, and improved SafeZone `5341.010 ms`.
-Instrumented RunBoth is closer and has trusted Rift slightly ahead:
-Streaming `4691.125 ms`, HPZone `4694.310 ms`, heap `4705.254 ms`, and
-unsafezone-hp `4720.234 ms`. This is runtime-substrate evidence; checked
-operator overhead still blocks a clean safe-Rift application claim.
+### Checked Operator Costs
 
-## Acceptance Criteria For Claims
+| Operator | Best checked result | Heap/control | Gate status |
+|---|---:|---:|---|
+| RegionBuffer decomposition | checked array `18.574 ms`; fixed `ObjectBuffer` `25.788 ms`; growable `RegionBuffer` `29.968 ms`; pre-sized `RegionBuffer` `25.980 ms` | heap array `21.089 ms`; heap buffer `34.097 ms` | Checked arrays are fast; bounded/growable buffer overhead remains. |
+| AppendWindow cursor | cursor `34.708 ms` | heap `35.705 ms` | Positive, cheap shape. |
+| SafeZone-backed AppendWindow | `rift-checked-safezone-improved-32k` `29.444 ms` | current checked cursor `30.922 ms`; heap `35.511 ms` | Focused gate passed. |
+| Page/token append | checked page-token `27.141 ms`; SafeZone-backed page-token `26.191 ms` | current checked `30.819 ms`; heap `35.652 ms` | Focused gate passed and feeds generated Common Crawl-shaped q1/q2. |
+| Fixed-chunk append | checked chunk-token `34.273 ms`; SafeZone-backed chunk-token `33.108 ms` | page-token `28.452 ms`; SafeZone-backed page-token `27.214 ms`; heap chunk `45.363 ms` | Correct but failed; chunk allocation/control overhead outweighs saved link writes in this sequential append/drain shape. |
+| Object allocation lowering | checked Rift `165.774 ms`; checked SafeZone-backed `143.319 ms`; trusted HP `199.627 ms` at 10M | heap `271.121 ms`, GC median `105.807 ms`, RSS `971 MB` | Allocation/reclaim win at scale; prior checked gap was mostly generic `RegionBuffer` retention overhead. |
+| WindowFold additive | checked `118.726 ms` | heap `103.244 ms` | Failed; checked aggregate overhead. |
+| StreamWindowRank long-key | checked-long `503.906 ms` | heap-long `358.988 ms` | Failed; rank/container overhead. |
+| StreamWindowTableRank | table-long `568.572 ms` | heap-long `437.702 ms` | Failed; gated out of DEBS. |
 
-A benchmark can be a serious Rift case study only if:
+### Stream And Application Rows
 
-- outputs/checksums match across modes;
-- Rift beats heap and improved SafeZone by about `>=10%`; or
-- Rift cuts GC/RSS materially with `<=5%` elapsed overhead and better latency;
-- checked rows use a focused-gated checked API;
-- result provenance is explicit: generated, real/preloaded, methodology, or
-  exact artifact reproduction.
+| Workload | Input | Heap | Best SafeZone-family | Best Rift / checked | Interpretation |
+|---|---|---:|---:|---:|---|
+| NEXMark Q3 | Beam-default generated | `316.626 ms` | rootless `296.480 ms`, improved `297.962 ms` | checked `292.371 ms` | Best checked generated methodology row; below 10% gate over improved SafeZone. |
+| NEXMark Q8 | Beam-default generated | `467.213 ms` | rootless `460.822 ms`, improved `462.599 ms` | checked `450.904 ms` | Checked wins modestly; promising but not decisive. |
+| Common Crawl WET-shaped q1 | generated stressor | `5412.618 ms`, GC `1570.724 ms` | improved-32k `4637.981 ms`, rootless `4620.056 ms` | checked page-token `3956.366 ms`; SafeZone-backed page-token `3728.286 ms`; HPZone `4367.265 ms` | First checked generated application-gate pass; generated stressor, not real input. |
+| Common Crawl WET-shaped q2 | generated stressor | `5252.803 ms`, GC `1572.021 ms` | improved-32k `4580.687 ms`, rootless `4423.332 ms` | checked page-token `4039.855 ms`; SafeZone-backed page-token `3816.247 ms`; Streaming `4212.494 ms` | First checked generated application-gate pass; generated stressor, not real input. |
+| Checked SafeZone-backed q1 | generated stressor | current checked `4744.872 ms` | improved-32k `4570.772 ms` | checked SafeZone-backed `4512.743 ms` | Backend improves checked by ~4.9%, misses application gate. |
+| Checked SafeZone-backed q2 | generated stressor | current checked `4698.903 ms` | improved-32k `4362.405 ms` | checked SafeZone-backed `4431.865 ms` | Backend improves checked by ~5.7%, still trails trusted modes. |
+| DEBS bounded 1M | real DEBS slice | heap `4861.406 ms` | improved SafeZone `5341.010 ms`; rootless `4639.791 ms` | Streaming `4663.529 ms`; checked `4844.738 ms` | Modest application-shaped substrate signal; checked near heap. |
+| Real Common Crawl WET q1/q2 | real preloaded WET shard | q1 heap `32.215 ms`; q2 heap `31.227 ms`; GC `0.000 ms` | q1 improved-32k `35.264 ms`; q2 `35.888 ms` | SafeZone-backed page-token q1 `30.474 ms`; q2 `30.783 ms` | Page-token matches output and wins modestly, but current shard is still median/max-GC-zero; ceiling/control evidence. |
+| Real Common Crawl WAT q4/q5 | real preloaded WAT shard | q4 heap `33.646 ms`; q5 heap `35.066 ms`; GC `0.000 ms` | q4 improved-32k `39.551 ms`; q5 `39.579 ms` | SafeZone-backed page-token q4 `31.792 ms`; q5 `33.937 ms` | Real link-object path works and wins modestly, but heap still has zero timed GC; ceiling/control evidence. |
+| GH Archive q1 fields | real preloaded NDJSON | 8-hour oracle 1M heap `293.204 ms`, max GC `135.368 ms`, RSS `1.74 GB`; 1G heap-cap diagnostic `395.295 ms`, median GC `92.347 ms` | 8-hour improved-32k `374.923 ms` | 8-hour Streaming rerun `340.820 ms`; SafeZone-backed page-token `348.817 ms` | Heap wins uncapped median by growing to a large heap; checked region wins the 1G memory-budget diagnostic and removes GC tails. |
+| GH Archive q2 repo window | real preloaded NDJSON | 8-hour oracle 1M heap `271.880 ms`, max GC `136.353 ms` | improved-32k `363.049 ms` | Streaming `325.665 ms`; SafeZone-backed page-token `347.033 ms` | Heap median wins; repo-window aggregation CPU dominates despite a GC outlier. |
+| Wikimedia real clickstream | real preloaded TSV | heap `126.800 ms` | improved `149.062 ms` | Streaming `157.449 ms` | Heap wins; ceiling control. |
+| Linear Road official q1 | official input | heap `162.668 ms` | source pack | HPZone `180.277 ms` | Heap wins; ceiling control. |
 
-Rows that fail these criteria still belong in the report as negative evidence
-or ceiling results.
+## 7. What Is A Win, What Is A Loss
 
-## Threats To Validity
+### Wins
 
-- Many literature-shaped rows are methodology reproductions, not exact
-  artifacts.
-- NEXMark rows use local Scala Native execution, not the Apache Beam runner.
-- Real-input rows often preload data; parser/decompression/I/O are separated
-  from memory-management claims.
-- Scala Native performance differs from JVM performance, so JVM benchmark
-  suites are not direct targets.
-- Allocation-attribution counters perturb timing and should not provide
-  headline elapsed numbers.
-- Improved SafeZone is a moving and strong baseline; beating old SafeZone is
-  not sufficient.
+| Win | Why it matters |
+|---|---|
+| Generated Common Crawl WET-shaped q1/q2 | Shows the memory-management regime Rift is built for: many ordinary stream objects, epochal lifetimes, heap spends ~1.5s in GC at 1M. |
+| NEXMark Q3/Q8 checked rows | Shows checked operator surface can beat heap and improved SafeZone on recognized stream-methodology shapes, though margins are still modest. |
+| SafeZone-backed checked AppendWindow | Shows SafeZone-family backend mechanics can reduce checked overhead without changing the user-level checked API. |
+| Checked page/token append operator | Shows static lifetime ownership can remove redundant runtime checks and turn the generated Common Crawl-like q1/q2 path from checked-overhead evidence into a checked generated-stressor win. |
+| SafeZone cost decomposition | Shows old SafeZone slowness was largely root bookkeeping and page-size configuration, not inherent region cost. |
+| Rootless SafeZone lower bound | Shows what allocator mechanics might achieve when root registration is unnecessary, but only as unsafe evidence. |
 
-## Remaining Report Work
+### Losses / Ceiling Results
 
-The core/prior/checked, stream, bounded DEBS 1M, UnsafeZone-HP core/prior,
-UnsafeZone-HP stream, and UnsafeZone-HP bounded DEBS legs have now run. The
-remaining report work is:
+| Loss / ceiling | Interpretation |
+|---|---|
+| Current Rift HPZone loses to improved SafeZone on linked/prior-work rows. | Standalone Rift allocator should learn from SafeZone internals instead of being tuned in isolation. |
+| Generic checked Common Crawl q1/q2 trail trusted Rift. | The generic `StreamAppendWindow` allocator placement is correct but too costly. The specialized page/token operator fixes this generated q1/q2 shape, but not yet real inputs or other operators. |
+| TableRank / rank / fold containers fail focused gates. | Do not use them for application claims yet. |
+| Real WET/WAT/Wikimedia/Linear Road rows mostly heap-fastest or median-GC-zero. | These inputs, as currently wired, do not stress GC enough; they are controls, not failures to tune. GH Archive q1 is now a memory-budget/tail-latency candidate rather than an uncapped throughput win. |
+| CPU-bound rows like pipeline surrogate. | Regions add overhead when memory management is not the limiting factor. |
+| Fixed-chunk append path. | Array/chunk structures are not automatically faster; the fair heap-chunk and checked chunk-token controls are slower than linked page-token for sequential append/drain. |
 
-1. Convert the current tracked summaries into final thesis tables.
-2. Decide whether to run a full-month DEBS rerun under the same quiet-machine
-   discipline.
-3. Add only targeted follow-up benchmarks for repeated winning shapes.
-4. Finalize the win-envelope and next API plan around cheaper checked
-   operators, not benchmark-specific rewrites.
+### When Rift Wins
 
-Use `evidence/EVALUATION_SUMMARY_TABLES.md` for compact tables and the
-individual result packs for detailed command provenance.
+| Situation | Mode | What the mode does | Benchmark/input | Why it is GC-heavy or not | Region data / heap data | Evidence class |
+|---|---|---|---|---|---|---|
+| Generated Common Crawl WET-shaped q1/q2 | `rift-checked-page-token` and `rift-checked-safezone-improved-32k` page-token | Checked operator-owned child buckets; SafeZone-backed row delegates object allocation to improved SafeZone + 32 KiB pages. | Generated WET-shaped stressor, 1M pages / 137M token records. | Heap spends about `1.57 s` in timed GC; many page/token records share page/window lifetimes. | Page/token records in regions; durable counters/config on heap or primitive arrays. | Uncapped generated-stressor throughput win; not real-input proof. |
+| Focused page/token append | `rift-checked-page-token` | Same checked API idea without application parsing or aggregation. | Synthetic focused append matrix, 1M records. | Isolates append/object lifetime overhead rather than full GC pressure. | Short-lived records in child bucket regions; operator metadata on parent/heap. | Static-safety overhead-removal win. |
+| GH Archive q1 under heap budget | `rift-checked-safezone-page-token` compared with capped `heap-immix` | Checked page-token path over SafeZone-backed region allocation. | Real preloaded GH Archive NDJSON, 1M events / 13M event-field records. | Uncapped heap wins by growing to about `1.7 GiB`; under `1G` cap heap collects materially and slows. | Event/field records in regions; preloaded primitive input arrays and control metadata on heap. | Fixed-memory / GC-tail candidate, not uncapped throughput win. |
+| NEXMark Q3/Q8 | `rift-checked-rift` | Checked region APIs on generated Beam-default methodology streams. | Generated NEXMark profile. | Moderate object/window pressure; margins are modest. | Event/window records in regions where checked operator exists; durable tables/counters on heap. | Generated methodology win/near-win. |
+| Broom-style Dataflow | `rift-checked-rift`, with SafeZone-family often fastest | Checked local epoch objects; SafeZone-family rows measure allocator substrate. | Local SELECT/AGGREGATE/JOIN methodology reproduction. | Documents/outputs are epoch-local. | Per-epoch document/output objects in regions; control state on heap. | Prior-work-shaped method evidence, not exact artifact reproduction. |
+| Real WET/WAT current shards | `rift-checked-safezone-improved-32k` page-token | Checked page/link-object path works over real preloaded data. | Real Common Crawl WET/WAT shards. | Current shards report zero timed heap GC, so this is not yet GC-heavy. | Page/link/token records in regions; input/control on heap. | Real-input ceiling/control with modest region wins only. |
+| Object-allocation scale-up | `rift-checked-rift`, `rift-checked-safezone-improved-32k` | Region-backed retained object array without stream/query operators. | Focused 10M-object matrix. | Heap spends `105.807 ms` median timed GC and reaches about `971 MB` RSS. | Ordinary small Scala objects in regions; one retained array/traversal in every mode. | Allocation/reclaim win; generic checked container overhead isolated as a separate problem. |
+
+## 8. What "Common Crawl WET-Shaped" Means
+
+`Common Crawl WET-shaped` is a generated stressor, not real Common Crawl data.
+It imitates the object shape of WET processing:
+
+- page records;
+- header/body-like fields;
+- many lines per page;
+- many token objects per line;
+- page/window lifetime boundaries.
+
+It is useful because it isolates the memory-management question and reliably
+creates heavy short/epochal object churn. It is not real-input proof. The real
+WET shard currently wired is much smaller and does not create comparable GC
+pressure. Real WAT link extraction now materializes about `1.0M` page/link
+records at 50k requested pages and the checked SafeZone-backed row wins
+modestly, but heap still reports zero timed GC. Both current real shards are
+therefore ceiling controls until larger/multiple shards or a different
+real-data stream creates material heap pressure.
+
+## 9. Realistic GC-Heavy Stream Benchmark Ladder
+
+The next benchmark search should focus on real or realistic stream workloads
+where object churn and epochal lifetimes are both present.
+
+| Priority | Candidate | Why | First gate |
+|---:|---|---|---|
+| 1 | Larger/multiple Common Crawl WET/WAT shards | Same domain as current GC-heavy stressor; one WAT shard was not enough to trigger GC. | Actual loaded pages/tokens/links large enough; heap median/max GC material. |
+| 2 | GH Archive file-backed and memory-budget JSON-lines | Preloaded q1 shows heap can avoid GC by growing to GB-scale RSS; under a 1G heap cap checked regions win q1. | Include parse/string allocation in timing; report heap caps, RSS, per-run elapsed/GC tails. |
+| 3 | Other public NDJSON/log-event streams | Real records often allocate JSON fields, tokens, maps, projected events, and output rows. | Preloaded and file-backed parse/project/window-count controls. |
+| 4 | DSPBench local-kernel subset | Stream benchmark family with varied applications; choose high object churn kernels only. | Triage 2-3 kernels with clear windows/epochs and local no-cluster execution. |
+| 5 | NEXMark Q3/Q8/Q9/Q11 | Recognized generated stream methodology; already has promising rows. | Keep as methodology/regression, not real-input proof. |
+| 6 | RIoTBench with provenance-clean input | IoT streams may have parse/filter/window lifetimes. | Only rerun with real/provenance-clean input or clearly labeled generator. |
+| Control | Wikimedia, Linear Road, Yahoo, DEBS | Useful regression/ceiling rows. | Revisit only after a checked operator/backend change alters allocation behavior. |
+
+Detailed ladder: `evidence/REALISTIC_STREAM_GC_MATRIX.md`.
+
+## 10. Reportable Claim Boundaries
+
+Use these claim boundaries in talks and writing:
+
+| Claim | Current status |
+|---|---|
+| "Rift regions always beat GC." | False. CPU-bound and low-GC rows often favor heap. |
+| "Old SafeZone is slow." | Too vague. Current roots mode 0 can be pathological; improved SafeZone is a strong baseline. |
+| "Trusted Rift can beat heap on GC-heavy epochal streams." | Supported by Common Crawl WET-shaped q1/q2 and some NEXMark rows. |
+| "Checked Rift already has a final application win." | Not yet. Checked rows are promising but still gated by operator overhead. |
+| "SafeZone internals are worth using for Rift." | Supported by SafeZone cost and checked SafeZone-backed AppendWindow. |
+| "Rootless SafeZone is safe." | False. It is an unsafe lower-bound unless root-free checked policy is proven. |
+| "Real stream data is always GC-heavy." | False. Current real WET/Wikimedia/Linear Road rows are mostly ceiling controls. |
+
+## 11. Next Engineering Plan
+
+The next implementation work should be ordered like this:
+
+1. **Keep allocation and generic checked-container costs separated.**
+   The region-array allocation matrix is positive; the earlier negative row was
+   mostly `RegionBuffer` overhead. The decomposition now shows
+   `rift-checked-array` at `18.574 ms` versus fixed `ObjectBuffer` at
+   `25.788 ms`, growable `RegionBuffer` at `29.968 ms`, and pre-sized
+   `RegionBuffer` at `25.980 ms`, so optimize generic checked
+   buffers/operators separately instead of treating that gap as raw allocation
+   cost.
+
+2. **Use `StreamPageTokenAppendWindow` as the first cheap checked operator.**
+   Keep the generic `StreamAppendWindow` path as the defensive control, and
+   apply the owned-path/no-check idea to fold/join/rank only after equivalent
+   stale-token probes exist.
+
+3. **Run the realistic stream ladder against the new operator.**
+   Start with larger/multiple WET shards and WAT metadata/link extraction, then
+   NDJSON/logs, then DSPBench triage. Park rows where heap median/max GC is
+   immaterial.
+
+4. **Advance checked SafeZone-backed backend carefully.**
+   Keep `rift-checked-safezone-improved-32k` as the safe candidate. Do not
+   make rootless checked claims until mixed-reference/root-free policy tests
+   prove eligibility.
+
+5. **Promote only repeated winning shapes into public APIs.**
+   Do not add more TableRank/rank-style application integration until focused
+   gates pass.
+
+## 12. Presentation Outline
+
+Use `docs/RIFT_EVALUATION_SUMMARY_SLIDES.md` as a slide skeleton. The talk
+should follow this order:
+
+1. Problem: GC overhead in epochal stream/dataflow object graphs.
+2. Design: checked regions plus GC heap fallback.
+3. Mode taxonomy: heap, SafeZone, rootless lower bound, trusted Rift, checked
+   Rift, checked SafeZone-backed Rift.
+4. Runtime lesson: SafeZone root coalescing and page size matter.
+5. Safety lesson: static checks should remove runtime escape/root/barrier work.
+6. Benchmark lesson: only some stream workloads are GC-heavy.
+7. Representative tables: Common Crawl-shaped q1/q2, NEXMark Q3/Q8, Dataflow,
+   ListOfLists, checked AppendWindow, negative rows.
+8. Current win envelope and losses.
+9. Next engineering plan.
+
+## 13. Source Evidence
+
+Read these files for detail:
+
+- `docs/MEMORY_MODE_TAXONOMY.md`
+- `evidence/EVALUATION_SUMMARY_TABLES.md`
+- `evidence/CHECKED_OVERHEAD_REMOVAL_MATRIX.md`
+- `evidence/CHECKED_PAGE_TOKEN_APPEND_MATRIX.md`
+- `evidence/CHECKED_SAFEZONE_BACKEND_MATRIX.md`
+- `evidence/REALISTIC_STREAM_GC_MATRIX.md`
+- `evidence/COMMON_CRAWL_LIKE_MATRIX.md`
+- `evidence/SN_WIN_ENVELOPE.md`
+- `evidence/SAFEZONE_COST_MATRIX.md`
+- `docs/HANDOFF.md`

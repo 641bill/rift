@@ -37,3 +37,4 @@ If working on implementation, also inspect:
 3. Update `docs/HANDOFF.md` when finishing a substantial milestone.
 4. Sync benchmark and result markdown from `scala-native-rift/` into `evidence/`.
 5. Treat `scala-native/` and `scala-parallel-collections-amordo/` as read-only references unless explicitly told otherwise.
+6. When modifying project docs or evidence markdown, update the document's `Last updated:` timestamp or add one near the top if it is missing.

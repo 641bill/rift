@@ -1,0 +1,142 @@
+# Rift Benchmark Catalog
+
+Date: 2026-05-05
+Last updated: 2026-05-05 15:43:00 CEST
+
+Status: working benchmark guide. Use this document to understand what each
+benchmark is meant to test before reading the detailed result files in
+`evidence/`.
+
+## 1. How To Read The Benchmarks
+
+Rift now has many benchmarks because they answer different questions. They
+should not be collapsed into a single "Rift is faster/slower" statement.
+
+| Evidence class | Question answered | Examples |
+|---|---|---|
+| Runtime-only | Is the allocator/reclaim path competitive before safety/operator overhead? | GCBench, ListOfLists, Dataflow trusted modes |
+| Topology/layout | Does the object graph shape fit region reclaim? | ListOfLists linked/flat/chunked/topology |
+| Prior-work methodology | Does Rift behave well on Broom/Yak/StreamFlex/Stancu-shaped workloads? | Dataflow, StreamFlex, Yak, Stancu |
+| Checked operator | Is a reusable safe API cheap enough for application use? | ObjectAllocationLowering, CheckedRegionBuffer, PageToken, AppendWindow, WindowFold, TableRank |
+| Generated stream stressor | Does a realistic stream shape create enough heap pressure to show a memory-management win? | Common Crawl WET-shaped, NEXMark Beam-default |
+| Real-input stream control | Does a public/real input preserve the same memory pressure? | real WET/WAT, GH Archive, Wikimedia, Linear Road |
+| Ceiling/negative | Does the workload prove heap/CPU/I/O dominates? | pipeline surrogate, real WET/WAT median-GC-zero rows |
+
+Headline claims should use the canonical memory-mode names from
+`docs/MEMORY_MODE_TAXONOMY.md`.
+
+## 2. Core Runtime Baselines
+
+| Benchmark | What it does | Input type | Main interpretation |
+|---|---|---|---|
+| GCBench | Allocates tree-shaped object graphs and stresses allocation/reclaim. | Synthetic runtime stressor | Useful for raw allocator/root-bookkeeping comparison; not a stream application. |
+| ListOfLists | Builds many linked lists, plus flat/chunked/topology variants. | Synthetic topology stressor | Shows where linked object topology hurts/helps regions and where chunked layouts change the story. |
+| Pipeline surrogate | CPU-heavy pipeline with little material GC pressure. | Synthetic ceiling control | Useful mainly to show that region memory cannot fix CPU-bound code. |
+
+"Chunked" in ListOfLists means several logical list elements are grouped into a
+larger region-friendly block/chunk. It changes topology and allocation count,
+so it is layout evidence, not a pure allocator comparison.
+
+## 3. Prior-Work Methodology Benchmarks
+
+| Benchmark | Comparator anchor | What it does | Main interpretation |
+|---|---|---|---|
+| Dataflow SELECT/AGGREGATE/JOIN | Broom-style dataflow | Stream operators with short-lived tuples and operator-local lifetimes. | Good prior-work-shaped runtime evidence; SafeZone-family rows are often strong. |
+| StreamFlex matrix | StreamFlex-style memory pressure/latency | Windowed stream pressure and latency-style measurements. | Methodology evidence, not exact artifact reproduction. |
+| Yak matrix | Yak-style epochs and promotion pressure | Topword/filter, GraphChi-like intervals, grouped sort, escape/promotion proxies. | Useful to compare static checked regions against dynamic region/promotion ideas. |
+| Stancu matrix | RegionScope/static hybrid analysis | Transaction/region-boundary style workloads. | Safety/methodology anchor; not full SPECjbb reproduction. |
+
+These rows are intentionally labeled as methodology reproductions unless the
+original benchmark artifact, input, and configuration are actually used.
+
+## 4. Checked Operator Matrices
+
+| Benchmark | What it isolates | Latest meaning |
+|---|---|---|
+| ObjectAllocationLoweringMatrix | Plain object allocation with no window/rank/query traversal. | Raw checked region allocation is not the main bottleneck: at 10M objects, checked SafeZone-backed allocation is `143.319 ms` versus heap `271.121 ms` with `105.807 ms` GC. |
+| CheckedRegionBufferMatrix | Growable buffer, fixed `ObjectBuffer`, and exact-array retention. | Exact checked arrays are fast; generic bounded/growable buffers still pay layout/access/dispatch overhead. |
+| CheckedAppendWindowMatrix | Reusable checked append/window bucket API. | Cursor/cached paths made the API viable, but generic paths are still slower than operator-owned fast paths. |
+| CheckedPageTokenAppendMatrix | Operator-owned page/event/window append path. | First focused checked operator gate that clearly passes; it removes per-record stale-bucket checks and region lookups. |
+| StreamChunkAppendWindow control | Operator-owned fixed object-array chunks per bucket. | Correct but slower than linked page-token at 1M; use as negative/control evidence for sequential append/drain workloads. |
+| CheckedWindowFoldMatrix | Additive window fold/count API. | Correct but failed the 1M speed gate; do not use as application evidence yet. |
+| CheckedStreamWindowRank/TableRank | Dense/keyed rank and fused table-rank structures. | Correct and useful framework progress, but current rank/table CPU overhead is too high for DEBS Q1 claims. |
+| CheapOperatorFamilyMatrix | First reporting-mode/operator-family wiring for Dataflow SELECT, Dataflow AGGREGATE, and ListOfLists linked topology. | Focused RSS rows now exist: SELECT scoped page-token `17.980 ms` / `30375936` RSS bytes vs heap `27.932 ms` / `39288832`; AGGREGATE epoch-fold `38.399 ms` / `46825472` vs heap `61.585 ms` / `40091648`; ListOfLists checked builder `9228.561 ms` / `364150784` vs heap `14822.115 ms` / `575930368`. Full clean headline sweep is still pending. |
+
+"Page/token" does not mean the benchmark is only about text tokens. It means
+one page, event, or bucket owns many short-lived records. The operator owns the
+bucket lookup, child-region access, append, and close, so checked code can skip
+runtime work that static ownership makes redundant.
+
+The cheap-operator family milestone generalizes that idea cautiously:
+
+| Family | Intended shape | Current implementation status |
+|---|---|---|
+| `PageTokenMapFilter` | SELECT/filter/project rows where each page/event/window owns short-lived projected records. | First Dataflow SELECT page-token rows wired and smoke-tested. |
+| `EpochFold` | Additive count/sum/fold rows with epochal record lifetimes. | Reporting row wired for Dataflow AGGREGATE using the existing exact-array checked aggregate path; a general reusable API is still open. |
+| `RegionListOfListsBuilder` | Linked object topology where a whole structure/epoch dies together. | Checked builder row wired and smoke-tested; clean medians pending. |
+| `EpochBuffer` | Append/drain epoch buffers for Yak/StreamFlex-style data/control splits. | Planned, not implemented in this slice. |
+| `TransactionRegion` | Stancu-style batched transaction regions with explicit commit/export handles. | Planned, not implemented in this slice. |
+
+Do not use these names to imply all applications can use the same operator.
+Ranking, median maintenance, hash joins, and top-k still need separate focused
+operators and gates.
+
+## 5. Stream And Application Benchmarks
+
+| Benchmark | Input type | Current status |
+|---|---|---|
+| DEBS 2015 | Real taxi CSV samples/full-month controls | Correctness and region-placement evidence exists, but elapsed wins are modest and much CPU is query/output work. Downstream validation, not the current tuning target. |
+| NEXMark | Official Beam-default generated profile in local Scala Native harness | Useful recognized stream methodology. Some wins on Q3/Q8-style rows, but not a decisive real-data case study. |
+| Common Crawl WET-shaped | Generated WET-like pages/lines/tokens | Strongest GC-heavy stream stressor: heap spends about `1.55-1.59 s` in timed GC at 1M generated pages; trusted and page-token checked rows win. This is not real Common Crawl input proof. |
+| Real Common Crawl WET/WAT | Public preloaded WET/WAT shards | Current shards have median timed GC of zero. Page-token rows work and win modestly on WAT, but these are ceiling/control rows. |
+| GH Archive | Real hourly NDJSON GitHub event files | Promising memory-budget/tail-latency candidate. Uncapped heap wins median by growing to about `1.7 GiB`; under a 1G heap cap, checked SafeZone-backed q1 wins. |
+| Wikimedia | Real/generated TSV/clickstream-style rows | Mostly heap or improved SafeZone wins with low median GC; parked as ceiling/regression control. |
+| Linear Road | Official/generated position-report methodology | Useful latency/window methodology, but current rows are not GC-heavy enough for a Rift case study. |
+| Yahoo-style ads | Local/generated ad-stream methodology | Some wins exist, but provenance is generated/local rather than official real input. |
+| RIoTBench-style IoT | Local/generated IoT ETL/statistics methodology | Some q1 wins exist, but real/provenance-clean input remains open. |
+
+## 6. Current Interpretation
+
+The good numbers are meaningful, but they are narrower than a broad "regions
+beat GC" claim:
+
+- Region reclaim helps most when many ordinary objects share an epochal
+  lifetime and the heap cannot just grow without collecting.
+- Checked allocation can be fast when the compiler/runtime path is direct and
+  the retention structure is simple.
+- Generic checked containers still add CPU overhead through growth, dispatch,
+  indexing, callback, or rank/table maintenance.
+- Real input often does not trigger much timed GC at the measured scale because
+  parsing, aggregation, checksum/output, or CPU traversal dominates.
+- Heap-size controls matter: an uncapped heap can buy throughput with high RSS,
+  while region modes are more interesting under fixed-memory or tail-latency
+  constraints.
+
+## 7. What Has Not Been Proven Yet
+
+Rift still does not have a final checked result on a public, real-input,
+GC-heavy stream workload that beats both `heap-immix` and
+`safezone-improved-32k` by a clear case-study margin.
+
+The nearest candidates are:
+
+1. GH Archive with heap-budgeted/file-backed/tail-latency runs.
+2. Larger or multiple real Common Crawl WET/WAT shards.
+3. Another real NDJSON/log-event stream with heavier object churn.
+4. DSPBench/Theodolite/RIoTBench-style local kernels only if input provenance
+   and lifetime structure are clean.
+
+## 8. Source Files
+
+Read these result files first for detailed numbers:
+
+- `evidence/OBJECT_ALLOCATION_LOWERING_MATRIX.md`
+- `evidence/CHECKED_REGION_BUFFER_MATRIX.md`
+- `evidence/CHECKED_PAGE_TOKEN_APPEND_MATRIX.md`
+- `evidence/CHEAP_OPERATOR_FAMILY_MATRIX.md`
+- `evidence/COMMON_CRAWL_LIKE_MATRIX.md`
+- `evidence/REALISTIC_STREAM_GC_MATRIX.md`
+- `evidence/GITHUB_ARCHIVE_REGION_MATRIX.md`
+- `evidence/SN_WIN_ENVELOPE.md`
+- `evidence/EVALUATION_SUMMARY_TABLES.md`
+- `evidence/ALL_PHASE_RESULTS.md`

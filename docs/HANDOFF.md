@@ -1,6 +1,7 @@
 # Rift Project Handoff
 
-Date: 2026-05-02
+Date: 2026-05-03
+Last updated: 2026-05-05 16:15:34 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -9,13 +10,345 @@ Active implementation branch for this update:
 `feature/rift`
 
 Implementation commit at start of this update:
-`41b848de79600c1a8938b9417cbfdeed47e42f6c`
-(`Reduce Rift allocation stats overhead`)
+`ac8009416` (`Add checked Common Crawl-like stream mode`)
 
 Parent evidence commit at start of this update:
-`36542ad` (`Record Rift fast allocation counter follow-up`)
+`8dad67c` (`Record checked Common Crawl-like follow-up`)
 
 Active update:
+Cheap checked page/token append operator implemented and measured; real WAT
+link-metadata control added; first GH Archive real NDJSON matrix added.
+Follow-up scaffold added for allocation-lowering decomposition and heap-budget
+reporting.
+
+Reusable operator-family update:
+`PageTokenMapFilter[T]`, `EpochFold[T]`, and `RegionList[T]` now exist as
+named checked APIs in `RiftRegion`, with compiler/runtime probes. Dataflow
+SELECT now uses `PageTokenMapFilter` instead of the lower-level page-token
+primitive directly; its 1M-shape 3-run row remains strong
+(`checked-page-token` `19.881 ms`, scoped backend `18.214 ms`, heap
+`27.872 ms`). `RegionList` replaced the benchmark-local ListOfLists checked
+builder and improved the focused 3-run row to `5927.385 ms`. `EpochFold` is
+correct but currently a negative/gated result: the first true reusable
+Dataflow AGGREGATE row is `91.938 ms`, much slower than the older exact-array
+checked aggregate path. Do not use `EpochFold` as headline evidence until it is
+optimized or redesigned.
+
+Validation for reusable operator update:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile
+ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"
+ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionCheckedTest"
+```
+
+Results: compile passed; checked compiler suite passed `106/106`; checked
+native runtime suite passed `47/47`.
+
+Comprehensive sweep attempt:
+Started a dirty-repo staged smoke run with
+`RIFT_EVAL_RUN_ID=2026-05-05-reusable-operators-smoke`,
+`RIFT_EVAL_SCALE=smoke`, and suites `preflight core prior checked streams`.
+It was stopped during the core GCBench leg because the harness repeatedly
+invoked sbt under Java 17, paid full rebuild/link costs, and produced code-cache
+warnings before reaching useful suite coverage. One partial heap GCBench row was
+written under `/Users/siyaoliu/rift/cache/perf-eval/2026-05-05-reusable-operators-smoke/`,
+but this run is not evidence. Before a comprehensive sweep, either commit the
+checkpoint and optimize the run harness to reuse built binaries or run the
+headline suites manually in smaller committed batches.
+
+Report/taxonomy/benchmark-catalog update:
+`docs/PERFORMANCE_EVALUATION_REPORT.md` is now the single high-level project
+report for presentation and planning. It summarizes the design target, canonical
+mode names, what was implemented, what runtime overhead has actually been
+removed, representative benchmark tables, wins/losses, realistic stream
+benchmark ladder, and next engineering plan. `docs/RIFT_EVALUATION_SUMMARY_SLIDES.md`
+is the matching markdown slide outline. `docs/BENCHMARK_CATALOG.md` is the
+separate guide to what each benchmark measures, which inputs are generated or
+real, and which rows are runtime-only, checked-operator, stream-stressor, or
+ceiling/control evidence. The report now explicitly records that region
+allocation removes tracing/reclaim cost but not object-construction,
+allocation-lowering, or operator/query CPU cost; it also defines page/token
+append and classifies wins as uncapped-throughput, fixed-memory, RSS, or
+tail-latency evidence.
+
+Latest checkpoint:
+`RiftRegion.StreamPageTokenAppendWindow[T]` now exists as an experimental
+checked operator-owned append path for page/token/window stream workloads. It
+allocates ordinary Scala records in child bucket regions, but user code does
+not receive reusable `StreamBucket` tokens for hot append. The operator owns
+bucket lookup, child-region caching, append, and close. Public low-level
+`StreamAppendWindow` APIs remain defensive.
+
+The page/token path removes these runtime costs from the checked hot path:
+per-record `bucket.child.checkOpen()`, per-record `streamBucketRegion(...)`
+lookup, and stale-current `isOpen` checks in the operator-owned fast path.
+New runtime probes reject stale bucket-region access after close-before and
+close-all, and a new compiler probe rejects passing a direct heap record to
+`appendPageToken`.
+
+Validation for this update:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile
+ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"
+ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionCheckedTest"
+```
+
+Results: compile passed; checked compiler suite passed `98/98`; checked native
+runtime suite passed `43/43`.
+
+Focused page/token append gate: passed. At 1M events,
+`rift-checked-page-token` is `27.141 ms` versus current `rift-checked-rift`
+`30.819 ms` and heap `35.652 ms`; the SafeZone-backed page-token row is
+`26.191 ms`. All rows matched checksum.
+
+Generated Common Crawl-shaped q1/q2 gate: passed. At 1M q1,
+`rift-checked-page-token` is `3956.366 ms` versus current checked
+`4855.133 ms`, trusted HPZone `4367.265 ms`, improved SafeZone-32k
+`4637.981 ms`, and heap `5412.618 ms`. The SafeZone-backed page-token row is
+`3728.286 ms`. At 1M q2, `rift-checked-page-token` is `4039.855 ms` versus
+current checked `4820.611 ms`, trusted Streaming `4212.494 ms`, improved
+SafeZone-32k `4580.687 ms`, and heap `5252.803 ms`. The SafeZone-backed
+page-token row is `3816.247 ms`. All q1/q2 rows matched checksum/output count.
+
+Interpretation: this is the first checked Common Crawl-shaped application gate
+that passes. It directly supports the static-safety overhead-removal story:
+when a checked operator owns the lifetime boundary, it can remove redundant
+dynamic checks and lookup work. Caveat: these are generated WET-shaped stressor
+rows, not real Common Crawl input proof.
+
+Real WET control: ran the existing preloaded Common Crawl WET shard with q1/q2
+and page-token modes. At the actual loaded scale, q1 produced `752797` token
+records and q2 produced `18560` outputs. Heap timed GC was `0.000 ms` in every
+row. SafeZone-backed page-token is fastest (`30.474 ms` q1 and `30.783 ms`
+q2), but this is a ceiling/control row, not GC-heavy evidence. The next real
+input step remains larger/multiple WET/WAT shards or a different real
+NDJSON/log-style workload.
+
+Real WAT control: added WAT link extraction queries to
+`CommonCrawlWetMatrix`: `q4-wat-links` materializes page plus URL/link records,
+and `q5-wat-link-domain-window` aggregates link domains at bucket close. The
+input is
+`/Users/siyaoliu/rift/cache/benchmark-data/common-crawl/CC-MAIN-2026-17/CC-MAIN-20260410081153-20260410111153-00000.warc.wat`.
+At 50k requested pages, q4 produced `1006742` page/link records and q5
+produced `293020` outputs. Heap still reported `0.000 ms` timed GC in every
+run. SafeZone-backed page-token was fastest on q4 (`31.792 ms` vs heap
+`33.646 ms`) and q5 (`33.937 ms` vs heap `35.066 ms`). A 100k requested-page
+q4 one-run probe also stayed heap-GC-zero: heap `43.274 ms`, SafeZone-backed
+page-token `42.226 ms`, output count `1339183`. Interpretation: real WAT is a
+useful correctness/real-input control and modest checked-backend win, but not
+the missing GC-heavy real-data case study.
+
+GH Archive real NDJSON control: added
+`GithubArchiveRegionMatrix` and `sandbox/run_github_archive_region_matrix.sh`.
+The matrix now supports comma-separated `GITHUB_ARCHIVE_INPUTS`; the local
+sample contains eight real hourly files from `2026-04-01-0` through
+`2026-04-01-7`. Queries are `q0-events`, `q1-fields`, and `q2-repo-window`;
+q1/q2 allocate ordinary event/field records with bucket lifetimes and reuse
+the page-token checked operator path. The first 100k q1 row showed a real GC
+signal and region win: heap `46.309 ms`, median GC `15.777 ms`, max GC
+`58.617 ms`, checked SafeZone-backed page-token `33.656 ms`. That row used
+the original heap-expected harness, so it remains a promising first signal but
+not the clean RSS/GC interpretation. The runner now uses a no-allocation
+checksum oracle. In the cleaner 8-hour 1M oracle row, q1 heap wins uncapped
+median elapsed (`293.204 ms`) while collecting in 1/3 runs with max GC
+`135.368 ms` and about `1.74 GB` RSS; trusted Streaming reruns at
+`340.820 ms` and checked SafeZone-backed page-token is `348.817 ms`, both with
+no timed GC. With `GC_MAXIMUM_HEAP_SIZE=1G`, heap q1 slows
+to `395.295 ms` with median GC `92.347 ms`, making the checked region row
+faster as a memory-budget diagnostic. q2 remains heap-fastest in median
+(`271.880 ms` uncapped; `279.959 ms` at `1400M`) despite max-GC outliers,
+because repo aggregation CPU dominates. Interpretation: GH Archive is now a
+memory-budget/tail-latency candidate, not an uncapped throughput case-study
+win.
+
+Allocation-lowering matrix: added `ObjectAllocationLoweringMatrix` and
+`sandbox/run_object_allocation_lowering_matrix.sh`, then validated the
+refined retained-region-array shape at 20k smoke, 100k, 1M, and 10M. This focused
+matrix allocates ordinary small Scala objects through `heap-immix`,
+`rift-trusted-hp`, `rift-trusted-streaming`, `rift-checked-rift`, and
+`rift-checked-safezone-improved-32k` without stream-window, ranking, or query
+traversal work. The rejected construct-only smoke is still recorded as a
+pitfall: the optimizer could remove checked allocations from Rift allocation
+counters. In the retained rows, checksums match and checked Rift reports
+nonzero object allocations.
+
+Follow-up refinement: the first retained-buffer version still mixed generic
+checked `RegionBuffer` overhead into an allocation-lowering matrix. The matrix
+now uses a region-owned array, `Array[CheckedRecord^{region}]^{region}`, in
+checked rows. This keeps allocated objects live without the generic buffer API.
+An attempted lowering fast path through `RiftRegion.allocImpl` failed during
+native lowering because Scala Native metadata does not expose `allocImpl` as a
+valid method lookup entry on `RiftRegion` or its checked subtraits; that probe
+was reverted and should not be repeated without changing method-table metadata.
+
+Refined key rows: at 100k, checked Rift is `1.576 ms` and checked
+SafeZone-backed is `1.395 ms` versus heap `1.691 ms`. At 1M, checked Rift is
+`16.100 ms` and checked SafeZone-backed is `14.347 ms` versus heap
+`20.429 ms` with `5.745 ms` median GC. At 10M, heap becomes GC/RSS-bound:
+heap is `271.121 ms` with `105.807 ms` median GC and about `971 MB` RSS;
+trusted HP is `199.627 ms`, checked Rift is `165.774 ms`, and checked
+SafeZone-backed allocation is `143.319 ms` at about `404 MB` RSS.
+Interpretation: region allocation/reclaim wins when heap pressure is real, and
+the earlier checked gap was mostly generic `RegionBuffer` retention overhead.
+The next performance target is generic checked buffers/operators, not raw
+allocation first.
+
+Checked RegionBuffer decomposition: `CheckedRegionBufferMatrix` now compares
+growable buffers, fixed-capacity `ObjectBuffer`, and exact-array controls. At
+10 x 100k records with initial capacity `16`, `rift-checked-array` is
+`18.574 ms`, fixed `ObjectBuffer` is `25.788 ms`, and growable
+`RegionBuffer` is `29.968 ms`; heap shows the same broad shape, with
+`heap-array` `21.089 ms` versus `heap-buffer` `34.097 ms`. Pre-sizing the
+buffer to `100000` improves `rift-checked-buffer` to `25.980 ms`, roughly tied
+with `ObjectBuffer` at `25.408 ms`, but still behind `rift-checked-array` at
+`18.466 ms`. Interpretation: growth/copy matters, but generic buffer
+access/layout/dispatch is still substantial. Known-size or page/batch-shaped
+checked operators should prefer operator-owned array/chunk fast paths;
+`ObjectBuffer` is the bounded ergonomic fallback and `RegionBuffer` remains
+the growable fallback until a focused layout/access patch narrows the gap.
+
+Fixed-chunk append follow-up: `StreamChunkAppendWindow[T]` now exists as an
+experimental checked operator-owned fixed-chunk append path, with compiler and
+runtime probes. It is correct but failed the focused speed gate. At 1M,
+`rift-checked-page-token` is `28.452 ms` and SafeZone-backed page-token is
+`27.214 ms`, while `rift-checked-chunk-token` is `34.273 ms` and
+SafeZone-backed chunk-token is `33.108 ms`; `heap-immix-chunk` is also slower
+than normal heap (`45.363 ms` versus `37.748 ms`). Interpretation: chunks add
+extra object/array allocation and control overhead in the sequential
+append/drain shape. Keep chunk-token as a negative/control row; do not move it
+into Common Crawl, GH Archive, or DEBS unless a workload needs page-local
+random access or substantially larger per-bucket payloads.
+
+Heap-budget runner support: `sandbox/run_github_archive_region_matrix.sh` now
+adds `heap_cap` and `status` columns. `GITHUB_ARCHIVE_HEAP_CAPS` can run
+multiple heap caps such as `uncapped 2G 1400M 1G`; failed capped processes are
+recorded as failed rows instead of aborting the whole matrix. Region rows can
+also be run under caps with `GITHUB_ARCHIVE_REGION_HEAP_CAPS` for diagnostics,
+but claims should be judged by completion and total RSS, not only GC heap size.
+
+New evidence:
+
+- `evidence/OBJECT_ALLOCATION_LOWERING_MATRIX.md`
+- updated `evidence/CHECKED_REGION_BUFFER_MATRIX.md`
+- `evidence/CHECKED_PAGE_TOKEN_APPEND_MATRIX.md`
+- updated `evidence/CHECKED_OVERHEAD_REMOVAL_MATRIX.md`
+- updated `evidence/COMMON_CRAWL_LIKE_MATRIX.md`
+- updated `evidence/REALISTIC_STREAM_GC_MATRIX.md`
+- new `evidence/GITHUB_ARCHIVE_REGION_MATRIX.md`
+- new `docs/BENCHMARK_CATALOG.md`
+- updated `docs/PERFORMANCE_EVALUATION_REPORT.md`
+- updated `docs/RIFT_EVALUATION_SUMMARY_SLIDES.md`
+
+Previous checkpoint:
+`RiftRegion.streamingSafeZone(...)` now exists as a benchmark-only checked
+backend entrypoint. It returns a checked `StreamingRegion`, delegates checked
+object allocation to `SafeZoneAllocator`, and makes child buckets opened from
+that parent use the same SafeZone-backed backend. Normal
+`RiftRegion.streaming(...)` is unchanged. V1 supports object allocation and
+close; raw byte allocation and reset throw `UnsupportedOperationException`.
+
+The implementation also fixes checked-region class allocation lowering: zoned
+`Classalloc` now retags the allocation receiver to the `SafeZone` trait before
+calling `allocImpl`, so allocations through narrow checked types such as
+`StreamingRegion` link correctly. New runtime tests cover SafeZone-backed
+checked allocation, child bucket cursor close, allocation-after-close
+rejection, and raw allocation/reset rejection.
+
+Focused append-window gate: passed. At 1M events,
+`rift-checked-safezone-32k` is `29.444 ms` versus current
+`rift-checked-api-cursor` at `30.922 ms`, with matching checksum and no RSS
+regression. The 100k row is `2.944 ms` versus current checked cursor
+`3.136 ms`.
+
+Common Crawl-like q1/q2 follow-up: improved checked mode but missed the
+application gate. At 1M q1, `rift-checked-safezone-32k` is `4512.743 ms`
+versus current `rift-checked` at `4744.872 ms`, improved SafeZone-32k at
+`4570.772 ms`, and trusted HPZone at `4278.440 ms`. At 1M q2,
+`rift-checked-safezone-32k` is `4431.865 ms` versus current checked
+`4698.903 ms`, improved SafeZone-32k `4362.405 ms`, and trusted HPZone
+`4075.431 ms`. All q1/q2 rows matched checksum/output count.
+
+Interpretation: SafeZone-family allocator mechanics help the reusable checked
+append-window backend, but the application-scale checked path still has
+material `StreamAppendWindow` container/API overhead. Treat
+`rift-checked-safezone-32k` as backend feasibility evidence, not a final
+checked application-speed claim. Do not move it into DEBS, TableRank, or
+broader application claims before the checked overhead split is understood.
+
+Validation for this update:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile
+ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"
+ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionCheckedTest"
+
+CHECKED_APPEND_BUILD=0 \
+CHECKED_APPEND_EVENTS=1000000 \
+CHECKED_APPEND_BENCHMARK_RUNS=3 \
+CHECKED_APPEND_WARMUPS=1 \
+CHECKED_APPEND_MODES="heap rift-checked-api-cursor rift-checked-safezone-32k safezone-improved-32k unsafezone-hp" \
+CHECKED_APPEND_OUTPUT_DIR=/Users/siyaoliu/rift/cache/checked-safezone-append-2026-05-03-1m \
+zsh sandbox/run_checked_append_window_matrix.sh
+
+COMMON_CRAWL_WET_BUILD=0 \
+COMMON_CRAWL_WET_PAGES=1000000 \
+COMMON_CRAWL_WET_BENCHMARK_RUNS=3 \
+COMMON_CRAWL_WET_WARMUPS=1 \
+COMMON_CRAWL_WET_QUERIES="q1-tokenize q2-domain-window" \
+COMMON_CRAWL_WET_MODES="heap safezone-improved-32k unsafezone-hp rift-hp rift-streaming rift-checked rift-checked-safezone-32k" \
+COMMON_CRAWL_WET_OUTPUT_DIR=/Users/siyaoliu/rift/cache/common-crawl-checked-safezone-2026-05-03-1m \
+zsh sandbox/run_common_crawl_wet_matrix.sh
+```
+
+Evidence files:
+
+- `docs/MEMORY_MODE_TAXONOMY.md`
+- `docs/PERFORMANCE_EVALUATION_REPORT.md`
+- `docs/RIFT_EVALUATION_SUMMARY_SLIDES.md`
+- `evidence/CHECKED_PAGE_TOKEN_APPEND_MATRIX.md`
+- `evidence/CHECKED_SAFEZONE_BACKEND_MATRIX.md`
+- `evidence/CHECKED_OVERHEAD_REMOVAL_MATRIX.md`
+- `evidence/REALISTIC_STREAM_GC_MATRIX.md`
+- `evidence/SAFEZONE_HP_BACKEND_PROTOTYPE.md`
+- `evidence/COMMON_CRAWL_LIKE_MATRIX.md`
+
+Mode naming update:
+new docs and scripts should use `heap-immix`, `safezone-improved-32k`,
+`safezone-rootless-32k`, `rift-trusted-hp`, `rift-trusted-streaming`,
+`rift-checked-rift`, and `rift-checked-safezone-improved-32k`. Older labels
+remain accepted as aliases in the checked append-window and Common Crawl-like
+runners.
+
+Canonical-name smoke validation:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+
+CHECKED_APPEND_EVENTS=20000 \
+CHECKED_APPEND_BENCHMARK_RUNS=1 \
+CHECKED_APPEND_WARMUPS=0 \
+CHECKED_APPEND_MODES="heap-immix rift-checked-rift rift-checked-safezone-improved-32k safezone-rootless-32k" \
+CHECKED_APPEND_OUTPUT_DIR=/Users/siyaoliu/rift/cache/canonical-checked-append-smoke-2026-05-03 \
+zsh sandbox/run_checked_append_window_matrix.sh
+
+COMMON_CRAWL_WET_PAGES=2000 \
+COMMON_CRAWL_WET_BENCHMARK_RUNS=1 \
+COMMON_CRAWL_WET_WARMUPS=0 \
+COMMON_CRAWL_WET_QUERIES="q1-tokenize q2-domain-window" \
+COMMON_CRAWL_WET_MODES="heap-immix safezone-improved-32k safezone-rootless-32k rift-trusted-hp rift-trusted-streaming rift-checked-rift rift-checked-safezone-improved-32k" \
+COMMON_CRAWL_WET_OUTPUT_DIR=/Users/siyaoliu/rift/cache/canonical-common-crawl-smoke-2026-05-03 \
+zsh sandbox/run_common_crawl_wet_matrix.sh
+```
+
+Both canonical-mode smokes matched checksums/output counts. These are wiring
+checks only, not headline benchmark rows.
+
+Previous update:
 Checked Common Crawl-like q1/q2 `StreamAppendWindow` follow-up implemented and
 measured after the Rift fast-allocation counter cleanup.
 
@@ -275,11 +608,13 @@ q1/q2 follow-up uses the focused `StreamAppendWindow` cursor API and validates
 safe record placement at scale, but misses the application performance gate
 against improved SafeZone and trusted Rift.
 
-`evidence/SAFEZONE_HP_BACKEND_PROTOTYPE.md` records the intended
-`rift-checked-safezone-hp` direction. No checked SafeZone-HP backend code has
-been added yet. The v1 rule should reject unsupported mixed-reference cases
-rather than falling back silently, so performance rows are not accidentally
-mixed with rootful or unsafe behavior.
+`evidence/SAFEZONE_HP_BACKEND_PROTOTYPE.md` records the intended checked
+SafeZone-family direction. At this older checkpoint, no checked SafeZone-backed
+backend code had been added yet; the 2026-05-03 update above supersedes that
+status with the implemented `rift-checked-safezone-32k` prototype. The v1 rule
+should still reject unsupported mixed-reference cases rather than falling back
+silently, so performance rows are not accidentally mixed with rootful or
+unsafe behavior.
 
 Validation for the SafeZone-cost scaffold update:
 
@@ -306,8 +641,9 @@ SAFEZONE_COST_OUTPUT_DIR=/tmp/safezone-cost-smoke \
 zsh sandbox/run_safezone_cost_matrix.sh
 ```
 
-The compile passed, the checked compiler suite remains `96/96`, and the
-checked runtime suite remains `38/38`. The Common Crawl smoke matched
+The compile passed, the checked compiler suite remained `96/96`, and the
+checked runtime suite remained `38/38` at that checkpoint. The current
+2026-05-03 runtime suite is `40/40`. The Common Crawl smoke matched
 checksums/output counts across modes. The SafeZone cost smoke produced trace
 rows for improved SafeZone and UnsafeZone-HP; at this tiny scale it is a
 format/mechanics check only, not headline evidence.
@@ -5281,6 +5617,181 @@ Safe next action:
    head insertion or a new focused result shows a real advantage.
 3. Move next to checked Q1 process overhead or deeper append-window/live-payload
    attribution.
+
+### 2026-05-05 Update: Cheap Operator Family Reporting And Staged Sweep
+
+Active repos:
+
+- Parent docs/evidence repo: `/Users/siyaoliu/rift` on `main`
+- Implementation repo: `/Users/siyaoliu/rift/scala-native-rift` on
+  `feature/rift`
+
+What changed:
+
+- Added a reporting-name layer in `docs/MEMORY_MODE_TAXONOMY.md`:
+  `gc-heap`, `region-scoped-rooted`, `region-scoped-rootless`,
+  `region-stream-rootless`, `region-hp-rootless`, `checked-region-stream`,
+  `checked-region-scoped`, and `checked-page-token`.
+- Kept public code symbols and raw script labels as aliases; this milestone
+  does not rename public APIs.
+- Added Dataflow SELECT page-token rows and SafeZone-backed page-token rows.
+- Added a Dataflow AGGREGATE `checked-epoch-fold` reporting row over the
+  existing exact-array checked aggregate path.
+- Added a checked ListOfLists linked builder row.
+- Extended the comprehensive runner so future staged runs include
+  object-allocation lowering, Common Crawl page-token rows, and GH Archive
+  heap-budget controls.
+- Added `CHEAP_OPERATOR_FAMILY_MATRIX.md` in both `sandbox/` and parent
+  `evidence/`, and synced it through `scripts/sync-evidence.sh`.
+- Fixed `sandbox/run_checked_region_buffer_matrix.sh` mode-list parsing so the
+  staged checked/stream run does not treat the full default mode list as one
+  mode.
+
+Validation:
+
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile` passed.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"` passed `100/100` after a rerun; the first parallel attempt only failed due sbt boot-server/lock contention.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionCheckedTest"` passed `44/44`.
+- Dataflow SELECT page-token smoke matched checksum.
+- Dataflow AGGREGATE `checked-epoch-fold` smoke matched checksum.
+- ListOfLists checked builder smoke completed.
+- Checked region buffer smoke completed after the parser fix.
+- The staged `checked streams` smoke leg completed with run id
+  `2026-05-05-cheap-operators-checked-streams-smoke`.
+
+Staged single-run rows, not final medians:
+
+| Workload | Row | Elapsed ms | Interpretation |
+|---|---|---:|---|
+| Dataflow SELECT | heap | 33.489 | Heap baseline; GC `12.218 ms`. |
+| Dataflow SELECT | improved SafeZone / `region-scoped-rooted` | 22.904 | Strong scoped-region baseline. |
+| Dataflow SELECT | current checked / `checked-region-stream` | 20.541 | Existing checked row. |
+| Dataflow SELECT | `checked-page-token` | 19.697 | New page-token row improves current checked. |
+| Dataflow SELECT | scoped-backend page-token | 18.371 | Fastest staged SELECT row. |
+| Dataflow AGGREGATE | heap | 49.316 | Heap baseline; GC `11.020 ms`. |
+| Dataflow AGGREGATE | current checked | 38.581 | Existing exact-array checked aggregate. |
+| Dataflow AGGREGATE | `checked-epoch-fold` | 39.213 | Beats heap, slightly trails current checked in this probe. |
+| ListOfLists linked | heap | 16615.319 | Baseline. |
+| ListOfLists linked | improved SafeZone | 9831.508 | Strong scoped-region row. |
+| ListOfLists linked | trusted HP | 9341.644 | Strong trusted-Rift row. |
+| ListOfLists linked | checked builder | 9109.045 | Fastest staged linked row. |
+
+Interpretation:
+
+- This implements the first slice of "Rift as checked stream-region
+  programming model plus backend choices." SafeZone-derived scoped allocation
+  is now treated as a serious backend candidate, not just a side experiment.
+- Page-token generalizes cleanly to SELECT/filter/project-like rows.
+- The `EpochFold` name is not yet a full reusable fold operator. It is a
+  reporting row over the exact-array checked aggregate path until a general
+  cheap fold API clears its own gate.
+- ListOfLists checked builder is promising topology evidence, but it needs
+  clean medians.
+- DEBS ranking/median remains deferred. Stateful indexed/ranking operators are
+  still separate, expensive shapes.
+
+Safe next action:
+
+1. Run clean 1M 3-run medians for Dataflow SELECT page-token/scoped page-token.
+2. Run clean 1M 3-run medians for Dataflow AGGREGATE `checked-epoch-fold`.
+3. Run clean 3-run medians for ListOfLists checked builder.
+4. Only after those pass, decide whether to add `EpochBuffer` and
+   `TransactionRegion` rows for Yak/StreamFlex/Stancu.
+
+### 2026-05-05 Update: Focused Cheap Operator Gates
+
+Active repos:
+
+- Parent docs/evidence repo: `/Users/siyaoliu/rift`
+- Implementation repo: `/Users/siyaoliu/rift/scala-native-rift`
+
+What changed:
+
+- Reran the first cheap-operator rows at the default 1M-shape with 3 timed
+  runs:
+  - Dataflow SELECT page-token and scoped-backend page-token;
+  - Dataflow AGGREGATE `checked-epoch-fold`;
+  - ListOfLists linked checked builder.
+- Updated `CHEAP_OPERATOR_FAMILY_MATRIX.md`, `docs/ROADMAP.md`,
+  `docs/PERFORMANCE_EVALUATION_REPORT.md`, `docs/BENCHMARK_CATALOG.md`,
+  `docs/RIFT_EVALUATION_SUMMARY_SLIDES.md`,
+  `evidence/EVALUATION_SUMMARY_TABLES.md`, and
+  `evidence/ALL_PHASE_RESULTS.md`.
+
+Focused rows:
+
+| Workload | Row | Median ms | Comparator |
+|---|---|---:|---|
+| Dataflow SELECT | `gc-heap` | 28.176 | GC median `6.698 ms`. |
+| Dataflow SELECT | `region-scoped-rooted` | 22.982 | Improved SafeZone 32 KiB. |
+| Dataflow SELECT | `checked-region-stream` | 21.033 | Current checked Rift. |
+| Dataflow SELECT | `checked-page-token` | 19.856 | Beats current checked. |
+| Dataflow SELECT | scoped-backend `checked-page-token` | 19.050 | Fastest focused SELECT row. |
+| Dataflow AGGREGATE | `gc-heap` | 62.008 | GC median `22.583 ms`. |
+| Dataflow AGGREGATE | `region-scoped-rooted` | 42.234 | Improved SafeZone 32 KiB. |
+| Dataflow AGGREGATE | `checked-region-stream` | 40.024 | Current checked Rift. |
+| Dataflow AGGREGATE | `checked-epoch-fold` | 38.991 | Fastest focused AGGREGATE row, but still exact-array implementation. |
+| ListOfLists linked | `gc-heap` | 15390.798 | Baseline. |
+| ListOfLists linked | `region-scoped-rooted` | 10002.658 | Improved SafeZone. |
+| ListOfLists linked | `region-hp-rootless` | 9594.689 | Trusted HP. |
+| ListOfLists linked | checked builder | 9407.102 | Fastest focused linked row. |
+
+Interpretation:
+
+- The SELECT page-token and ListOfLists builder gates pass and should move into
+  the next clean headline sweep.
+- The AGGREGATE row is positive, but it should not be oversold as a new generic
+  fold operator yet. It is the existing exact-array checked aggregate path
+  under the `EpochFold` reporting direction.
+- These rows did not collect RSS. RSS collection is the next required control
+  before using them as presentation headline rows.
+
+Safe next action:
+
+1. Add RSS capture for these focused rows, preferably through the staged
+   performance runner rather than ad hoc sbt output.
+2. Then implement the next cheap operator only if it maps cleanly:
+   `EpochBuffer` for Yak/StreamFlex-style append/drain epochs, or
+   `TransactionRegion` for Stancu-style batch regions.
+3. Do not touch DEBS ranking/median until indexed/ranking operators have their
+   own passing focused gates.
+
+### 2026-05-05 Update: Cheap Operator RSS Rerun
+
+What changed:
+
+- Wrapped the native benchmark binaries directly with `/usr/bin/time -l` so
+  RSS measures the benchmark process, not SBT.
+- Stored raw logs under
+  `/Users/siyaoliu/rift/cache/cheap-operator-rss-2026-05-05/`.
+- Updated `CHEAP_OPERATOR_FAMILY_MATRIX.md`, report, roadmap, slides, summary
+  tables, and all-phase rollup.
+
+RSS-focused rows:
+
+| Workload | Row | Median ms | RSS bytes | Interpretation |
+|---|---|---:|---:|---|
+| Dataflow SELECT | `gc-heap` | 27.932 | 39288832 | Heap baseline, GC median `6.616 ms`. |
+| Dataflow SELECT | `region-scoped-rooted` | 22.466 | 30375936 | Improved SafeZone 32 KiB. |
+| Dataflow SELECT | `checked-region-stream` | 20.245 | 30490624 | Current checked Rift. |
+| Dataflow SELECT | `checked-page-token` | 19.673 | 30392320 | Faster than current checked. |
+| Dataflow SELECT | scoped-backend `checked-page-token` | 17.980 | 30375936 | Fastest SELECT row and lower RSS than heap. |
+| Dataflow AGGREGATE | `gc-heap` | 61.585 | 40091648 | Heap baseline, GC median `22.297 ms`. |
+| Dataflow AGGREGATE | `region-scoped-rooted` | 40.103 | 46907392 | Faster than heap but higher RSS. |
+| Dataflow AGGREGATE | `checked-region-stream` | 38.644 | 46825472 | Faster than scoped rooted. |
+| Dataflow AGGREGATE | `checked-epoch-fold` | 38.399 | 46825472 | Fastest elapsed, but RSS higher than heap and still exact-array implementation. |
+| ListOfLists linked | `gc-heap` | 14822.115 | 575930368 | Baseline. |
+| ListOfLists linked | `region-scoped-rooted` | 9812.764 | 367280128 | Strong region row. |
+| ListOfLists linked | `region-hp-rootless` | 9547.748 | 364101632 | Trusted HP row. |
+| ListOfLists linked | checked builder | 9228.561 | 364150784 | Fastest and about `212 MB` lower RSS than heap. |
+
+Interpretation:
+
+- SELECT page-token and ListOfLists builder are now positive on elapsed and RSS.
+- AGGREGATE is positive on elapsed/GC but not RSS. Keep it as a promising
+  direction, not a completed reusable `EpochFold` API.
+- These are still focused rows. The next engineering step should be a reusable
+  RSS wrapper/runner and then one new cheap operator family, not DEBS ranking.
 
 ## Unsafe Assumptions To Avoid
 

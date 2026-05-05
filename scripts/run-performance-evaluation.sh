@@ -147,6 +147,7 @@ run_prior_work() {
 }
 
 run_checked() {
+  run_logged object-allocation-lowering "$FORK" env OBJECT_ALLOC_OBJECTS="$RIFT_EVAL_EVENTS" OBJECT_ALLOC_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" OBJECT_ALLOC_OUTPUT_DIR="$SUMMARY_DIR/object-allocation-lowering" zsh sandbox/run_object_allocation_lowering_matrix.sh
   run_logged checked-region-buffer "$FORK" env CHECKED_BUFFER_EPOCHS="$RIFT_EVAL_CHECKED_EPOCHS" CHECKED_BUFFER_RECORDS_PER_EPOCH="$RIFT_EVAL_CHECKED_RECORDS_PER_EPOCH" CHECKED_BUFFER_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" zsh sandbox/run_checked_region_buffer_matrix.sh
   run_logged checked-priority-queue "$FORK" env CHECKED_PQ_EPOCHS="$RIFT_EVAL_CHECKED_EPOCHS" CHECKED_PQ_RECORDS_PER_EPOCH="$RIFT_EVAL_CHECKED_PQ_RECORDS_PER_EPOCH" CHECKED_PQ_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" zsh sandbox/run_checked_region_priority_queue_matrix.sh
   run_logged checked-indexed-priority-queue "$FORK" env CHECKED_IPQ_EPOCHS="$RIFT_EVAL_CHECKED_IPQ_EPOCHS" CHECKED_IPQ_EVENTS_PER_EPOCH="$RIFT_EVAL_CHECKED_IPQ_EVENTS_PER_EPOCH" CHECKED_IPQ_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" zsh sandbox/run_checked_region_indexed_priority_queue_matrix.sh
@@ -166,6 +167,8 @@ run_streams() {
   run_logged riotbench "$FORK" env RIOTBENCH_EVENTS="$RIFT_EVAL_EVENTS" RIOTBENCH_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" RIOTBENCH_OUTPUT_DIR="$SUMMARY_DIR/riotbench" zsh sandbox/run_riotbench_region_matrix.sh
   run_logged wikimedia "$FORK" env WIKIMEDIA_EVENTS="$RIFT_EVAL_EVENTS" WIKIMEDIA_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" WIKIMEDIA_OUTPUT_DIR="$SUMMARY_DIR/wikimedia" zsh sandbox/run_wikimedia_region_matrix.sh
   run_logged common-crawl-wet "$FORK" env COMMON_CRAWL_WET_PAGES="$RIFT_EVAL_EVENTS" COMMON_CRAWL_WET_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" COMMON_CRAWL_WET_OUTPUT_DIR="$SUMMARY_DIR/common-crawl-wet" zsh sandbox/run_common_crawl_wet_matrix.sh
+  run_logged common-crawl-page-token "$FORK" env COMMON_CRAWL_WET_PAGES="$RIFT_EVAL_EVENTS" COMMON_CRAWL_WET_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" COMMON_CRAWL_WET_QUERIES="q1-tokenize q2-domain-window" COMMON_CRAWL_WET_MODES="heap-immix safezone-improved-32k safezone-rootless-32k rift-trusted-hp rift-trusted-streaming rift-checked-rift rift-checked-page-token rift-checked-safezone-improved-32k rift-checked-safezone-page-token" COMMON_CRAWL_WET_OUTPUT_DIR="$SUMMARY_DIR/common-crawl-page-token" zsh sandbox/run_common_crawl_wet_matrix.sh
+  run_logged github-archive "$FORK" env GITHUB_ARCHIVE_EVENTS="$RIFT_EVAL_EVENTS" GITHUB_ARCHIVE_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" GITHUB_ARCHIVE_QUERIES="q1-fields q2-repo-window" GITHUB_ARCHIVE_HEAP_CAPS="uncapped 2G 1400M 1G" GITHUB_ARCHIVE_OUTPUT_DIR="$SUMMARY_DIR/github-archive" zsh sandbox/run_github_archive_region_matrix.sh
   run_logged linear-road "$FORK" env LINEAR_ROAD_EVENTS="$RIFT_EVAL_EVENTS" LINEAR_ROAD_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" LINEAR_ROAD_OUTPUT_DIR="$SUMMARY_DIR/linear-road" zsh sandbox/run_linear_road_region_matrix.sh
 }
 
