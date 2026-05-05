@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-05 22:37:14 CEST
+Last updated: 2026-05-05 23:47:54 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -43,7 +43,7 @@ Latest representative 1M rows:
 | Dataflow AGGREGATE | true `EpochFold` `94.378 ms` vs current checked exact-array aggregate `39.759 ms` | `EpochFold` is correct but speed-gated/negative |
 | Checked append | scoped page-token `27.004 ms`, Rift page-token `28.341 ms`, heap `37.490 ms` | focused operator-owned append path still clears the gate |
 | Checked epoch buffer | scoped checked `EpochBuffer` `25.448 ms`, checked Rift `26.673 ms`, heap epoch `27.164 ms` with `5.707 ms` GC | new reusable epoch append/drain API clears first focused 1M gate |
-| StreamFlex checked EpochBuffer | 200k throughput: heap `42.504 ms`, improved SafeZone `40.224 ms`, Rift Streaming `36.357 ms`, checked EpochBuffer `47.462 ms`, scoped checked EpochBuffer `44.504 ms` | checksum-valid but negative for stacked four-buffer pipeline; motivates `TransactionRegion`/multi-list epoch |
+| StreamFlex checked TransactionRegion | 200k throughput: heap `41.995 ms`, improved SafeZone `41.871 ms`, Rift Streaming `36.365 ms`, checked TransactionRegion `44.881 ms`, scoped checked TransactionRegion `41.375 ms` | multi-list transaction fixes the stacked-EpochBuffer granularity problem; scoped checked row is the best checked StreamFlex-shaped row so far, but trusted Streaming remains fastest |
 | Common Crawl-shaped q1 | scoped page-token `3654.143 ms`, Rift page-token `3856.625 ms`, heap `5313.928 ms` with `1517.397 ms` GC | strongest checked generated stream win |
 | Common Crawl-shaped q2 | scoped page-token `3713.483 ms`, Rift page-token `3927.449 ms`, heap `5250.408 ms` with `1628.382 ms` GC | strongest checked generated window win |
 | NEXMark Beam-default | checked q3 `278.455 ms`, q8 `429.087 ms`, q9 `711.256 ms` | modest generated methodology wins |
@@ -82,6 +82,22 @@ regions for packets, decoded records, classified records, and alerts. This is
 useful negative evidence and points directly at the next operator:
 `TransactionRegion` or a multi-list epoch operator that opens one child region
 per transaction/batch and owns several internal lists.
+
+StreamFlex TransactionRegion follow-up:
+`RiftRegion.TransactionRegion` and typed `TransactionList[T]` are now
+implemented, with compiler/runtime probes. The operator owns one active child
+region and several internal append lists, so a multi-stage batch pipeline can
+drain packets, decoded records, classified records, and alerts before one
+transaction close. A first array-indexed list implementation was too slow; the
+hot path was changed so each typed list handle owns its own `head`/`tail`/
+`length` fields. Validation passed: sandbox compile, checked compiler suite
+`110/110`, and checked native runtime suite `49/49`. In StreamFlex 200k
+throughput, checked TransactionRegion improves over stacked checked
+EpochBuffer (`44.881 ms` vs `48.052 ms`) and scoped checked TransactionRegion
+is the best checked row (`41.375 ms`), slightly faster than heap
+(`41.995 ms`) and improved SafeZone (`41.871 ms`). Trusted Rift Streaming is
+still faster (`36.365 ms`), so this is a partial checked-operator win and not a
+reason to claim StreamFlex solved.
 
 Validation for reusable operator update:
 

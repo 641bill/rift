@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-05 20:27:58 CEST
+Last updated: 2026-05-05 23:47:54 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -169,8 +169,12 @@ benchmark-local checked builder around `9.2-9.4 s` and earlier heap rows around
 reusable Dataflow AGGREGATE row is `94.378 ms` in the clean headline run, so it remains gated; the older
 `38.399-38.991 ms` aggregate row should be treated as exact-array checked
 aggregate evidence, not `EpochFold` evidence. The next roadmap gate is
-lower-overhead fold/epoch operators plus `EpochBuffer` and
-`TransactionRegion`; real hash/join/rank/median operators remain open.
+lower-overhead fold/epoch operators after `EpochBuffer` and
+`TransactionRegion`. `EpochBuffer` passed a focused 1M gate, and
+`TransactionRegion` is now partially validated on StreamFlex-shaped
+multi-stage epochs: scoped checked transaction slightly beats heap/improved
+SafeZone at 200k throughput, while Rift-native checked transaction remains
+speed-gated. Real hash/join/rank/median operators remain open.
 
 Current fixed-chunk append checkpoint:
 `StreamChunkAppendWindow[T]` is implemented as an operator-owned fixed

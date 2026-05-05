@@ -1,7 +1,7 @@
 # Rift Benchmark Catalog
 
 Date: 2026-05-05
-Last updated: 2026-05-05 15:43:00 CEST
+Last updated: 2026-05-05 23:47:54 CEST
 
 Status: working benchmark guide. Use this document to understand what each
 benchmark is meant to test before reading the detailed result files in
@@ -60,7 +60,7 @@ original benchmark artifact, input, and configuration are actually used.
 | StreamChunkAppendWindow control | Operator-owned fixed object-array chunks per bucket. | Correct but slower than linked page-token at 1M; use as negative/control evidence for sequential append/drain workloads. |
 | CheckedWindowFoldMatrix | Additive window fold/count API. | Correct but failed the 1M speed gate; do not use as application evidence yet. |
 | CheckedStreamWindowRank/TableRank | Dense/keyed rank and fused table-rank structures. | Correct and useful framework progress, but current rank/table CPU overhead is too high for DEBS Q1 claims. |
-| CheapOperatorFamilyMatrix | First reporting-mode/operator-family wiring for Dataflow SELECT, Dataflow AGGREGATE, and ListOfLists linked topology. | Focused RSS rows now exist: SELECT scoped page-token `17.980 ms` / `30375936` RSS bytes vs heap `27.932 ms` / `39288832`; AGGREGATE epoch-fold `38.399 ms` / `46825472` vs heap `61.585 ms` / `40091648`; ListOfLists checked builder `9228.561 ms` / `364150784` vs heap `14822.115 ms` / `575930368`. Full clean headline sweep is still pending. |
+| CheapOperatorFamilyMatrix | First reporting-mode/operator-family wiring for Dataflow SELECT, Dataflow AGGREGATE, ListOfLists linked topology, epoch buffers, and multi-list transaction regions. | Focused rows now include positive `PageTokenMapFilter`, `RegionList`, `EpochBuffer`, and partial-positive `TransactionRegion` evidence. StreamFlex scoped checked `TransactionRegion` is `41.375 ms` at 200k throughput versus heap `41.995 ms` and improved SafeZone `41.871 ms`; Rift-native checked transaction remains speed-gated. Full clean headline sweep is still pending. |
 
 "Page/token" does not mean the benchmark is only about text tokens. It means
 one page, event, or bucket owns many short-lived records. The operator owns the
@@ -75,7 +75,7 @@ The cheap-operator family milestone generalizes that idea cautiously:
 | `EpochFold` | Additive count/sum/fold rows with epochal record lifetimes. | Reporting row wired for Dataflow AGGREGATE using the existing exact-array checked aggregate path; a general reusable API is still open. |
 | `RegionListOfListsBuilder` | Linked object topology where a whole structure/epoch dies together. | Checked builder row wired and smoke-tested; clean medians pending. |
 | `EpochBuffer` | Append/drain epoch buffers for Yak/StreamFlex-style data/control splits. | Implemented and focused-positive: 1M checked epoch buffer `26.673 ms`, scoped checked epoch buffer `25.448 ms`, versus heap epoch `27.164 ms` with `5.707 ms` GC. |
-| `TransactionRegion` | Stancu-style batched transaction regions with explicit commit/export handles. | Planned, not implemented in this slice. |
+| `TransactionRegion` | Multi-stage batch/transaction pipelines with several temporary lists and one shared child-region lifetime. | Implemented and partially validated. It fixes stacked `EpochBuffer` granularity in StreamFlex-shaped code; scoped checked transaction slightly beats heap/improved SafeZone at 200k, while Rift-native checked remains slower than heap. |
 
 Do not use these names to imply all applications can use the same operator.
 Ranking, median maintenance, hash joins, and top-k still need separate focused

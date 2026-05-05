@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-05 15:43:00 CEST
+Last updated: 2026-05-05 23:47:54 CEST
 
 Status: markdown slide deck outline. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report and this file as
@@ -160,6 +160,13 @@ Dataflow SELECT scoped page-token is `17.980 ms` / `30.4 MB` RSS versus heap
 `364.2 MB` versus heap `14822.115 ms` / `575.9 MB`. Dataflow AGGREGATE
 epoch-fold is `38.399 ms` versus heap `61.585 ms`, but it raises RSS and still
 uses the exact-array checked aggregate path.
+
+The first multi-list `TransactionRegion` row is a partial checked win:
+StreamFlex 200k scoped checked transaction is `41.375 ms`, slightly faster
+than heap `41.995 ms` and improved SafeZone `41.871 ms`, while trusted Rift
+Streaming remains best at `36.365 ms`. The lesson is reusable and concrete:
+multi-stage stream operators should share one child-region lifetime, but hot
+list state must be operator-owned fields rather than generic indexed metadata.
 
 ## Slide 11: What Is A Loss
 
