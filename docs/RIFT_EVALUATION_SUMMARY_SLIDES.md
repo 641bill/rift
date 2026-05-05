@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-05 23:47:54 CEST
+Last updated: 2026-05-06 00:55 CEST
 
 Status: markdown slide deck outline. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report and this file as
@@ -79,8 +79,8 @@ clearest memory-regime detector.
 
 | Query | heap elapsed / GC | best trusted Rift | improved SafeZone 32K | best checked page-token |
 |---|---:|---:|---:|---:|
-| q1 tokenization | `5412.618 ms` / `1570.724 ms` | HPZone `4367.265 ms` | `4637.981 ms` | SafeZone-backed `3728.286 ms` |
-| q2 domain window | `5252.803 ms` / `1572.021 ms` | Streaming `4212.494 ms` | `4580.687 ms` | SafeZone-backed `3816.247 ms` |
+| q1 tokenization | `5350.531 ms` / `1517.640 ms` | HPZone `4265.969 ms` | `4578.914 ms` | SafeZone-backed `3696.284 ms` |
+| q2 domain window | `5183.656 ms` / `1526.751 ms` | Streaming `4109.290 ms` | `4364.704 ms` | SafeZone-backed `3732.171 ms` |
 
 Interpretation: region placement removes GC, and an operator-owned checked
 path can also remove enough redundant runtime overhead to win on this generated
@@ -129,8 +129,9 @@ memory-budget diagnostic by removing GC pressure.
 
 | Query | heap | improved SafeZone | best checked | Interpretation |
 |---|---:|---:|---:|---|
-| NEXMark Q3 | `316.626 ms` | `297.962 ms` | `292.371 ms` | best checked methodology row, below 10% gate. |
-| NEXMark Q8 | `467.213 ms` | `462.599 ms` | `450.904 ms` | checked wins modestly. |
+| NEXMark Q3 | `287.568 ms` | `291.839 ms` | `282.629 ms` | best checked methodology row, modest win. |
+| NEXMark Q8 | `452.128 ms` | `442.092 ms` | `432.391 ms` | checked wins modestly. |
+| NEXMark Q9 | `779.032 ms` | `742.398 ms` | `708.391 ms` | strongest Beam-default checked row in this sweep. |
 
 NEXMark uses generated Beam-default methodology, not the Beam runner.
 
@@ -140,14 +141,14 @@ Focused 1M append/window rows:
 
 | Mode | Median |
 |---|---:|
-| `heap-immix` | `35.652 ms` |
-| `rift-checked-rift` current | `30.819 ms` |
-| `rift-checked-page-token` | `27.141 ms` |
-| `rift-checked-safezone-page-token` | `26.191 ms` |
+| `heap-immix` | `36.944 ms` |
+| `rift-checked-rift` current | `32.226 ms` |
+| `rift-checked-page-token` | `27.886 ms` |
+| `rift-checked-safezone-page-token` | `26.883 ms` |
 
 The generic SafeZone-backed cursor was a useful backend step. The page/token
 operator is stronger: generated Common Crawl-shaped q1/q2 improves current
-checked by `16.2-18.5%`.
+checked by about `16-23%` in the 2026-05-06 staged sweep.
 
 `Page/token` means an operator-owned child-bucket append path: one
 page/event/window owns many short-lived records, the operator caches the child
@@ -162,9 +163,9 @@ epoch-fold is `38.399 ms` versus heap `61.585 ms`, but it raises RSS and still
 uses the exact-array checked aggregate path.
 
 The first multi-list `TransactionRegion` row is a partial checked win:
-StreamFlex 200k scoped checked transaction is `41.375 ms`, slightly faster
-than heap `41.995 ms` and improved SafeZone `41.871 ms`, while trusted Rift
-Streaming remains best at `36.365 ms`. The lesson is reusable and concrete:
+StreamFlex 1M-shape throughput scoped checked transaction is `39.019 ms`,
+faster than heap `42.860 ms` and improved SafeZone `41.327 ms`, while trusted
+Rift HP/Streaming remain best at about `36.4 ms`. The lesson is reusable and concrete:
 multi-stage stream operators should share one child-region lifetime, but hot
 list state must be operator-owned fields rather than generic indexed metadata.
 

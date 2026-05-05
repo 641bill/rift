@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-05 23:47:54 CEST
+Last updated: 2026-05-06 00:55 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -10,44 +10,40 @@ Active implementation branch for this update:
 `feature/rift`
 
 Implementation commit at start of latest sweep:
-`acc748e80` (`Add reusable checked region operators and evidence`)
+`34f4fb57c` (`Let prior-work runners skip current SafeZone`)
 
 Parent evidence commit at start of latest sweep:
-`aab9a72` (`Make ListOfLists smoke dimensions explicit`)
+`10da348` (`Skip current SafeZone in staged evaluation sweep`)
 
 Latest comprehensive sweep checkpoint:
-Clean staged runs completed after the reusable API checkpoint. Source summary:
-`evidence/COMPREHENSIVE_SWEEP_2026_05_05.md`.
+Staged headline runs completed after the TransactionRegion checkpoint. Source
+summary: `evidence/COMPREHENSIVE_SWEEP_2026_05_06.md`.
 
 Completed run ids:
 
-- `2026-05-05-reusable-operators-preflight`
-- `2026-05-05-reusable-operators-prior-checked-streams-smoke`
-- `2026-05-05-reusable-operators-core-smoke-small`
-- `2026-05-05-reusable-operators-prior-checked-headline`
-- `2026-05-05-reusable-operators-streams-headline`
+- `2026-05-05-comprehensive-headline`
+- `2026-05-05-comprehensive-headline-cont`
 
-Important correction: the first core smoke attempt used large ListOfLists
-topology defaults and entered a known pathological current-SafeZone row. The
-parent runner now passes explicit smoke dimensions
-(`LISTBENCH_N=200`, `LISTBENCH_STRUCTURES=1`), and the fixed core smoke
-completed. Core headline remains a separate long-running job; the current
-clean headline rows for reusable operators and stream/application suites are
-the two 2026-05-05 headline batches above.
+Important correction: the first run completed compile/prior/checked rows but
+was stopped after it entered an unwanted `current-safezone` row inside
+SafeZone-cost. The continuation reran SafeZone-cost with `current-default`
+excluded and completed streams. Core runtime/topology long rows were not
+rerun in this pass; use the earlier clean core evidence for those until a
+separate current-skipped core sweep exists.
 
 Latest representative 1M rows:
 
 | Area | Result | Interpretation |
 |---|---|---|
-| Dataflow SELECT | scoped `PageTokenMapFilter` `18.685 ms`, `checked-page-token` `20.129 ms` | reusable page-token SELECT remains the fastest Dataflow SELECT path |
-| Dataflow AGGREGATE | true `EpochFold` `94.378 ms` vs current checked exact-array aggregate `39.759 ms` | `EpochFold` is correct but speed-gated/negative |
-| Checked append | scoped page-token `27.004 ms`, Rift page-token `28.341 ms`, heap `37.490 ms` | focused operator-owned append path still clears the gate |
-| Checked epoch buffer | scoped checked `EpochBuffer` `25.448 ms`, checked Rift `26.673 ms`, heap epoch `27.164 ms` with `5.707 ms` GC | new reusable epoch append/drain API clears first focused 1M gate |
-| StreamFlex checked TransactionRegion | 200k throughput: heap `41.995 ms`, improved SafeZone `41.871 ms`, Rift Streaming `36.365 ms`, checked TransactionRegion `44.881 ms`, scoped checked TransactionRegion `41.375 ms` | multi-list transaction fixes the stacked-EpochBuffer granularity problem; scoped checked row is the best checked StreamFlex-shaped row so far, but trusted Streaming remains fastest |
-| Common Crawl-shaped q1 | scoped page-token `3654.143 ms`, Rift page-token `3856.625 ms`, heap `5313.928 ms` with `1517.397 ms` GC | strongest checked generated stream win |
-| Common Crawl-shaped q2 | scoped page-token `3713.483 ms`, Rift page-token `3927.449 ms`, heap `5250.408 ms` with `1628.382 ms` GC | strongest checked generated window win |
-| NEXMark Beam-default | checked q3 `278.455 ms`, q8 `429.087 ms`, q9 `711.256 ms` | modest generated methodology wins |
-| Object allocation lowering | checked SafeZone-backed `15.166 ms`, checked Rift `16.734 ms`, heap `20.797 ms` | raw checked allocation is not the main remaining bottleneck |
+| Dataflow SELECT | scoped `PageTokenMapFilter` `18.458 ms`, `checked-page-token` `20.479 ms`, heap `29.347 ms` | reusable page-token SELECT remains the fastest Dataflow SELECT path |
+| Dataflow AGGREGATE | true `EpochFold` `92.923 ms` vs current checked exact-array aggregate `40.098 ms` | `EpochFold` is correct but speed-gated/negative |
+| Dataflow JOIN | checked Rift `21.607 ms`, improved SafeZone `23.846 ms`, heap `33.438 ms` | checked JOIN wins in the latest prior-work pass |
+| Checked append | scoped EpochBuffer `26.461 ms`, scoped page-token `26.883 ms`, heap `36.944 ms` | focused operator-owned append paths still clear the gate |
+| StreamFlex checked TransactionRegion | throughput: heap `42.860 ms`, improved SafeZone `41.327 ms`, Rift HP `36.436 ms`, checked TransactionRegion `45.620 ms`, scoped checked TransactionRegion `39.019 ms` | multi-list transaction fixes the stacked-EpochBuffer granularity problem; scoped checked row is the best checked StreamFlex-shaped row so far, but trusted Rift remains fastest |
+| Common Crawl-shaped q1 | scoped page-token `3696.284 ms`, Rift page-token `3905.285 ms`, heap `5350.531 ms` with `1517.640 ms` GC | strongest checked generated stream win |
+| Common Crawl-shaped q2 | scoped page-token `3732.171 ms`, Rift page-token `3972.493 ms`, heap `5183.656 ms` with `1526.751 ms` GC | strongest checked generated window win |
+| NEXMark Beam-default | checked q3 `282.629 ms`, q8 `432.391 ms`, q9 `708.391 ms` | modest generated methodology wins |
+| Object allocation lowering | checked SafeZone-backed `14.903 ms`, checked Rift `16.039 ms`, heap `21.885 ms` | raw checked allocation is not the main remaining bottleneck |
 
 Active update:
 Cheap checked page/token append operator implemented and measured; real WAT
@@ -65,7 +61,7 @@ primitive directly; its 1M-shape 3-run row remains strong
 `27.872 ms`). `RegionList` replaced the benchmark-local ListOfLists checked
 builder and improved the focused 3-run row to `5927.385 ms`. `EpochFold` is
 correct but currently a negative/gated result: the first true reusable
-Dataflow AGGREGATE row is `91.938 ms`, much slower than the older exact-array
+Dataflow AGGREGATE row is `92.923 ms`, much slower than the exact-array
 checked aggregate path. Do not use `EpochFold` as headline evidence until it is
 optimized or redesigned. `EpochBuffer` is the new batch/epoch append-drain
 operator: it matched checksums at 20k/100k/1M and at 1M beats the fair
@@ -91,13 +87,13 @@ drain packets, decoded records, classified records, and alerts before one
 transaction close. A first array-indexed list implementation was too slow; the
 hot path was changed so each typed list handle owns its own `head`/`tail`/
 `length` fields. Validation passed: sandbox compile, checked compiler suite
-`110/110`, and checked native runtime suite `49/49`. In StreamFlex 200k
-throughput, checked TransactionRegion improves over stacked checked
-EpochBuffer (`44.881 ms` vs `48.052 ms`) and scoped checked TransactionRegion
-is the best checked row (`41.375 ms`), slightly faster than heap
-(`41.995 ms`) and improved SafeZone (`41.871 ms`). Trusted Rift Streaming is
-still faster (`36.365 ms`), so this is a partial checked-operator win and not a
-reason to claim StreamFlex solved.
+`110/110`, and checked native runtime suite `49/49`. In the latest staged
+headline StreamFlex throughput row, checked TransactionRegion improves over
+stacked checked EpochBuffer (`45.620 ms` vs `47.934 ms`) and scoped checked
+TransactionRegion is the best checked row (`39.019 ms`), faster than heap
+(`42.860 ms`) and improved SafeZone (`41.327 ms`). Trusted Rift HP/Streaming
+remain faster around `36.4 ms`, so this is a partial checked-operator win and
+not a reason to claim StreamFlex solved.
 
 Validation for reusable operator update:
 
@@ -111,17 +107,14 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memor
 Results: compile passed; checked compiler suite passed `108/108`; checked
 native runtime suite passed `48/48` after the `EpochBuffer` probes.
 
-Comprehensive sweep attempt:
-Started a dirty-repo staged smoke run with
-`RIFT_EVAL_RUN_ID=2026-05-05-reusable-operators-smoke`,
-`RIFT_EVAL_SCALE=smoke`, and suites `preflight core prior checked streams`.
-It was stopped during the core GCBench leg because the harness repeatedly
-invoked sbt under Java 17, paid full rebuild/link costs, and produced code-cache
-warnings before reaching useful suite coverage. One partial heap GCBench row was
-written under `/Users/siyaoliu/rift/cache/perf-eval/2026-05-05-reusable-operators-smoke/`,
-but this run is not evidence. Before a comprehensive sweep, either commit the
-checkpoint and optimize the run harness to reuse built binaries or run the
-headline suites manually in smaller committed batches.
+Comprehensive staged sweep:
+Completed a clean staged headline sweep after adding explicit mode-list
+controls for prior-work runners and parent orchestration defaults. The first
+run (`2026-05-05-comprehensive-headline`) completed compile/prior/checked rows
+and was stopped when SafeZone-cost entered an unwanted `current-safezone` row.
+The continuation (`2026-05-05-comprehensive-headline-cont`) reran SafeZone-cost
+with `current-default` excluded and completed stream/application rows. Source
+summary: `evidence/COMPREHENSIVE_SWEEP_2026_05_06.md`.
 
 Report/taxonomy/benchmark-catalog update:
 `docs/PERFORMANCE_EVALUATION_REPORT.md` is now the single high-level project

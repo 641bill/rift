@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-05 23:47:54 CEST
+Last updated: 2026-05-06 00:55 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -27,6 +27,12 @@ Current merge state is tracked in `docs/HANDOFF.md`; the substantive roadmap
 revision began at implementation commit `ddbba577aecd4c0adc741cbf7085ee93548c46b4`.
 Benchmark descriptions and evidence classes are tracked separately in
 `docs/BENCHMARK_CATALOG.md`.
+
+Latest staged headline sweep: `evidence/COMPREHENSIVE_SWEEP_2026_05_06.md`.
+It completed prior-work, checked-operator, SafeZone-cost, and stream rows with
+current SafeZone skipped in competitive rows. Core runtime/topology headline
+rows remain from the earlier clean core runs until a separate current-skipped
+core sweep is added.
 
 ## 1. Roadmap Principles
 
@@ -146,35 +152,37 @@ validate the boundary: compiler tests are now `100/100`, runtime tests are
 `27.141 ms` versus current checked `30.819 ms` and heap `35.652 ms`; the
 SafeZone-backed page-token row is `26.191 ms`. Generated Common Crawl-shaped
 q1/q2 then pass the checked application-shaped gate. The latest clean staged
-sweep records q1 page-token at `3856.625 ms` and SafeZone-backed page-token at
-`3654.143 ms` versus heap `5313.928 ms` with `1517.397 ms` GC; q2 page-token
-is `3927.449 ms` and SafeZone-backed page-token is `3713.483 ms` versus heap
-`5250.408 ms` with `1628.382 ms` GC. Treat this as generated
+sweep records q1 page-token at `3905.285 ms` and SafeZone-backed page-token at
+`3696.284 ms` versus heap `5350.531 ms` with `1517.640 ms` GC; q2 page-token
+is `3972.493 ms` and SafeZone-backed page-token is `3732.171 ms` versus heap
+`5183.656 ms` with `1526.751 ms` GC. Treat this as generated
 memory-pressure evidence and the first successful checked-overhead removal, not
 as real Common Crawl proof.
 
 Current cheap operator-family checkpoint:
 The first reusable-family slice is wired and has focused 1M-shape 3-run rows,
-and has now been followed by clean staged smoke/headline batches recorded in
-`evidence/COMPREHENSIVE_SWEEP_2026_05_05.md`. `PageTokenMapFilter[T]` is now
+and has now been followed by staged headline batches recorded in
+`evidence/COMPREHENSIVE_SWEEP_2026_05_06.md`. `PageTokenMapFilter[T]` is now
 a real reusable SELECT/filter/project API; focused medians are `19.881 ms` for
 the Rift checked backend and `18.214 ms` for the scoped backend, versus current
 checked `20.844 ms`, improved SafeZone/scoped rooted `23.025 ms`, and heap
-`27.872 ms`; the clean headline rerun records scoped page-token SELECT at
-`18.685 ms` and Rift page-token SELECT at `20.129 ms`. `RegionList[T]` is now
+`27.872 ms`; the latest staged headline rerun records scoped page-token SELECT at
+`18.458 ms` and Rift page-token SELECT at `20.479 ms`. `RegionList[T]` is now
 a real reusable linked-topology API; the
 ListOfLists checked builder rerun is `5927.385 ms`, faster than the earlier
 benchmark-local checked builder around `9.2-9.4 s` and earlier heap rows around
 `14.8-15.4 s`. `EpochFold[T]` is implemented and correct, but the first true
-reusable Dataflow AGGREGATE row is `94.378 ms` in the clean headline run, so it remains gated; the older
+reusable Dataflow AGGREGATE row is `92.923 ms` in the latest staged headline run, so it remains gated; the older
 `38.399-38.991 ms` aggregate row should be treated as exact-array checked
 aggregate evidence, not `EpochFold` evidence. The next roadmap gate is
 lower-overhead fold/epoch operators after `EpochBuffer` and
 `TransactionRegion`. `EpochBuffer` passed a focused 1M gate, and
 `TransactionRegion` is now partially validated on StreamFlex-shaped
-multi-stage epochs: scoped checked transaction slightly beats heap/improved
-SafeZone at 200k throughput, while Rift-native checked transaction remains
-speed-gated. Real hash/join/rank/median operators remain open.
+multi-stage epochs: scoped checked transaction beats heap/improved SafeZone in
+the latest throughput sweep (`39.019 ms` vs heap `42.860 ms` and improved
+SafeZone `41.327 ms`), while trusted Rift remains fastest and Rift-native
+checked transaction remains speed-gated. Real hash/join/rank/median operators
+remain open.
 
 Current fixed-chunk append checkpoint:
 `StreamChunkAppendWindow[T]` is implemented as an operator-owned fixed

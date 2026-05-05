@@ -1,15 +1,58 @@
 # Rift Evaluation Summary Tables
 
 Date: 2026-05-01
-Last updated: 2026-05-05 20:27:58 CEST
+Last updated: 2026-05-06 00:55 CEST
 
 Status: seeded summary pack for the comprehensive evaluation. Rows below are
-current checked-in evidence before the next clean headline sweep unless marked
-pending rerun.
+current checked-in evidence unless marked pending rerun.
 
-## Clean Reusable-Operator Sweep: 2026-05-05
+## Staged Headline Sweep: 2026-05-06
+
+Source: `evidence/COMPREHENSIVE_SWEEP_2026_05_06.md`
+
+Run ids:
+
+- `2026-05-05-comprehensive-headline`
+- `2026-05-05-comprehensive-headline-cont`
+
+The first run completed compile/prior/checked rows and was stopped after it
+entered an unwanted `current-safezone` cost row. The continuation completed
+SafeZone-cost and stream rows with `current-default` excluded from
+SafeZone-cost. Competitive rows skip current SafeZone by default.
+
+| Area | Main result | Interpretation |
+|---|---|---|
+| Dataflow SELECT | scoped page-token `18.458 ms`, Rift page-token `20.479 ms`, heap `29.347 ms` with `7.304 ms` GC | reusable page-token SELECT remains a clear checked win |
+| Dataflow AGGREGATE | current checked exact-array aggregate `40.098 ms`, heap `53.677 ms`; true `EpochFold` `92.923 ms` | checked aggregate row wins, but reusable `EpochFold` is still negative/gated |
+| Dataflow JOIN | checked Rift `21.607 ms`, improved SafeZone `23.846 ms`, heap `33.438 ms` | checked beats heap and SafeZone in this rerun |
+| StreamFlex | trusted Rift HP `36.436 ms`; scoped checked TransactionRegion `39.019 ms`; heap `42.860 ms`; improved SafeZone `41.327 ms` | TransactionRegion is the best checked StreamFlex shape; trusted Rift remains fastest |
+| Object allocation lowering | checked SafeZone-backed `14.903 ms`, checked Rift `16.039 ms`, heap `21.885 ms` | focused checked allocation is not the remaining bottleneck |
+| Checked append/window | scoped EpochBuffer `26.461 ms`, scoped page-token `26.883 ms`, heap Immix `36.944 ms` with `10.900 ms` GC | cheap checked append operators beat heap |
+| StreamWindowRank | checked `344.918 ms`, heap `227.736 ms` | rank/index maintenance remains a negative control |
+| NEXMark Beam-default | checked Rift fastest on q0/q1/q2/q3/q4/q5/q8/q9/q11; q9 checked `708.391 ms` vs heap `779.032 ms` | broad generated methodology win, mostly modest |
+| Common Crawl-shaped q1 | checked SafeZone page-token `3696.284 ms`, checked Rift page-token `3905.285 ms`, heap `5350.531 ms` with `1517.640 ms` GC | strongest checked generated stream win |
+| Common Crawl-shaped q2 | checked SafeZone page-token `3732.171 ms`, checked Rift page-token `3972.493 ms`, heap `5183.656 ms` with `1526.751 ms` GC | strongest checked generated window win |
+| Common Crawl-shaped q3 | heap `10188.412 ms`; SafeZone-family rows can be much slower | parser-scratch shape is negative/mixed, not a case-study target |
+| GH Archive-shaped | q1 trusted Streaming `246.174 ms` and q2 trusted HP `233.427 ms`; heap q1/q2 `286.721` / `268.717 ms` | generated GH-shaped row favors regions; still not real-input proof |
+| Linear Road | heap fastest or tied on q0/q1/q2 despite GC reduction in region modes | ceiling/control evidence |
+
+Key SafeZone-cost decomposition from the corrected continuation:
+
+| Benchmark/config | Median ms | Claim ms | Reclaim ms | Root add+remove ms | Interpretation |
+|---|---:|---:|---:|---:|---|
+| GCBench unsafe 32K | `697.984` | `0.977` | `1.321` | `0.000` | rootless lower bound |
+| GCBench improved 32K | `703.092` | `2.556` | `1.326` | `1.596` | close to rootless |
+| ListOfLists linked improved 32K | `32837.097` | `93.615` | `60.867` | `58.205` | faster than rootless in trace mode |
+| ListOfLists linked rootless 32K | `33588.729` | `31.243` | `52.382` | `0.000` | root work gone, total still dominated elsewhere |
+| Common Crawl q1 improved 32K | `8443.875` | `54.623` | `42.836` | `45.283` | trace-mode diagnostic |
+| Common Crawl q1 rootless 32K | `8459.317` | `16.318` | `31.718` | `0.000` | rootless does not improve total in trace mode |
+
+## Superseded Clean Reusable-Operator Sweep: 2026-05-05
 
 Source: `evidence/COMPREHENSIVE_SWEEP_2026_05_05.md`
+
+These rows are retained for provenance. Prefer the 2026-05-06 staged headline
+sweep above where rows overlap.
 
 Run ids:
 
@@ -135,7 +178,7 @@ full comprehensive headline sweep; a clean committed rerun remains pending.
 | Checked SafeZone-backed backend | AppendWindow 1M `rift-checked-safezone-32k` `29.444 ms` vs current checked cursor `30.922 ms`; Common Crawl q1 `4512.743 ms` vs current checked `4744.872 ms`; q2 `4431.865 ms` vs current checked `4698.903 ms` | Backend mechanics help focused checked append/window but the generic application q1/q2 path still missed the gate. |
 | Checked page/token append operator | Focused 1M `rift-checked-page-token` `27.141 ms`, SafeZone-backed page-token `26.191 ms`; Common Crawl-shaped q1 page-token `3956.366 ms`, SafeZone-backed page-token `3728.286 ms`; q2 page-token `4039.855 ms`, SafeZone-backed page-token `3816.247 ms` | First checked generated Common Crawl-shaped application-gate pass. The result is generated stressor evidence, not real-input proof. |
 | Object allocation lowering | 10M retained-region-array row: checked SafeZone-backed `143.319 ms`, checked Rift `165.774 ms`, trusted HP `199.627 ms`, heap `271.121 ms` with `105.807 ms` median GC | Region allocation/reclaim wins at scale; earlier checked gap was mostly generic `RegionBuffer` retention overhead. |
-| Cheap operator family checkpoint | SELECT scoped page-token `18.214 ms` latest API rerun and `17.980 ms` / `30375936` RSS bytes in direct-binary run; true `EpochFold` `91.938 ms`; reusable `RegionList` ListOfLists builder `5927.385 ms` | First reusable API slice. `PageTokenMapFilter` and `RegionList` pass focused gates; `EpochFold` is correct but negative/gated. Full headline sweep pending. |
+| Cheap operator family checkpoint | SELECT scoped page-token `18.214 ms` latest API rerun and `17.980 ms` / `30375936` RSS bytes in direct-binary run; true `EpochFold` `91.938 ms`; reusable `RegionList` ListOfLists builder `5927.385 ms` | First reusable API slice. `PageTokenMapFilter` and `RegionList` pass focused gates; `EpochFold` is correct but negative/gated. Superseded by the 2026-05-06 staged sweep where overlapping. |
 
 The older seeded tables below are retained for provenance and comparison, but
 this clean subset should be treated as the current headline evidence for

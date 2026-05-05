@@ -1,7 +1,7 @@
 # Rift All-Phase Results Rollup
 
 Date: 2026-05-01
-Last updated: 2026-05-05 23:47:54 CEST
+Last updated: 2026-05-06 00:55 CEST
 
 This file gathers the current numeric and validation evidence across all
 roadmap phases. It is a rollup, not the primary raw log. Prefer the source files
@@ -53,6 +53,7 @@ For performance numbers, use the following rule of thumb:
 
 | Area | Source |
 |---|---|
+| 2026-05-06 staged comprehensive headline sweep | `evidence/COMPREHENSIVE_SWEEP_2026_05_06.md` |
 | 2026-05-05 reusable-operator staged sweep | `evidence/COMPREHENSIVE_SWEEP_2026_05_05.md` |
 | 2026-05-01 clean core/prior/checked rerun | `evidence/HEADLINE_CORE_PRIOR_CHECKED_RERUN_2026_05_01.md` |
 | 2026-05-01 clean core/prior/checked headline subset | `evidence/HEADLINE_CORE_PRIOR_CHECKED_2026_05_01.md` |
@@ -97,6 +98,30 @@ For performance numbers, use the following rule of thumb:
 | Current roadmap status | `docs/ROADMAP.md` |
 | Handoff / caveats | `docs/HANDOFF.md` |
 
+## Latest Staged Sweep Snapshot
+
+Source: `evidence/COMPREHENSIVE_SWEEP_2026_05_06.md`.
+
+The latest staged headline sweep used run IDs
+`2026-05-05-comprehensive-headline` and
+`2026-05-05-comprehensive-headline-cont`. Competitive rows skip
+`current-safezone`; the continuation reran SafeZone-cost with
+`current-default` excluded after the first run was stopped on that unwanted
+row. Core runtime/topology headline rows were not rerun in this pass.
+
+| Area | Latest result | Meaning |
+|---|---|---|
+| Dataflow SELECT | checked scoped page-token `18.458 ms` vs heap `29.347 ms` | reusable checked page-token remains the strongest simple map/filter operator |
+| Dataflow AGGREGATE | checked exact-array aggregate `40.098 ms`; true `EpochFold` `92.923 ms` | current checked aggregate wins, reusable fold remains speed-gated |
+| StreamFlex | scoped checked TransactionRegion `39.019 ms`; heap `42.860 ms`; trusted Rift HP `36.436 ms` | TransactionRegion is the best checked multi-stage stream shape so far |
+| Object allocation lowering | checked SafeZone-backed `14.903 ms`; checked Rift `16.039 ms`; heap `21.885 ms` | focused checked allocation is not the main bottleneck |
+| Checked append/window | scoped EpochBuffer `26.461 ms`; scoped page-token `26.883 ms`; heap `36.944 ms` | cheap checked append operators beat heap |
+| Table/rank | checked rank `344.918 ms` vs heap `227.736 ms` | ranking/index maintenance remains negative |
+| NEXMark Beam-default | checked Rift fastest on q0/q1/q2/q3/q4/q5/q8/q9/q11 | broad generated methodology win, mostly modest |
+| Common Crawl-shaped q1 | checked SafeZone page-token `3696.284 ms`, checked Rift page-token `3905.285 ms`, heap `5350.531 ms` with `1517.640 ms` GC | strongest checked generated stream win |
+| Common Crawl-shaped q2 | checked SafeZone page-token `3732.171 ms`, checked Rift page-token `3972.493 ms`, heap `5183.656 ms` with `1526.751 ms` GC | strongest checked generated window win |
+| Linear Road | heap fastest or tied on q0/q1/q2 | ceiling/control despite region GC reduction |
+
 ## Evidence Levels
 
 | Level | Meaning |
@@ -123,8 +148,8 @@ For performance numbers, use the following rule of thumb:
 | Runtime substrate control: UnsafeZone-HP | Headline core/prior, stream, and bounded DEBS rows started | Validated for covered local harnesses; unsafe by design | SafeZone no-root mode `SAFEZONE_ROOTS_MODE=3` with 32 KiB pages. Clean core/prior sweep shows it usually beats improved SafeZone slightly and beats current Rift HPZone on linked/prior-work rows, while Rift HPZone still wins flat ListOfLists. Clean stream sweep shows the same pattern: UnsafeZone-HP is often best or near-best, but mostly only slightly ahead of improved SafeZone. Bounded DEBS 1M normal single-run row has unsafezone-hp fastest (`4639.791 ms`), with trusted Streaming close (`4663.529 ms`) and checked heap-adjacent (`4844.738 ms`). |
 | SafeZone-family cost decomposition | Headline diagnostic run completed | Validated diagnostic rows; trace-instrumented elapsed caveat | `sandbox/run_safezone_cost_matrix.sh` records SafeZone pool trace counters (`SAFEZONE_TRACE=1`) alongside benchmark medians/RSS for root-mode and page-size configurations. Current SafeZone root removal dominates old pathologies; improved roots plus 32 KiB pages match or beat rootless UnsafeZone-HP on several key trace rows. The trace-mode Common Crawl q1 unsafe pathology does not reproduce in non-trace q1/q2. After the Rift fast-allocation counter cleanup, Common Crawl-like q1/q2 now favor trusted Rift over improved-32k/unsafezone-hp, so keep rootless UnsafeZone-HP as an unsafe comparator and treat improved-32k/chunk roots as backend candidates rather than the only next direction. |
 | Checked SafeZone-backed backend prototype | Focused backend gate passed; application gate missed | Validated compile/tests plus focused and application medians | `RiftRegion.streamingSafeZone(...)` delegates checked object allocation to SafeZone allocator internals while preserving the checked programming model. `CheckedAppendWindowMatrix` 1M passes (`rift-checked-safezone-32k` `29.444 ms` vs current checked cursor `30.922 ms`). Common Crawl-like q1/q2 improve current checked by `4.9-5.7%` at 1M but miss the application gate against trusted Rift/improved SafeZone. |
-| Cheap checked operator families | Started, first reusable APIs validated | Compile/tests plus focused 1M-shape 3-run, StreamFlex transaction rows, and RSS rows | `PageTokenMapFilter`, `RegionList`, `EpochBuffer`, and `TransactionRegion` are now real reusable APIs. Focused rows are positive for SELECT, linked ListOfLists, and epoch append/drain: SELECT scoped page-token `18.214 ms` in the latest API rerun and `17.980 ms` / `30375936` RSS bytes in the direct-binary rerun vs heap `27.872-27.932 ms`; reusable `RegionList` ListOfLists builder `5927.385 ms` vs earlier heap around `14.8-15.4 s`; `EpochBuffer` 1M scoped checked `25.448 ms` and checked Rift `26.673 ms` vs heap epoch `27.164 ms` with `5.707 ms` GC. `TransactionRegion` is partially positive in StreamFlex-shaped code: scoped checked transaction `41.375 ms` beats heap `41.995 ms` and improved SafeZone `41.871 ms` at 200k throughput, but trusted Rift Streaming remains faster at `36.365 ms` and Rift-native checked transaction remains speed-gated at `44.881 ms`. `EpochFold` is implemented and correct but failed its first speed gate at `91.938 ms`; the older `38.399 ms` aggregate row remains exact-array checked aggregate evidence, not true `EpochFold` evidence. Full comprehensive headline sweep remains pending. |
-| StreamFlex checked TransactionRegion integration | Partial checked win | Compile, compiler/runtime safety, smoke, 200k throughput, and 10k latency rows | `StreamFlexRegionMatrix` now accepts `rift-checked-transaction-region` and `rift-checked-safezone-transaction-region` in addition to EpochBuffer controls. Checksums match. `TransactionRegion` reduces checked Rift opens/closes from `3129` to `783` at 200k throughput and measured Rift op time from `0.403 ms` to `0.189 ms`. Scoped checked transaction is the best checked StreamFlex-shaped throughput row (`41.375 ms`) and removes latency deadline misses in the 10k latency row, but the trusted reset-oriented Streaming backend is still fastest. |
+| Cheap checked operator families | Started, first reusable APIs validated | Compile/tests plus focused 1M-shape 3-run, StreamFlex transaction rows, RSS rows, and staged headline sweep | `PageTokenMapFilter`, `RegionList`, `EpochBuffer`, and `TransactionRegion` are now real reusable APIs. Latest staged sweep rows are positive for SELECT and cheap append/drain: SELECT scoped page-token `18.458 ms` vs heap `29.347 ms`; scoped checked EpochBuffer `26.461 ms` and scoped checked page-token `26.883 ms` vs heap `36.944 ms`. `RegionList` remains the linked-topology reusable API from the previous focused gate. `TransactionRegion` is partially positive in StreamFlex-shaped code: scoped checked transaction `39.019 ms` beats heap `42.860 ms` and improved SafeZone `41.327 ms`, but trusted Rift HP remains faster at `36.436 ms` and Rift-native checked transaction remains speed-gated at `45.620 ms`. `EpochFold` is implemented and correct but failed the latest speed gate at `92.923 ms`; the `40.098 ms` aggregate row remains exact-array checked aggregate evidence, not true `EpochFold` evidence. |
+| StreamFlex checked TransactionRegion integration | Partial checked win | Compile, compiler/runtime safety, smoke, 200k/1M-shape throughput, and latency rows | `StreamFlexRegionMatrix` now accepts `rift-checked-transaction-region` and `rift-checked-safezone-transaction-region` in addition to EpochBuffer controls. Checksums match. `TransactionRegion` reduces checked Rift opens/closes compared with stacked EpochBuffer and keeps one child region per transaction. Scoped checked transaction is the best checked StreamFlex-shaped throughput row in the latest sweep (`39.019 ms`) and beats heap/improved SafeZone, but trusted Rift HP/Streaming remain faster around `36.4 ms`. |
 | Phase 9: Lean mechanization | Open | No data | None |
 | Phase 10: writing | Not started beyond notes | No data | None |
 
