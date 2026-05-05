@@ -94,6 +94,8 @@ set_scale_defaults() {
     smoke)
       export RIFT_EVAL_EVENTS="${RIFT_EVAL_EVENTS:-20000}"
       export RIFT_EVAL_RUNS="${RIFT_EVAL_RUNS:-1}"
+      export RIFT_EVAL_LISTBENCH_N="${RIFT_EVAL_LISTBENCH_N:-200}"
+      export RIFT_EVAL_LISTBENCH_STRUCTURES="${RIFT_EVAL_LISTBENCH_STRUCTURES:-1}"
       export RIFT_EVAL_CHECKED_EPOCHS="${RIFT_EVAL_CHECKED_EPOCHS:-1}"
       export RIFT_EVAL_CHECKED_RECORDS_PER_EPOCH="${RIFT_EVAL_CHECKED_RECORDS_PER_EPOCH:-20000}"
       export RIFT_EVAL_CHECKED_PQ_RECORDS_PER_EPOCH="${RIFT_EVAL_CHECKED_PQ_RECORDS_PER_EPOCH:-20000}"
@@ -103,6 +105,8 @@ set_scale_defaults() {
     headline)
       export RIFT_EVAL_EVENTS="${RIFT_EVAL_EVENTS:-1000000}"
       export RIFT_EVAL_RUNS="${RIFT_EVAL_RUNS:-5}"
+      export RIFT_EVAL_LISTBENCH_N="${RIFT_EVAL_LISTBENCH_N:-3000}"
+      export RIFT_EVAL_LISTBENCH_STRUCTURES="${RIFT_EVAL_LISTBENCH_STRUCTURES:-40}"
       export RIFT_EVAL_CHECKED_EPOCHS="${RIFT_EVAL_CHECKED_EPOCHS:-10}"
       export RIFT_EVAL_CHECKED_RECORDS_PER_EPOCH="${RIFT_EVAL_CHECKED_RECORDS_PER_EPOCH:-100000}"
       export RIFT_EVAL_CHECKED_PQ_RECORDS_PER_EPOCH="${RIFT_EVAL_CHECKED_PQ_RECORDS_PER_EPOCH:-50000}"
@@ -112,6 +116,8 @@ set_scale_defaults() {
     full)
       export RIFT_EVAL_EVENTS="${RIFT_EVAL_EVENTS:-10000000}"
       export RIFT_EVAL_RUNS="${RIFT_EVAL_RUNS:-3}"
+      export RIFT_EVAL_LISTBENCH_N="${RIFT_EVAL_LISTBENCH_N:-3000}"
+      export RIFT_EVAL_LISTBENCH_STRUCTURES="${RIFT_EVAL_LISTBENCH_STRUCTURES:-40}"
       export RIFT_EVAL_CHECKED_EPOCHS="${RIFT_EVAL_CHECKED_EPOCHS:-10}"
       export RIFT_EVAL_CHECKED_RECORDS_PER_EPOCH="${RIFT_EVAL_CHECKED_RECORDS_PER_EPOCH:-1000000}"
       export RIFT_EVAL_CHECKED_PQ_RECORDS_PER_EPOCH="${RIFT_EVAL_CHECKED_PQ_RECORDS_PER_EPOCH:-500000}"
@@ -132,10 +138,10 @@ run_compile() {
 run_core() {
   run_logged gcbench-runtime "$FORK" env GCBENCH_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" zsh sandbox/run_gcbench_runtime_matrix.sh
   run_logged gcbench-topology "$FORK" env GCBENCH_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" zsh sandbox/run_gcbench_topology_matrix.sh
-  run_logged listoflists-runtime "$FORK" env LISTBENCH_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" zsh sandbox/run_listoflists_runtime_matrix.sh
-  run_logged listoflists-flat "$FORK" env LISTBENCH_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" zsh sandbox/run_listoflists_flat_matrix.sh
-  run_logged listoflists-chunked "$FORK" env LISTBENCH_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" zsh sandbox/run_listoflists_chunked_matrix.sh
-  run_logged listoflists-topology "$FORK" env LISTBENCH_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" zsh sandbox/run_listoflists_topology_matrix.sh
+  run_logged listoflists-runtime "$FORK" env LISTBENCH_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" LISTBENCH_N="$RIFT_EVAL_LISTBENCH_N" LISTBENCH_STRUCTURES="$RIFT_EVAL_LISTBENCH_STRUCTURES" zsh sandbox/run_listoflists_runtime_matrix.sh
+  run_logged listoflists-flat "$FORK" env LISTBENCH_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" LISTBENCH_N="$RIFT_EVAL_LISTBENCH_N" LISTBENCH_STRUCTURES="$RIFT_EVAL_LISTBENCH_STRUCTURES" zsh sandbox/run_listoflists_flat_matrix.sh
+  run_logged listoflists-chunked "$FORK" env LISTBENCH_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" LISTBENCH_N="$RIFT_EVAL_LISTBENCH_N" LISTBENCH_STRUCTURES="$RIFT_EVAL_LISTBENCH_STRUCTURES" zsh sandbox/run_listoflists_chunked_matrix.sh
+  run_logged listoflists-topology "$FORK" env LISTBENCH_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" LISTBENCH_N="$RIFT_EVAL_LISTBENCH_N" LISTBENCH_STRUCTURES="$RIFT_EVAL_LISTBENCH_STRUCTURES" zsh sandbox/run_listoflists_topology_matrix.sh
   run_logged pipeline-runtime "$FORK" env PIPELINE_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" zsh sandbox/run_pipeline_runtime_matrix.sh
 }
 
