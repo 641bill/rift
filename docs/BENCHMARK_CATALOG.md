@@ -74,7 +74,7 @@ The cheap-operator family milestone generalizes that idea cautiously:
 | `PageTokenMapFilter` | SELECT/filter/project rows where each page/event/window owns short-lived projected records. | First Dataflow SELECT page-token rows wired and smoke-tested. |
 | `EpochFold` | Additive count/sum/fold rows with epochal record lifetimes. | Reporting row wired for Dataflow AGGREGATE using the existing exact-array checked aggregate path; a general reusable API is still open. |
 | `RegionListOfListsBuilder` | Linked object topology where a whole structure/epoch dies together. | Checked builder row wired and smoke-tested; clean medians pending. |
-| `EpochBuffer` | Append/drain epoch buffers for Yak/StreamFlex-style data/control splits. | Planned, not implemented in this slice. |
+| `EpochBuffer` | Append/drain epoch buffers for Yak/StreamFlex-style data/control splits. | Implemented and focused-positive: 1M checked epoch buffer `26.673 ms`, scoped checked epoch buffer `25.448 ms`, versus heap epoch `27.164 ms` with `5.707 ms` GC. |
 | `TransactionRegion` | Stancu-style batched transaction regions with explicit commit/export handles. | Planned, not implemented in this slice. |
 
 Do not use these names to imply all applications can use the same operator.

@@ -1,7 +1,7 @@
 # Comprehensive Sweep Checkpoint: 2026-05-05
 
 Date: 2026-05-05
-Last updated: 2026-05-05 20:27:58 CEST
+Last updated: 2026-05-05 20:52:18 CEST
 
 Status: clean staged sweep checkpoint after introducing reusable checked
 operator APIs. This is not a single monolithic all-suite run; it is a staged
@@ -170,6 +170,11 @@ intentionally launched.
 
 - The reusable API milestone is real: `PageTokenMapFilter` and `RegionList`
   are not benchmark-local one-offs.
+- Post-sweep follow-up added `EpochBuffer` as the next reusable checked
+  operator. Its focused 1M epoch append/drain row is positive:
+  `rift-checked-safezone-epoch-buffer` `25.448 ms` and
+  `rift-checked-epoch-buffer` `26.673 ms` versus `heap-epoch` `27.164 ms` with
+  `5.707 ms` GC. This is focused operator evidence, not an application row.
 - `EpochFold` is correct but currently too slow, so fold-style reusable APIs
   need a lower-overhead representation before application use.
 - The strongest current win remains generated Common Crawl WET-shaped q1/q2

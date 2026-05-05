@@ -117,7 +117,7 @@ Detailed taxonomy: `docs/MEMORY_MODE_TAXONOMY.md`.
 | Checked stream operators | Partial | AppendWindow/cursor works; Join/Fold/Rank/TableRank exist but many fail performance gates. |
 | Checked SafeZone-backed backend | Implemented as benchmark prototype | `RiftRegion.streamingSafeZone(...)`; object allocation/close supported, raw allocation/reset unsupported. |
 | Canonical benchmark labels | Implemented for key matrices | Checked AppendWindow and Common Crawl WET-shaped runners accept new names and old aliases. |
-| Cheap checked operator families | Started | `PageTokenMapFilter` and `RegionList` are now real reusable APIs with passing safety probes and focused wins. `EpochFold` is implemented and correct but failed the first Dataflow AGGREGATE speed gate. EpochBuffer and TransactionRegion remain open. |
+| Cheap checked operator families | Started | `PageTokenMapFilter`, `RegionList`, and `EpochBuffer` are now real reusable APIs with passing safety probes. `EpochBuffer` passes its first focused 1M epoch gate (`25.448 ms` scoped checked vs heap epoch `27.164 ms` with `5.707 ms` GC). `EpochFold` is implemented and correct but failed the first Dataflow AGGREGATE speed gate. TransactionRegion remains open. |
 | Performance report package | In progress | This report now consolidates the main evidence; individual packs remain backing data. |
 
 ## 5. Runtime Overhead Removal
@@ -237,6 +237,7 @@ evidence.
 | `PageTokenMapFilter` | Dataflow SELECT | heap `27.872 ms`; improved SafeZone `23.025 ms`; current checked `20.844 ms` | scoped-backend page-token `18.214 ms`; Rift page-token `19.881 ms` | Gate passes: real reusable SELECT/filter/project API, with scoped backend fastest and lower RSS than heap in the RSS rerun. |
 | `EpochFold` | Dataflow AGGREGATE | older exact-array checked aggregate `38.399 ms` / RSS `46825472`; heap `61.585 ms` / RSS `40091648` | true reusable `EpochFold` `91.938 ms` | Correct but failed speed gate. Keep as negative/gated operator evidence; do not headline until optimized. |
 | `RegionList` | ListOfLists linked | earlier heap `14822.115 ms` / RSS `575930368`; scoped rooted `9812.764 ms`; HP `9547.748 ms` | reusable checked builder `5927.385 ms` | Gate passes strongly for linked topology with shared lifetime; this is now a real reusable API row, not benchmark-local code. |
+| `EpochBuffer` | focused epoch append/drain | heap epoch `27.164 ms`, GC `5.707 ms` | checked Rift `26.673 ms`; scoped checked `25.448 ms` | Focused gate passes at 1M. Use for Yak/StreamFlex-style batch/epoch data paths before any rank/hash-heavy integration. |
 
 This checkpoint supports the updated design framing: Rift is the checked
 stream-region programming model and operator library, while SafeZone-derived
@@ -252,6 +253,7 @@ operator problems with separate gates.
 | AppendWindow cursor | cursor `34.708 ms` | heap `35.705 ms` | Positive, cheap shape. |
 | SafeZone-backed AppendWindow | `rift-checked-safezone-improved-32k` `29.444 ms` | current checked cursor `30.922 ms`; heap `35.511 ms` | Focused gate passed. |
 | Page/token append | checked page-token `27.141 ms`; SafeZone-backed page-token `26.191 ms` | current checked `30.819 ms`; heap `35.652 ms` | Focused gate passed and feeds generated Common Crawl-shaped q1/q2. |
+| EpochBuffer append/drain | checked Rift `26.673 ms`; SafeZone-backed checked `25.448 ms` | heap epoch `27.164 ms`, GC `5.707 ms` | Focused gate passed for whole-epoch append/drain. |
 | Fixed-chunk append | checked chunk-token `34.273 ms`; SafeZone-backed chunk-token `33.108 ms` | page-token `28.452 ms`; SafeZone-backed page-token `27.214 ms`; heap chunk `45.363 ms` | Correct but failed; chunk allocation/control overhead outweighs saved link writes in this sequential append/drain shape. |
 | Object allocation lowering | checked Rift `165.774 ms`; checked SafeZone-backed `143.319 ms`; trusted HP `199.627 ms` at 10M | heap `271.121 ms`, GC median `105.807 ms`, RSS `971 MB` | Allocation/reclaim win at scale; prior checked gap was mostly generic `RegionBuffer` retention overhead. |
 | WindowFold additive | checked `118.726 ms` | heap `103.244 ms` | Failed; checked aggregate overhead. |

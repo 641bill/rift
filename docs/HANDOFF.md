@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-05 20:27:58 CEST
+Last updated: 2026-05-05 20:52:18 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -42,6 +42,7 @@ Latest representative 1M rows:
 | Dataflow SELECT | scoped `PageTokenMapFilter` `18.685 ms`, `checked-page-token` `20.129 ms` | reusable page-token SELECT remains the fastest Dataflow SELECT path |
 | Dataflow AGGREGATE | true `EpochFold` `94.378 ms` vs current checked exact-array aggregate `39.759 ms` | `EpochFold` is correct but speed-gated/negative |
 | Checked append | scoped page-token `27.004 ms`, Rift page-token `28.341 ms`, heap `37.490 ms` | focused operator-owned append path still clears the gate |
+| Checked epoch buffer | scoped checked `EpochBuffer` `25.448 ms`, checked Rift `26.673 ms`, heap epoch `27.164 ms` with `5.707 ms` GC | new reusable epoch append/drain API clears first focused 1M gate |
 | Common Crawl-shaped q1 | scoped page-token `3654.143 ms`, Rift page-token `3856.625 ms`, heap `5313.928 ms` with `1517.397 ms` GC | strongest checked generated stream win |
 | Common Crawl-shaped q2 | scoped page-token `3713.483 ms`, Rift page-token `3927.449 ms`, heap `5250.408 ms` with `1628.382 ms` GC | strongest checked generated window win |
 | NEXMark Beam-default | checked q3 `278.455 ms`, q8 `429.087 ms`, q9 `711.256 ms` | modest generated methodology wins |
@@ -54,7 +55,8 @@ Follow-up scaffold added for allocation-lowering decomposition and heap-budget
 reporting.
 
 Reusable operator-family update:
-`PageTokenMapFilter[T]`, `EpochFold[T]`, and `RegionList[T]` now exist as
+`PageTokenMapFilter[T]`, `EpochFold[T]`, `RegionList[T]`, and
+`EpochBuffer[T]` now exist as
 named checked APIs in `RiftRegion`, with compiler/runtime probes. Dataflow
 SELECT now uses `PageTokenMapFilter` instead of the lower-level page-token
 primitive directly; its 1M-shape 3-run row remains strong
@@ -64,7 +66,9 @@ builder and improved the focused 3-run row to `5927.385 ms`. `EpochFold` is
 correct but currently a negative/gated result: the first true reusable
 Dataflow AGGREGATE row is `91.938 ms`, much slower than the older exact-array
 checked aggregate path. Do not use `EpochFold` as headline evidence until it is
-optimized or redesigned.
+optimized or redesigned. `EpochBuffer` is the new batch/epoch append-drain
+operator: it matched checksums at 20k/100k/1M and at 1M beats the fair
+`heap-epoch` control by removing a `5.707 ms` GC component.
 
 Validation for reusable operator update:
 
@@ -75,8 +79,8 @@ ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.Rif
 ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionCheckedTest"
 ```
 
-Results: compile passed; checked compiler suite passed `106/106`; checked
-native runtime suite passed `47/47`.
+Results: compile passed; checked compiler suite passed `108/108`; checked
+native runtime suite passed `48/48` after the `EpochBuffer` probes.
 
 Comprehensive sweep attempt:
 Started a dirty-repo staged smoke run with
