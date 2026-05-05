@@ -1,13 +1,16 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-05 16:15:34 CEST
+Last updated: 2026-05-05 20:27:58 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
 step. It summarizes the design, implementation status, benchmark evidence,
 runtime-overhead story, wins, losses, and open work. Individual evidence files
 remain the source of detailed command provenance.
+
+Latest clean staged sweep checkpoint:
+`evidence/COMPREHENSIVE_SWEEP_2026_05_05.md`.
 
 Benchmark guide: `docs/BENCHMARK_CATALOG.md` describes what each benchmark is
 meant to measure and which rows are generated, real-input, focused, or
@@ -34,7 +37,7 @@ The current evidence is mixed but useful:
 | Checked Rift | Checked APIs can be fast for simple append/window shapes. The new page/token append operator now clears the generated Common Crawl-shaped q1/q2 gate, while rank/fold/table containers still add too much CPU overhead. |
 | Safe checked backend | `rift-checked-safezone-improved-32k` improves focused checked append/window. The page/token SafeZone-backed variant is fastest on generated Common Crawl-shaped q1/q2, but it is still generated stressor evidence rather than real-input proof. |
 | Real-input stream evidence | Current real/preloaded WET, Wikimedia, Linear Road, Yahoo, and RIoTBench rows mostly have low/zero median GC or heap wins. They are ceiling controls, not final Rift case studies. |
-| Strongest memory-pressure row | Generated Common Crawl WET-shaped q1/q2 creates heavy stream object churn: heap spends about `1.55-1.59 s` in timed GC at 1M pages. Trusted Rift beats heap and improved SafeZone after fast-path cleanup; the new checked page/token operator then beats current checked by `16.2-18.5%` and clears the generated q1/q2 gate. |
+| Strongest memory-pressure row | Generated Common Crawl WET-shaped q1/q2 creates heavy stream object churn: in the 2026-05-05 clean headline run, heap spends `1517.397 ms` timed GC on q1 and `1628.382 ms` on q2. Scoped checked page-token is fastest (`3654.143 ms` q1, `3713.483 ms` q2), followed by Rift checked page-token (`3856.625 ms` q1, `3927.449 ms` q2). |
 
 The strongest current claim is:
 
@@ -44,6 +47,18 @@ The strongest current claim is:
 > remove enough runtime overhead to win on the generated Common Crawl-shaped
 > q1/q2 stressor. The remaining research problem is making that result hold for
 > real-input GC-heavy streams and broader checked operators.
+
+Latest staged sweep interpretation:
+
+- `PageTokenMapFilter` is now a reusable API, not a benchmark-local primitive;
+  scoped Dataflow SELECT is `18.685 ms` and Rift page-token SELECT is
+  `20.129 ms`.
+- `RegionList` is a reusable topology API and remains the preferred direction
+  for linked ListOfLists-style region-friendly structures.
+- `EpochFold` is implemented and correct, but its first true Dataflow
+  AGGREGATE row is `94.378 ms`; it is gated out until redesigned.
+- Generated Common Crawl WET-shaped q1/q2 is the current best GC-heavy stream
+  stressor; real-input GC-heavy proof is still open.
 
 The project still does not have a final checked application result on a
 real-input GC-heavy stream benchmark.

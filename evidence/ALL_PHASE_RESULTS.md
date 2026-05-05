@@ -1,7 +1,7 @@
 # Rift All-Phase Results Rollup
 
 Date: 2026-05-01
-Last updated: 2026-05-05 16:15:34 CEST
+Last updated: 2026-05-05 20:27:58 CEST
 
 This file gathers the current numeric and validation evidence across all
 roadmap phases. It is a rollup, not the primary raw log. Prefer the source files
@@ -53,6 +53,7 @@ For performance numbers, use the following rule of thumb:
 
 | Area | Source |
 |---|---|
+| 2026-05-05 reusable-operator staged sweep | `evidence/COMPREHENSIVE_SWEEP_2026_05_05.md` |
 | 2026-05-01 clean core/prior/checked rerun | `evidence/HEADLINE_CORE_PRIOR_CHECKED_RERUN_2026_05_01.md` |
 | 2026-05-01 clean core/prior/checked headline subset | `evidence/HEADLINE_CORE_PRIOR_CHECKED_2026_05_01.md` |
 | 2026-05-01 headline stream sweep | `evidence/HEADLINE_STREAMS_2026_05_01.md` |
@@ -85,9 +86,9 @@ For performance numbers, use the following rule of thumb:
 | Phase 6 pipeline / parallel collections | `evidence/PIPELINE_PARCOLL_COMPARISON.md` |
 | Phase 7 checked stream-window rank | `evidence/CHECKED_STREAM_WINDOW_RANK_MATRIX.md` |
 | Phase 7 TableRank profile | `evidence/TABLERANK_PROFILE.md` |
-| Phase 7 checked append-window operator | `evidence/CHECKED_APPEND_WINDOW_MATRIX.md` |
+| Phase 7 checked append-window operator | `evidence/CHECKED_APPEND_WINDOW_MATRIX.md`; `evidence/COMPREHENSIVE_SWEEP_2026_05_05.md` |
 | Phase 7 object allocation lowering | `evidence/OBJECT_ALLOCATION_LOWERING_MATRIX.md` |
-| Phase 7 cheap operator families | `evidence/CHEAP_OPERATOR_FAMILY_MATRIX.md` |
+| Phase 7 cheap operator families | `evidence/CHEAP_OPERATOR_FAMILY_MATRIX.md`; `evidence/COMPREHENSIVE_SWEEP_2026_05_05.md` |
 | Phase 7 checked window-fold operator | `evidence/CHECKED_WINDOW_FOLD_MATRIX.md` |
 | Scala Native win-envelope synthesis | `evidence/SN_WIN_ENVELOPE.md` |
 | Comprehensive evaluation runbook | `evidence/PERF_EVAL_RUNBOOK.md` |

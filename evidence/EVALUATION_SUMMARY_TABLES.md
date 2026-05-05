@@ -1,11 +1,35 @@
 # Rift Evaluation Summary Tables
 
 Date: 2026-05-01
-Last updated: 2026-05-05 16:15:34 CEST
+Last updated: 2026-05-05 20:27:58 CEST
 
 Status: seeded summary pack for the comprehensive evaluation. Rows below are
 current checked-in evidence before the next clean headline sweep unless marked
 pending rerun.
+
+## Clean Reusable-Operator Sweep: 2026-05-05
+
+Source: `evidence/COMPREHENSIVE_SWEEP_2026_05_05.md`
+
+Run ids:
+
+- `2026-05-05-reusable-operators-preflight`
+- `2026-05-05-reusable-operators-prior-checked-streams-smoke`
+- `2026-05-05-reusable-operators-core-smoke-small`
+- `2026-05-05-reusable-operators-prior-checked-headline`
+- `2026-05-05-reusable-operators-streams-headline`
+
+| Area | Main clean result | Interpretation |
+|---|---|---|
+| Dataflow SELECT | scoped `PageTokenMapFilter` `18.685 ms`; Rift `PageTokenMapFilter` `20.129 ms` | reusable page-token SELECT clears the gate |
+| Dataflow AGGREGATE | true reusable `EpochFold` `94.378 ms`; current checked exact-array aggregate `39.759 ms` | `EpochFold` is correct but speed-gated |
+| Checked append | scoped page-token `27.004 ms`, Rift page-token `28.341 ms`, heap `37.490 ms` | operator-owned checked append remains a win |
+| Object allocation lowering | checked SafeZone-backed `15.166 ms`, checked Rift `16.734 ms`, heap `20.797 ms` | raw checked allocation is not the primary remaining bottleneck |
+| Common Crawl-shaped q1 | scoped page-token `3654.143 ms`, Rift page-token `3856.625 ms`, heap `5313.928 ms` with `1517.397 ms` GC | strongest generated checked stream win |
+| Common Crawl-shaped q2 | scoped page-token `3713.483 ms`, Rift page-token `3927.449 ms`, heap `5250.408 ms` with `1628.382 ms` GC | strongest generated checked window win |
+| NEXMark Beam-default | checked q3 `278.455 ms`, q8 `429.087 ms`, q9 `711.256 ms`, q11 `211.000 ms` | modest generated methodology wins |
+| GH Archive shaped q1 | Rift HP `246.205 ms`, checked page-token `250.705 ms`, heap `284.689 ms` | generated-shaped row wins; real-input case remains separate |
+| Core smoke | fixed smoke dimensions completed | core headline remains the 2026-05-01 rerun unless a separate long core job is launched |
 
 ## Clean Headline Subset: 2026-05-01
 

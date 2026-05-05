@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-05 16:15:34 CEST
+Last updated: 2026-05-05 20:27:58 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -145,29 +145,32 @@ validate the boundary: compiler tests are now `100/100`, runtime tests are
 `44/44`, and the focused 1M gate passes. At 1M, `rift-checked-page-token` is
 `27.141 ms` versus current checked `30.819 ms` and heap `35.652 ms`; the
 SafeZone-backed page-token row is `26.191 ms`. Generated Common Crawl-shaped
-q1/q2 then pass the checked application-shaped gate: q1 page-token is
-`3956.366 ms` and SafeZone-backed page-token is `3728.286 ms` versus heap
-`5412.618 ms`; q2 page-token is `4039.855 ms` and SafeZone-backed page-token
-is `3816.247 ms` versus heap `5252.803 ms`. Treat this as generated
+q1/q2 then pass the checked application-shaped gate. The latest clean staged
+sweep records q1 page-token at `3856.625 ms` and SafeZone-backed page-token at
+`3654.143 ms` versus heap `5313.928 ms` with `1517.397 ms` GC; q2 page-token
+is `3927.449 ms` and SafeZone-backed page-token is `3713.483 ms` versus heap
+`5250.408 ms` with `1628.382 ms` GC. Treat this as generated
 memory-pressure evidence and the first successful checked-overhead removal, not
 as real Common Crawl proof.
 
 Current cheap operator-family checkpoint:
 The first reusable-family slice is wired and has focused 1M-shape 3-run rows,
-but it is not yet a full clean headline sweep. `PageTokenMapFilter[T]` is now
+and has now been followed by clean staged smoke/headline batches recorded in
+`evidence/COMPREHENSIVE_SWEEP_2026_05_05.md`. `PageTokenMapFilter[T]` is now
 a real reusable SELECT/filter/project API; focused medians are `19.881 ms` for
 the Rift checked backend and `18.214 ms` for the scoped backend, versus current
 checked `20.844 ms`, improved SafeZone/scoped rooted `23.025 ms`, and heap
-`27.872 ms`. `RegionList[T]` is now a real reusable linked-topology API; the
+`27.872 ms`; the clean headline rerun records scoped page-token SELECT at
+`18.685 ms` and Rift page-token SELECT at `20.129 ms`. `RegionList[T]` is now
+a real reusable linked-topology API; the
 ListOfLists checked builder rerun is `5927.385 ms`, faster than the earlier
 benchmark-local checked builder around `9.2-9.4 s` and earlier heap rows around
 `14.8-15.4 s`. `EpochFold[T]` is implemented and correct, but the first true
-reusable Dataflow AGGREGATE row is `91.938 ms`, so it remains gated; the older
+reusable Dataflow AGGREGATE row is `94.378 ms` in the clean headline run, so it remains gated; the older
 `38.399-38.991 ms` aggregate row should be treated as exact-array checked
-aggregate evidence, not `EpochFold` evidence. The next roadmap gate is a
-committed/clean rerun and a reusable RSS wrapper before promoting these rows
-into the comprehensive headline report. `EpochBuffer`, `TransactionRegion`,
-and real hash/join/rank/median operators remain open.
+aggregate evidence, not `EpochFold` evidence. The next roadmap gate is
+lower-overhead fold/epoch operators plus `EpochBuffer` and
+`TransactionRegion`; real hash/join/rank/median operators remain open.
 
 Current fixed-chunk append checkpoint:
 `StreamChunkAppendWindow[T]` is implemented as an operator-owned fixed
