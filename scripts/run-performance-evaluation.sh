@@ -146,10 +146,10 @@ run_core() {
 }
 
 run_prior_work() {
-  run_logged dataflow "$FORK" env DATAFLOW_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" zsh sandbox/run_dataflow_region_matrix.sh
+  run_logged dataflow "$FORK" env DATAFLOW_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" DATAFLOW_MODES="heap improved-safezone unsafezone-hp rift-hp rift-streaming rift-checked checked-page-token checked-page-token-scoped checked-epoch-fold" zsh sandbox/run_dataflow_region_matrix.sh
   run_logged streamflex "$FORK" env STREAMFLEX_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" STREAMFLEX_OUTPUT_DIR="$SUMMARY_DIR/streamflex" zsh sandbox/run_streamflex_region_instrumented_matrix.sh
-  run_logged yak "$FORK" env YAK_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" YAK_OUTPUT_DIR="$SUMMARY_DIR/yak" zsh sandbox/run_yak_region_instrumented_matrix.sh
-  run_logged stancu "$FORK" env STANCU_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" STANCU_OUTPUT_DIR="$SUMMARY_DIR/stancu" zsh sandbox/run_stancu_region_instrumented_matrix.sh
+  run_logged yak "$FORK" env YAK_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" YAK_MODES="heap improved-safezone unsafezone-hp rift-hp rift-streaming yak-runtime heap-promotion yak-runtime-promotion" YAK_OUTPUT_DIR="$SUMMARY_DIR/yak" zsh sandbox/run_yak_region_instrumented_matrix.sh
+  run_logged stancu "$FORK" env STANCU_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" STANCU_MODES="heap improved-safezone unsafezone-hp rift-hp rift-streaming" STANCU_OUTPUT_DIR="$SUMMARY_DIR/stancu" zsh sandbox/run_stancu_region_instrumented_matrix.sh
 }
 
 run_checked() {
@@ -167,15 +167,15 @@ run_safezone_cost() {
 }
 
 run_streams() {
-  run_logged nexmark-local "$FORK" env NEXMARK_EVENTS="$RIFT_EVAL_EVENTS" NEXMARK_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" NEXMARK_OUTPUT_DIR="$SUMMARY_DIR/nexmark-local" zsh sandbox/run_nexmark_region_matrix.sh
-  run_logged nexmark-beam-default "$FORK" env NEXMARK_BEAM_DEFAULTS=1 NEXMARK_EVENTS="$RIFT_EVAL_EVENTS" NEXMARK_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" NEXMARK_OUTPUT_DIR="$SUMMARY_DIR/nexmark-beam-default" zsh sandbox/run_nexmark_region_matrix.sh
-  run_logged yahoo-ad "$FORK" env YAHOO_AD_EVENTS="$RIFT_EVAL_EVENTS" YAHOO_AD_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" YAHOO_AD_OUTPUT_DIR="$SUMMARY_DIR/yahoo-ad" zsh sandbox/run_yahoo_ad_region_matrix.sh
-  run_logged riotbench "$FORK" env RIOTBENCH_EVENTS="$RIFT_EVAL_EVENTS" RIOTBENCH_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" RIOTBENCH_OUTPUT_DIR="$SUMMARY_DIR/riotbench" zsh sandbox/run_riotbench_region_matrix.sh
-  run_logged wikimedia "$FORK" env WIKIMEDIA_EVENTS="$RIFT_EVAL_EVENTS" WIKIMEDIA_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" WIKIMEDIA_OUTPUT_DIR="$SUMMARY_DIR/wikimedia" zsh sandbox/run_wikimedia_region_matrix.sh
-  run_logged common-crawl-wet "$FORK" env COMMON_CRAWL_WET_PAGES="$RIFT_EVAL_EVENTS" COMMON_CRAWL_WET_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" COMMON_CRAWL_WET_OUTPUT_DIR="$SUMMARY_DIR/common-crawl-wet" zsh sandbox/run_common_crawl_wet_matrix.sh
+  run_logged nexmark-local "$FORK" env NEXMARK_EVENTS="$RIFT_EVAL_EVENTS" NEXMARK_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" NEXMARK_MODES="heap safezone-improved unsafezone-hp rift-checked rift-hp rift-streaming" NEXMARK_OUTPUT_DIR="$SUMMARY_DIR/nexmark-local" zsh sandbox/run_nexmark_region_matrix.sh
+  run_logged nexmark-beam-default "$FORK" env NEXMARK_BEAM_DEFAULTS=1 NEXMARK_EVENTS="$RIFT_EVAL_EVENTS" NEXMARK_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" NEXMARK_MODES="heap safezone-improved unsafezone-hp rift-checked rift-hp rift-streaming" NEXMARK_OUTPUT_DIR="$SUMMARY_DIR/nexmark-beam-default" zsh sandbox/run_nexmark_region_matrix.sh
+  run_logged yahoo-ad "$FORK" env YAHOO_AD_EVENTS="$RIFT_EVAL_EVENTS" YAHOO_AD_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" YAHOO_AD_MODES="heap safezone-improved unsafezone-hp rift-hp rift-streaming" YAHOO_AD_OUTPUT_DIR="$SUMMARY_DIR/yahoo-ad" zsh sandbox/run_yahoo_ad_region_matrix.sh
+  run_logged riotbench "$FORK" env RIOTBENCH_EVENTS="$RIFT_EVAL_EVENTS" RIOTBENCH_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" RIOTBENCH_MODES="heap safezone-improved unsafezone-hp rift-hp rift-streaming" RIOTBENCH_OUTPUT_DIR="$SUMMARY_DIR/riotbench" zsh sandbox/run_riotbench_region_matrix.sh
+  run_logged wikimedia "$FORK" env WIKIMEDIA_EVENTS="$RIFT_EVAL_EVENTS" WIKIMEDIA_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" WIKIMEDIA_MODES="heap safezone-improved unsafezone-hp rift-hp rift-streaming" WIKIMEDIA_OUTPUT_DIR="$SUMMARY_DIR/wikimedia" zsh sandbox/run_wikimedia_region_matrix.sh
+  run_logged common-crawl-wet "$FORK" env COMMON_CRAWL_WET_PAGES="$RIFT_EVAL_EVENTS" COMMON_CRAWL_WET_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" COMMON_CRAWL_WET_MODES="heap-immix safezone-improved safezone-improved-32k safezone-chunk-roots safezone-rootless-32k rift-trusted-hp rift-trusted-streaming" COMMON_CRAWL_WET_OUTPUT_DIR="$SUMMARY_DIR/common-crawl-wet" zsh sandbox/run_common_crawl_wet_matrix.sh
   run_logged common-crawl-page-token "$FORK" env COMMON_CRAWL_WET_PAGES="$RIFT_EVAL_EVENTS" COMMON_CRAWL_WET_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" COMMON_CRAWL_WET_QUERIES="q1-tokenize q2-domain-window" COMMON_CRAWL_WET_MODES="heap-immix safezone-improved-32k safezone-rootless-32k rift-trusted-hp rift-trusted-streaming rift-checked-rift rift-checked-page-token rift-checked-safezone-improved-32k rift-checked-safezone-page-token" COMMON_CRAWL_WET_OUTPUT_DIR="$SUMMARY_DIR/common-crawl-page-token" zsh sandbox/run_common_crawl_wet_matrix.sh
   run_logged github-archive "$FORK" env GITHUB_ARCHIVE_EVENTS="$RIFT_EVAL_EVENTS" GITHUB_ARCHIVE_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" GITHUB_ARCHIVE_QUERIES="q1-fields q2-repo-window" GITHUB_ARCHIVE_HEAP_CAPS="uncapped 2G 1400M 1G" GITHUB_ARCHIVE_OUTPUT_DIR="$SUMMARY_DIR/github-archive" zsh sandbox/run_github_archive_region_matrix.sh
-  run_logged linear-road "$FORK" env LINEAR_ROAD_EVENTS="$RIFT_EVAL_EVENTS" LINEAR_ROAD_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" LINEAR_ROAD_OUTPUT_DIR="$SUMMARY_DIR/linear-road" zsh sandbox/run_linear_road_region_matrix.sh
+  run_logged linear-road "$FORK" env LINEAR_ROAD_EVENTS="$RIFT_EVAL_EVENTS" LINEAR_ROAD_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" LINEAR_ROAD_MODES="heap safezone-improved unsafezone-hp rift-hp rift-streaming" LINEAR_ROAD_OUTPUT_DIR="$SUMMARY_DIR/linear-road" zsh sandbox/run_linear_road_region_matrix.sh
 }
 
 run_debs() {
