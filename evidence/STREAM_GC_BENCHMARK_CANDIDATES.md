@@ -1,6 +1,7 @@
 # Stream GC Benchmark Candidates
 
 Date: 2026-05-01
+Last updated: 2026-05-07 00:37 CEST
 
 Status: benchmark-selection note for Phase 6. This is not a result pack.
 
@@ -37,6 +38,7 @@ requires it and licensing/provenance are explicit.
 | BigDataBench | Broad big-data/AI suite with streaming among several workload types and real-world datasets. | Useful workload catalogue; likely too broad/heavy for the immediate next implementation. |
 | ShuffleBench / SH-Bench | Large-scale stream shuffling/routing to state-local aggregations, inspired by observability workloads. | Interesting if we want routing/shuffle object pressure; less directly region-lifetime-friendly than append/window ETL. |
 | RiverBench RDF streaming | Real-life RDF stream datasets and streaming tasks including serialization/deserialization throughput. | Potentially object-heavy parser/record workload, but RDF/network serialization may dominate memory-management effects. |
+| LogHub / LogPAI logs | Large real system-log datasets including HDFS, BGL, Hadoop, Spark, Thunderbird, Windows, and others. Several are multi-million-line logs, and LogHub reports both line counts and raw sizes. | Best immediate real-input candidate after GH Archive because log parsing/tokenization/template extraction naturally creates many short-lived line/token/template objects with window/session/block lifetimes. |
 | DaCapo / Renaissance / SPECjbb2015 | General JVM/managed-runtime benchmark context. | Deprioritized for primary Rift evidence because lifetimes are not stream-structured. |
 
 Sources:
@@ -51,20 +53,26 @@ Sources:
 - BigDataBench: https://www.benchcouncil.org/BigDataBench/index.html
 - ShuffleBench replication package: https://zenodo.org/records/10667717/latest
 - RiverBench: https://riverbench.github.io/v/latest/
+- LogHub: https://github.com/logpai/loghub
+- LogHub data repository / download table:
+  https://github.com/logpai/loghub/blob/master/docs/datasets.md
 
 ## Candidate Ranking
 
 | Rank | Candidate | Why it fits Rift | First action |
 |---:|---|---|---|
-| 1 | DSPBench local-kernel subset | Broadest stream-processing benchmark family found in this pass: finance, telecom, sensor, social, and other applications; paper explicitly characterizes workload and memory occupation. | Inspect `GMAP/DSPBench` or the paper app list, choose 2-3 object-heavy kernels, and port local heap/SafeZone/Rift kernels without Storm/Spark runtime. |
-| 2 | Real RIoTBench-style input | Actual RIoTBench uses real IoT observation streams, unlike our current generated probe. | Find/download a public CITY/FIT-style dataset, wire `RIOTBENCH_INPUT`, and rerun q1/q2 before changing operators. |
-| 3 | NEXMark Beam-default expansion | Auction streams have generated event objects, joins, windows, and output objects with explicit window/session lifetimes. Q3 is the best new checked row; Q0/Q11 are trusted wins; Q1/Q8 remain useful profile rows. | Keep as active profile/regression evidence; do not claim exact Beam runner evidence. |
-| 4 | Theodolite local UC subset | Industrial IoT microservice benchmarks with load generators and UC1-UC4 stream shapes. | Port one local UC kernel only if DSPBench/real RIoTBench do not produce a stronger target; avoid Kubernetes/Kafka in headline memory runs. |
-| 5 | Yahoo-style ad stream | Ad-view pipelines match filter/project/campaign-lookup/window-count structure, but our 1M Q2 row does not beat heap. | Keep `YahooAdRegionMatrix` as a control; improve provenance/schema later, not as the next speed target. |
-| 6 | ShuffleBench / SH-Bench | Routing/shuffle to state-local aggregation may allocate many route/envelope objects. | Use only if we want a routing/object-envelope stress test; not a first region-lifetime case study. |
-| 7 | HiBench Streaming | Identity/repartition/stateful wordcount/fixed-window are easy to port and compare. | Use as simple controls; too small/simple for primary evidence. |
-| 8 | BigDataBench streaming / RiverBench RDF streaming | BigDataBench offers broad datasets; RiverBench offers real RDF stream datasets that may be parser/object heavy. | Keep as later workload catalogues; likely higher setup/parser/serialization noise. |
-| 9 | DaCapo / Renaissance / SPECjbb2015 | GC-heavy in places, but not stream-topology-first. | Deprioritized as primary Rift performance evidence. |
+| 1 | LogHub / LogPAI real system logs | Real, public, record-oriented log streams with large line counts. Query shapes map directly to Rift's page/token/window operators: parse line records, tokenize fields, group by component/template/block, and close per time/window/session. | Add a `LogHubRegionMatrix` first, starting with HDFS or BGL. Run file-backed byte-slice and string-parser controls, then scale until heap GC is a material share of elapsed or the row is parked. |
+| 2 | DSPBench local-kernel subset | Broadest stream-processing benchmark family found in this pass: finance, telecom, sensor, social, and other applications; paper explicitly characterizes workload and memory occupation. | Inspect `GMAP/DSPBench` or the paper app list, choose 2-3 object-heavy kernels, and port local heap/SafeZone/Rift kernels without Storm/Spark runtime. |
+| 3 | Larger/multiple Common Crawl WET/WAT shards | Same domain as the current generated GC-heavy stressor, but current real shards are too small/low-GC. | Download and run multiple WET/WAT shards, record actual pages/tokens/links, and stop if heap GC remains small. |
+| 4 | GDELT event stream | Real global event/news stream with frequent CSV event files and many fields per record. | Add file-backed byte-slice field extraction and windowed country/topic counts only after LogHub triage, because GDELT is likely more primitive/CSV-heavy. |
+| 5 | Real RIoTBench-style input | Actual RIoTBench uses real IoT observation streams, unlike our current generated probe. | Find/download a public CITY/FIT-style dataset, wire `RIOTBENCH_INPUT`, and rerun q1/q2 before changing operators. |
+| 6 | NEXMark Beam-default expansion | Auction streams have generated event objects, joins, windows, and output objects with explicit window/session lifetimes. Q3 is the best new checked row; Q0/Q11 are trusted wins; Q1/Q8 remain useful profile rows. | Keep as active profile/regression evidence; do not claim exact Beam runner evidence. |
+| 7 | Theodolite local UC subset | Industrial IoT microservice benchmarks with load generators and UC1-UC4 stream shapes. | Port one local UC kernel only if DSPBench/real RIoTBench do not produce a stronger target; avoid Kubernetes/Kafka in headline memory runs. |
+| 8 | Yahoo-style ad stream | Ad-view pipelines match filter/project/campaign-lookup/window-count structure, but our 1M Q2 row does not beat heap. | Keep `YahooAdRegionMatrix` as a control; improve provenance/schema later, not as the next speed target. |
+| 9 | ShuffleBench / SH-Bench | Routing/shuffle to state-local aggregation may allocate many route/envelope objects. | Use only if we want a routing/object-envelope stress test; not a first region-lifetime case study. |
+| 10 | HiBench Streaming | Identity/repartition/stateful wordcount/fixed-window are easy to port and compare. | Use as simple controls; too small/simple for primary evidence. |
+| 11 | BigDataBench streaming / RiverBench RDF streaming | BigDataBench offers broad datasets; RiverBench offers real RDF stream datasets that may be parser/object heavy. | Keep as later workload catalogues; likely higher setup/parser/serialization noise. |
+| 12 | DaCapo / Renaissance / SPECjbb2015 | GC-heavy in places, but not stream-topology-first. | Deprioritized as primary Rift performance evidence. |
 
 ## Gates
 
@@ -85,5 +93,10 @@ Linear Road input as parked ceiling/regression controls unless a future
 operator changes their allocation shape. Keep NEXMark Q3/Q8, Yahoo Q2, and
 RIoTBench q1 as stream-GC profile/regression controls, but make checked
 operator overhead reduction the next engineering focus unless DSPBench or real
-RIoTBench input shows stronger heap pressure. The next benchmark-search action
-should be DSPBench triage, not another generic JVM suite.
+RIoTBench input shows stronger heap pressure.
+
+Updated next benchmark-search action: try LogHub first. It is the most direct
+real-input analogue of the generated Common Crawl-shaped detector because it is
+line/token/template-heavy and naturally window/session structured. If LogHub
+does not produce material heap GC, fall back to DSPBench local-kernel triage
+rather than another generic JVM suite.

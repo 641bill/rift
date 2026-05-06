@@ -1,7 +1,7 @@
 # Rift Benchmark Catalog
 
 Date: 2026-05-05
-Last updated: 2026-05-07 00:28 CEST
+Last updated: 2026-05-07 00:37 CEST
 
 Status: working benchmark guide. Use this document to understand what each
 benchmark is meant to test before reading the detailed result files in
@@ -165,6 +165,7 @@ record-oriented and can be processed as an event/page/window stream:
 | Candidate | Input form | First query shape |
 |---|---|---|
 | GH Archive | hourly real GitHub events, JSON/NDJSON | file-backed byte-slice parse/project fields, repo/window counts, heap-capped tails, parser/string-scratch controls |
+| LogHub / LogPAI system logs | real HDFS/BGL/Spark/Thunderbird/etc. log lines | parse log records, tokenize fields/templates, window/session/block counts |
 | Larger/multiple Common Crawl WET/WAT shards | public WET/WAT archive records | page/token/link object materialization and domain/window counts |
 | GDELT events | public event files | parse/project event fields and windowed country/topic counts |
 | Public web/server/security logs | Apache/NASA-style logs or JSON security events | tokenize fields, filter/project, per-window counts |
@@ -179,10 +180,12 @@ GC-heavy stream workload that beats both `heap-immix` and
 
 The nearest candidates are:
 
-1. GH Archive with heap-budgeted/file-backed/tail-latency runs.
+1. LogHub / LogPAI real system logs, starting with HDFS or BGL.
 2. Larger or multiple real Common Crawl WET/WAT shards.
-3. Another real NDJSON/log-event stream with heavier object churn.
-4. DSPBench/Theodolite/RIoTBench-style local kernels only if input provenance
+3. GH Archive with heap-budgeted/file-backed/tail-latency runs as a modest-win
+   control, not GC-heavy proof.
+4. Another real NDJSON/log-event stream with heavier object churn.
+5. DSPBench/Theodolite/RIoTBench-style local kernels only if input provenance
    and lifetime structure are clean.
 
 ## 8. Source Files

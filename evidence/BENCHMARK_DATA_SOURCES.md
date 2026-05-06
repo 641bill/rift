@@ -1,6 +1,7 @@
 # Benchmark Data Sources
 
 Date: 2026-05-01
+Last updated: 2026-05-07 00:37 CEST
 
 Local data root:
 `/Users/siyaoliu/rift/cache/benchmark-data`
@@ -45,6 +46,10 @@ checked with `tar -tzf`. The Apache Beam source archive passed the official
 - Apache Beam releases: `https://beam.apache.org/get-started/downloads/`
 - Apache Beam NEXMark docs:
   `https://beam.apache.org/documentation/sdks/java/testing/nexmark/`
+- LogHub / LogPAI log datasets:
+  `https://github.com/logpai/loghub`
+- LogHub dataset table:
+  `https://github.com/logpai/loghub/blob/master/docs/datasets.md`
 
 ## Apache Beam NEXMark
 
@@ -81,6 +86,9 @@ Those directories are also ignored by git.
 - Broom/Naiad, StreamFlex, Yak, and Stancu-style matrices in this repo remain
   methodology/local reproductions unless paper-specific artifacts are later
   obtained.
+- LogHub / LogPAI system logs have not been downloaded yet. They are the next
+  real-input candidate to try because HDFS/BGL/Spark/Thunderbird-style logs
+  are large line streams with natural parse/token/template/window lifetimes.
 
 ## Next Wiring Work
 

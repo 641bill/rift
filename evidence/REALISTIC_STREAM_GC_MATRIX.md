@@ -1,7 +1,7 @@
 # Realistic Stream GC Matrix
 
 Date: 2026-05-03
-Last updated: 2026-05-07 00:16 CEST
+Last updated: 2026-05-07 00:37 CEST
 
 Status: benchmark ladder for realistic and real-input GC-heavy stream
 evidence. This file distinguishes generated stressors, methodology generators,
@@ -17,6 +17,7 @@ for why some real datasets are parked instead of tuned.
 | NEXMark Q3/Q8/Q9/Q11 | official-style generated auction profile | Latest Beam-default sweep has checked Rift fastest on q3/q8/q9/q11, with q9 the strongest row (`708.391 ms` vs heap `779.032 ms`). Margins remain mostly modest. | Keep as methodology/regression evidence. |
 | DSPBench | external benchmark family | Not ported yet; broad stream applications with memory-occupation characterization. | Next new benchmark family to triage. |
 | RIoTBench | generated local probe so far; real input desired | Current generated rows are not strong enough. | Revisit only with provenance-clean real IoT-style input. |
+| LogHub / LogPAI system logs | real public system logs, not yet downloaded/wired | Strong candidate because HDFS/BGL/Spark/Thunderbird-style logs are large real line streams. The target query shape is log line -> token/template objects -> per-window/component/block aggregation. | Next real-input candidate to implement before DSPBench. Add `LogHubRegionMatrix` and stop quickly if heap GC remains a small share of elapsed. |
 | GH Archive NDJSON/log-event stream | generated/real-shaped local GitHub-event rows plus real file-backed hourly events | The legacy string-parser file-backed rows showed timed heap GC in every run and large RSS reductions from regions, but parser/string allocation dominated elapsed. The new byte-slice parser-scratch path cuts 100k elapsed/RSS sharply and makes the two-hour 200k q1/q2 rows modest real-input throughput/RSS/tail wins: heap uses about `290 MB` RSS and collects in 2/3 runs, while region rows use about `211 MB` RSS and report zero timed GC. Heap GC is still only about `58-62 ms` inside `3.8 s` total elapsed, so this is not the missing GC-heavy case study. | Keep as the strongest current real-input modest-win candidate, not GC-heavy proof. Next target is scaling byte-slice file-backed rows and generalizing byte-slice NDJSON/log extraction beyond GH-specific code. |
 | Other NDJSON/log-event streams | real public logs desired | GH Archive is implemented; other public logs not yet tried. | Still high-priority if they produce larger object churn or force steadier GC without multi-GB heap growth. |
 | Wikimedia / Linear Road real inputs | real preloaded inputs | Mostly heap-fastest or median-GC-zero. | Regression/ceiling controls. |
@@ -94,24 +95,33 @@ Latest GH Archive control:
 
 Next attempts:
 
-1. GH Archive larger byte-slice file-backed q1/q2:
+1. LogHub real system-log matrix:
+   - download or wire HDFS/BGL first because they are large public log-line
+     streams;
+   - implement q0 parse records, q1 token/template objects, and q2
+     component/block/window counts;
+   - run heap, trusted Streaming, checked scoped page-token, and
+     safe scoped baseline;
+   - classify quickly: serious candidate only if heap GC is a material share
+     of elapsed at large line counts.
+2. GH Archive larger byte-slice file-backed q1/q2:
    - test whether multi-hour/day file-backed inputs amplify the fixed-memory result;
    - record per-run elapsed and GC so max-GC tails are visible;
    - explicitly label heap cap/RSS when using memory-budget controls.
-2. General NDJSON/log parser-scratch API:
+3. General NDJSON/log parser-scratch API:
    - factor the byte-slice JSON field extraction shape out of GH Archive;
    - apply it to another public NDJSON/log stream before claiming broad
      parser-scratch generality.
-3. Larger/multiple Common Crawl WET/WAT shards:
+4. Larger/multiple Common Crawl WET/WAT shards:
    - load enough pages/tokens to approach generated q1/q2 object counts;
    - record actual pages/tokens and shard provenance.
-4. More NDJSON/log-event streams:
+5. More NDJSON/log-event streams:
    - prefer public web/server/security logs with JSON or key-value records;
    - first concrete candidates are GDELT event files, Apache/NASA-style web
      logs, security/event JSON lines, and Stack Exchange-style dumps converted
      to event streams;
    - implement parse/project/window-count and token/field extraction variants.
-5. DSPBench local-kernel subset:
+6. DSPBench local-kernel subset:
    - choose 2-3 kernels with high object churn and clear windows/epochs;
    - remove distributed runtime dependencies from headline memory rows.
 
