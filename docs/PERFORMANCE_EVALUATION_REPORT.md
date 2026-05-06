@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-06 08:56 CEST
+Last updated: 2026-05-06 15:05 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -38,6 +38,7 @@ The current evidence is mixed but useful:
 | Safe checked backend | `rift-checked-safezone-improved-32k` improves focused checked append/window. The page/token SafeZone-backed variant is fastest on generated Common Crawl-shaped q1/q2, but it is still generated stressor evidence rather than real-input proof. |
 | Real-input stream evidence | Current real/preloaded WET, Wikimedia, Linear Road, Yahoo, and RIoTBench rows mostly have low/zero median GC or heap wins. They are ceiling controls, not final Rift case studies. |
 | Strongest memory-pressure row | Generated Common Crawl WET-shaped q1/q2 creates heavy stream object churn: in the 2026-05-06 staged headline sweep, heap spends `1517.640 ms` timed GC on q1 and `1526.751 ms` on q2. Checked SafeZone-backed page-token is fastest (`3696.284 ms` q1, `3732.171 ms` q2), followed by checked Rift page-token (`3905.285 ms` q1, `3972.493 ms` q2). |
+| ReML/MLKit lineage | New comparison track started. The paper table is transcribed as paper-reported/not-rerun evidence, and Tier 1 Scala Native ReML-shaped ports are scaffolded. The erased-generic heap-retention probe is now active and passing; exact ReML artifact rerun and headline medians remain open. |
 
 The strongest current claim is:
 
@@ -126,6 +127,8 @@ Detailed taxonomy: `docs/MEMORY_MODE_TAXONOMY.md`.
 | Checked SafeZone-backed backend | Implemented as benchmark prototype | `RiftRegion.streamingSafeZone(...)`; object allocation/close supported, raw allocation/reset unsupported. |
 | Canonical benchmark labels | Implemented for key matrices | Checked AppendWindow and Common Crawl WET-shaped runners accept new names and old aliases. |
 | Cheap checked operator families | Started | `PageTokenMapFilter`, `RegionList`, `EpochBuffer`, and `TransactionRegion` are now real reusable APIs with passing safety probes. In the latest staged sweep, scoped checked append operators remain fast (`26.461 ms` scoped EpochBuffer, `26.883 ms` scoped page-token vs heap `36.944 ms`). `TransactionRegion` fixes the stacked-EpochBuffer StreamFlex granularity issue enough that scoped checked transaction is the best checked StreamFlex row (`39.019 ms`), but trusted Rift remains faster. `EpochFold` is implemented and correct but failed the Dataflow AGGREGATE speed gate (`92.923 ms`). |
+| ReML/MLKit comparison track | Scaffolded | `ReMLRegionMatrix` implements Tier 1 Scala Native-shaped ports and `REML_COMPARISON_MATRIX.md` records paper-reported ReML data. Exact artifact reproduction and headline Tier 1 medians remain open. |
+| Final component selection | Started | `docs/FINAL_COMPONENT_SELECTION.md` classifies public candidates, internal lower-bound controls, and gated/rejected operators without deleting runtime code. The parent evaluation runner and main sandbox matrices now exclude current/rootless controls by default; set `RIFT_EVAL_INCLUDE_CONTROLS=1` or `RIFT_BENCH_INCLUDE_CONTROLS=1` to reproduce lower-bound/control rows. Dirty-worktree smoke run `2026-05-06-final-selection-smoke` completed broad suites with `include_controls=0`; it validates runner behavior, not headline performance. |
 | Performance report package | In progress | This report now consolidates the main evidence; individual packs remain backing data. |
 
 ## 5. Runtime Overhead Removal
@@ -261,6 +264,36 @@ still lacks a public real-input GC-heavy stream case study.
 
 These are local methodology reproductions unless original artifacts are used.
 They compare shapes, not exact published systems.
+
+Prior-system comparisons must use each system's own reported axes, then show
+Rift's standardized metrics separately. Broom is strongest on runtime and GC
+share in dataflow systems; Yak reports normalized runtime, GC time, app time,
+and epoch/promotion behavior; StreamFlex emphasizes throughput, latency tails,
+and deadline misses; Stancu et al. report young-generation sensitivity,
+collections, annotation burden, and region-freed memory; ReML/MLKit reports
+real time, RSS, and GC counts. Rift tables should always add local elapsed,
+GC time/count, RSS, region op time, checksum/output, and annotation/API burden
+where available.
+
+### ReML / MLKit Lineage
+
+Source: `evidence/REML_COMPARISON_MATRIX.md` and
+`docs/REML_COMPARISON_PLAN.md`.
+
+This is a new comparison track, not a stream benchmark. It matters because the
+MLKit/ReML lineage stresses region polymorphism, higher-order programs, and
+tracing-GC safety when region values can be hidden by polymorphic types.
+
+| Evidence class | Current status | Claim boundary |
+|---|---|---|
+| Paper-reported ReML table | Elsman 2023 Figure 9 is transcribed into tracked evidence. | Literature anchor only; not local measurement. |
+| Exact artifact rerun | Open. Original source/configuration provenance still needs to be found. | Required before any raw wall-clock "Rift beats ReML" claim. |
+| Scala Native ports | `ReMLRegionMatrix` has Tier 1 ports for `fib37`, `tak`, `mandel`, `msort`, `msort-r`, `life`, `fft`, and `ratio`. | Valid for local Rift-vs-Scala-Native ratios, not exact ReML reproduction. |
+| Safety probes | ReML-inspired compiler probes now include local polymorphic use, generic identity escape, generic heap-cell durable retention, widened `AnyRef`, heap arrays, closure hiding, and unrooted heap metadata. | The previous erased-generic gap is fixed at the current durable/static-retention probe level. Broader heap alias analysis remains open. |
+
+The next useful result here is a Tier 1 3-run local matrix reporting
+region-vs-heap ratios, RSS, GC time/count, and checked overhead. It should be
+interpreted separately from stream workloads.
 
 ### Cheap Operator Family Checkpoint
 
@@ -421,11 +454,11 @@ The next implementation work should be ordered like this:
    cost.
 
 2. **Add CPU profiling before the next tuning pass.**
-   Scala Native officially recommends native profiling workflows for generated
-   binaries, including `/usr/bin/time`, Linux `perf`, flamegraph-style tools,
-   and `samply` with Scala Native symbol demangling. Use profiling as
-   diagnostic evidence, not headline timing. Create `docs/CPU_PROFILE_REPORT.md`
-   after profiling the smallest representative set:
+   Scala Native's official profiling guidance treats Scala Native output as a
+   native binary: use external time/RSS tools, platform native profilers, and
+   `samply`/flamegraph-style sampled profiles where available. Use profiling as
+   diagnostic evidence, not headline timing. Record the run plan and results in
+   `docs/CPU_PROFILE_REPORT.md` after profiling the smallest representative set:
    Common Crawl-shaped q1/q2 (`heap-immix`, `rift-checked-page-token`,
    `rift-checked-safezone-page-token`), Dataflow AGGREGATE exact-array versus
    true `EpochFold`, StreamFlex trusted Rift versus checked
@@ -452,6 +485,21 @@ The next implementation work should be ordered like this:
 6. **Promote only repeated winning shapes into public APIs.**
    Do not add more TableRank/rank-style application integration until focused
    gates pass.
+
+7. **Run the ReML/MLKit Tier 1 comparison as a separate axis.**
+   Run `ReMLRegionMatrix` for `fib37`, `tak`, `mandel`, `msort`, `msort-r`,
+   `life`, `fft`, and `ratio` with 3-run medians, then decide whether Tier 2
+   ports are worth adding. Keep exact ReML artifact search open, and treat the
+   fixed erased-generic probe as current compiler evidence rather than a full
+   proof of arbitrary heap alias safety.
+
+8. **Run final component selection benchmarks.**
+   Use `docs/FINAL_COMPONENT_SELECTION.md` as the public/internal filter:
+   include `gc-heap`, the best safe/rooted baseline, the best checked backend,
+   and the best operator-specific candidate by default; keep rootless and
+   losing operators in explicit control sections only. The runner now encodes
+   this split in default mode lists; control sweeps must opt in with
+   `RIFT_EVAL_INCLUDE_CONTROLS=1` or explicit per-matrix mode variables.
 
 ## 12. Presentation Outline
 
@@ -481,6 +529,10 @@ Read these files for detail:
 - `evidence/CHECKED_SAFEZONE_BACKEND_MATRIX.md`
 - `evidence/REALISTIC_STREAM_GC_MATRIX.md`
 - `evidence/COMMON_CRAWL_LIKE_MATRIX.md`
+- `evidence/REML_COMPARISON_MATRIX.md`
+- `docs/REML_COMPARISON_PLAN.md`
+- `docs/CPU_PROFILE_REPORT.md`
+- `docs/LITERATURE_BENCHMARK_CONTRACT.md`
 - `evidence/SN_WIN_ENVELOPE.md`
 - `evidence/SAFEZONE_COST_MATRIX.md`
 - `docs/HANDOFF.md`

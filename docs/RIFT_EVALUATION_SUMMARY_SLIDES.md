@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-06 00:55 CEST
+Last updated: 2026-05-06 14:37 CEST
 
 Status: markdown slide deck outline. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report and this file as
@@ -40,6 +40,9 @@ placement and lifetime policy should differ.
 | `checked-page-token` | Operator-owned checked page/event/window append fast path. |
 
 Raw labels remain aliases in scripts and source result packs.
+
+Default final-selection runs now show safe/rooted and checked candidates.
+Rootless/current SafeZone controls require an explicit control flag.
 
 ## Slide 4: Runtime Lesson
 
@@ -211,3 +214,39 @@ win, but it does not yet have a final checked real-input application win.
 3. Add heap-size-controlled rows for GH Archive, Common Crawl-shaped, and NEXMark.
 4. Test larger/multiple real WET/WAT, NDJSON/logs, and DSPBench-style local kernels.
 5. Promote only repeated winning shapes; keep TableRank/rank gated out.
+6. Run the ReML/MLKit Tier 1 comparison matrix as a separate typed-region
+   lineage axis.
+7. Apply `docs/FINAL_COMPONENT_SELECTION.md`: public candidates only in the
+   default story; rootless/loss rows only as explicit controls.
+
+## Slide 15: ReML / MLKit Lineage Track
+
+This is not a stream benchmark. It asks whether Rift's checked region model
+also addresses the classic typed-region problem: higher-order and polymorphic
+programs where region values can be hidden by type abstraction.
+
+| Evidence | Status |
+|---|---|
+| ReML paper Figure 9 | transcribed as paper-reported, not rerun. |
+| Exact MLKit/ReML artifact | open; needed for raw timing comparisons. |
+| Scala Native Tier 1 ports | scaffolded for `fib37`, `tak`, `mandel`, `msort`, `msort-r`, `life`, `fft`, `ratio`. |
+| Safety probes | erased-generic heap retention is now rejected in durable/static state; local polymorphic use remains legal. |
+
+Claim boundary: compare relative region-vs-heap/RSS/GC effects and safety
+burden until exact artifacts are rerun. The generic-retention fix is compiler
+probe evidence, not a full mechanized proof.
+
+## Slide 16: Prior-System Metric Rule
+
+Compare each prior system on the axes it actually reported:
+
+| System | Axes to preserve |
+|---|---|
+| Broom | runtime speedup, GC share, dataflow synchronization delays |
+| Yak | normalized runtime, GC time, app time, epoch/promotion behavior |
+| StreamFlex | throughput, latency tails, deadline misses |
+| Stancu et al. | young-gen sensitivity, collections, annotation burden, region-freed memory |
+| ReML/MLKit | real time, RSS, GC count |
+
+Then show Rift's local standardized metrics separately: elapsed, GC time/count,
+RSS, region op time, correctness, and annotation/API burden.

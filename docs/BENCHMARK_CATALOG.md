@@ -1,7 +1,7 @@
 # Rift Benchmark Catalog
 
 Date: 2026-05-05
-Last updated: 2026-05-06 00:55 CEST
+Last updated: 2026-05-06 14:37 CEST
 
 Status: working benchmark guide. Use this document to understand what each
 benchmark is meant to test before reading the detailed result files in
@@ -17,6 +17,7 @@ should not be collapsed into a single "Rift is faster/slower" statement.
 | Runtime-only | Is the allocator/reclaim path competitive before safety/operator overhead? | GCBench, ListOfLists, Dataflow trusted modes |
 | Topology/layout | Does the object graph shape fit region reclaim? | ListOfLists linked/flat/chunked/topology |
 | Prior-work methodology | Does Rift behave well on Broom/Yak/StreamFlex/Stancu-shaped workloads? | Dataflow, StreamFlex, Yak, Stancu |
+| MLKit/ReML lineage | Does Rift address classic safe region+GC workloads with higher-order and polymorphic code? | ReML paper table, `ReMLRegionMatrix` Tier 1 ports |
 | Checked operator | Is a reusable safe API cheap enough for application use? | ObjectAllocationLowering, CheckedRegionBuffer, PageToken, AppendWindow, WindowFold, TableRank |
 | Generated stream stressor | Does a realistic stream shape create enough heap pressure to show a memory-management win? | Common Crawl WET-shaped, NEXMark Beam-default |
 | Real-input stream control | Does a public/real input preserve the same memory pressure? | real WET/WAT, GH Archive, Wikimedia, Linear Road |
@@ -24,6 +25,16 @@ should not be collapsed into a single "Rift is faster/slower" statement.
 
 Headline claims should use the canonical memory-mode names from
 `docs/MEMORY_MODE_TAXONOMY.md`.
+
+Default final-selection runs now exclude current SafeZone and rootless/unsafe
+lower-bound rows. Use `RIFT_EVAL_INCLUDE_CONTROLS=1`,
+`RIFT_BENCH_INCLUDE_CONTROLS=1`, or an explicit `*_MODES` variable when a
+benchmark needs provenance or lower-bound controls.
+
+Prior-system comparison tables should not force all systems into one metric
+schema. Use the metric axes each paper reports, then add Rift's standardized
+local metrics separately. The detailed contract is
+`docs/LITERATURE_BENCHMARK_CONTRACT.md`.
 
 ## 2. Core Runtime Baselines
 
@@ -45,9 +56,19 @@ so it is layout evidence, not a pure allocator comparison.
 | StreamFlex matrix | StreamFlex-style memory pressure/latency | Windowed stream pressure and latency-style measurements. | Methodology evidence, not exact artifact reproduction. |
 | Yak matrix | Yak-style epochs and promotion pressure | Topword/filter, GraphChi-like intervals, grouped sort, escape/promotion proxies. | Useful to compare static checked regions against dynamic region/promotion ideas. |
 | Stancu matrix | RegionScope/static hybrid analysis | Transaction/region-boundary style workloads. | Safety/methodology anchor; not full SPECjbb reproduction. |
+| ReML / MLKit lineage | Elsman 2023 / MLKit typed-region lineage | Paper-reported benchmark table plus local Scala Native-shaped ports for classic SML benchmark programs. | New comparison axis for region polymorphism and GC-safety; not stream evidence and not exact ReML reproduction yet. |
 
 These rows are intentionally labeled as methodology reproductions unless the
 original benchmark artifact, input, and configuration are actually used.
+
+The ReML track has four evidence classes:
+
+| Class | Meaning |
+|---|---|
+| Paper-reported | Elsman 2023 Figure 9 data copied into tracked evidence, not rerun. |
+| Exact artifact | Open; only valid if original MLKit/ReML benchmarks and configurations are found and run locally. |
+| Scala Native ports | Local `ReMLRegionMatrix` ports; valid for Rift-vs-Scala-Native ratios, not cross-language claims. |
+| Safety probes | ReML-inspired compiler tests for polymorphic/higher-order GC-safety hazards; the current durable/static generic heap-retention probe is active and passing. |
 
 ## 4. Checked Operator Matrices
 
@@ -134,6 +155,7 @@ Read these result files first for detailed numbers:
 - `evidence/CHECKED_REGION_BUFFER_MATRIX.md`
 - `evidence/CHECKED_PAGE_TOKEN_APPEND_MATRIX.md`
 - `evidence/CHEAP_OPERATOR_FAMILY_MATRIX.md`
+- `evidence/REML_COMPARISON_MATRIX.md`
 - `evidence/COMMON_CRAWL_LIKE_MATRIX.md`
 - `evidence/REALISTIC_STREAM_GC_MATRIX.md`
 - `evidence/GITHUB_ARCHIVE_REGION_MATRIX.md`

@@ -10,6 +10,7 @@ LOG_DIR="$RUN_ROOT/logs"
 SUMMARY_DIR="$RUN_ROOT/summaries"
 SUITES="${RIFT_EVAL_SUITES:-preflight}"
 SCALE="${RIFT_EVAL_SCALE:-smoke}"
+INCLUDE_CONTROLS="${RIFT_EVAL_INCLUDE_CONTROLS:-0}"
 
 mkdir -p "$LOG_DIR" "$SUMMARY_DIR"
 
@@ -20,6 +21,20 @@ log() {
 suite_enabled() {
   local wanted="$1"
   [[ " $SUITES " == *" all "* || " $SUITES " == *" $wanted "* ]]
+}
+
+include_controls() {
+  [[ "$INCLUDE_CONTROLS" == "1" || "$INCLUDE_CONTROLS" == "true" || "$INCLUDE_CONTROLS" == "yes" ]]
+}
+
+selected_modes() {
+  local final_modes="$1"
+  local control_modes="$2"
+  if include_controls; then
+    printf '%s %s' "$final_modes" "$control_modes"
+  else
+    printf '%s' "$final_modes"
+  fi
 }
 
 run_logged() {
@@ -43,6 +58,7 @@ record_environment() {
     echo "fork=$FORK"
     echo "suites=$SUITES"
     echo "scale=$SCALE"
+    echo "include_controls=$INCLUDE_CONTROLS"
     echo
     echo "== uname =="
     uname -a
@@ -146,10 +162,16 @@ run_core() {
 }
 
 run_prior_work() {
-  run_logged dataflow "$FORK" env DATAFLOW_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" DATAFLOW_MODES="heap improved-safezone unsafezone-hp rift-hp rift-streaming rift-checked checked-page-token checked-page-token-scoped checked-epoch-fold" zsh sandbox/run_dataflow_region_matrix.sh
-  run_logged streamflex "$FORK" env STREAMFLEX_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" STREAMFLEX_OUTPUT_DIR="$SUMMARY_DIR/streamflex" zsh sandbox/run_streamflex_region_instrumented_matrix.sh
-  run_logged yak "$FORK" env YAK_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" YAK_MODES="heap improved-safezone unsafezone-hp rift-hp rift-streaming yak-runtime heap-promotion yak-runtime-promotion" YAK_OUTPUT_DIR="$SUMMARY_DIR/yak" zsh sandbox/run_yak_region_instrumented_matrix.sh
-  run_logged stancu "$FORK" env STANCU_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" STANCU_MODES="heap improved-safezone unsafezone-hp rift-hp rift-streaming" STANCU_OUTPUT_DIR="$SUMMARY_DIR/stancu" zsh sandbox/run_stancu_region_instrumented_matrix.sh
+  local dataflow_modes streamflex_modes yak_modes stancu_modes
+  dataflow_modes="$(selected_modes "heap improved-safezone rift-checked checked-page-token checked-page-token-scoped" "current-safezone unsafezone-hp rift-hp rift-streaming checked-epoch-fold")"
+  streamflex_modes="$(selected_modes "heap improved-safezone rift-checked-safezone-transaction-region" "current-safezone unsafezone-hp rift-hp rift-streaming rift-checked-epoch-buffer rift-checked-safezone-epoch-buffer rift-checked-transaction-region")"
+  yak_modes="$(selected_modes "heap improved-safezone yak-runtime" "current-safezone unsafezone-hp rift-hp rift-streaming heap-promotion yak-runtime-promotion")"
+  stancu_modes="$(selected_modes "heap improved-safezone" "current-safezone unsafezone-hp rift-hp rift-streaming")"
+
+  run_logged dataflow "$FORK" env DATAFLOW_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" DATAFLOW_MODES="$dataflow_modes" zsh sandbox/run_dataflow_region_matrix.sh
+  run_logged streamflex "$FORK" env STREAMFLEX_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" STREAMFLEX_MODES="$streamflex_modes" STREAMFLEX_OUTPUT_DIR="$SUMMARY_DIR/streamflex" zsh sandbox/run_streamflex_region_instrumented_matrix.sh
+  run_logged yak "$FORK" env YAK_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" YAK_MODES="$yak_modes" YAK_OUTPUT_DIR="$SUMMARY_DIR/yak" zsh sandbox/run_yak_region_instrumented_matrix.sh
+  run_logged stancu "$FORK" env STANCU_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" STANCU_MODES="$stancu_modes" STANCU_OUTPUT_DIR="$SUMMARY_DIR/stancu" zsh sandbox/run_stancu_region_instrumented_matrix.sh
 }
 
 run_checked() {
@@ -167,15 +189,28 @@ run_safezone_cost() {
 }
 
 run_streams() {
-  run_logged nexmark-local "$FORK" env NEXMARK_EVENTS="$RIFT_EVAL_EVENTS" NEXMARK_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" NEXMARK_MODES="heap safezone-improved unsafezone-hp rift-checked rift-hp rift-streaming" NEXMARK_OUTPUT_DIR="$SUMMARY_DIR/nexmark-local" zsh sandbox/run_nexmark_region_matrix.sh
-  run_logged nexmark-beam-default "$FORK" env NEXMARK_BEAM_DEFAULTS=1 NEXMARK_EVENTS="$RIFT_EVAL_EVENTS" NEXMARK_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" NEXMARK_MODES="heap safezone-improved unsafezone-hp rift-checked rift-hp rift-streaming" NEXMARK_OUTPUT_DIR="$SUMMARY_DIR/nexmark-beam-default" zsh sandbox/run_nexmark_region_matrix.sh
-  run_logged yahoo-ad "$FORK" env YAHOO_AD_EVENTS="$RIFT_EVAL_EVENTS" YAHOO_AD_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" YAHOO_AD_MODES="heap safezone-improved unsafezone-hp rift-hp rift-streaming" YAHOO_AD_OUTPUT_DIR="$SUMMARY_DIR/yahoo-ad" zsh sandbox/run_yahoo_ad_region_matrix.sh
-  run_logged riotbench "$FORK" env RIOTBENCH_EVENTS="$RIFT_EVAL_EVENTS" RIOTBENCH_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" RIOTBENCH_MODES="heap safezone-improved unsafezone-hp rift-hp rift-streaming" RIOTBENCH_OUTPUT_DIR="$SUMMARY_DIR/riotbench" zsh sandbox/run_riotbench_region_matrix.sh
-  run_logged wikimedia "$FORK" env WIKIMEDIA_EVENTS="$RIFT_EVAL_EVENTS" WIKIMEDIA_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" WIKIMEDIA_MODES="heap safezone-improved unsafezone-hp rift-hp rift-streaming" WIKIMEDIA_OUTPUT_DIR="$SUMMARY_DIR/wikimedia" zsh sandbox/run_wikimedia_region_matrix.sh
-  run_logged common-crawl-wet "$FORK" env COMMON_CRAWL_WET_PAGES="$RIFT_EVAL_EVENTS" COMMON_CRAWL_WET_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" COMMON_CRAWL_WET_MODES="heap-immix safezone-improved safezone-improved-32k safezone-chunk-roots safezone-rootless-32k rift-trusted-hp rift-trusted-streaming" COMMON_CRAWL_WET_OUTPUT_DIR="$SUMMARY_DIR/common-crawl-wet" zsh sandbox/run_common_crawl_wet_matrix.sh
-  run_logged common-crawl-page-token "$FORK" env COMMON_CRAWL_WET_PAGES="$RIFT_EVAL_EVENTS" COMMON_CRAWL_WET_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" COMMON_CRAWL_WET_QUERIES="q1-tokenize q2-domain-window" COMMON_CRAWL_WET_MODES="heap-immix safezone-improved-32k safezone-rootless-32k rift-trusted-hp rift-trusted-streaming rift-checked-rift rift-checked-page-token rift-checked-safezone-improved-32k rift-checked-safezone-page-token" COMMON_CRAWL_WET_OUTPUT_DIR="$SUMMARY_DIR/common-crawl-page-token" zsh sandbox/run_common_crawl_wet_matrix.sh
+  local nexmark_modes simple_stream_modes common_wet_modes common_page_token_modes linear_modes
+  nexmark_modes="$(selected_modes "heap safezone-improved rift-checked" "safezone-current unsafezone-hp rift-hp rift-streaming")"
+  simple_stream_modes="$(selected_modes "heap safezone-improved" "safezone-current unsafezone-hp rift-hp rift-streaming")"
+  common_wet_modes="$(selected_modes "heap-immix safezone-improved-32k rift-checked-safezone-improved-32k" "safezone-current safezone-improved safezone-chunk-roots safezone-rootless-32k rift-trusted-hp rift-trusted-streaming")"
+  common_page_token_modes="$(selected_modes "heap-immix safezone-improved-32k rift-checked-page-token rift-checked-safezone-page-token" "safezone-rootless-32k rift-trusted-hp rift-trusted-streaming rift-checked-rift rift-checked-safezone-improved-32k")"
+  linear_modes="$(selected_modes "heap safezone-improved" "safezone-current unsafezone-hp rift-hp rift-streaming")"
+
+  run_logged nexmark-local "$FORK" env NEXMARK_EVENTS="$RIFT_EVAL_EVENTS" NEXMARK_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" NEXMARK_MODES="$nexmark_modes" NEXMARK_OUTPUT_DIR="$SUMMARY_DIR/nexmark-local" zsh sandbox/run_nexmark_region_matrix.sh
+  run_logged nexmark-beam-default "$FORK" env NEXMARK_BEAM_DEFAULTS=1 NEXMARK_EVENTS="$RIFT_EVAL_EVENTS" NEXMARK_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" NEXMARK_MODES="$nexmark_modes" NEXMARK_OUTPUT_DIR="$SUMMARY_DIR/nexmark-beam-default" zsh sandbox/run_nexmark_region_matrix.sh
+  run_logged yahoo-ad "$FORK" env YAHOO_AD_EVENTS="$RIFT_EVAL_EVENTS" YAHOO_AD_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" YAHOO_AD_MODES="$simple_stream_modes" YAHOO_AD_OUTPUT_DIR="$SUMMARY_DIR/yahoo-ad" zsh sandbox/run_yahoo_ad_region_matrix.sh
+  run_logged riotbench "$FORK" env RIOTBENCH_EVENTS="$RIFT_EVAL_EVENTS" RIOTBENCH_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" RIOTBENCH_MODES="$simple_stream_modes" RIOTBENCH_OUTPUT_DIR="$SUMMARY_DIR/riotbench" zsh sandbox/run_riotbench_region_matrix.sh
+  run_logged wikimedia "$FORK" env WIKIMEDIA_EVENTS="$RIFT_EVAL_EVENTS" WIKIMEDIA_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" WIKIMEDIA_MODES="$simple_stream_modes" WIKIMEDIA_OUTPUT_DIR="$SUMMARY_DIR/wikimedia" zsh sandbox/run_wikimedia_region_matrix.sh
+  run_logged common-crawl-wet "$FORK" env COMMON_CRAWL_WET_PAGES="$RIFT_EVAL_EVENTS" COMMON_CRAWL_WET_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" COMMON_CRAWL_WET_MODES="$common_wet_modes" COMMON_CRAWL_WET_OUTPUT_DIR="$SUMMARY_DIR/common-crawl-wet" zsh sandbox/run_common_crawl_wet_matrix.sh
+  run_logged common-crawl-page-token "$FORK" env COMMON_CRAWL_WET_PAGES="$RIFT_EVAL_EVENTS" COMMON_CRAWL_WET_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" COMMON_CRAWL_WET_QUERIES="q1-tokenize q2-domain-window" COMMON_CRAWL_WET_MODES="$common_page_token_modes" COMMON_CRAWL_WET_OUTPUT_DIR="$SUMMARY_DIR/common-crawl-page-token" zsh sandbox/run_common_crawl_wet_matrix.sh
   run_logged github-archive "$FORK" env GITHUB_ARCHIVE_EVENTS="$RIFT_EVAL_EVENTS" GITHUB_ARCHIVE_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" GITHUB_ARCHIVE_QUERIES="q1-fields q2-repo-window" GITHUB_ARCHIVE_HEAP_CAPS="uncapped 2G 1400M 1G" GITHUB_ARCHIVE_OUTPUT_DIR="$SUMMARY_DIR/github-archive" zsh sandbox/run_github_archive_region_matrix.sh
-  run_logged linear-road "$FORK" env LINEAR_ROAD_EVENTS="$RIFT_EVAL_EVENTS" LINEAR_ROAD_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" LINEAR_ROAD_MODES="heap safezone-improved unsafezone-hp rift-hp rift-streaming" LINEAR_ROAD_OUTPUT_DIR="$SUMMARY_DIR/linear-road" zsh sandbox/run_linear_road_region_matrix.sh
+  run_logged linear-road "$FORK" env LINEAR_ROAD_EVENTS="$RIFT_EVAL_EVENTS" LINEAR_ROAD_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" LINEAR_ROAD_MODES="$linear_modes" LINEAR_ROAD_OUTPUT_DIR="$SUMMARY_DIR/linear-road" zsh sandbox/run_linear_road_region_matrix.sh
+}
+
+run_reml() {
+  local reml_modes
+  reml_modes="$(selected_modes "gc-heap region-scoped-rooted checked-region-stream checked-region-scoped" "region-scoped-rootless region-hp-rootless region-stream-rootless")"
+  run_logged reml-region "$FORK" env REML_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" REML_MODES="$reml_modes" REML_OUTPUT_DIR="$SUMMARY_DIR/reml-region" zsh sandbox/run_reml_region_matrix.sh
 }
 
 run_debs() {
@@ -208,6 +243,9 @@ main() {
   fi
   if suite_enabled streams; then
     run_streams
+  fi
+  if suite_enabled reml; then
+    run_reml
   fi
   if suite_enabled debs; then
     run_debs

@@ -1,6 +1,7 @@
 # Rift Literature Benchmark Contract
 
 Date: 2026-04-25
+Last updated: 2026-05-06 13:30 CEST
 
 Status: extracted from local PDFs under `docs/literature/`. The PDFs are local
 research references and are not committed as project source unless explicitly
@@ -119,6 +120,19 @@ heap `45.315 ms`. Treat the Stancu evidence as a coarse-lifetime accounting
 result, not a claim that region-candidate fraction alone predicts performance.
 
 ## Metrics Required For Reproduction Claims
+
+Compare prior systems on the axes they actually reported, then present Rift's
+standard local metrics separately. Do not force every paper into the same RSS
+table: ReML reports RSS directly, while Broom/Yak/StreamFlex/Stancu emphasize
+different metrics.
+
+| System | Primary paper axes to compare | Rift local metrics to report alongside |
+|---|---|---|
+| Broom | runtime speedup, GC-time share, synchronization/GC-delay motivation, dataflow-region fit | elapsed median/min/max, GC time/count, RSS, region op time, region objects, output/checksum |
+| Yak | normalized runtime, GC time fraction, application time, epoch/control-data split, promotion/barrier behavior | elapsed, GC time/count, RSS, region op time, promotion/proxy counters where modeled, checksum |
+| StreamFlex | throughput, latency tails, deadline misses, GC-pause avoidance | throughput, p50/p95/max latency, deadline misses, GC time/count, RSS, region op time |
+| Stancu et al. | speedup under young-gen sizes, young collections, percent region-freed, annotation count | elapsed under heap caps where possible, GC time/count, RSS, region-freed/accounting proxy, annotation/API burden |
+| ReML/MLKit | real time, RSS MB, GC count, region-vs-GC compilation modes, code/instantiation columns | local Scala Native elapsed, RSS, GC time/count, checked/trusted mode ratios, safety/annotation burden; exact ReML rows only if artifacts are rerun |
 
 Every benchmark result intended for comparison should include:
 

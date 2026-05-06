@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-06 08:56 CEST
+Last updated: 2026-05-06 15:05 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -18,6 +18,59 @@ Parent evidence commit at start of latest sweep:
 Latest comprehensive sweep checkpoint:
 Staged headline runs completed after the TransactionRegion checkpoint. Source
 summary: `evidence/COMPREHENSIVE_SWEEP_2026_05_06.md`.
+
+Latest ReML/MLKit comparison checkpoint:
+Phase 6c has been scaffolded as a separate comparison track. New files:
+`docs/REML_COMPARISON_PLAN.md`,
+`evidence/REML_COMPARISON_MATRIX.md`,
+`scala-native-rift/sandbox/REML_COMPARISON_MATRIX.md`,
+`scala-native-rift/sandbox/run_reml_region_matrix.sh`, and
+`scala-native-rift/sandbox/src/main/scala-next/ReMLRegionMatrix.scala`.
+The evidence file transcribes the Elsman 2023 ReML Figure 9 table as
+paper-reported/not-rerun data, while the Scala Native matrix implements Tier 1
+ReML-shaped ports (`fib37`, `tak`, `mandel`, `msort`, `msort-r`, `life`,
+`fft`, `ratio`). A reduced-size all-Tier-1 smoke run matched checksums across
+`gc-heap`, `checked-region-stream`, and `checked-region-scoped`, and the
+`ratio` port was fixed to retain allocated region objects so checked
+allocation is not optimized away. No headline ReML medians have been run yet,
+and exact MLKit/ReML artifact reproduction is still open.
+
+ReML-inspired safety checkpoint:
+The checked compiler suite now includes local polymorphic consumer acceptance,
+polymorphic identity escape rejection, durable/static generic heap-cell
+retention rejection, widened `AnyRef` rejection, heap-array retention
+rejection, escaping-closure hiding rejection, and polymorphic unrooted
+heap-value constructor rejection. The previously ignored ReML-style generic
+heap-retention probe is now active and passing. This fixes the current probe
+gap, but it is still not a full arbitrary heap alias analysis; do not make
+rootless checked safety claims until root-free eligibility is separately
+proved.
+
+Latest safety/component-selection checkpoint:
+`nscplugin/src/main/scala-3/scala/scalanative/nscplugin/NirGenExpr.scala` now
+tracks heap values derived from known Rift region allocations/factories and
+rejects storing those values into durable/static heap state. The fix keeps
+local nonescaping polymorphic heap objects legal inside a region scope and
+scopes the diagnostic away from Java/Scala platform-library implementation
+classes. `docs/FINAL_COMPONENT_SELECTION.md` records the public/internal
+component split: checked scoped backend and checked page-token are public
+candidates; rootless modes stay internal lower-bound controls; `EpochFold`,
+`TableRank`, rank-heavy structures, and chunk append remain gated/rejected.
+Validation after this change:
+`RiftRegionCheckedCompilerTest` passed `118/118`, `RiftRegionCheckedTest`
+passed `49/49`, and `sandbox3_next/compile` passed.
+
+Design/report update after the ReML discussion:
+`docs/DESIGN.md` now records the erased-generic heap-retention rule as active
+current compiler evidence: generic heap allocations derived from region values
+must not flow into durable/static heap state, while local nonescaping
+polymorphic use remains legal. `docs/REML_COMPARISON_PLAN.md` now separates
+the fixed probe, the broader heap-alias open work, Tier 1 Scala Native rows,
+exact MLKit/ReML artifact reproduction, and overlapping Scala Native benchmark
+controls such as Mandelbrot. `docs/LITERATURE_BENCHMARK_CONTRACT.md` now says
+to compare each prior system on its own reported axes, then show Rift's local
+metrics separately. `docs/CPU_PROFILE_REPORT.md` is a new scaffold for Scala
+Native-guided native profiling; no profile rows have been collected yet.
 
 Completed run ids:
 
@@ -5862,6 +5915,51 @@ Interpretation:
   RSS wrapper/runner and then one new cheap operator family, not DEBS ranking.
 
 ## Unsafe Assumptions To Avoid
+
+### 2026-05-06 Update: Safety Gap Fixed And Default Control Rows Pruned
+
+What changed:
+
+- Fixed the ReML-style generic heap-retention probe at the current compiler
+  boundary. Durable/static heap state now rejects known Rift-derived
+  region-captured generic heap wrappers, widened `AnyRef` values, heap arrays
+  of region-captured values, and escaping closures that hide generic region
+  values. Local nonescaping polymorphic use remains accepted.
+- Added `docs/FINAL_COMPONENT_SELECTION.md`, which separates public candidates,
+  internal lower-bound controls, and gated/rejected operators.
+- Updated the parent performance runner and the main sandbox matrix scripts so
+  final-selection defaults exclude current SafeZone and rootless/unsafe control
+  modes. Use `RIFT_EVAL_INCLUDE_CONTROLS=1`,
+  `RIFT_BENCH_INCLUDE_CONTROLS=1`, or explicit `*_MODES` variables to reproduce
+  those rows.
+
+Validation:
+
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"`
+  passed `118/118`.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionCheckedTest"`
+  passed `49/49`.
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile`
+  passed.
+- `bash -n scripts/run-performance-evaluation.sh` and `zsh -n` over the touched
+  sandbox runner scripts passed.
+
+Remaining caveat:
+
+- The fixed safety rule covers durable/static retention of known Rift-derived
+  values. It is not yet a full arbitrary heap-object field/alias analysis, and
+  it does not make rootless checked backends safe to present publicly.
+
+Follow-up validation:
+
+- Final-selection smoke run `2026-05-06-final-selection-smoke` completed with
+  `RIFT_EVAL_SUITES="preflight core prior checked streams reml"`,
+  `RIFT_EVAL_SCALE=smoke`, and `include_controls=0`.
+- Raw run directory:
+  `/Users/siyaoliu/rift/cache/perf-eval/2026-05-06-final-selection-smoke/`.
+- This smoke is not headline performance evidence because it used
+  `RIFT_EVAL_ALLOW_DIRTY=1`, but it validates that the default staged runner
+  can execute broad suites without the old current/rootless control rows.
 
 - "Rift already has final DEBS application proof." It does not. The current
   bounded-sample medians are encouraging application evidence, and the

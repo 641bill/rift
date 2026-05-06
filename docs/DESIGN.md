@@ -2,6 +2,8 @@
 
 Status: active research design for the Scala Native fork.
 
+Last updated: 2026-05-06 14:20 CEST
+
 Active worktree: `/Users/siyaoliu/rift/scala-native-rift`
 
 Branch: `feature/rift`
@@ -273,6 +275,7 @@ native compatibility, and proof obligations.
 | Yak | Hybrid control-space GC plus data-space regions; dynamic promotion makes epochs safe with very low annotation burden. | Purely dynamic, write-barrier overhead, STW during epoch end, JVM-specific, no formal type story. | Rift adopts the two-space control/data split, and the current Yak-style harness now includes wordcount, graph-step, external-sort-shaped grouped sort, Hadoop-like top-word/filter, GraphChi-like subinterval updates, a Scala Native runtime-safety proxy, and a `RiftRegion.RuntimeEpoch` promotion/escape API with barrier checks, remembered refs, and promoted-copy accounting. | Replace Yak's dynamic safety with static capture checking, then show comparable GC-time reductions without barriers/STW promotion. Current memory-API-level promotion is slower than heap, which strengthens the case for static rejection/checked boundaries. Do not claim exact Yak coverage until there is real field-write barrier or static rejection evidence plus Hyracks/Hadoop/GraphChi-shaped workloads. |
 | Stancu et al. `@RegionScope` | Static points-to analysis infers region allocation from few annotations and falls back to GC. | Closed-world whole-program analysis, coarse phases, no higher-order Scala story, no formal proof. | Rift is already compiler-integrated and aims for lightweight region boundaries plus inference. | Implement capture-guided allocation/fallback, count annotations per KLOC, and avoid closed-world assumptions where possible. |
 | Tofte-Talpin / MLKit | Deep formal basis, automatic region inference, region polymorphism, zero annotations in ML. | ML-specific, region size problem, unpredictable lifetimes with closures, no Scala subtyping/object model. | Rift borrows region polymorphism and containment as proof targets. | Keep annotation burden low without pretending full Scala inference is tractable; mechanize the higher-order case. |
+| ReML / GC-safe MLKit lineage | Shows how region-polymorphic programs can be made safe with tracing GC and reports time, RSS, and GC-count data on classic SML benchmarks. | ML benchmark suite and type system differ from Scala Native; exact comparison requires artifact reproduction. The lineage highlights subtle higher-order/polymorphic soundness hazards. | Rift now has a ReML comparison track, local Scala Native ReML-shaped ports, and active ReML-inspired compiler probes, including generic heap-retention rejection. | Reproduce exact MLKit/ReML artifacts if available, run local Tier 1 medians, and compare relative region-vs-heap effects rather than raw cross-language time. |
 | Hallenberg-Elsman-Tofte, PLDI 2002 | Regions plus intra-region GC handle region leaks and preserve region safety. | Copying GC and tags conflict with Scala Native's native/non-moving assumptions; conservative closure restrictions. | Rift keeps a non-moving GC heap and region slabs compatible with native code. | Decide whether safe mixed region/GC references require handles, GC-scanned metadata, or stricter static rejection. |
 | Elsman-Hallenberg typed regions | Typed regions enable tag-free layouts and write-barrier-free generational GC. | ML-only, stack discipline, rare mutation, STW, no mechanized proof, later soundness concerns in the lineage. | Rift's native backend could eventually exploit typed-region/BIBOP-style layout information. | This is not implemented. A future phase must define region type metadata and prove layout/GC safety. |
 | Reggio / Verona | Static reference capabilities isolate regions and permit per-region memory strategies. | Forest topology, single mutable window, pervasive annotations, limited higher-order support, no mechanized proof. | Rift plans to use capture/separation checking as a lower-annotation capability analogue. | Show multiple active regions and Scala closures can be checked safely without Reggio's annotation burden. |
@@ -463,6 +466,17 @@ capture checking because the selected field gets its own capability.
 Region-owned arrays require explicit element capture such as
 `Array[Leaf^{region}]^{region}`; stores into known region arrays reject
 unrooted heap objects and accept region-local values or `HeapRoot` handles.
+The ReML-style polymorphic escape gap is now fixed for the current checked
+compiler probe boundary. Heap generic objects such as
+`Cell[Box^{region}]`, generic cells widened to `AnyRef`, heap arrays that
+store region-captured values, and escaping closures that hide generic region
+values are rejected when they flow into durable/static heap state. Local
+nonescaping polymorphic consumers and local heap generic cells remain legal
+inside the region scope. This fix is intentionally narrower than a full heap
+alias analysis: it tracks known Rift-derived values and durable/static
+retention sites, while broader heap-object field provenance remains open.
+Rootless checked backends still require a separate root-free eligibility proof
+before they can be claimed safe.
 `RiftRegion.ObjectBuffer` is the first checked higher-level container: it uses
 heap control metadata plus a region-owned backing object array. Its v1 API is
 owner-token based, for example `RiftRegion.append(region, buffer, value)` or
@@ -510,6 +524,11 @@ Minimum Phase 6 evidence:
   vals are covered positively; mutable static vars are covered negatively.
   Region-owned array containers are covered with
   positive region-value/`HeapRoot` stores and a negative unrooted heap store.
+  ReML-style probes now include local polymorphic consumer acceptance,
+  polymorphic identity escape rejection, durable/static generic heap-cell
+  retention rejection, widened `AnyRef` rejection, heap-array retention
+  rejection, escaping-closure hiding rejection, and unrooted heap-metadata
+  rejection.
   `ObjectBuffer` and growable `RegionBuffer` are covered as the first checked
   higher-level containers, with
   positive region-value/`HeapRoot` stores, owner-token extension method syntax,
@@ -912,9 +931,10 @@ Required theorems:
 - Safe close/reset: closing or resetting a region cannot leave a reachable
   dangling pointer.
 
-The MLKit lineage shows why this cannot stay pen-and-paper only: later work
-found soundness problems in higher-order polymorphic cases. Rift's proof must
-pay special attention to higher-order functions and closures.
+The MLKit/ReML lineage shows why this cannot stay pen-and-paper only: later
+work found soundness problems in higher-order polymorphic cases. Rift's proof
+must pay special attention to higher-order functions, closures, generic heap
+containers, and capture preservation through type erasure/widening.
 
 ## 12. Claim Boundaries
 
