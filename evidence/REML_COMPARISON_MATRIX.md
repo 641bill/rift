@@ -83,6 +83,16 @@ Next exact-reproduction step:
 4. Add a tracked runbook with exact commands for `rg`, `rg-`, `r`, and MLton.
 5. Only then compare raw wall-clock speed with Rift local rows.
 
+Smoke scaffold:
+
+```sh
+cd /Users/siyaoliu/rift
+MLKIT_TAG=v4.7.5 bash scripts/reml-mlkit-docker-smoke.sh
+```
+
+This uses an amd64 Ubuntu container. It is not yet run because Docker was
+installed but the daemon was not running during the 2026-05-06 inspection.
+
 Reference paper: Martin Elsman, "Garbage-Collection Safety for Region-Based
 Type-Polymorphic Programs", PLDI 2023.
 

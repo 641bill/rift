@@ -57,6 +57,10 @@ annotation support), `v4.7.5` (`5f0f811d`, ReML released), and `v4.7.6`
 plausible, but no local `mlkit`/`mlton` executables are installed yet and the
 paper labels `rg`, `rg-`, and `r` still need verified command mappings. Do not
 claim raw "Rift beats ReML" until those exact local runs exist.
+`scripts/reml-mlkit-docker-smoke.sh` now provides the first reproducible
+amd64-container smoke scaffold for building MLKit from `v4.7.5` and compiling
+`msort`, `fft`, and `ratio`. Docker is installed on this machine but the daemon
+was not running when checked, so the smoke script has not been executed.
 
 ReML-inspired safety checkpoint:
 The checked compiler suite now includes local polymorphic consumer acceptance,

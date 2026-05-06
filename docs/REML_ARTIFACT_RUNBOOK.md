@@ -87,11 +87,24 @@ Open mapping gaps:
 2. Install or build tools.
    - Need `mlkit` and `mlton`.
    - Record tool versions, install method, and binary paths.
+   - On this arm64 macOS machine, Homebrew reports `mlkit` as x86_64-only.
+     Prefer an amd64 Linux container or x86_64 host for exact MLKit runs.
 
 3. Smoke compile three programs.
    - `test/msort.mlb`
    - `test/fft.sml`
    - `test/ratio-regions.sml`
+
+   Container smoke scaffold:
+
+   ```sh
+   cd /Users/siyaoliu/rift
+   MLKIT_TAG=v4.7.5 bash scripts/reml-mlkit-docker-smoke.sh
+   ```
+
+   This requires a running Docker daemon with `linux/amd64` support. It builds
+   MLKit from the selected tag and compiles the three smoke programs, but it
+   does not yet run the Figure 9 modes.
 
 4. Verify mode flags.
    - `rg`: region inference plus tracing GC with GC-safety refinement.
