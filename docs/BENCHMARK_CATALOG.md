@@ -1,7 +1,7 @@
 # Rift Benchmark Catalog
 
 Date: 2026-05-05
-Last updated: 2026-05-06 22:50 CEST
+Last updated: 2026-05-06 23:08 CEST
 
 Status: working benchmark guide. Use this document to understand what each
 benchmark is meant to test before reading the detailed result files in
@@ -133,7 +133,7 @@ operators and gates.
 | NEXMark | Official Beam-default generated profile in local Scala Native harness | Useful recognized stream methodology. Some wins on Q3/Q8-style rows, but not a decisive real-data case study. |
 | Common Crawl WET-shaped | Generated WET-like pages/lines/tokens | Strongest GC-heavy stream stressor: heap spends about `1.55-1.59 s` in timed GC at 1M generated pages; trusted and page-token checked rows win. This is not real Common Crawl input proof. |
 | Real Common Crawl WET/WAT | Public preloaded WET/WAT shards | Current shards have median timed GC of zero. Page-token rows work and win modestly on WAT, but these are ceiling/control rows. |
-| GH Archive | Real hourly NDJSON GitHub event files | Promising memory-budget/tail-latency candidate. Uncapped preloaded heap wins median by growing to about `1.7 GiB`; under a 1G heap cap, checked SafeZone-backed q1 wins. First file-backed q1 row modestly favors region modes on elapsed/RSS, but parser/string allocation still causes GC. |
+| GH Archive | Real hourly NDJSON GitHub event files | Promising memory-budget/tail-latency candidate. Uncapped preloaded heap wins median by growing to about `1.7 GiB`; under a 1G heap cap, checked SafeZone-backed q1 wins. First file-backed q1/q2 rows modestly favor region modes on elapsed/RSS, and q2 heap fails under `1G`; parser/string allocation still causes GC. |
 | Wikimedia | Real/generated TSV/clickstream-style rows | Mostly heap or improved SafeZone wins with low median GC; parked as ceiling/regression control. |
 | Linear Road | Official/generated position-report methodology | Useful latency/window methodology, but current rows are not GC-heavy enough for a Rift case study. |
 | Yahoo-style ads | Local/generated ad-stream methodology | Some wins exist, but provenance is generated/local rather than official real input. |

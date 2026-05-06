@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-06 22:50 CEST
+Last updated: 2026-05-06 23:08 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -332,6 +332,21 @@ checked SafeZone-backed page-token `3937.394 ms`, `106.248 ms` median GC, and
 region throughput win, but not yet a decisive checked case study because
 parser/string allocation still happens on the heap. Next GH Archive work is
 file-backed q2 plus heap caps and per-run tail reporting.
+
+GH Archive file-backed q2 follow-up:
+The first 100k q2 file-backed cap/tail run also matched checksums. Uncapped
+heap is `3995.632 ms`, `158.277 ms` median GC, and `1218428928` bytes RSS.
+Heap with `2G` and `1400M` caps still completes at `4066.670 ms` and
+`3983.441 ms`; heap with `1G` fails with signal 11 at `1077067776` bytes RSS.
+Improved SafeZone-32k is `3934.094 ms`, `105.445 ms` median GC, and
+`672088064` bytes RSS. Trusted Streaming is `3906.291 ms`, `81.402 ms` median
+GC, `0.112 ms` median Rift op time, and `673644544` bytes RSS. Checked
+SafeZone-backed page-token is `3921.127 ms`, `106.352 ms` median GC, and
+`673824768` bytes RSS. Interpretation: with parsing timed, q2 is no longer a
+pure heap-fastest aggregation ceiling; region rows modestly improve elapsed/RSS
+and the `1G` heap cap fails. Parser/string allocation still keeps GC visible in
+all successful rows. Next GH Archive step is q1 file-backed heap caps and
+larger/multi-hour rows only if the machine can tolerate the memory footprint.
 
 Allocation-lowering matrix: added `ObjectAllocationLoweringMatrix` and
 `sandbox/run_object_allocation_lowering_matrix.sh`, then validated the

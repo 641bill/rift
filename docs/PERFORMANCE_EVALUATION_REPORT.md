@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-06 22:50 CEST
+Last updated: 2026-05-06 23:08 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -385,6 +385,7 @@ operator problems with separate gates.
 | GH Archive q1 fields | real preloaded NDJSON | 8-hour oracle 1M heap `293.204 ms`, max GC `135.368 ms`, RSS `1.74 GB`; 1G heap-cap diagnostic `395.295 ms`, median GC `92.347 ms` | 8-hour improved-32k `374.923 ms` | 8-hour Streaming rerun `340.820 ms`; SafeZone-backed page-token `348.817 ms` | Heap wins uncapped median by growing to a large heap; checked region wins the 1G memory-budget diagnostic and removes GC tails. |
 | GH Archive q1 fields | real file-backed NDJSON | 100k heap `3999.933 ms`, median GC `158.149 ms`, RSS `1.22 GB` | improved-32k `3924.979 ms`, RSS `674.8 MB` | Streaming `3908.972 ms`, RSS `495.9 MB`; SafeZone-backed page-token `3937.394 ms`, RSS `674.8 MB` | First parse-in-timed-loop row: region modes modestly improve elapsed/RSS, but parser/string allocation still triggers GC in every mode. |
 | GH Archive q2 repo window | real preloaded NDJSON | 8-hour oracle 1M heap `271.880 ms`, max GC `136.353 ms` | improved-32k `363.049 ms` | Streaming `325.665 ms`; SafeZone-backed page-token `347.033 ms` | Heap median wins; repo-window aggregation CPU dominates despite a GC outlier. |
+| GH Archive q2 repo window | real file-backed NDJSON | 100k heap `3995.632 ms`, median GC `158.277 ms`, RSS `1.22 GB`; `1G` cap fails with signal 11 | improved-32k `3934.094 ms`, RSS `672.1 MB` | Streaming `3906.291 ms`, RSS `673.6 MB`; SafeZone-backed page-token `3921.127 ms`, RSS `673.8 MB` | With parsing timed, q2 becomes a modest region/RSS/fixed-memory win; parser/string allocation still causes GC in region rows. |
 | Wikimedia real clickstream | real preloaded TSV | heap `126.800 ms` | improved `149.062 ms` | Streaming `157.449 ms` | Heap wins; ceiling control. |
 | Linear Road official q1 | official input | heap `162.668 ms` | source pack | HPZone `180.277 ms` | Heap wins; ceiling control. |
 
@@ -454,7 +455,7 @@ where object churn and epochal lifetimes are both present.
 | Priority | Candidate | Why | First gate |
 |---:|---|---|---|
 | 1 | Larger/multiple Common Crawl WET/WAT shards | Same domain as current GC-heavy stressor; one WAT shard was not enough to trigger GC. | Actual loaded pages/tokens/links large enough; heap median/max GC material. |
-| 2 | GH Archive file-backed and memory-budget JSON-lines | Preloaded q1 shows heap can avoid GC by growing to GB-scale RSS; under a 1G heap cap checked regions win q1. First file-backed q1 shows a modest region/RSS win but parser strings still allocate on heap. | Add file-backed q2, heap caps, RSS, and per-run elapsed/GC tails. |
+| 2 | GH Archive file-backed and memory-budget JSON-lines | Preloaded q1 shows heap can avoid GC by growing to GB-scale RSS; under a 1G heap cap checked regions win q1. First file-backed q1/q2 rows show modest region/RSS wins, and q2 heap fails at `1G`, but parser strings still allocate on heap. | Add file-backed q1 heap caps, larger multi-hour rows if feasible, and parser/string scratch attribution. |
 | 3 | Other public NDJSON/log-event streams | Real records often allocate JSON fields, tokens, maps, projected events, and output rows. | Start with GDELT event files, public web/server/security logs, Stack Exchange-style XML/JSON dumps converted to event streams, or other provenance-clean JSON-lines sources. |
 | 4 | DSPBench local-kernel subset | Stream benchmark family with varied applications; choose high object churn kernels only. | Triage 2-3 kernels with clear windows/epochs and local no-cluster execution. |
 | 5 | NEXMark Q3/Q8/Q9/Q11 | Recognized generated stream methodology; already has promising rows. | Keep as methodology/regression, not real-input proof. |
