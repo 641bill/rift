@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-07 00:16 CEST
+Last updated: 2026-05-07 00:28 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -161,7 +161,9 @@ JSON-line files were run file-backed at 200k events with
 GC `61.625 ms`; trusted Streaming is `3645.458 ms`; checked scoped page-token
 is `3626.107 ms`, both with about `211 MB` RSS and zero timed GC.
 Interpretation: byte-slice parser scratch turns GH Archive into a modest
-real-input throughput/RSS/tail win, not a huge Broom/Yak-style win.
+real-input throughput/RSS/tail win, not a GC-heavy case study. Heap GC is only
+about `58-62 ms` inside roughly `3.8 s` elapsed at the current 200k/two-hour
+scale.
 
 Active update:
 Cheap checked page/token append operator implemented and measured; real WAT

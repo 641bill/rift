@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-07 00:16 CEST
+Last updated: 2026-05-07 00:28 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -38,7 +38,7 @@ representative components.
 | Runtime substrate | Improved SafeZone/rooted scoped regions remain the safe baseline; rootless/trusted rows are now explicit controls, not default public evidence. |
 | Checked Rift | Checked APIs are fast for simple append/window shapes. Page-token, Dataflow SELECT, RegionList, GH Archive-shaped q1/q2, and generated Common Crawl-shaped q1/q2 clear useful gates; rank/fold/table containers still add too much CPU overhead. |
 | Safe checked backend | `checked-region-scoped` is the best page-token backend in the clean final-selection sweep. It is fastest on focused page-token append and generated Common Crawl-shaped q1/q2. |
-| Real-input stream evidence | GH Archive byte-slice file-backed q1/q2 is now the strongest real-input candidate: at two hourly files / 200k events, checked scoped page-token and trusted Streaming are modest throughput/RSS/tail wins. Current real/preloaded WET, Wikimedia, Linear Road, Yahoo, and RIoTBench rows mostly have low/zero median GC or heap wins. |
+| Real-input stream evidence | GH Archive byte-slice file-backed q1/q2 is now the strongest real-input modest-win candidate: at two hourly files / 200k events, checked scoped page-token and trusted Streaming are modest throughput/RSS/tail wins. It is not GC-heavy: heap GC is only about `58-62 ms` inside roughly `3.8 s` elapsed. Current real/preloaded WET, Wikimedia, Linear Road, Yahoo, and RIoTBench rows mostly have low/zero median GC or heap wins. |
 | Strongest memory-pressure row | Generated Common Crawl WET-shaped q1/q2 creates heavy stream object churn: in the clean final-selection sweep, heap spends `1625.936 ms` timed GC on q1 and `1643.346 ms` on q2. Checked scoped page-token is fastest (`3860.248 ms` q1, `3895.711 ms` q2), followed by checked Rift page-token (`4159.837 ms` q1, `4175.633 ms` q2). |
 | ReML/MLKit lineage | Tier 1 Scala Native ReML-shaped medians now exist. `msort`, `msort-r`, and `ratio` show useful checked-region allocation/RSS/GC behavior; exact ReML artifact rerun remains blocked by missing local `mlkit`/`mlton` and no running Docker daemon. |
 
@@ -122,8 +122,8 @@ file-backed parser reuses input buffers and extracts JSON fields from raw
 UTF-8 bytes. At two hourly files / 200k real events, both trusted Streaming
 and checked scoped page-token modestly beat heap while cutting RSS from about
 `290 MB` to about `211 MB` and removing timed GC. This is a real-input
-throughput/RSS/tail win, but still modest rather than a huge Broom/Yak-style
-win.
+throughput/RSS/tail win, but it is not a GC-heavy case study: the heap row
+spends only about `1.5-1.6%` of elapsed time in timed GC.
 
 ## 2. Design Target
 
@@ -412,11 +412,11 @@ operator problems with separate gates.
 | GH Archive q1 fields | real preloaded NDJSON | 8-hour oracle 1M heap `293.204 ms`, max GC `135.368 ms`, RSS `1.74 GB`; 1G heap-cap diagnostic `395.295 ms`, median GC `92.347 ms` | 8-hour improved-32k `374.923 ms` | 8-hour Streaming rerun `340.820 ms`; SafeZone-backed page-token `348.817 ms` | Heap wins uncapped median by growing to a large heap; checked region wins the 1G memory-budget diagnostic and removes GC tails. |
 | GH Archive q1 fields | real file-backed NDJSON | 100k heap uncapped `4014.909 ms`, median GC `157.495 ms`, RSS `1.22 GB`; `1G` cap fails with signal 11 | improved-32k `4000.812 ms`, RSS `673.8 MB` | Streaming `3995.238 ms`, RSS `673.6 MB`; SafeZone-backed page-token `4023.883 ms`, RSS `674.7 MB` | Mostly RSS/fixed-memory evidence: trusted Streaming modestly wins elapsed, checked scoped page-token is a near tie/slight elapsed loss, and parser/string allocation still triggers GC in every mode. |
 | GH Archive q1 fields | real file-backed NDJSON, 2 hourly files, legacy string parser | 200k heap `7549.355 ms`, median GC `198.535 ms`, RSS `2.43 GB` | not rerun in this subset | Streaming `7448.838 ms`, RSS `925.5 MB`; SafeZone-backed page-token `7489.923 ms`, RSS `925.6 MB` | Legacy parser row: RSS/fixed-memory story, but parser/string/decompression dominates. |
-| GH Archive q1 fields | real file-backed NDJSON, 2 hourly files, byte-slice parser | 200k heap `3806.120 ms`, median GC `57.685 ms`, RSS `290 MB` | not rerun in this subset | Streaming `3626.219 ms`, RSS `211 MB`; SafeZone-backed page-token `3629.193 ms`, RSS `211 MB` | Byte-slice parser-scratch makes q1 a modest real-input throughput/RSS/tail win; heap collects in 2/3 runs, region rows report zero timed GC. |
+| GH Archive q1 fields | real file-backed NDJSON, 2 hourly files, byte-slice parser | 200k heap `3806.120 ms`, median GC `57.685 ms`, RSS `290 MB` | not rerun in this subset | Streaming `3626.219 ms`, RSS `211 MB`; SafeZone-backed page-token `3629.193 ms`, RSS `211 MB` | Byte-slice parser-scratch makes q1 a modest real-input throughput/RSS/tail win; heap collects in 2/3 runs, region rows report zero timed GC. Not GC-heavy: heap GC is about `1.5%` of elapsed. |
 | GH Archive q2 repo window | real preloaded NDJSON | 8-hour oracle 1M heap `271.880 ms`, max GC `136.353 ms` | improved-32k `363.049 ms` | Streaming `325.665 ms`; SafeZone-backed page-token `347.033 ms` | Heap median wins; repo-window aggregation CPU dominates despite a GC outlier. |
 | GH Archive q2 repo window | real file-backed NDJSON | 100k heap `3995.632 ms`, median GC `158.277 ms`, RSS `1.22 GB`; `1G` cap fails with signal 11 | improved-32k `3934.094 ms`, RSS `672.1 MB` | Streaming `3906.291 ms`, RSS `673.6 MB`; SafeZone-backed page-token `3921.127 ms`, RSS `673.8 MB` | With parsing timed, q2 becomes a modest region/RSS/fixed-memory win; parser/string allocation still causes GC in region rows. |
 | GH Archive q2 repo window | real file-backed NDJSON, 2 hourly files, legacy string parser | 200k heap `7641.540 ms`, median GC `199.876 ms`, RSS `2.43 GB` | not rerun in this subset | Streaming `7442.005 ms`, RSS `724.8 MB`; SafeZone-backed page-token `7498.263 ms`, RSS `925.6 MB` | Legacy parser row: Streaming modestly wins elapsed and strongly wins RSS; checked scoped page-token is near-tied. |
-| GH Archive q2 repo window | real file-backed NDJSON, 2 hourly files, byte-slice parser | 200k heap `3756.950 ms`, median GC `61.625 ms`, RSS `290 MB` | not rerun in this subset | Streaming `3645.458 ms`, RSS `211 MB`; SafeZone-backed page-token `3626.107 ms`, RSS `211 MB` | Byte-slice parser-scratch turns q2 into a modest checked scoped page-token win with zero timed GC in region rows. |
+| GH Archive q2 repo window | real file-backed NDJSON, 2 hourly files, byte-slice parser | 200k heap `3756.950 ms`, median GC `61.625 ms`, RSS `290 MB` | not rerun in this subset | Streaming `3645.458 ms`, RSS `211 MB`; SafeZone-backed page-token `3626.107 ms`, RSS `211 MB` | Byte-slice parser-scratch turns q2 into a modest checked scoped page-token win with zero timed GC in region rows. Not GC-heavy: heap GC is about `1.6%` of elapsed. |
 | Wikimedia real clickstream | real preloaded TSV | heap `126.800 ms` | improved `149.062 ms` | Streaming `157.449 ms` | Heap wins; ceiling control. |
 | Linear Road official q1 | official input | heap `162.668 ms` | source pack | HPZone `180.277 ms` | Heap wins; ceiling control. |
 

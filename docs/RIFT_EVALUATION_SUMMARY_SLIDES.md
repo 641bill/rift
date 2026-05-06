@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-07 00:16 CEST
+Last updated: 2026-05-07 00:28 CEST
 
 Status: markdown slide deck outline. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report and this file as
@@ -131,7 +131,8 @@ that allocation cliff. With two real hourly files / 200k events, byte-slice q1
 is heap `3806.120 ms` versus checked scoped page-token `3629.193 ms`; byte-
 slice q2 is heap `3756.950 ms` versus checked scoped page-token `3626.107 ms`.
 Both checked rows cut RSS from about `290 MB` to `211 MB` and report zero timed
-GC. This is a modest real-input throughput/RSS/tail win.
+GC. This is a modest real-input throughput/RSS/tail win, not a GC-heavy case
+study: heap GC is only about `58-62 ms` inside roughly `3.8 s` elapsed.
 
 ## Slide 9: Best Checked Stream Rows
 
@@ -214,15 +215,16 @@ Next realistic GC-heavy search:
 
 The first real WAT shard now validates link-object placement and modestly
 favors SafeZone-backed page-token, but heap still reports zero timed GC.
-GH Archive is now the strongest real-input candidate. The 8-hour preloaded
+GH Archive is now the strongest real-input modest-win candidate, but not the
+missing GC-heavy proof. The 8-hour preloaded
 oracle row has heap winning uncapped median by growing to about `1.7 GB`, but
 the same q1 shape under a `1G` heap cap makes checked SafeZone-backed
 page-token faster than heap. The legacy file-backed q1/q2 rows showed RSS/
 fixed-memory wins but were dominated by string parser allocation. The new
 byte-slice file-backed rows keep gzip/JSON parsing in timing while reusing
 parser scratch, and now show modest checked throughput wins plus zero timed GC
-in region rows. Next: scale this byte-slice path and generalize it to other
-NDJSON/log streams.
+in region rows. Heap GC remains a small share of elapsed, so next benchmark
+work still needs a real-input workload with materially higher GC pressure.
 
 The 2-hour file-backed GH Archive rows strengthen that interpretation:
 heap uses about `2.43 GB` RSS, while region rows use about `0.72-0.93 GB`.

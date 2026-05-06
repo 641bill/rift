@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Tables
 
 Date: 2026-05-01
-Last updated: 2026-05-07 00:16 CEST
+Last updated: 2026-05-07 00:28 CEST
 
 Status: seeded summary pack for the comprehensive evaluation. Rows below are
 current checked-in evidence unless marked pending rerun.
@@ -35,7 +35,7 @@ SafeZone-cost. Competitive rows skip current SafeZone by default.
 | Common Crawl-shaped q3 | heap `10188.412 ms`; SafeZone-family rows can be much slower | parser-scratch shape is negative/mixed, not a case-study target |
 | GH Archive-shaped | q1 trusted Streaming `246.174 ms` and q2 trusted HP `233.427 ms`; heap q1/q2 `286.721` / `268.717 ms` | generated GH-shaped row favors regions; still not real-input proof |
 | GH Archive file-backed 2h, legacy string parser | q1 Streaming `7448.838 ms`, checked scoped page-token `7489.923 ms`, heap `7549.355 ms`; q2 Streaming `7442.005 ms`, checked scoped page-token `7498.263 ms`, heap `7641.540 ms` | real file-backed RSS/fixed-memory row: heap around `2.43 GB` RSS, region rows around `0.72-0.93 GB`; profile says parser/string/decompression dominates |
-| GH Archive file-backed 2h, byte-slice parser | q1 heap `3806.120 ms`, Streaming `3626.219 ms`, checked scoped page-token `3629.193 ms`; q2 heap `3756.950 ms`, Streaming `3645.458 ms`, checked scoped page-token `3626.107 ms` | parser-scratch follow-up: real file-backed modest throughput/RSS/tail win; region rows use about `211 MB` RSS and zero timed GC vs heap about `290 MB` RSS with GC in 2/3 runs |
+| GH Archive file-backed 2h, byte-slice parser | q1 heap `3806.120 ms`, Streaming `3626.219 ms`, checked scoped page-token `3629.193 ms`; q2 heap `3756.950 ms`, Streaming `3645.458 ms`, checked scoped page-token `3626.107 ms` | parser-scratch follow-up: real file-backed modest throughput/RSS/tail win; region rows use about `211 MB` RSS and zero timed GC vs heap about `290 MB` RSS with GC in 2/3 runs. Not GC-heavy: heap GC is only about `1.5-1.6%` of elapsed. |
 | ReML-shaped Tier 1 | checked stream `msort` `104.358 ms` vs heap `124.983 ms`; `msort-r` `104.929 ms` vs heap `126.163 ms`; checked scoped `ratio` `48.929 ms` vs heap `51.302 ms` | local Scala Native port evidence for MLKit/ReML lineage; not exact ReML reproduction |
 | Linear Road | heap fastest or tied on q0/q1/q2 despite GC reduction in region modes | ceiling/control evidence |
 
@@ -314,7 +314,7 @@ trusted HPZone `4403.007 ms`; q2 `rift-checked` is `5061.479 ms` versus heap
 | GH Archive Q1 fields, 8-hour oracle | 1M real JSON events / 13M event-field records | Streaming rerun `340.820 ms`; checked SafeZone-backed page-token `348.817 ms` | heap `293.204 ms`, max GC `135.368 ms`, 1/3 runs with GC | improved-32k `374.923 ms` | Heap wins uncapped median by growing to ~1.7 GiB; regions remove GC tail but lose throughput | 2026-05-03 multi-hour oracle |
 | GH Archive Q1 fields, 1G heap cap diagnostic | 1M real JSON events / 13M event-field records | compare to checked SafeZone-backed page-token `348.817 ms` from uncapped region row | heap `395.295 ms`, median GC `92.347 ms`, max GC `101.174 ms` | not rerun under cap; SafeZone crashed under 1G in a later process | Memory-budget diagnostic: checked region path beats heap when heap cannot grow freely | 2026-05-03 cap diagnostic |
 | GH Archive Q2 repo window, 8-hour oracle | 1M real JSON events / 13M event-field records | Streaming `325.665 ms`; checked SafeZone-backed page-token `347.033 ms` | heap `271.880 ms`, max GC `136.353 ms`, 1/3 runs with GC | improved-32k `363.049 ms` | Heap wins median; repo-window aggregation CPU dominates despite GC tail | 2026-05-03 multi-hour oracle |
-| GH Archive Q1 fields, file-backed byte-slice | 200k real JSON events / 2.6M event-field records, 2 hourly gzip files | Streaming `3626.219 ms`; checked SafeZone-backed page-token `3629.193 ms` | heap `3806.120 ms`, median GC `57.685 ms`, RSS `290177024` | not rerun in this subset | Byte-slice parser-scratch makes q1 a modest real-input throughput/RSS/tail win; region rows report zero timed GC and about `211 MB` RSS | 2026-05-07 byte parser follow-up |
+| GH Archive Q1 fields, file-backed byte-slice | 200k real JSON events / 2.6M event-field records, 2 hourly gzip files | Streaming `3626.219 ms`; checked SafeZone-backed page-token `3629.193 ms` | heap `3806.120 ms`, median GC `57.685 ms`, RSS `290177024` | not rerun in this subset | Byte-slice parser-scratch makes q1 a modest real-input throughput/RSS/tail win; region rows report zero timed GC and about `211 MB` RSS; not GC-heavy | 2026-05-07 byte parser follow-up |
 | GH Archive Q2 repo window, file-backed byte-slice | 200k real JSON events / 2.6M event-field records, 2 hourly gzip files | Streaming `3645.458 ms`; checked SafeZone-backed page-token `3626.107 ms` | heap `3756.950 ms`, median GC `61.625 ms`, RSS `290193408` | not rerun in this subset | Byte-slice parser-scratch makes q2 a modest checked scoped page-token win; region rows report zero timed GC and about `211 MB` RSS | 2026-05-07 byte parser follow-up |
 | Linear Road official Q1 | 1M events | HPZone `180.277 ms` | `162.668 ms` | recorded in source pack | Real-input CPU ceiling | Parked control |
 

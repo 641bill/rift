@@ -1,7 +1,7 @@
 # Rift All-Phase Results Rollup
 
 Date: 2026-05-01
-Last updated: 2026-05-07 00:16 CEST
+Last updated: 2026-05-07 00:28 CEST
 
 This file gathers the current numeric and validation evidence across all
 roadmap phases. It is a rollup, not the primary raw log. Prefer the source files
@@ -2765,7 +2765,9 @@ Status:
   and about `211 MB` RSS. q2 heap is `3756.950 ms`; trusted Streaming is
   `3645.458 ms`; checked SafeZone-backed page-token is `3626.107 ms`. This is
   now the strongest real-input GH Archive row: a modest throughput win, clear
-  RSS win, and GC-tail win after removing parser-string scratch overhead.
+  RSS win, and GC-tail win after removing parser-string scratch overhead. It is
+  not the missing GC-heavy case study because heap GC is only about `1.5-1.6%`
+  of elapsed time at this scale.
 - The append-window result does not justify returning to DEBS Q1 ranking.
   TableRank remains gated out. The first DEBS integration of the passing
   cursor-close shape now exists for checked Q1 event-window entries and
