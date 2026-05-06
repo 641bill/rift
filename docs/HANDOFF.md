@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-06 23:45 CEST
+Last updated: 2026-05-07 00:16 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -107,8 +107,10 @@ the fixed probe, the broader heap-alias open work, Tier 1 Scala Native rows,
 exact MLKit/ReML artifact reproduction, and overlapping Scala Native benchmark
 controls such as Mandelbrot. `docs/LITERATURE_BENCHMARK_CONTRACT.md` now says
 to compare each prior system on its own reported axes, then show Rift's local
-metrics separately. `docs/CPU_PROFILE_REPORT.md` is a new scaffold for Scala
-Native-guided native profiling; no profile rows have been collected yet.
+metrics separately. `docs/CPU_PROFILE_REPORT.md` now has the first
+Scala Native-guided profile row and a profile-driven implementation follow-up:
+the GH Archive string parser was identified as the dominant file-backed cost,
+then a byte-slice file-backed parser was added and measured.
 
 Completed run ids:
 
@@ -143,19 +145,23 @@ available) before more operator/runtime tuning. The first sampled profile row
 is now recorded in `docs/CPU_PROFILE_REPORT.md`: GH Archive file-backed q1 with
 `rift-checked-safezone-page-token` is dominated by `BufferedReader`, UTF-8
 decoder/StringBuilder/String operations, field counting/hashing, and gzip
-inflate. Allocator/GC symbols are present but not dominant. This makes parser
-scratch/byte-slice JSON field extraction the next GH Archive technical target.
+inflate. Allocator/GC symbols are present but not dominant. This made parser
+scratch/byte-slice JSON field extraction the right GH Archive technical
+target; that path is now implemented as `GITHUB_ARCHIVE_FILE_PARSER=byte-slice`.
 Treat profile runs as attribution evidence, not headline timing.
 
 Latest GH Archive real-input checkpoint:
-Two hourly gzip JSON-line files were run file-backed at 200k events. q1 heap is
-`7549.355 ms`, RSS `2.43 GB`, GC `198.535 ms`; trusted Streaming is
-`7448.838 ms`, RSS `925 MB`, GC `154.497 ms`; checked scoped page-token is
-`7489.923 ms`, RSS `926 MB`, GC `193.910 ms`. q2 heap is `7641.540 ms`, RSS
-`2.43 GB`, GC `199.876 ms`; trusted Streaming is `7442.005 ms`, RSS `725 MB`;
-checked scoped page-token is `7498.263 ms`, RSS `926 MB`. Interpretation:
-real file-backed GH Archive is an RSS/fixed-memory/tail candidate with modest
-throughput wins, not yet a decisive checked throughput case study.
+The legacy string-parser file-backed rows remain useful provenance, but the
+current GH Archive checkpoint is the byte-slice parser path. Two hourly gzip
+JSON-line files were run file-backed at 200k events with
+`GITHUB_ARCHIVE_FILE_PARSER=byte-slice`. q1 heap is `3806.120 ms`, RSS
+`290177024`, median GC `57.685 ms`; trusted Streaming is `3626.219 ms`, RSS
+`211075072`, zero timed GC; checked scoped page-token is `3629.193 ms`, RSS
+`211238912`, zero timed GC. q2 heap is `3756.950 ms`, RSS `290193408`, median
+GC `61.625 ms`; trusted Streaming is `3645.458 ms`; checked scoped page-token
+is `3626.107 ms`, both with about `211 MB` RSS and zero timed GC.
+Interpretation: byte-slice parser scratch turns GH Archive into a modest
+real-input throughput/RSS/tail win, not a huge Broom/Yak-style win.
 
 Active update:
 Cheap checked page/token append operator implemented and measured; real WAT

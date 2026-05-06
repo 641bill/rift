@@ -1,9 +1,11 @@
 # Rift CPU Profiling Report
 
-Last updated: 2026-05-06 23:45 CEST
+Last updated: 2026-05-07 00:16 CEST
 
-Status: profiling runbook plus first sampled profile row. The first row covers
-GH Archive file-backed q1 with the checked SafeZone-backed page-token path.
+Status: profiling runbook plus first sampled profile row and the first
+profile-driven implementation follow-up. The sampled GH Archive row identified
+`BufferedReader`/UTF-8/`StringBuilder` parser allocation as the avoidable cost;
+the follow-up byte-slice file-backed parser now validates that direction.
 
 Reference: Scala Native official profiling guide:
 <https://scala-native.org/en/stable/user/profiling.html>
@@ -64,6 +66,7 @@ The current questions are:
 | Date | Benchmark | Mode | Tool | Input/scale | Main hot symbols | Interpretation |
 |---|---|---|---|---|---|---|
 | 2026-05-06 | GH Archive q1-fields | `rift-checked-safezone-page-token` | macOS `/usr/bin/sample`, 10s sampled diagnostic | 2 hourly gzip JSON-line files, 200k real events, file-backed | `java.io.BufferedReader.readLine`, UTF-8 decoder loop, `AbstractStringBuilder.append0`, `String.charAt`, `BufferedReader.prepareRead`, `StringBuilder.append`, `GithubArchiveRegionMatrixHelpers.countJsonFields`, stable hashing, zlib inflate; allocator/GC present but lower | Remaining file-backed cost is parser/string/decompression dominated. Page-token already moves event/field records, but the current reader still creates heap strings/builders. Next optimization should be NDJSON byte/char-slice parser scratch before more region allocator tuning. |
+| 2026-05-07 | GH Archive q1/q2 byte-slice follow-up | `heap-immix`, `rift-trusted-streaming`, `rift-checked-safezone-page-token` | non-profiled benchmark rerun | 2 hourly gzip JSON-line files, 200k real events, file-backed `GITHUB_ARCHIVE_FILE_PARSER=byte-slice` | n/a, implementation follow-up | Byte-slice parsing removes the measured parser-string cliff: q1 heap `3806.120 ms` vs checked scoped page-token `3629.193 ms`; q2 heap `3756.950 ms` vs checked scoped page-token `3626.107 ms`. Region rows report zero timed GC and about `211 MB` RSS versus heap about `290 MB`. |
 
 Profile artifact:
 

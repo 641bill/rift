@@ -1,7 +1,7 @@
 # Rift All-Phase Results Rollup
 
 Date: 2026-05-01
-Last updated: 2026-05-06 23:45 CEST
+Last updated: 2026-05-07 00:16 CEST
 
 This file gathers the current numeric and validation evidence across all
 roadmap phases. It is a rollup, not the primary raw log. Prefer the source files
@@ -2754,6 +2754,18 @@ Status:
   `4023.883 ms`, all around `674 MB` RSS and with matching output count
   `1300000`. Trusted Streaming slightly wins elapsed; checked scoped
   page-token is a near tie/slight elapsed loss but cuts RSS by about 45%.
+- A profile-driven GH Archive byte-slice parser-scratch path is now
+  implemented and measured. The legacy file-backed rows were dominated by
+  `BufferedReader`/UTF-8/`StringBuilder` parser allocation. With
+  `GITHUB_ARCHIVE_FILE_PARSER=byte-slice`, the 100k real file-backed rows drop
+  from about `4.0 s` and `1.2 GB` RSS to about `2.0 s` and `148-153 MB` RSS.
+  At two hourly files / 200k real events, q1 heap is `3806.120 ms`, median GC
+  `57.685 ms`, RSS `290177024`; trusted Streaming is `3626.219 ms` and
+  checked SafeZone-backed page-token is `3629.193 ms`, both with zero timed GC
+  and about `211 MB` RSS. q2 heap is `3756.950 ms`; trusted Streaming is
+  `3645.458 ms`; checked SafeZone-backed page-token is `3626.107 ms`. This is
+  now the strongest real-input GH Archive row: a modest throughput win, clear
+  RSS win, and GC-tail win after removing parser-string scratch overhead.
 - The append-window result does not justify returning to DEBS Q1 ranking.
   TableRank remains gated out. The first DEBS integration of the passing
   cursor-close shape now exists for checked Q1 event-window entries and

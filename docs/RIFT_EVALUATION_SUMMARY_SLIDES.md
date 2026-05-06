@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-06 23:45 CEST
+Last updated: 2026-05-07 00:16 CEST
 
 Status: markdown slide deck outline. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report and this file as
@@ -124,9 +124,14 @@ linked page-token `28.452 ms`; SafeZone-backed chunk-token is `33.108 ms`
 versus page-token `27.214 ms`. Chunk allocation/control overhead outweighs the
 saved per-record link write in this sequential append/drain workload.
 
-GH Archive q1 shows the same evaluation issue at application scale: uncapped
-heap wins median by growing to GB-scale RSS, while checked regions win the 1G
-memory-budget diagnostic by removing GC pressure.
+GH Archive shows both the evaluation issue and the next reusable optimization:
+the legacy file-backed parser spent most time in `BufferedReader`/UTF-8/
+`StringBuilder` work, while the new byte-slice parser-scratch path removes
+that allocation cliff. With two real hourly files / 200k events, byte-slice q1
+is heap `3806.120 ms` versus checked scoped page-token `3629.193 ms`; byte-
+slice q2 is heap `3756.950 ms` versus checked scoped page-token `3626.107 ms`.
+Both checked rows cut RSS from about `290 MB` to `211 MB` and report zero timed
+GC. This is a modest real-input throughput/RSS/tail win.
 
 ## Slide 9: Best Checked Stream Rows
 
@@ -200,7 +205,7 @@ deadline misses. They can move in different directions.
 Next realistic GC-heavy search:
 
 1. larger/multiple real Common Crawl WET/WAT shards;
-2. GH Archive file-backed and memory-budget NDJSON rows;
+2. GH Archive byte-slice file-backed and memory-budget NDJSON rows;
 3. other real NDJSON/log-event streams such as GDELT or public web/server/security logs;
 4. DSPBench local-kernel subset;
 5. NEXMark Q3/Q8/Q9/Q11 as generated controls;
@@ -209,14 +214,15 @@ Next realistic GC-heavy search:
 
 The first real WAT shard now validates link-object placement and modestly
 favors SafeZone-backed page-token, but heap still reports zero timed GC.
-GH Archive is now a real memory-budget/tail-latency candidate: the 8-hour 1M
+GH Archive is now the strongest real-input candidate. The 8-hour preloaded
 oracle row has heap winning uncapped median by growing to about `1.7 GB`, but
 the same q1 shape under a `1G` heap cap makes checked SafeZone-backed
-page-token faster than heap.
-The file-backed q1/q2 rows include gzip/JSON parsing in timing and show
-RSS/fixed-memory wins; both heap rows fail under a `1G` cap. Parser/string
-allocation still causes GC in region rows too, so parser scratch is the next
-technical question.
+page-token faster than heap. The legacy file-backed q1/q2 rows showed RSS/
+fixed-memory wins but were dominated by string parser allocation. The new
+byte-slice file-backed rows keep gzip/JSON parsing in timing while reusing
+parser scratch, and now show modest checked throughput wins plus zero timed GC
+in region rows. Next: scale this byte-slice path and generalize it to other
+NDJSON/log streams.
 
 The 2-hour file-backed GH Archive rows strengthen that interpretation:
 heap uses about `2.43 GB` RSS, while region rows use about `0.72-0.93 GB`.
