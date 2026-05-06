@@ -1,7 +1,7 @@
 # Rift All-Phase Results Rollup
 
 Date: 2026-05-01
-Last updated: 2026-05-06 16:14 CEST
+Last updated: 2026-05-06 22:50 CEST
 
 This file gathers the current numeric and validation evidence across all
 roadmap phases. It is a rollup, not the primary raw log. Prefer the source files
@@ -2726,6 +2726,17 @@ Status:
   which is slower than the checked SafeZone-backed q1 row. Current decision:
   GH Archive is promising for memory-budget and GC-tail evidence, not yet for
   an unconstrained throughput case-study claim.
+- GH Archive now also has an opt-in file-backed timed mode:
+  `GITHUB_ARCHIVE_INPUT_MODE=file-backed`. It rereads and parses the gzip JSON
+  lines inside each timed run, so parser/string allocation is included. The
+  first 100k q1 file-backed row matches checksums and records heap
+  `3999.933 ms`, median GC `158.149 ms`, RSS `1218805760`; improved SafeZone
+  `3924.979 ms`, median GC `107.125 ms`, RSS `674807808`; trusted Streaming
+  `3908.972 ms`, median GC `73.055 ms`, RSS `495943680`; checked
+  SafeZone-backed page-token `3937.394 ms`, median GC `106.248 ms`, RSS
+  `674791424`. This is a real-data RSS win and modest region throughput win,
+  but parser/string allocation still causes GC in all rows, so the next GH
+  Archive step is file-backed q2 plus heap caps and tail reporting.
 - The append-window result does not justify returning to DEBS Q1 ranking.
   TableRank remains gated out. The first DEBS integration of the passing
   cursor-close shape now exists for checked Q1 event-window entries and

@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-06 16:14 CEST
+Last updated: 2026-05-06 22:50 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -317,6 +317,21 @@ faster as a memory-budget diagnostic. q2 remains heap-fastest in median
 because repo aggregation CPU dominates. Interpretation: GH Archive is now a
 memory-budget/tail-latency candidate, not an uncapped throughput case-study
 win.
+
+GH Archive file-backed q1 follow-up:
+`GithubArchiveRegionMatrix` now accepts
+`GITHUB_ARCHIVE_INPUT_MODE=file-backed`, which rereads and parses the gzip JSON
+lines inside every timed run instead of preloading primitive metadata. A 20k
+smoke matched checksums. The first 100k q1 3-run row over
+`2026-04-01-0.json.gz` matched checksums and reports heap `3999.933 ms`,
+`158.149 ms` median GC, and `1218805760` bytes RSS; improved SafeZone-32k
+`3924.979 ms`, `107.125 ms` median GC, and `674807808` bytes RSS; trusted
+Streaming `3908.972 ms`, `73.055 ms` median GC, and `495943680` bytes RSS;
+checked SafeZone-backed page-token `3937.394 ms`, `106.248 ms` median GC, and
+`674791424` bytes RSS. Interpretation: this is a real-data RSS win and modest
+region throughput win, but not yet a decisive checked case study because
+parser/string allocation still happens on the heap. Next GH Archive work is
+file-backed q2 plus heap caps and per-run tail reporting.
 
 Allocation-lowering matrix: added `ObjectAllocationLoweringMatrix` and
 `sandbox/run_object_allocation_lowering_matrix.sh`, then validated the

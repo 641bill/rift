@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-06 16:14 CEST
+Last updated: 2026-05-06 22:50 CEST
 
 Status: markdown slide deck outline. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report and this file as
@@ -213,6 +213,9 @@ GH Archive is now a real memory-budget/tail-latency candidate: the 8-hour 1M
 oracle row has heap winning uncapped median by growing to about `1.7 GB`, but
 the same q1 shape under a `1G` heap cap makes checked SafeZone-backed
 page-token faster than heap.
+The first file-backed q1 row includes gzip/JSON parsing in timing and shows a
+modest region/RSS win, but parser/string allocation still causes GC in region
+rows too.
 
 Every stream headline should now say whether the win is uncapped throughput,
 fixed-memory, RSS, or tail-latency evidence.
