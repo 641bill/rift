@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-06 23:08 CEST
+Last updated: 2026-05-06 23:24 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.

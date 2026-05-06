@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-06 23:08 CEST
+Last updated: 2026-05-06 23:24 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -347,6 +347,21 @@ pure heap-fastest aggregation ceiling; region rows modestly improve elapsed/RSS
 and the `1G` heap cap fails. Parser/string allocation still keeps GC visible in
 all successful rows. Next GH Archive step is q1 file-backed heap caps and
 larger/multi-hour rows only if the machine can tolerate the memory footprint.
+
+GH Archive file-backed q1 heap-cap follow-up:
+The q1 cap run also matched checksums. Heap is `4014.909 ms`, `157.495 ms`
+median GC, and `1218822144` bytes RSS uncapped; heap with `2G` is
+`4005.975 ms`, `149.868 ms` median GC, and `1168179200` bytes RSS; heap with
+`1400M` is `4093.234 ms`, `166.523 ms` median GC, `201.304 ms` max GC, and
+`1168162816` bytes RSS; heap with `1G` fails with signal 11 at `1076805632`
+bytes RSS. Improved SafeZone-32k is `4000.812 ms`, `105.804 ms` median GC,
+and `673808384` bytes RSS. Trusted Streaming is `3995.238 ms`, `82.368 ms`
+median GC, `0.293 ms` median Rift op time, and `673611776` bytes RSS. Checked
+SafeZone-backed page-token is `4023.883 ms`, `113.334 ms` median GC, and
+`674742272` bytes RSS. Interpretation: q1 file-backed is mainly an RSS and
+fixed-memory win; trusted Streaming slightly beats uncapped heap, while
+checked scoped page-token is a near tie/slight elapsed loss with about 45%
+lower RSS. Parser/string heap allocation remains visible in all rows.
 
 Allocation-lowering matrix: added `ObjectAllocationLoweringMatrix` and
 `sandbox/run_object_allocation_lowering_matrix.sh`, then validated the

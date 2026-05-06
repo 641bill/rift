@@ -1,7 +1,7 @@
 # Rift All-Phase Results Rollup
 
 Date: 2026-05-01
-Last updated: 2026-05-06 23:08 CEST
+Last updated: 2026-05-06 23:24 CEST
 
 This file gathers the current numeric and validation evidence across all
 roadmap phases. It is a rollup, not the primary raw log. Prefer the source files
@@ -2746,6 +2746,14 @@ Status:
   `15877`. This changes q2 from a preloaded aggregation-ceiling row into
   modest real file-backed throughput/RSS/fixed-memory evidence, while still
   showing that parser/string heap allocation must be addressed or isolated.
+- The matching file-backed GH Archive q1 heap-cap row is primarily RSS and
+  fixed-memory evidence. Uncapped heap is `4014.909 ms`, median GC
+  `157.495 ms`, RSS `1218822144`; heap with `1G` fails with signal 11 at
+  `1076805632` bytes RSS. Improved SafeZone is `4000.812 ms`, trusted
+  Streaming is `3995.238 ms`, and checked SafeZone-backed page-token is
+  `4023.883 ms`, all around `674 MB` RSS and with matching output count
+  `1300000`. Trusted Streaming slightly wins elapsed; checked scoped
+  page-token is a near tie/slight elapsed loss but cuts RSS by about 45%.
 - The append-window result does not justify returning to DEBS Q1 ranking.
   TableRank remains gated out. The first DEBS integration of the passing
   cursor-close shape now exists for checked Q1 event-window entries and

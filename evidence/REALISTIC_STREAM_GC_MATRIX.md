@@ -1,7 +1,7 @@
 # Realistic Stream GC Matrix
 
 Date: 2026-05-03
-Last updated: 2026-05-06 23:08 CEST
+Last updated: 2026-05-06 23:24 CEST
 
 Status: benchmark ladder for realistic and real-input GC-heavy stream
 evidence. This file distinguishes generated stressors, methodology generators,
@@ -82,11 +82,13 @@ Latest GH Archive control:
 | q2-repo-window | 1M real events / 13M records, 8-hour oracle | `271.880 ms` | Streaming `325.665 ms`; SafeZone-backed page-token `347.033 ms` | median `0.000 ms`, max `136.353 ms`, 1/3 runs | `159411` | Heap wins median; repo aggregation CPU dominates. |
 | q1-fields | 100k real file-backed events / 1.3M records | heap `3999.933 ms`, RSS `1218805760` | Streaming `3908.972 ms`, RSS `495943680`; SafeZone-backed page-token `3937.394 ms`, RSS `674791424` | heap median `158.149 ms`, Streaming `73.055 ms`, checked SafeZone-backed `106.248 ms`; all modes 3/3 runs with GC | `1300000` | First real file-backed row: regions modestly improve elapsed/RSS, but parser/string allocation still causes GC in region rows. |
 | q2-repo-window | 100k real file-backed events / 1.3M records | heap `3995.632 ms`, RSS `1218428928`; heap `1G` cap fails with signal 11 at `1077067776` bytes RSS | Streaming `3906.291 ms`, RSS `673644544`; SafeZone-backed page-token `3921.127 ms`, RSS `673824768` | heap median `158.277 ms`, Streaming `81.402 ms`, checked SafeZone-backed `106.352 ms`; all successful rows 3/3 runs with GC | `15877` | File-backed q2 is modest region/RSS/fixed-memory evidence, not just an aggregation-CPU ceiling row. Parser/string allocation still causes GC. |
+| q1-fields | 100k real file-backed events / 1.3M records, heap caps | heap uncapped `4014.909 ms`, `1G` cap fails with signal 11 at `1076805632` bytes RSS | Streaming `3995.238 ms`, RSS `673611776`; SafeZone-backed page-token `4023.883 ms`, RSS `674742272` | heap uncapped median `157.495 ms`, heap `1400M` max `201.304 ms`, Streaming `82.368 ms`, checked SafeZone-backed `113.334 ms` | `1300000` | Mostly RSS/fixed-memory evidence: checked scoped page-token is a near tie/slight elapsed loss but cuts RSS by about 45%; trusted Streaming is slightly faster. |
 
 Next attempts:
 
-1. GH Archive file-backed q1 heap caps and latency/tail rows:
-   - compare q1's field-record shape against q2's aggregation-heavy shape;
+1. GH Archive larger file-backed q1/q2 and parser-attribution rows:
+   - test whether multi-hour file-backed inputs amplify the fixed-memory result;
+   - isolate parser/string allocation, which still causes GC in region rows;
    - record per-run elapsed and GC so max-GC tails are visible;
    - explicitly label heap cap/RSS when using memory-budget controls.
 2. Larger/multiple Common Crawl WET/WAT shards:
