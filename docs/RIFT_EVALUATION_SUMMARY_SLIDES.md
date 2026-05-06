@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-06 14:37 CEST
+Last updated: 2026-05-06 15:57 CEST
 
 Status: markdown slide deck outline. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report and this file as
@@ -80,10 +80,10 @@ require more static probes before removal.
 Generated Common Crawl WET-shaped q1/q2 is not real-input proof, but it is the
 clearest memory-regime detector.
 
-| Query | heap elapsed / GC | best trusted Rift | improved SafeZone 32K | best checked page-token |
+| Query | heap elapsed / GC | improved SafeZone 32K | checked page-token | checked scoped page-token |
 |---|---:|---:|---:|---:|
-| q1 tokenization | `5350.531 ms` / `1517.640 ms` | HPZone `4265.969 ms` | `4578.914 ms` | SafeZone-backed `3696.284 ms` |
-| q2 domain window | `5183.656 ms` / `1526.751 ms` | Streaming `4109.290 ms` | `4364.704 ms` | SafeZone-backed `3732.171 ms` |
+| q1 tokenization | `5619.896 ms` / `1625.936 ms` | `4710.779 ms` | `4159.837 ms` | `3860.248 ms` |
+| q2 domain window | `5429.530 ms` / `1643.346 ms` | `4577.498 ms` | `4175.633 ms` | `3895.711 ms` |
 
 Interpretation: region placement removes GC, and an operator-owned checked
 path can also remove enough redundant runtime overhead to win on this generated
@@ -132,9 +132,9 @@ memory-budget diagnostic by removing GC pressure.
 
 | Query | heap | improved SafeZone | best checked | Interpretation |
 |---|---:|---:|---:|---|
-| NEXMark Q3 | `287.568 ms` | `291.839 ms` | `282.629 ms` | best checked methodology row, modest win. |
-| NEXMark Q8 | `452.128 ms` | `442.092 ms` | `432.391 ms` | checked wins modestly. |
-| NEXMark Q9 | `779.032 ms` | `742.398 ms` | `708.391 ms` | strongest Beam-default checked row in this sweep. |
+| NEXMark Q3 | `317.003 ms` | `304.246 ms` | `287.541 ms` | best checked methodology row, modest win. |
+| NEXMark Q8 | `471.966 ms` | `465.297 ms` | `445.214 ms` | checked wins modestly. |
+| NEXMark Q9 | `806.418 ms` | `756.289 ms` | `731.810 ms` | strong Beam-default checked row. |
 
 NEXMark uses generated Beam-default methodology, not the Beam runner.
 
@@ -144,10 +144,9 @@ Focused 1M append/window rows:
 
 | Mode | Median |
 |---|---:|
-| `heap-immix` | `36.944 ms` |
-| `rift-checked-rift` current | `32.226 ms` |
-| `rift-checked-page-token` | `27.886 ms` |
-| `rift-checked-safezone-page-token` | `26.883 ms` |
+| `heap-immix` | `37.046 ms` |
+| `rift-checked-page-token` | `28.160 ms` |
+| `rift-checked-safezone-page-token` | `26.866 ms` |
 
 The generic SafeZone-backed cursor was a useful backend step. The page/token
 operator is stronger: generated Common Crawl-shaped q1/q2 improves current
@@ -159,16 +158,16 @@ bucket/region, and static lifetime ownership justifies removing per-record
 defensive checks.
 
 First cheap-family focused rows now pass their initial gates with RSS:
-Dataflow SELECT scoped page-token is `17.980 ms` / `30.4 MB` RSS versus heap
-`27.932 ms` / `39.3 MB`; ListOfLists checked builder is `9228.561 ms` /
-`364.2 MB` versus heap `14822.115 ms` / `575.9 MB`. Dataflow AGGREGATE
-epoch-fold is `38.399 ms` versus heap `61.585 ms`, but it raises RSS and still
-uses the exact-array checked aggregate path.
+Dataflow SELECT scoped page-token is `19.063 ms` versus heap `29.272 ms`.
+ListOfLists checked builder is `6053.235 ms` versus heap `15820.172 ms` and
+improved SafeZone `10133.449 ms`. Dataflow AGGREGATE checked is a near-tie
+with improved SafeZone (`41.827 ms` vs `41.810 ms`) and should not be
+presented as a generic `EpochFold` win.
 
 The first multi-list `TransactionRegion` row is a partial checked win:
-StreamFlex 1M-shape throughput scoped checked transaction is `39.019 ms`,
-faster than heap `42.860 ms` and improved SafeZone `41.327 ms`, while trusted
-Rift HP/Streaming remain best at about `36.4 ms`. The lesson is reusable and concrete:
+StreamFlex 1M-shape throughput scoped checked transaction is `40.512 ms`,
+faster than heap `42.431 ms` and improved SafeZone `42.236 ms`, but latency
+median is worse. The lesson is reusable and concrete:
 multi-stage stream operators should share one child-region lifetime, but hot
 list state must be operator-owned fields rather than generic indexed metadata.
 

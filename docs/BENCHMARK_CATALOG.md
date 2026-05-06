@@ -1,7 +1,7 @@
 # Rift Benchmark Catalog
 
 Date: 2026-05-05
-Last updated: 2026-05-06 14:37 CEST
+Last updated: 2026-05-06 15:57 CEST
 
 Status: working benchmark guide. Use this document to understand what each
 benchmark is meant to test before reading the detailed result files in
@@ -30,6 +30,9 @@ Default final-selection runs now exclude current SafeZone and rootless/unsafe
 lower-bound rows. Use `RIFT_EVAL_INCLUDE_CONTROLS=1`,
 `RIFT_BENCH_INCLUDE_CONTROLS=1`, or an explicit `*_MODES` variable when a
 benchmark needs provenance or lower-bound controls.
+
+The first clean default headline sweep is summarized in
+`evidence/FINAL_SELECTION_HEADLINE_2026_05_06.md`.
 
 Prior-system comparison tables should not force all systems into one metric
 schema. Use the metric axes each paper reports, then add Rift's standardized

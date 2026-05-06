@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-06 15:05 CEST
+Last updated: 2026-05-06 15:57 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -18,6 +18,17 @@ Parent evidence commit at start of latest sweep:
 Latest comprehensive sweep checkpoint:
 Staged headline runs completed after the TransactionRegion checkpoint. Source
 summary: `evidence/COMPREHENSIVE_SWEEP_2026_05_06.md`.
+
+Latest final-selection sweep checkpoint:
+Clean run `2026-05-06-final-selection-headline` completed after committing the
+safety/default-runner checkpoint. Source summary:
+`evidence/FINAL_SELECTION_HEADLINE_2026_05_06.md`. It ran from parent
+`72dc1dfb974cc1620dc950a8ff2fb104233ec8b0` and child
+`458c556d20698887d753fc29969847dc29ac8cb4` with `include_controls=0`.
+Key outcomes: checked scoped page-token wins focused append and generated
+Common Crawl-shaped q1/q2; checked page-token wins generated GH Archive-shaped
+q1/q2; checked builder wins linked ListOfLists; ReML-shaped Tier 1 medians now
+exist; generic fold/join/rank-heavy operators remain gated.
 
 Latest ReML/MLKit comparison checkpoint:
 Phase 6c has been scaffolded as a separate comparison track. New files:
@@ -5960,6 +5971,9 @@ Follow-up validation:
 - This smoke is not headline performance evidence because it used
   `RIFT_EVAL_ALLOW_DIRTY=1`, but it validates that the default staged runner
   can execute broad suites without the old current/rootless control rows.
+- Clean final-selection headline run `2026-05-06-final-selection-headline`
+  then completed from clean parent/child commits. Use
+  `evidence/FINAL_SELECTION_HEADLINE_2026_05_06.md` for the compact tables.
 
 - "Rift already has final DEBS application proof." It does not. The current
   bounded-sample medians are encouraging application evidence, and the

@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-06 15:05 CEST
+Last updated: 2026-05-06 15:57 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -9,8 +9,8 @@ step. It summarizes the design, implementation status, benchmark evidence,
 runtime-overhead story, wins, losses, and open work. Individual evidence files
 remain the source of detailed command provenance.
 
-Latest staged headline sweep checkpoint:
-`evidence/COMPREHENSIVE_SWEEP_2026_05_06.md`.
+Latest clean final-selection headline sweep:
+`evidence/FINAL_SELECTION_HEADLINE_2026_05_06.md`.
 
 Benchmark guide: `docs/BENCHMARK_CATALOG.md` describes what each benchmark is
 meant to measure and which rows are generated, real-input, focused, or
@@ -32,13 +32,12 @@ The current evidence is mixed but useful:
 
 | Result class | Current conclusion |
 |---|---|
-| Runtime substrate | SafeZone-family allocator/pool mechanics are strong. Improved SafeZone and rootless SafeZone often beat current standalone Rift HPZone on linked/prior-work rows. |
-| Trusted Rift | `rift-trusted-hp` / `rift-trusted-streaming` win on the best generated GC-heavy stream detector: Common Crawl WET-shaped q1/q2. |
-| Checked Rift | Checked APIs can be fast for simple append/window shapes. The new page/token append operator now clears the generated Common Crawl-shaped q1/q2 gate, while rank/fold/table containers still add too much CPU overhead. |
-| Safe checked backend | `rift-checked-safezone-improved-32k` improves focused checked append/window. The page/token SafeZone-backed variant is fastest on generated Common Crawl-shaped q1/q2, but it is still generated stressor evidence rather than real-input proof. |
+| Runtime substrate | Improved SafeZone/rooted scoped regions remain the safe baseline; rootless/trusted rows are now explicit controls, not default public evidence. |
+| Checked Rift | Checked APIs are fast for simple append/window shapes. Page-token, Dataflow SELECT, RegionList, GH Archive-shaped q1/q2, and generated Common Crawl-shaped q1/q2 clear useful gates; rank/fold/table containers still add too much CPU overhead. |
+| Safe checked backend | `checked-region-scoped` is the best page-token backend in the clean final-selection sweep. It is fastest on focused page-token append and generated Common Crawl-shaped q1/q2. |
 | Real-input stream evidence | Current real/preloaded WET, Wikimedia, Linear Road, Yahoo, and RIoTBench rows mostly have low/zero median GC or heap wins. They are ceiling controls, not final Rift case studies. |
-| Strongest memory-pressure row | Generated Common Crawl WET-shaped q1/q2 creates heavy stream object churn: in the 2026-05-06 staged headline sweep, heap spends `1517.640 ms` timed GC on q1 and `1526.751 ms` on q2. Checked SafeZone-backed page-token is fastest (`3696.284 ms` q1, `3732.171 ms` q2), followed by checked Rift page-token (`3905.285 ms` q1, `3972.493 ms` q2). |
-| ReML/MLKit lineage | New comparison track started. The paper table is transcribed as paper-reported/not-rerun evidence, and Tier 1 Scala Native ReML-shaped ports are scaffolded. The erased-generic heap-retention probe is now active and passing; exact ReML artifact rerun and headline medians remain open. |
+| Strongest memory-pressure row | Generated Common Crawl WET-shaped q1/q2 creates heavy stream object churn: in the clean final-selection sweep, heap spends `1625.936 ms` timed GC on q1 and `1643.346 ms` on q2. Checked scoped page-token is fastest (`3860.248 ms` q1, `3895.711 ms` q2), followed by checked Rift page-token (`4159.837 ms` q1, `4175.633 ms` q2). |
+| ReML/MLKit lineage | Tier 1 Scala Native ReML-shaped medians now exist. `msort`, `msort-r`, `fft`, and `ratio` show useful checked-region behavior; exact ReML artifact rerun remains open. |
 
 The strongest current claim is:
 
@@ -49,22 +48,33 @@ The strongest current claim is:
 > q1/q2 stressor. The remaining research problem is making that result hold for
 > real-input GC-heavy streams and broader checked operators.
 
-Latest staged headline sweep interpretation:
+Latest clean final-selection headline interpretation:
 
-- `PageTokenMapFilter` is now a reusable API, not a benchmark-local primitive;
-  scoped Dataflow SELECT is `18.458 ms` and Rift page-token SELECT is
-  `20.479 ms`.
-- `RegionList` is a reusable topology API and remains the preferred direction
-  for linked ListOfLists-style region-friendly structures.
+- Focused page-token append is strong: heap `37.046 ms`, checked page-token
+  `28.160 ms`, and scoped checked page-token `26.866 ms`, with lower RSS than
+  heap.
+- `PageTokenMapFilter` remains the reusable SELECT/filter/project API:
+  Dataflow SELECT is heap `29.272 ms`, improved SafeZone `23.253 ms`, checked
+  page-token `20.528 ms`, and scoped checked page-token `19.063 ms`.
+- `RegionList` is a reusable topology API: linked ListOfLists is heap
+  `15820.172 ms`, improved SafeZone `10133.449 ms`, and checked builder
+  `6053.235 ms`.
 - `EpochFold` is implemented and correct, but its latest true Dataflow
-  AGGREGATE row is `92.923 ms`; it is gated out until redesigned.
+  reusable fold row remains gated; Dataflow AGGREGATE is a checked/safezone
+  near-tie (`41.827 ms` checked, `41.810 ms` improved SafeZone) rather than a
+  generic fold win.
 - `TransactionRegion` is the best checked StreamFlex shape so far: scoped
-  checked transaction throughput is `39.019 ms`, faster than heap
-  `42.860 ms` and improved SafeZone `41.327 ms`, while trusted Rift remains
-  fastest around `36.4 ms`.
-- NEXMark Beam-default is broadly favorable but modest: `rift-checked` is the
-  fastest row for q0/q1/q2/q3/q4/q5/q8/q9/q11 in the latest sweep, but most
-  wins are not large enough to be the central case study.
+  checked transaction throughput is `40.512 ms`, faster than heap `42.431 ms`
+  and improved SafeZone `42.236 ms`, but latency median is worse.
+- NEXMark Beam-default is broadly favorable but modest: checked wins q0/q1/q2/
+  q3/q4/q5/q8/q9/q11, with q3 `287.541 ms` versus heap `317.003 ms` and
+  improved SafeZone `304.246 ms`.
+- GH Archive-shaped q1/q2 now favor checked page-token on uncapped generated
+  rows: q1 `262.139 ms` versus heap `293.716 ms`; q2 `261.762 ms` versus heap
+  `279.743 ms`, with much lower RSS.
+- ReML-shaped Tier 1 ports add a non-stream axis: checked stream wins `msort`
+  (`106.813 ms` versus heap `118.185 ms`) and `msort-r` (`103.878 ms` versus
+  heap `127.936 ms`) while cutting RSS substantially.
 - Generated Common Crawl WET-shaped q1/q2 is the current best GC-heavy stream
   stressor; q3 parser-scratch is a negative/mixed control and real-input
   GC-heavy proof is still open.

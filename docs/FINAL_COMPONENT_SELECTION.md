@@ -1,6 +1,6 @@
 # Final Component Selection
 
-Last updated: 2026-05-06 15:05 CEST
+Last updated: 2026-05-06 15:57 CEST
 
 Status: selection policy for the final Rift story. This document classifies
 components by evidence without deleting runtime code. Losing and unsafe modes
@@ -109,3 +109,35 @@ The run completed. It records `include_controls=0` in
 `cache/perf-eval/2026-05-06-final-selection-smoke/environment.txt`, and the
 generated summaries contain no default rootless/current-control rows. Treat it
 as runner/default validation only because the repos were intentionally dirty.
+
+## Clean Headline Selection
+
+Run id `2026-05-06-final-selection-headline` completed the clean default
+headline sweep:
+
+```bash
+RIFT_EVAL_RUN_ID=2026-05-06-final-selection-headline \
+RIFT_EVAL_SCALE=headline \
+RIFT_EVAL_SUITES="preflight core prior checked streams reml" \
+bash scripts/run-performance-evaluation.sh
+```
+
+Source summary: `evidence/FINAL_SELECTION_HEADLINE_2026_05_06.md`.
+
+Selection changes from this run:
+
+- `checked-page-token` remains a public candidate. It wins focused append,
+  generated Common Crawl-shaped q1/q2, GH Archive-shaped q1/q2, and Dataflow
+  SELECT.
+- `checked-region-scoped` remains a leading backend candidate for page-token
+  shapes: it is fastest on focused page-token append and generated Common
+  Crawl-shaped q1/q2.
+- `checked-region-stream` remains necessary as a candidate/control backend: it
+  is best for GH Archive-shaped q1/q2 and ReML-shaped `msort`/`msort-r`.
+- `RegionList` is promoted as a strong linked-topology candidate: linked
+  ListOfLists is heap `15820.172 ms`, improved SafeZone `10133.449 ms`, and
+  checked builder `6053.235 ms`.
+- `TransactionRegion` remains candidate, not final: throughput wins are
+  present, but latency remains mixed.
+- `StreamWindowFold`, `TableRank`, JOIN, rank/window/table-heavy structures,
+  and parser-scratch shapes remain gated or negative.

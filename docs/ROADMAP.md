@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-06 15:05 CEST
+Last updated: 2026-05-06 15:57 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -31,6 +31,9 @@ controls require `RIFT_EVAL_INCLUDE_CONTROLS=1`,
 Smoke run `2026-05-06-final-selection-smoke` completed the broad default path
 with controls off; treat it as validation only because it ran from the current
 dirty checkpoint.
+Clean run `2026-05-06-final-selection-headline` then completed from parent
+`72dc1df` and child `458c556d`; source summary is
+`evidence/FINAL_SELECTION_HEADLINE_2026_05_06.md`.
 
 Current merge state is tracked in `docs/HANDOFF.md`; the substantive roadmap
 revision began at implementation commit `ddbba577aecd4c0adc741cbf7085ee93548c46b4`.
