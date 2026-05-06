@@ -1,6 +1,6 @@
 # ReML / MLKit Comparison Plan
 
-Last updated: 2026-05-06 16:14 CEST
+Last updated: 2026-05-06 23:45 CEST
 
 ## Goal
 
@@ -31,7 +31,18 @@ Initial scaffold is implemented:
 Tier 1 local ports are implemented for `fib37`, `tak`, `mandel`, `msort`,
 `msort-r`, `life`, `fft`, and `ratio`. A reduced-size all-Tier-1 smoke run
 matched checksums across `gc-heap`, `checked-region-stream`, and
-`checked-region-scoped`; no headline medians have been collected yet.
+`checked-region-scoped`. A 3-run Tier 1 headline matrix was collected on
+2026-05-06 and is recorded in `evidence/REML_COMPARISON_MATRIX.md`.
+
+The current Tier 1 results are useful but still only **Scala Native
+ReML-shaped ports**:
+
+- `msort`, `msort-r`, and `ratio` show real local region-vs-heap allocation,
+  GC, and RSS effects.
+- `fib37`, `tak`, `mandel`, and `life` are mostly compute/array controls with
+  little or no timed GC.
+- `fft` is a very small row at the current default and is better treated as an
+  RSS/tiny-allocation control until scaled or matched to the MLKit input.
 
 The matrix supports the canonical reporting modes:
 
@@ -88,6 +99,43 @@ generational GC, and no-GC region execution, but the exact Figure 9 mapping of
 Until those runs exist, compare Rift to ReML only by paper-reported axes and by
 local Scala Native port ratios.
 
+Docker/toolchain status, 2026-05-06 23:45 CEST:
+
+- `docker` CLI exists at `/usr/local/bin/docker`.
+- `docker info` fails because the Docker daemon is not running.
+- `mlkit` and `mlton` are not installed on the host.
+- Therefore exact local MLKit/ReML timing is still blocked; no exact `rg`,
+  `rg-`, `r`, or MLton row has been collected.
+
+## Scala Native Port Closeness Policy
+
+The local ports should be made as close as practical, but the evidence class
+must remain honest. Exact reproduction requires the original SML source,
+paper-era MLKit/ReML compiler configuration, and benchmark inputs. The current
+Scala Native ports use the same broad algorithm families, not source-level
+translations.
+
+| Port | Current closeness | Fairness caveat / next check |
+|---|---|---|
+| `fib37` | Same recursive Fibonacci family and default `n=37`. | MLKit source candidates include `fib35`; exact source/config still needs pinning. |
+| `tak` | Same Takeuchi-recursion family. | Default tuple `(18,12,6)` must be checked against the paper source. |
+| `mandel` | Same Mandelbrot numeric family. | Grid/iteration defaults are local; compare with MLKit/Scala Native Mandelbrot configs before cross-system ratios. |
+| `msort`, `msort-r` | Same linked-node sort/allocation family; reverse variant included. | Current default `REML_LIST_SIZE=100000`; MLKit source has benchmark-specific sizes, so exact reproduction must pin those. |
+| `life` | Same Life/grid-update family. | Local implementation is array-heavy and mostly a compute/control row. |
+| `fft` | Same complex-object FFT-style update family. | Current `REML_FFT_SIZE=16384` is tiny; scale or match MLKit input before strong claims. |
+| `ratio` | Same rational-number allocation/reduction family. | Local data generator/checksum is Scala Native-specific; use relative heap-vs-region ratios only. |
+
+Default local modes are selected for a fair safe-user comparison:
+
+- `gc-heap`;
+- `region-scoped-rooted`;
+- `checked-region-stream`;
+- `checked-region-scoped`.
+
+Rootless/trusted controls remain available with `RIFT_BENCH_INCLUDE_CONTROLS=1`
+or explicit `REML_MODES`, but they are lower-bound controls rather than safe
+system rows.
+
 ## Safety Finding
 
 The ReML-inspired probes now cover:
@@ -127,31 +175,23 @@ Design issue to fix:
    broader heap alias story, or explicitly document that boundary, before
    making stronger rootless checked safety claims.
 
-2. Run a Tier 1 headline matrix after committing the scaffold:
-
-   ```sh
-   cd /Users/siyaoliu/rift/scala-native-rift
-   REML_BENCHMARK_RUNS=3 \
-   zsh sandbox/run_reml_region_matrix.sh
-   ```
-
-3. Interpret Tier 1 by relative ratios, not raw ReML wall-clock:
+2. Interpret Tier 1 by relative ratios, not raw ReML wall-clock:
 
    - region-vs-heap elapsed ratio;
    - RSS ratio;
    - GC time/count reduction;
    - checked overhead versus trusted/rooted rows.
 
-4. Compare with existing Scala Native benchmarks where names overlap.
+3. Compare with existing Scala Native benchmarks where names overlap.
    `scala-native-benchmarks` includes a Mandelbrot-style benchmark, which
    overlaps the ReML `mandel` family. Use it as an additional Scala Native
    control only after documenting input/config differences.
 
-5. Add Tier 2 only after Tier 1 is useful:
+4. Add Tier 2 only after Tier 1 is useful:
 
    - `b-hut`, `nucleic`, `ray`, `logic`, `zebra`, `kbc`, `tsp`, `mpuz`.
 
-6. Search for exact artifact/source provenance:
+5. Continue exact artifact/source provenance:
 
    - record MLKit/ReML source URL or archive, commit/hash if available,
      compiler versions, MLton version, machine, commands, and run counts;

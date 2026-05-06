@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-06 23:24 CEST
+Last updated: 2026-05-06 23:45 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -43,8 +43,13 @@ ReML-shaped ports (`fib37`, `tak`, `mandel`, `msort`, `msort-r`, `life`,
 `fft`, `ratio`). A reduced-size all-Tier-1 smoke run matched checksums across
 `gc-heap`, `checked-region-stream`, and `checked-region-scoped`, and the
 `ratio` port was fixed to retain allocated region objects so checked
-allocation is not optimized away. No headline ReML medians have been run yet,
-and exact MLKit/ReML artifact reproduction is still open.
+allocation is not optimized away. A direct Tier 1 3-run median matrix was run
+on 2026-05-06. The meaningful local allocation/RSS rows are `msort`
+(`checked-region-stream` `104.358 ms` vs heap `124.983 ms`), `msort-r`
+(`104.929 ms` vs heap `126.163 ms`), and `ratio` (`checked-region-scoped`
+`48.929 ms` vs heap `51.302 ms`, with RSS cut from about `44 MB` to
+`16 MB`). `fib37`, `tak`, `mandel`, and `life` are mostly compute/control
+rows. These are Scala Native ReML-shaped ports, not exact ReML reproduction.
 
 ReML exact-artifact reproduction update:
 The public MLKit repository has been cloned into ignored cache at
@@ -60,7 +65,8 @@ claim raw "Rift beats ReML" until those exact local runs exist.
 `scripts/reml-mlkit-docker-smoke.sh` now provides the first reproducible
 amd64-container smoke scaffold for building MLKit from `v4.7.5` and compiling
 `msort`, `fft`, and `ratio`. Docker is installed on this machine but the daemon
-was not running when checked, so the smoke script has not been executed.
+was not running when checked again on 2026-05-06 23:45 CEST, so the smoke
+script has not been executed.
 `scripts/reml-mlkit-docker-bench-draft.sh` adds a draft benchmark runner for
 `rg`, `rg-`, `r`, and `MLton` using a source-inspected mapping
 (`mlkit`, `mlkit -disable_spurious_type_variables`, `mlkit -no_gc`, and
@@ -131,14 +137,25 @@ Latest representative 1M rows:
 | Object allocation lowering | checked SafeZone-backed `14.903 ms`, checked Rift `16.039 ms`, heap `21.885 ms` | raw checked allocation is not the main remaining bottleneck |
 
 Profiling update:
-The next diagnostic layer should use the official Scala Native profiling
-workflow for native binaries (`/usr/bin/time`, native profilers, and `samply`
-where available) before more operator/runtime tuning. Add
-`docs/CPU_PROFILE_REPORT.md` after profiling Common Crawl-shaped q1/q2
-page-token rows, Dataflow AGGREGATE exact-array versus `EpochFold`,
-StreamFlex trusted Rift versus checked `TransactionRegion`, and Common Crawl
-q3 parser-scratch. Treat profile runs as attribution evidence, not headline
-timing.
+The diagnostic layer should use the official Scala Native profiling workflow
+for native binaries (`/usr/bin/time`, native profilers, and `samply` where
+available) before more operator/runtime tuning. The first sampled profile row
+is now recorded in `docs/CPU_PROFILE_REPORT.md`: GH Archive file-backed q1 with
+`rift-checked-safezone-page-token` is dominated by `BufferedReader`, UTF-8
+decoder/StringBuilder/String operations, field counting/hashing, and gzip
+inflate. Allocator/GC symbols are present but not dominant. This makes parser
+scratch/byte-slice JSON field extraction the next GH Archive technical target.
+Treat profile runs as attribution evidence, not headline timing.
+
+Latest GH Archive real-input checkpoint:
+Two hourly gzip JSON-line files were run file-backed at 200k events. q1 heap is
+`7549.355 ms`, RSS `2.43 GB`, GC `198.535 ms`; trusted Streaming is
+`7448.838 ms`, RSS `925 MB`, GC `154.497 ms`; checked scoped page-token is
+`7489.923 ms`, RSS `926 MB`, GC `193.910 ms`. q2 heap is `7641.540 ms`, RSS
+`2.43 GB`, GC `199.876 ms`; trusted Streaming is `7442.005 ms`, RSS `725 MB`;
+checked scoped page-token is `7498.263 ms`, RSS `926 MB`. Interpretation:
+real file-backed GH Archive is an RSS/fixed-memory/tail candidate with modest
+throughput wins, not yet a decisive checked throughput case study.
 
 Active update:
 Cheap checked page/token append operator implemented and measured; real WAT

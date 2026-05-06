@@ -1,9 +1,9 @@
 # Rift CPU Profiling Report
 
-Last updated: 2026-05-06 13:30 CEST
+Last updated: 2026-05-06 23:45 CEST
 
-Status: profiling runbook and empty report scaffold. No profile rows have been
-collected yet.
+Status: profiling runbook plus first sampled profile row. The first row covers
+GH Archive file-backed q1 with the checked SafeZone-backed page-token path.
 
 Reference: Scala Native official profiling guide:
 <https://scala-native.org/en/stable/user/profiling.html>
@@ -61,9 +61,22 @@ The current questions are:
 
 ## Results
 
-No profile rows collected yet.
-
-Future rows should include:
-
 | Date | Benchmark | Mode | Tool | Input/scale | Main hot symbols | Interpretation |
 |---|---|---|---|---|---|---|
+| 2026-05-06 | GH Archive q1-fields | `rift-checked-safezone-page-token` | macOS `/usr/bin/sample`, 10s sampled diagnostic | 2 hourly gzip JSON-line files, 200k real events, file-backed | `java.io.BufferedReader.readLine`, UTF-8 decoder loop, `AbstractStringBuilder.append0`, `String.charAt`, `BufferedReader.prepareRead`, `StringBuilder.append`, `GithubArchiveRegionMatrixHelpers.countJsonFields`, stable hashing, zlib inflate; allocator/GC present but lower | Remaining file-backed cost is parser/string/decompression dominated. Page-token already moves event/field records, but the current reader still creates heap strings/builders. Next optimization should be NDJSON byte/char-slice parser scratch before more region allocator tuning. |
+
+Profile artifact:
+
+`/Users/siyaoliu/rift/cache/profile-gharchive-q1-checked-2026-05-06/sample.txt`
+
+Profiled benchmark row:
+
+| Query | Mode | Median ms | GC ms | Max GC ms | Output count |
+|---|---|---:|---:|---:|---:|
+| q1-fields | `rift-checked-safezone-page-token` | `7393.602` | `192.570` | `193.221` | `2600000` |
+
+Important caveat: `/usr/bin/sample` was diagnostic only. Use the non-profiled
+3-run medians in `evidence/GITHUB_ARCHIVE_REGION_MATRIX.md` for headline
+timing.
+
+Future rows should include:

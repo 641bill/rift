@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-06 23:24 CEST
+Last updated: 2026-05-06 23:45 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -994,9 +994,14 @@ Current status:
 - `sandbox/src/main/scala-next/ReMLRegionMatrix.scala` and
   `sandbox/run_reml_region_matrix.sh` implement the first Scala Native
   ReML-shaped Tier 1 matrix.
-- Local smoke rows for `fib37`, `msort`, and `ratio` matched checksums. The
-  `ratio` smoke now retains region objects so checked allocation is not
-  optimized away. No Tier 1 headline medians have been recorded yet.
+- Local smoke rows for Tier 1 matched checksums. The `ratio` smoke now retains
+  region objects so checked allocation is not optimized away.
+- A 2026-05-06 Tier 1 3-run median matrix has been recorded. `msort`,
+  `msort-r`, and `ratio` are the meaningful allocation/RSS rows:
+  `checked-region-stream` is `104.358 ms` on `msort` versus heap
+  `124.983 ms`, `104.929 ms` on `msort-r` versus heap `126.163 ms`, and
+  `checked-region-scoped` is `48.929 ms` on `ratio` versus heap `51.302 ms`.
+  `fib37`, `tak`, `mandel`, and `life` are mostly compute/control rows.
 - ReML-inspired compiler probes now reject the previously ignored generic
   heap-retention case: heap generic `Cell[Box^{region}]`, widened `AnyRef`,
   heap-array retention, and escaping closure hiding are rejected when they flow
@@ -1005,13 +1010,16 @@ Current status:
 
 Required work:
 
-- Run 3-run Tier 1 medians and report relative region-vs-heap ratios, RSS, GC,
-  and checked overhead. Do not compare raw wall-clock to ReML paper numbers.
+- Keep Tier 1 interpreted as Scala Native ReML-shaped port evidence. Report
+  relative region-vs-heap ratios, RSS, GC, and checked overhead; do not compare
+  raw wall-clock to ReML paper numbers.
 - Compare overlapping Scala Native benchmark families where useful. In
   particular, `scala-native-benchmarks` has a Mandelbrot-style benchmark that
   can serve as an additional Scala Native control for the ReML `mandel` family
   once configuration differences are documented.
-- Search for exact MLKit/ReML benchmark provenance. If exact artifacts are not
+- Search for exact MLKit/ReML benchmark provenance. The public MLKit repo is
+  cloned in ignored cache and has likely paper-era tags, but host `mlkit`/
+  `mlton` are missing and Docker is not running. If exact artifacts are not
   available, mark exact reproduction unavailable and keep Scala Native ports
   labeled as methodology-shaped evidence.
 - If exact artifacts are found, rerun the paper configurations for `rg`,

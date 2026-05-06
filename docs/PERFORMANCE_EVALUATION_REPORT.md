@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-06 23:24 CEST
+Last updated: 2026-05-06 23:45 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -40,7 +40,7 @@ representative components.
 | Safe checked backend | `checked-region-scoped` is the best page-token backend in the clean final-selection sweep. It is fastest on focused page-token append and generated Common Crawl-shaped q1/q2. |
 | Real-input stream evidence | Current real/preloaded WET, Wikimedia, Linear Road, Yahoo, and RIoTBench rows mostly have low/zero median GC or heap wins. They are ceiling controls, not final Rift case studies. |
 | Strongest memory-pressure row | Generated Common Crawl WET-shaped q1/q2 creates heavy stream object churn: in the clean final-selection sweep, heap spends `1625.936 ms` timed GC on q1 and `1643.346 ms` on q2. Checked scoped page-token is fastest (`3860.248 ms` q1, `3895.711 ms` q2), followed by checked Rift page-token (`4159.837 ms` q1, `4175.633 ms` q2). |
-| ReML/MLKit lineage | Tier 1 Scala Native ReML-shaped medians now exist. `msort`, `msort-r`, `fft`, and `ratio` show useful checked-region behavior; exact ReML artifact rerun remains open. |
+| ReML/MLKit lineage | Tier 1 Scala Native ReML-shaped medians now exist. `msort`, `msort-r`, and `ratio` show useful checked-region allocation/RSS/GC behavior; exact ReML artifact rerun remains blocked by missing local `mlkit`/`mlton` and no running Docker daemon. |
 
 The strongest current claim is:
 
@@ -75,9 +75,11 @@ Latest clean final-selection headline interpretation:
 - GH Archive-shaped q1/q2 now favor checked page-token on uncapped generated
   rows: q1 `262.139 ms` versus heap `293.716 ms`; q2 `261.762 ms` versus heap
   `279.743 ms`, with much lower RSS.
-- ReML-shaped Tier 1 ports add a non-stream axis: checked stream wins `msort`
-  (`106.813 ms` versus heap `118.185 ms`) and `msort-r` (`103.878 ms` versus
-  heap `127.936 ms`) while cutting RSS substantially.
+- ReML-shaped Tier 1 ports add a non-stream axis. In the latest direct Tier 1
+  run, checked stream wins `msort` (`104.358 ms` versus heap `124.983 ms`) and
+  `msort-r` (`104.929 ms` versus heap `126.163 ms`) while cutting RSS
+  substantially; `ratio` is a smaller elapsed win (`48.929-49.681 ms` checked
+  versus heap `51.302 ms`) but a strong RSS/GC reduction.
 - Generated Common Crawl WET-shaped q1/q2 is the current best GC-heavy stream
   stressor; q3 parser-scratch is a negative/mixed control and real-input
   GC-heavy proof is still open.
@@ -105,6 +107,15 @@ throughput improves. StreamFlex is the current example: scoped
 
 The project still does not have a final checked application result on a
 real-input GC-heavy stream benchmark.
+
+The closest real-input stream candidate is GH Archive. File-backed q1/q2 now
+include gzip read/decompression and JSON field extraction during timing. At
+two hourly files / 200k real events, trusted Streaming modestly beats heap and
+cuts RSS from about `2.43 GB` to `0.72-0.93 GB`; checked scoped page-token is a
+near-tie with similar RSS reduction. A sampled profile shows the remaining
+time is dominated by line reading, UTF-8/string builder work, field counting,
+hashing, and gzip inflate. That means GH Archive is currently an RSS/fixed-
+memory/tail candidate, not yet a decisive checked throughput case study.
 
 ## 2. Design Target
 
@@ -161,7 +172,7 @@ Detailed taxonomy: `docs/MEMORY_MODE_TAXONOMY.md`.
 | Checked SafeZone-backed backend | Implemented as benchmark prototype | `RiftRegion.streamingSafeZone(...)`; object allocation/close supported, raw allocation/reset unsupported. |
 | Canonical benchmark labels | Implemented for key matrices | Checked AppendWindow and Common Crawl WET-shaped runners accept new names and old aliases. |
 | Cheap checked operator families | Started | `PageTokenMapFilter`, `RegionList`, `EpochBuffer`, and `TransactionRegion` are now real reusable APIs with passing safety probes. In the latest staged sweep, scoped checked append operators remain fast (`26.461 ms` scoped EpochBuffer, `26.883 ms` scoped page-token vs heap `36.944 ms`). `TransactionRegion` fixes the stacked-EpochBuffer StreamFlex granularity issue enough that scoped checked transaction is the best checked StreamFlex row (`39.019 ms`), but trusted Rift remains faster. `EpochFold` is implemented and correct but failed the Dataflow AGGREGATE speed gate (`92.923 ms`). |
-| ReML/MLKit comparison track | Scaffolded | `ReMLRegionMatrix` implements Tier 1 Scala Native-shaped ports and `REML_COMPARISON_MATRIX.md` records paper-reported ReML data. The public MLKit repo has been cloned into ignored cache and contains many Figure 9-style benchmark sources; exact paper-era configuration and local MLKit/MLton toolchain reproduction remain open. |
+| ReML/MLKit comparison track | Started with local medians | `ReMLRegionMatrix` implements Tier 1 Scala Native-shaped ports and `REML_COMPARISON_MATRIX.md` records paper-reported ReML data. The 2026-05-06 Tier 1 run gives local medians for `fib37`, `tak`, `mandel`, `msort`, `msort-r`, `life`, `fft`, and `ratio`; `msort`/`msort-r`/`ratio` are the meaningful allocation/RSS rows. The public MLKit repo has been cloned into ignored cache and contains many Figure 9-style benchmark sources; exact paper-era configuration and local MLKit/MLton toolchain reproduction remain open. |
 | Final component selection | Started | `docs/FINAL_COMPONENT_SELECTION.md` classifies public candidates, internal lower-bound controls, and gated/rejected operators without deleting runtime code. The parent evaluation runner and main sandbox matrices now exclude current/rootless controls by default; set `RIFT_EVAL_INCLUDE_CONTROLS=1` or `RIFT_BENCH_INCLUDE_CONTROLS=1` to reproduce lower-bound/control rows. Dirty-worktree smoke run `2026-05-06-final-selection-smoke` completed broad suites with `include_controls=0`; it validates runner behavior, not headline performance. |
 | Performance report package | In progress | This report now consolidates the main evidence; individual packs remain backing data. |
 
@@ -321,13 +332,21 @@ tracing-GC safety when region values can be hidden by polymorphic types.
 | Evidence class | Current status | Claim boundary |
 |---|---|---|
 | Paper-reported ReML table | Elsman 2023 Figure 9 is transcribed into tracked evidence. | Literature anchor only; not local measurement. |
-| Exact artifact rerun | Open. Current MLKit HEAD was inspected and contains many benchmark sources; paper-era source/configuration and local `mlkit`/`mlton` toolchain runs remain to be pinned. | Required before any raw wall-clock "Rift beats ReML" claim. |
-| Scala Native ports | `ReMLRegionMatrix` has Tier 1 ports for `fib37`, `tak`, `mandel`, `msort`, `msort-r`, `life`, `fft`, and `ratio`. | Valid for local Rift-vs-Scala-Native ratios, not exact ReML reproduction. |
+| Exact artifact rerun | Open. Current MLKit HEAD was inspected and contains many benchmark sources; paper-era source/configuration and local `mlkit`/`mlton` toolchain runs remain to be pinned. Host `mlkit`/`mlton` are missing, and Docker is installed but the daemon is not running. | Required before any raw wall-clock "Rift beats ReML" claim. |
+| Scala Native ports | `ReMLRegionMatrix` has Tier 1 medians for `fib37`, `tak`, `mandel`, `msort`, `msort-r`, `life`, `fft`, and `ratio`. | Valid for local Rift-vs-Scala-Native ratios, not exact ReML reproduction. |
 | Safety probes | ReML-inspired compiler probes now include local polymorphic use, generic identity escape, generic heap-cell durable retention, widened `AnyRef`, heap arrays, closure hiding, and unrooted heap metadata. | The previous erased-generic gap is fixed at the current durable/static-retention probe level. Broader heap alias analysis remains open. |
 
-The next useful result here is a Tier 1 3-run local matrix reporting
-region-vs-heap ratios, RSS, GC time/count, and checked overhead. It should be
-interpreted separately from stream workloads.
+Tier 1 interpretation:
+
+| Workload | Best local checked row | Heap row | Current meaning |
+|---|---:|---:|---|
+| `msort` | checked stream `104.358 ms`, RSS `10.4 MB` | `124.983 ms`, RSS `21.4 MB`, GC `27.180 ms` | allocation/RSS win on a linked-node sort shape. |
+| `msort-r` | checked stream `104.929 ms`, RSS `10.4 MB` | `126.163 ms`, RSS `39.2 MB`, GC `27.280 ms` | allocation/RSS win on reverse-input linked sort. |
+| `ratio` | checked scoped `48.929 ms`, RSS `16.0 MB`, GC `0` | `51.302 ms`, RSS `44.0 MB`, GC `3.191 ms` | modest elapsed win and strong RSS/GC reduction. |
+| `fib37`/`tak`/`mandel`/`life` | small or noisy differences | heap has no material GC | compute/control rows, not memory-management evidence. |
+
+These should be interpreted separately from stream workloads and compared to
+ReML by relative ratios until exact MLKit/ReML artifacts are run locally.
 
 ### Cheap Operator Family Checkpoint
 
@@ -384,8 +403,10 @@ operator problems with separate gates.
 | Real Common Crawl WAT q4/q5 | real preloaded WAT shard | q4 heap `33.646 ms`; q5 heap `35.066 ms`; GC `0.000 ms` | q4 improved-32k `39.551 ms`; q5 `39.579 ms` | SafeZone-backed page-token q4 `31.792 ms`; q5 `33.937 ms` | Real link-object path works and wins modestly, but heap still has zero timed GC; ceiling/control evidence. |
 | GH Archive q1 fields | real preloaded NDJSON | 8-hour oracle 1M heap `293.204 ms`, max GC `135.368 ms`, RSS `1.74 GB`; 1G heap-cap diagnostic `395.295 ms`, median GC `92.347 ms` | 8-hour improved-32k `374.923 ms` | 8-hour Streaming rerun `340.820 ms`; SafeZone-backed page-token `348.817 ms` | Heap wins uncapped median by growing to a large heap; checked region wins the 1G memory-budget diagnostic and removes GC tails. |
 | GH Archive q1 fields | real file-backed NDJSON | 100k heap uncapped `4014.909 ms`, median GC `157.495 ms`, RSS `1.22 GB`; `1G` cap fails with signal 11 | improved-32k `4000.812 ms`, RSS `673.8 MB` | Streaming `3995.238 ms`, RSS `673.6 MB`; SafeZone-backed page-token `4023.883 ms`, RSS `674.7 MB` | Mostly RSS/fixed-memory evidence: trusted Streaming modestly wins elapsed, checked scoped page-token is a near tie/slight elapsed loss, and parser/string allocation still triggers GC in every mode. |
+| GH Archive q1 fields | real file-backed NDJSON, 2 hourly files | 200k heap `7549.355 ms`, median GC `198.535 ms`, RSS `2.43 GB` | not rerun in this subset | Streaming `7448.838 ms`, RSS `925.5 MB`; SafeZone-backed page-token `7489.923 ms`, RSS `925.6 MB` | Larger file-backed row strengthens the RSS/fixed-memory story; throughput win remains modest because parser/string/decompression dominates. |
 | GH Archive q2 repo window | real preloaded NDJSON | 8-hour oracle 1M heap `271.880 ms`, max GC `136.353 ms` | improved-32k `363.049 ms` | Streaming `325.665 ms`; SafeZone-backed page-token `347.033 ms` | Heap median wins; repo-window aggregation CPU dominates despite a GC outlier. |
 | GH Archive q2 repo window | real file-backed NDJSON | 100k heap `3995.632 ms`, median GC `158.277 ms`, RSS `1.22 GB`; `1G` cap fails with signal 11 | improved-32k `3934.094 ms`, RSS `672.1 MB` | Streaming `3906.291 ms`, RSS `673.6 MB`; SafeZone-backed page-token `3921.127 ms`, RSS `673.8 MB` | With parsing timed, q2 becomes a modest region/RSS/fixed-memory win; parser/string allocation still causes GC in region rows. |
+| GH Archive q2 repo window | real file-backed NDJSON, 2 hourly files | 200k heap `7641.540 ms`, median GC `199.876 ms`, RSS `2.43 GB` | not rerun in this subset | Streaming `7442.005 ms`, RSS `724.8 MB`; SafeZone-backed page-token `7498.263 ms`, RSS `925.6 MB` | Streaming modestly wins elapsed and strongly wins RSS; checked scoped page-token is near-tied and still blocked by parser/string heap allocation. |
 | Wikimedia real clickstream | real preloaded TSV | heap `126.800 ms` | improved `149.062 ms` | Streaming `157.449 ms` | Heap wins; ceiling control. |
 | Linear Road official q1 | official input | heap `162.668 ms` | source pack | HPZone `180.277 ms` | Heap wins; ceiling control. |
 
@@ -496,12 +517,15 @@ The next implementation work should be ordered like this:
    Scala Native's official profiling guidance treats Scala Native output as a
    native binary: use external time/RSS tools, platform native profilers, and
    `samply`/flamegraph-style sampled profiles where available. Use profiling as
-   diagnostic evidence, not headline timing. Record the run plan and results in
-   `docs/CPU_PROFILE_REPORT.md` after profiling the smallest representative set:
-   Common Crawl-shaped q1/q2 (`heap-immix`, `rift-checked-page-token`,
-   `rift-checked-safezone-page-token`), Dataflow AGGREGATE exact-array versus
-   true `EpochFold`, StreamFlex trusted Rift versus checked
-   `TransactionRegion`, and Common Crawl q3 parser-scratch. The goal is to
+   diagnostic evidence, not headline timing. The first GH Archive file-backed
+   q1 profile is now recorded in `docs/CPU_PROFILE_REPORT.md`; it points to
+   `BufferedReader`/UTF-8/StringBuilder/field-count/hashing/gzip work, not
+   region close, as the next bottleneck. Continue profiling the smallest
+   representative set: Common Crawl-shaped q1/q2 (`heap-immix`,
+   `rift-checked-page-token`, `rift-checked-safezone-page-token`), Dataflow
+   AGGREGATE exact-array versus true `EpochFold`, StreamFlex trusted Rift
+   versus checked `TransactionRegion`, and Common Crawl q3 parser-scratch. The
+   goal is to
    attribute remaining time to object construction, checked allocation
    lowering, operator/link/cursor traversal, SafeZone claim/reclaim/root work,
    parser/token scratch, rank/table maintenance, or output/checksum CPU.
@@ -525,12 +549,12 @@ The next implementation work should be ordered like this:
    Do not add more TableRank/rank-style application integration until focused
    gates pass.
 
-7. **Run the ReML/MLKit Tier 1 comparison as a separate axis.**
-   Run `ReMLRegionMatrix` for `fib37`, `tak`, `mandel`, `msort`, `msort-r`,
-   `life`, `fft`, and `ratio` with 3-run medians, then decide whether Tier 2
-   ports are worth adding. Keep exact ReML artifact search open, and treat the
-   fixed erased-generic probe as current compiler evidence rather than a full
-   proof of arbitrary heap alias safety.
+7. **Continue the ReML/MLKit comparison as a separate axis.**
+   Tier 1 local medians now exist. Next, pin the exact MLKit/ReML artifact or
+   build environment, verify the paper's `rg`/`rg-`/`r` command mapping, and
+   decide whether Tier 2 ports are worth adding. Keep exact ReML artifact search
+   open, and treat the fixed erased-generic probe as current compiler evidence
+   rather than a full proof of arbitrary heap alias safety.
 
 8. **Run final component selection benchmarks.**
    Use `docs/FINAL_COMPONENT_SELECTION.md` as the public/internal filter:

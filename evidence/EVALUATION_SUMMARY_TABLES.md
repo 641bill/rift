@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Tables
 
 Date: 2026-05-01
-Last updated: 2026-05-06 00:55 CEST
+Last updated: 2026-05-06 23:45 CEST
 
 Status: seeded summary pack for the comprehensive evaluation. Rows below are
 current checked-in evidence unless marked pending rerun.
@@ -34,6 +34,8 @@ SafeZone-cost. Competitive rows skip current SafeZone by default.
 | Common Crawl-shaped q2 | checked SafeZone page-token `3732.171 ms`, checked Rift page-token `3972.493 ms`, heap `5183.656 ms` with `1526.751 ms` GC | strongest checked generated window win |
 | Common Crawl-shaped q3 | heap `10188.412 ms`; SafeZone-family rows can be much slower | parser-scratch shape is negative/mixed, not a case-study target |
 | GH Archive-shaped | q1 trusted Streaming `246.174 ms` and q2 trusted HP `233.427 ms`; heap q1/q2 `286.721` / `268.717 ms` | generated GH-shaped row favors regions; still not real-input proof |
+| GH Archive file-backed 2h | q1 Streaming `7448.838 ms`, checked scoped page-token `7489.923 ms`, heap `7549.355 ms`; q2 Streaming `7442.005 ms`, checked scoped page-token `7498.263 ms`, heap `7641.540 ms` | real file-backed RSS/fixed-memory row: heap around `2.43 GB` RSS, region rows around `0.72-0.93 GB`; profile says parser/string/decompression dominates |
+| ReML-shaped Tier 1 | checked stream `msort` `104.358 ms` vs heap `124.983 ms`; `msort-r` `104.929 ms` vs heap `126.163 ms`; checked scoped `ratio` `48.929 ms` vs heap `51.302 ms` | local Scala Native port evidence for MLKit/ReML lineage; not exact ReML reproduction |
 | Linear Road | heap fastest or tied on q0/q1/q2 despite GC reduction in region modes | ceiling/control evidence |
 
 Key SafeZone-cost decomposition from the corrected continuation:

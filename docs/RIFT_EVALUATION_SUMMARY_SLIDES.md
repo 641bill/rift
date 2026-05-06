@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-06 23:24 CEST
+Last updated: 2026-05-06 23:45 CEST
 
 Status: markdown slide deck outline. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report and this file as
@@ -217,6 +217,29 @@ The file-backed q1/q2 rows include gzip/JSON parsing in timing and show
 RSS/fixed-memory wins; both heap rows fail under a `1G` cap. Parser/string
 allocation still causes GC in region rows too, so parser scratch is the next
 technical question.
+
+The 2-hour file-backed GH Archive rows strengthen that interpretation:
+heap uses about `2.43 GB` RSS, while region rows use about `0.72-0.93 GB`.
+Trusted Streaming is modestly faster on q1/q2, checked scoped page-token is
+near-tied, and a sampled q1 profile shows the remaining bottleneck is
+`BufferedReader`/UTF-8/StringBuilder/field parsing/hashing/gzip rather than
+region close.
+
+## Slide 14: ReML / MLKit Axis
+
+This is not stream evidence; it tests the MLKit/ReML lineage: higher-order,
+polymorphic, region+GC safety.
+
+| Workload | Heap | Best checked | Meaning |
+|---|---:|---:|---|
+| `msort` | `124.983 ms`, RSS `21.4 MB`, GC `27.180 ms` | checked stream `104.358 ms`, RSS `10.4 MB`, GC `6.063 ms` | local linked-allocation win. |
+| `msort-r` | `126.163 ms`, RSS `39.2 MB`, GC `27.280 ms` | checked stream `104.929 ms`, RSS `10.4 MB`, GC `6.005 ms` | local reverse-list allocation win. |
+| `ratio` | `51.302 ms`, RSS `44.0 MB`, GC `3.191 ms` | checked scoped `48.929 ms`, RSS `16.0 MB`, GC `0` | modest elapsed, strong RSS/GC win. |
+
+Exact ReML/MLKit reproduction is still open: public MLKit sources and likely
+paper-era tags are found, but host `mlkit`/`mlton` are missing and Docker is
+not running. Until exact artifacts run locally, compare ratios and safety
+properties, not raw cross-language wall-clock.
 
 Every stream headline should now say whether the win is uncapped throughput,
 fixed-memory, RSS, or tail-latency evidence.
