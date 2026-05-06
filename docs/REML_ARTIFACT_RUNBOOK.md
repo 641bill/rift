@@ -112,10 +112,36 @@ Open mapping gaps:
    - `r`: pure region inference/no tracing GC.
    - `MLton`: optimizing SML baseline.
 
+   Current source-inspected draft mapping:
+
+   | Paper label | Draft command shape | Evidence |
+   |---|---|---|
+   | `rg` | `mlkit <source>` | `KitX64.sml` turns on `garbage_collection`; `Flags.sml` keeps region inference enabled by default. |
+   | `rg-` | `mlkit -disable_spurious_type_variables <source>` | `RegInf.sml` defines this flag as disabling inference of spurious type variables and says it matters when GC is enabled. |
+   | `r` | `mlkit -no_gc <source>` | `test/Makefile` uses `kittester ... -no_gc` for "MLKit with Regions"; `Flags.sml` turns off GC and leaves region inference on. |
+   | `MLton` | `mlton <source>` | MLKit benchmark harness supports `-mlton` rows. |
+
+   This mapping is plausible, but must be validated against the paper/artifact
+   before headline claims.
+
 5. Run exact medians.
    - At least 3 runs for every program/mode.
    - Record real time, RSS, GC count, command line, source revision, and
      output/checksum where available.
+
+   Draft benchmark scaffold after the smoke passes:
+
+   ```sh
+   cd /Users/siyaoliu/rift
+   MLKIT_TAG=v4.7.5 \
+   REML_WORKLOADS="msort fft ratio" \
+   REML_RUNS=3 \
+   bash scripts/reml-mlkit-docker-bench-draft.sh
+   ```
+
+   This produces raw logs under `cache/reml/runs/<run-id>/`. Rows from this
+   script must be labeled draft/provisional until the mode mapping above is
+   confirmed.
 
 6. Compare to Rift.
    - Do not compare raw wall-clock as the primary claim unless tools and source

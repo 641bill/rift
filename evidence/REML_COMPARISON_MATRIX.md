@@ -68,6 +68,18 @@ Open provenance gaps:
 - The current public source has MLKit flags for region inference, no-GC region
   mode, tracing GC, and generational GC. It does not yet give us a validated
   mapping from the paper labels `rg`, `rg-`, and `r` to concrete command lines.
+
+Source-inspected draft mapping, not yet paper-confirmed:
+
+| Paper label | Draft command shape | Source evidence |
+|---|---|---|
+| `rg` | `mlkit <source>` | `KitX64.sml` turns on `garbage_collection`; region inference is enabled by default. |
+| `rg-` | `mlkit -disable_spurious_type_variables <source>` | `RegInf.sml` defines this flag and says it matters when GC is enabled. |
+| `r` | `mlkit -no_gc <source>` | `test/Makefile` labels `kittester ... -no_gc` as "MLKit with Regions". |
+| `MLton` | `mlton <source>` | `src/Tools/Benchmark` supports MLton rows. |
+
+`scripts/reml-mlkit-docker-bench-draft.sh` encodes this mapping for smoke and
+provisional rows once an amd64 Docker daemon or host is available.
 - The mapping from paper modes `rg`, `rg-`, and `r` to concrete MLKit command
   flags must be verified from the paper-era sources or author artifact before
   reporting exact reproduction.

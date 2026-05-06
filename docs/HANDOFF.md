@@ -61,6 +61,11 @@ claim raw "Rift beats ReML" until those exact local runs exist.
 amd64-container smoke scaffold for building MLKit from `v4.7.5` and compiling
 `msort`, `fft`, and `ratio`. Docker is installed on this machine but the daemon
 was not running when checked, so the smoke script has not been executed.
+`scripts/reml-mlkit-docker-bench-draft.sh` adds a draft benchmark runner for
+`rg`, `rg-`, `r`, and `MLton` using a source-inspected mapping
+(`mlkit`, `mlkit -disable_spurious_type_variables`, `mlkit -no_gc`, and
+`mlton`). Treat any rows from it as provisional until the paper/artifact flag
+mapping is confirmed.
 
 ReML-inspired safety checkpoint:
 The checked compiler suite now includes local polymorphic consumer acceptance,
