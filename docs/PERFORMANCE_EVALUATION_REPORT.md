@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-07 00:28 CEST
+Last updated: 2026-05-07 01:23 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -38,7 +38,7 @@ representative components.
 | Runtime substrate | Improved SafeZone/rooted scoped regions remain the safe baseline; rootless/trusted rows are now explicit controls, not default public evidence. |
 | Checked Rift | Checked APIs are fast for simple append/window shapes. Page-token, Dataflow SELECT, RegionList, GH Archive-shaped q1/q2, and generated Common Crawl-shaped q1/q2 clear useful gates; rank/fold/table containers still add too much CPU overhead. |
 | Safe checked backend | `checked-region-scoped` is the best page-token backend in the clean final-selection sweep. It is fastest on focused page-token append and generated Common Crawl-shaped q1/q2. |
-| Real-input stream evidence | GH Archive byte-slice file-backed q1/q2 is now the strongest real-input modest-win candidate: at two hourly files / 200k events, checked scoped page-token and trusted Streaming are modest throughput/RSS/tail wins. It is not GC-heavy: heap GC is only about `58-62 ms` inside roughly `3.8 s` elapsed. Current real/preloaded WET, Wikimedia, Linear Road, Yahoo, and RIoTBench rows mostly have low/zero median GC or heap wins. |
+| Real-input stream evidence | GH Archive byte-slice file-backed q1/q2 and LogHub BGL are now the strongest real-input modest-win candidates. GH Archive q1/q2 at two hourly files / 200k events gives modest throughput/RSS/tail wins, but heap GC is only about `58-62 ms` inside roughly `3.8 s`. LogHub BGL at 1M real lines triggers steadier heap GC (`99-157 ms`) and modest region wins; full-file q2 spends `595.599 ms` in heap GC inside `32.161 s`. These are useful real-input controls, not the missing huge-GC flagship. |
 | Strongest memory-pressure row | Generated Common Crawl WET-shaped q1/q2 creates heavy stream object churn: in the clean final-selection sweep, heap spends `1625.936 ms` timed GC on q1 and `1643.346 ms` on q2. Checked scoped page-token is fastest (`3860.248 ms` q1, `3895.711 ms` q2), followed by checked Rift page-token (`4159.837 ms` q1, `4175.633 ms` q2). |
 | ReML/MLKit lineage | Tier 1 Scala Native ReML-shaped medians now exist. `msort`, `msort-r`, and `ratio` show useful checked-region allocation/RSS/GC behavior; exact ReML artifact rerun remains blocked by missing local `mlkit`/`mlton` and no running Docker daemon. |
 
@@ -81,6 +81,13 @@ Latest clean final-selection headline interpretation:
   checked scoped page-token is `3629.193 ms`, both with zero timed GC and
   about `211 MB` RSS. q2 is similar: heap `3756.950 ms`, checked scoped
   page-token `3626.107 ms`.
+- Real file-backed LogHub BGL now has a line/token/window matrix. At 1M real
+  lines, q1 heap is `5568.252 ms` with `99.271 ms` GC and trusted Streaming
+  is `5491.033 ms`; q2 heap is `5646.824 ms` with `157.198 ms` GC and
+  improved SafeZone-32k is `5509.481 ms`. A full-file q2 single-run probe
+  loads `4747963` lines: heap `32161.391 ms`, `595.599 ms` GC, RSS
+  `576012288`; checked scoped page-token `31165.087 ms`, zero timed GC, RSS
+  `490946560`.
 - ReML-shaped Tier 1 ports add a non-stream axis. In the latest direct Tier 1
   run, checked stream wins `msort` (`104.358 ms` versus heap `124.983 ms`) and
   `msort-r` (`104.929 ms` versus heap `126.163 ms`) while cutting RSS
@@ -123,7 +130,11 @@ UTF-8 bytes. At two hourly files / 200k real events, both trusted Streaming
 and checked scoped page-token modestly beat heap while cutting RSS from about
 `290 MB` to about `211 MB` and removing timed GC. This is a real-input
 throughput/RSS/tail win, but it is not a GC-heavy case study: the heap row
-spends only about `1.5-1.6%` of elapsed time in timed GC.
+spends only about `1.5-1.6%` of elapsed time in timed GC. LogHub BGL is the
+newest real log control and is slightly more GC-visible than GH Archive
+byte-slice, but it reaches the same conclusion: regions remove timed GC and
+can modestly improve elapsed/RSS/tails, while parser/token/query CPU still
+dominates.
 
 ## 2. Design Target
 
@@ -417,6 +428,8 @@ operator problems with separate gates.
 | GH Archive q2 repo window | real file-backed NDJSON | 100k heap `3995.632 ms`, median GC `158.277 ms`, RSS `1.22 GB`; `1G` cap fails with signal 11 | improved-32k `3934.094 ms`, RSS `672.1 MB` | Streaming `3906.291 ms`, RSS `673.6 MB`; SafeZone-backed page-token `3921.127 ms`, RSS `673.8 MB` | With parsing timed, q2 becomes a modest region/RSS/fixed-memory win; parser/string allocation still causes GC in region rows. |
 | GH Archive q2 repo window | real file-backed NDJSON, 2 hourly files, legacy string parser | 200k heap `7641.540 ms`, median GC `199.876 ms`, RSS `2.43 GB` | not rerun in this subset | Streaming `7442.005 ms`, RSS `724.8 MB`; SafeZone-backed page-token `7498.263 ms`, RSS `925.6 MB` | Legacy parser row: Streaming modestly wins elapsed and strongly wins RSS; checked scoped page-token is near-tied. |
 | GH Archive q2 repo window | real file-backed NDJSON, 2 hourly files, byte-slice parser | 200k heap `3756.950 ms`, median GC `61.625 ms`, RSS `290 MB` | not rerun in this subset | Streaming `3645.458 ms`, RSS `211 MB`; SafeZone-backed page-token `3626.107 ms`, RSS `211 MB` | Byte-slice parser-scratch turns q2 into a modest checked scoped page-token win with zero timed GC in region rows. Not GC-heavy: heap GC is about `1.6%` of elapsed. |
+| LogHub BGL q1 tokens | real file-backed BGL system log | 1M heap `5568.252 ms`, median GC `99.271 ms`, RSS `408 MB`; 256M heap cap `5807.256 ms`, median GC `194.609 ms` | improved-32k `5589.860 ms`, RSS `358 MB` | Streaming `5491.033 ms`, RSS `358 MB`; checked scoped page-token `5552.988 ms`, RSS `476 MB` | Real log stream modest win/control: heap GC appears in every 1M run but remains only about 1.8% of elapsed. Trusted Streaming wins modestly and reduces RSS; checked scoped page-token is near-tied but high-RSS in this row. |
+| LogHub BGL q2 window counts | real file-backed BGL system log | 1M heap `5646.824 ms`, median GC `157.198 ms`, RSS `409 MB`; full-file q2 heap `32161.391 ms`, GC `595.599 ms`, RSS `576 MB` | 1M improved-32k `5509.481 ms`; full-file improved-32k `31459.104 ms`, RSS `490 MB` | 1M Streaming `5605.787 ms`; full-file Streaming `30899.595 ms`; full-file checked scoped page-token `31165.087 ms`, RSS `491 MB` | Full-file q2 is a real-input modest throughput/RSS/tail win for region rows, but heap GC is still under 2% of elapsed, so it is not the missing huge-GC case. |
 | Wikimedia real clickstream | real preloaded TSV | heap `126.800 ms` | improved `149.062 ms` | Streaming `157.449 ms` | Heap wins; ceiling control. |
 | Linear Road official q1 | official input | heap `162.668 ms` | source pack | HPZone `180.277 ms` | Heap wins; ceiling control. |
 
@@ -430,6 +443,7 @@ operator problems with separate gates.
 | NEXMark Q3/Q8 checked rows | Shows checked operator surface can beat heap and improved SafeZone on recognized stream-methodology shapes, though margins are still modest. |
 | Modest real-input page-token WET/WAT rows | Shows the operator works on real Common Crawl records and sometimes improves elapsed/RSS, even though these shards are not GC-heavy enough for a representative case study. |
 | RSS/fixed-memory wins | Shows regions can be valuable even when uncapped throughput is only tied or modestly worse; GH Archive q1 under heap cap and several ReML-shaped ports belong here. |
+| LogHub BGL q1/q2 modest wins | Shows the page/token/log-line shape generalizes beyond GH Archive and Common Crawl-shaped stressors to a public multi-million-line real system log. The result is useful but still parser/query dominated. |
 | SafeZone-backed checked AppendWindow | Shows SafeZone-family backend mechanics can reduce checked overhead without changing the user-level checked API. |
 | Checked page/token append operator | Shows static lifetime ownership can remove redundant runtime checks and turn the generated Common Crawl-like q1/q2 path from checked-overhead evidence into a checked generated-stressor win. |
 | SafeZone cost decomposition | Shows old SafeZone slowness was largely root bookkeeping and page-size configuration, not inherent region cost. |
@@ -442,7 +456,7 @@ operator problems with separate gates.
 | Current Rift HPZone loses to improved SafeZone on linked/prior-work rows. | Standalone Rift allocator should learn from SafeZone internals instead of being tuned in isolation. |
 | Generic checked Common Crawl q1/q2 trail trusted Rift. | The generic `StreamAppendWindow` allocator placement is correct but too costly. The specialized page/token operator fixes this generated q1/q2 shape, but not yet real inputs or other operators. |
 | TableRank / rank / fold containers fail focused gates. | Do not use them for application claims yet. |
-| Real WET/WAT/Wikimedia/Linear Road rows mostly heap-fastest or median-GC-zero. | These inputs, as currently wired, do not stress GC enough; they are controls, not failures to tune. GH Archive q1 is now a memory-budget/tail-latency candidate rather than an uncapped throughput win. |
+| Real WET/WAT/Wikimedia/Linear Road rows mostly heap-fastest or median-GC-zero; LogHub/GH Archive are only modest wins. | These inputs, as currently wired, do not stress GC enough for the flagship claim. GH Archive q1 and LogHub BGL q2 are memory-budget/tail/modest-throughput candidates rather than decisive uncapped throughput wins. |
 | CPU-bound rows like pipeline surrogate. | Regions add overhead when memory management is not the limiting factor. |
 | Fixed-chunk append path. | Array/chunk structures are not automatically faster; the fair heap-chunk and checked chunk-token controls are slower than linked page-token for sequential append/drain. |
 
@@ -453,6 +467,7 @@ operator problems with separate gates.
 | Generated Common Crawl WET-shaped q1/q2 | `rift-checked-page-token` and `rift-checked-safezone-improved-32k` page-token | Checked operator-owned child buckets; SafeZone-backed row delegates object allocation to improved SafeZone + 32 KiB pages. | Generated WET-shaped stressor, 1M pages / 137M token records. | Heap spends about `1.57 s` in timed GC; many page/token records share page/window lifetimes. | Page/token records in regions; durable counters/config on heap or primitive arrays. | Uncapped generated-stressor throughput win; not real-input proof. |
 | Focused page/token append | `rift-checked-page-token` | Same checked API idea without application parsing or aggregation. | Synthetic focused append matrix, 1M records. | Isolates append/object lifetime overhead rather than full GC pressure. | Short-lived records in child bucket regions; operator metadata on parent/heap. | Static-safety overhead-removal win. |
 | GH Archive q1 under heap budget | `rift-checked-safezone-page-token` compared with capped `heap-immix` | Checked page-token path over SafeZone-backed region allocation. | Real preloaded GH Archive NDJSON, 1M events / 13M event-field records. | Uncapped heap wins by growing to about `1.7 GiB`; under `1G` cap heap collects materially and slows. | Event/field records in regions; preloaded primitive input arrays and control metadata on heap. | Fixed-memory / GC-tail candidate, not uncapped throughput win. |
+| LogHub BGL full-file q2 | `rift-trusted-streaming`, `rift-checked-safezone-page-token`, and `safezone-improved-32k` | Line/token records are allocated with window/bucket lifetimes; checked scoped page-token uses the safe operator-owned path. | Real BGL system log, full `4747963` lines / `66868883` line+token records. | Heap spends `595.599 ms` in GC, but that is still under 2% of total elapsed. | Line/token records in regions; file input, severity/component classification, and aggregate counters remain heap/primitive. | Real-input modest throughput/RSS/tail control, not flagship GC-heavy proof. |
 | NEXMark Q3/Q8 | `rift-checked-rift` | Checked region APIs on generated Beam-default methodology streams. | Generated NEXMark profile. | Moderate object/window pressure; margins are modest. | Event/window records in regions where checked operator exists; durable tables/counters on heap. | Generated methodology win/near-win. |
 | Broom-style Dataflow | `rift-checked-rift`, with SafeZone-family often fastest | Checked local epoch objects; SafeZone-family rows measure allocator substrate. | Local SELECT/AGGREGATE/JOIN methodology reproduction. | Documents/outputs are epoch-local. | Per-epoch document/output objects in regions; control state on heap. | Prior-work-shaped method evidence, not exact artifact reproduction. |
 | Real WET/WAT current shards | `rift-checked-safezone-improved-32k` page-token | Checked page/link-object path works over real preloaded data. | Real Common Crawl WET/WAT shards. | Current shards report zero timed heap GC, so this is not yet GC-heavy. | Page/link/token records in regions; input/control on heap. | Real-input ceiling/control with modest region wins only. |
@@ -485,12 +500,12 @@ where object churn and epochal lifetimes are both present.
 
 | Priority | Candidate | Why | First gate |
 |---:|---|---|---|
-| 1 | Larger/multiple Common Crawl WET/WAT shards | Same domain as current GC-heavy stressor; one WAT shard was not enough to trigger GC. | Actual loaded pages/tokens/links large enough; heap median/max GC material. |
-| 2 | GH Archive file-backed and memory-budget JSON-lines | Preloaded q1 shows heap can avoid GC by growing to GB-scale RSS; under a 1G heap cap checked regions win q1. File-backed q1/q2 rows show RSS/fixed-memory wins, and heap fails at `1G`, but parser strings still allocate on heap. | Add larger multi-hour rows if feasible, and parser/string scratch attribution. |
-| 3 | Other public NDJSON/log-event streams | Real records often allocate JSON fields, tokens, maps, projected events, and output rows. | Start with GDELT event files, public web/server/security logs, Stack Exchange-style XML/JSON dumps converted to event streams, or other provenance-clean JSON-lines sources. |
-| 4 | DSPBench local-kernel subset | Stream benchmark family with varied applications; choose high object churn kernels only. | Triage 2-3 kernels with clear windows/epochs and local no-cluster execution. |
-| 5 | NEXMark Q3/Q8/Q9/Q11 | Recognized generated stream methodology; already has promising rows. | Keep as methodology/regression, not real-input proof. |
-| 6 | RIoTBench with provenance-clean input | IoT streams may have parse/filter/window lifetimes. | Only rerun with real/provenance-clean input or clearly labeled generator. |
+| 1 | DSPBench local-kernel subset | Stream benchmark family with varied applications; choose high object churn kernels only. | Triage 2-3 kernels with clear windows/epochs and local no-cluster execution. |
+| 2 | Real RIoTBench-style input | Current local RIoTBench is generated; real sensor traces may have richer parse/window pressure. | Find provenance-clean traces and require material heap GC before tuning. |
+| 3 | Larger/multiple Common Crawl WET/WAT shards | Same domain as current GC-heavy stressor; one WAT shard was not enough to trigger GC. | Actual loaded pages/tokens/links large enough; heap median/max GC material. |
+| 4 | More real log/NDJSON streams | LogHub BGL and GH Archive are modest wins but not GC-heavy. | Try HDFS/Thunderbird/Spark logs, GDELT, or security logs only if they materialize more per-record objects. |
+| 5 | GH Archive file-backed and memory-budget JSON-lines | Preloaded q1 shows heap can avoid GC by growing to GB-scale RSS; under a 1G heap cap checked regions win q1. File-backed q1/q2 rows show RSS/fixed-memory wins, but byte-slice parser rows are not GC-heavy. | Keep as modest-win parser-scratch control. |
+| 6 | NEXMark Q3/Q8/Q9/Q11 | Recognized generated stream methodology; already has promising rows. | Keep as methodology/regression, not real-input proof. |
 | 7 | Real MLKit/ReML benchmark sources | Non-stream but real prior-system source programs; useful for region+GC safety/performance comparison. | Build/run paper-era MLKit modes and local Scala Native ports; compare ratios, RSS, and GC counts. |
 | Control | Wikimedia, Linear Road, Yahoo, DEBS | Useful regression/ceiling rows. | Revisit only after a checked operator/backend change alters allocation behavior. |
 

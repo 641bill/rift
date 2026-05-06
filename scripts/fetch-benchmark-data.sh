@@ -127,6 +127,37 @@ fetch_gharchive() {
   done
 }
 
+fetch_loghub() {
+  if [[ "${RIFT_FETCH_LOGHUB_SAMPLE:-0}" != "1" ]]; then
+    echo "skip     LogHub sample; set RIFT_FETCH_LOGHUB_SAMPLE=1 to fetch it"
+    return
+  fi
+
+  local dir="$DATA_ROOT/loghub"
+  local datasets="${RIFT_LOGHUB_DATASETS:-HDFS BGL}"
+  local dataset
+  for dataset in $datasets; do
+    case "$dataset" in
+      HDFS)
+        fetch "https://zenodo.org/records/1147681/files/HDFS.tar.gz?download=1" \
+          "$dir/HDFS.tar.gz"
+        mkdir -p "$dir/HDFS"
+        tar -xzf "$dir/HDFS.tar.gz" -C "$dir/HDFS"
+        ;;
+      BGL)
+        fetch "https://zenodo.org/records/1147681/files/BGL.tar.gz?download=1" \
+          "$dir/BGL.tar.gz"
+        mkdir -p "$dir/BGL"
+        tar -xzf "$dir/BGL.tar.gz" -C "$dir/BGL"
+        ;;
+      *)
+        echo "unknown LogHub dataset '$dataset'; expected HDFS or BGL" >&2
+        exit 1
+        ;;
+    esac
+  done
+}
+
 write_manifest() {
   cat > "$MANIFEST" <<EOF
 # Rift Benchmark Data Manifest
@@ -175,6 +206,18 @@ EOF
       record "GH Archive hourly JSON events" "$gharchive_sample" "https://www.gharchive.org/"
     fi
   done < <(find "$DATA_ROOT/gharchive" -maxdepth 1 -name '*.json.gz' 2>/dev/null | sort)
+  local loghub_archive
+  while IFS= read -r loghub_archive; do
+    if [[ -n "$loghub_archive" ]]; then
+      record "LogHub archive" "$loghub_archive" "https://zenodo.org/records/1147681"
+    fi
+  done < <(find "$DATA_ROOT/loghub" -maxdepth 1 \( -name '*.tar.gz' -o -name '*.zip' \) 2>/dev/null | sort)
+  local loghub_log
+  while IFS= read -r loghub_log; do
+    if [[ -n "$loghub_log" ]]; then
+      record "LogHub extracted log" "$loghub_log" "https://github.com/logpai/loghub"
+    fi
+  done < <(find "$DATA_ROOT/loghub" -type f \( -name '*.log' -o -name '*.txt' \) 2>/dev/null | sort)
 }
 
 fetch_wikimedia
@@ -182,6 +225,7 @@ fetch_common_crawl
 fetch_linear_road
 fetch_beam_nexmark
 fetch_gharchive
+fetch_loghub
 write_manifest
 
 echo "Wrote $MANIFEST"

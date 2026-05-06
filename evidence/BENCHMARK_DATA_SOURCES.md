@@ -1,7 +1,7 @@
 # Benchmark Data Sources
 
 Date: 2026-05-01
-Last updated: 2026-05-07 00:37 CEST
+Last updated: 2026-05-07 01:23 CEST
 
 Local data root:
 `/Users/siyaoliu/rift/cache/benchmark-data`
@@ -32,10 +32,12 @@ The ignored per-download manifest is
 | Linear Road validator | `/Users/siyaoliu/rift/cache/benchmark-data/linear-road/validator.tar.gz` | 14218 | Official validator bundle. |
 | Apache Beam source release | `/Users/siyaoliu/rift/cache/benchmark-data/apache-beam/apache-beam-2.73.0-source-release.zip` | 44900494 | Official Beam source archive containing the Java NEXMark generator, model, queries, and configuration. |
 | Apache Beam source checksum | `/Users/siyaoliu/rift/cache/benchmark-data/apache-beam/apache-beam-2.73.0-source-release.zip.sha512` | 168 | Official SHA-512 checksum for the Beam source archive. |
+| LogHub BGL archive | `/Users/siyaoliu/rift/cache/benchmark-data/loghub/BGL.tar.gz` | 62936967 | Real LogHub / LogPAI Blue Gene/L system log archive from the Zenodo-hosted LogHub dataset. |
+| LogHub BGL extracted log | `/Users/siyaoliu/rift/cache/benchmark-data/loghub/BGL/BGL.log` | 743185031 | Extracted real BGL log; first `LogHubRegionMatrix` input with `4747963` lines. |
 
-All downloaded `.gz` files passed `gzip -t`. The Linear Road tarballs were
-checked with `tar -tzf`. The Apache Beam source archive passed the official
-`sha512` check.
+All downloaded `.gz` files passed `gzip -t`. The Linear Road and LogHub
+tarballs were checked with `tar -tzf` or successfully extracted. The Apache
+Beam source archive passed the official `sha512` check.
 
 ## Upstream Sources
 
@@ -86,9 +88,11 @@ Those directories are also ignored by git.
 - Broom/Naiad, StreamFlex, Yak, and Stancu-style matrices in this repo remain
   methodology/local reproductions unless paper-specific artifacts are later
   obtained.
-- LogHub / LogPAI system logs have not been downloaded yet. They are the next
-  real-input candidate to try because HDFS/BGL/Spark/Thunderbird-style logs
-  are large line streams with natural parse/token/template/window lifetimes.
+- LogHub / LogPAI BGL has now been downloaded and wired into
+  `LogHubRegionMatrix`. Other LogHub datasets such as HDFS, Spark, or
+  Thunderbird remain optional follow-up inputs if their query shape
+  materializes more per-record objects than the current BGL line/token/window
+  path.
 
 ## Next Wiring Work
 
@@ -114,3 +118,6 @@ The first wiring pass is now implemented in the Scala Native sandbox:
   decompressed `.warc.wet` sample.
 - `LINEAR_ROAD_INPUT=...` preloads official Linear Road Data Driver `.dat`
   position reports.
+- `LOGHUB_INPUT=...` with `LOGHUB_INPUT_MODE=file-backed` streams extracted
+  real LogHub `.log` files. First validated input:
+  `/Users/siyaoliu/rift/cache/benchmark-data/loghub/BGL/BGL.log`.

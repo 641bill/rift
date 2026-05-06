@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-07 00:28 CEST
+Last updated: 2026-05-07 01:23 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -135,6 +135,7 @@ Latest representative 1M rows:
 | StreamFlex checked TransactionRegion | throughput: heap `42.860 ms`, improved SafeZone `41.327 ms`, Rift HP `36.436 ms`, checked TransactionRegion `45.620 ms`, scoped checked TransactionRegion `39.019 ms` | multi-list transaction fixes the stacked-EpochBuffer granularity problem; scoped checked row is the best checked StreamFlex-shaped row so far, but trusted Rift remains fastest |
 | Common Crawl-shaped q1 | scoped page-token `3696.284 ms`, Rift page-token `3905.285 ms`, heap `5350.531 ms` with `1517.640 ms` GC | strongest checked generated stream win |
 | Common Crawl-shaped q2 | scoped page-token `3732.171 ms`, Rift page-token `3972.493 ms`, heap `5183.656 ms` with `1526.751 ms` GC | strongest checked generated window win |
+| LogHub BGL q2 full-file | checked scoped page-token `31165.087 ms`, trusted Streaming `30899.595 ms`, heap `32161.391 ms` with `595.599 ms` GC | real-input modest throughput/RSS/tail control, not a GC-heavy flagship |
 | NEXMark Beam-default | checked q3 `282.629 ms`, q8 `432.391 ms`, q9 `708.391 ms` | modest generated methodology wins |
 | Object allocation lowering | checked SafeZone-backed `14.903 ms`, checked Rift `16.039 ms`, heap `21.885 ms` | raw checked allocation is not the main remaining bottleneck |
 
@@ -165,11 +166,33 @@ real-input throughput/RSS/tail win, not a GC-heavy case study. Heap GC is only
 about `58-62 ms` inside roughly `3.8 s` elapsed at the current 200k/two-hour
 scale.
 
+Latest LogHub real-input checkpoint:
+`LogHubRegionMatrix` now exists in the sandbox and supports generated smoke
+input plus real file-backed LogHub logs. The BGL archive was downloaded into
+ignored benchmark data; extracted input:
+`/Users/siyaoliu/rift/cache/benchmark-data/loghub/BGL/BGL.log`
+(`4747963` lines, `743185031` bytes). Generated 20k smoke matched checksums
+between heap and checked scoped page-token. Real BGL 100k and 1M q1/q2 rows
+also matched output counts/checksums across heap, improved SafeZone-32k,
+trusted Streaming, and checked scoped page-token. At 1M, q1 heap is
+`5568.252 ms`, median GC `99.271 ms`, RSS `408420352`, while trusted
+Streaming is `5491.033 ms` and checked scoped page-token is `5552.988 ms`.
+At 1M q2, heap is `5646.824 ms`, median GC `157.198 ms`; improved SafeZone-32k
+is `5509.481 ms`, trusted Streaming `5605.787 ms`, and checked scoped
+page-token `5636.357 ms`. Heap caps at `256M` roughly double q1/q2 GC to
+about `195-200 ms`. A full-file q2 single-run probe loaded all `4747963` BGL
+lines: heap `32161.391 ms`, GC `595.599 ms`, RSS `576012288`; trusted
+Streaming `30899.595 ms`, GC `0.000 ms`; checked scoped page-token
+`31165.087 ms`, GC `0.000 ms`, RSS `490946560`. Interpretation: LogHub BGL is
+useful real-input modest throughput/RSS/fixed-memory evidence, but still not
+the missing GC-heavy stream case because heap GC remains under 2% of elapsed
+at full-file scale.
+
 Active update:
 Cheap checked page/token append operator implemented and measured; real WAT
-link-metadata control added; first GH Archive real NDJSON matrix added.
-Follow-up scaffold added for allocation-lowering decomposition and heap-budget
-reporting.
+link-metadata control, GH Archive real NDJSON, and LogHub real BGL matrices are
+now added. Follow-up scaffold added for allocation-lowering decomposition and
+heap-budget reporting.
 
 Reusable operator-family update:
 `PageTokenMapFilter[T]`, `EpochFold[T]`, `RegionList[T]`, and

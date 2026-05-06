@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Tables
 
 Date: 2026-05-01
-Last updated: 2026-05-07 00:28 CEST
+Last updated: 2026-05-07 01:23 CEST
 
 Status: seeded summary pack for the comprehensive evaluation. Rows below are
 current checked-in evidence unless marked pending rerun.
@@ -36,6 +36,7 @@ SafeZone-cost. Competitive rows skip current SafeZone by default.
 | GH Archive-shaped | q1 trusted Streaming `246.174 ms` and q2 trusted HP `233.427 ms`; heap q1/q2 `286.721` / `268.717 ms` | generated GH-shaped row favors regions; still not real-input proof |
 | GH Archive file-backed 2h, legacy string parser | q1 Streaming `7448.838 ms`, checked scoped page-token `7489.923 ms`, heap `7549.355 ms`; q2 Streaming `7442.005 ms`, checked scoped page-token `7498.263 ms`, heap `7641.540 ms` | real file-backed RSS/fixed-memory row: heap around `2.43 GB` RSS, region rows around `0.72-0.93 GB`; profile says parser/string/decompression dominates |
 | GH Archive file-backed 2h, byte-slice parser | q1 heap `3806.120 ms`, Streaming `3626.219 ms`, checked scoped page-token `3629.193 ms`; q2 heap `3756.950 ms`, Streaming `3645.458 ms`, checked scoped page-token `3626.107 ms` | parser-scratch follow-up: real file-backed modest throughput/RSS/tail win; region rows use about `211 MB` RSS and zero timed GC vs heap about `290 MB` RSS with GC in 2/3 runs. Not GC-heavy: heap GC is only about `1.5-1.6%` of elapsed. |
+| LogHub BGL real log | 1M q1 heap `5568.252 ms`, Streaming `5491.033 ms`, checked scoped page-token `5552.988 ms`; 1M q2 heap `5646.824 ms`, improved-32k `5509.481 ms`, checked scoped page-token `5636.357 ms`; full-file q2 heap `32161.391 ms`, Streaming `30899.595 ms`, checked scoped page-token `31165.087 ms` | real file-backed multi-million-line system-log control. Region rows remove timed GC and modestly improve selected rows; full-file q2 heap GC is `595.599 ms`, still under 2% of elapsed, so this is not the missing GC-heavy case. |
 | ReML-shaped Tier 1 | checked stream `msort` `104.358 ms` vs heap `124.983 ms`; `msort-r` `104.929 ms` vs heap `126.163 ms`; checked scoped `ratio` `48.929 ms` vs heap `51.302 ms` | local Scala Native port evidence for MLKit/ReML lineage; not exact ReML reproduction |
 | Linear Road | heap fastest or tied on q0/q1/q2 despite GC reduction in region modes | ceiling/control evidence |
 
@@ -316,6 +317,8 @@ trusted HPZone `4403.007 ms`; q2 `rift-checked` is `5061.479 ms` versus heap
 | GH Archive Q2 repo window, 8-hour oracle | 1M real JSON events / 13M event-field records | Streaming `325.665 ms`; checked SafeZone-backed page-token `347.033 ms` | heap `271.880 ms`, max GC `136.353 ms`, 1/3 runs with GC | improved-32k `363.049 ms` | Heap wins median; repo-window aggregation CPU dominates despite GC tail | 2026-05-03 multi-hour oracle |
 | GH Archive Q1 fields, file-backed byte-slice | 200k real JSON events / 2.6M event-field records, 2 hourly gzip files | Streaming `3626.219 ms`; checked SafeZone-backed page-token `3629.193 ms` | heap `3806.120 ms`, median GC `57.685 ms`, RSS `290177024` | not rerun in this subset | Byte-slice parser-scratch makes q1 a modest real-input throughput/RSS/tail win; region rows report zero timed GC and about `211 MB` RSS; not GC-heavy | 2026-05-07 byte parser follow-up |
 | GH Archive Q2 repo window, file-backed byte-slice | 200k real JSON events / 2.6M event-field records, 2 hourly gzip files | Streaming `3645.458 ms`; checked SafeZone-backed page-token `3626.107 ms` | heap `3756.950 ms`, median GC `61.625 ms`, RSS `290193408` | not rerun in this subset | Byte-slice parser-scratch makes q2 a modest checked scoped page-token win; region rows report zero timed GC and about `211 MB` RSS | 2026-05-07 byte parser follow-up |
+| LogHub BGL Q1 tokens | 1M real BGL lines / 13.4M line+token records | Streaming `5491.033 ms`, RSS `357679104`; checked scoped page-token `5552.988 ms` | heap `5568.252 ms`, median GC `99.271 ms`, RSS `408420352`; 256M cap heap `5807.256 ms`, median GC `194.609 ms` | improved-32k `5589.860 ms`, RSS `357842944` | Trusted Streaming is a modest throughput/RSS win; checked scoped page-token is near-tied but high-RSS. Heap GC is steady but still a small share of elapsed. | 2026-05-07 LogHub BGL follow-up |
+| LogHub BGL Q2 window counts | full real BGL file, 4.75M lines / 66.9M line+token records | Streaming `30899.595 ms`; checked scoped page-token `31165.087 ms`, RSS `490946560` | heap `32161.391 ms`, GC `595.599 ms`, RSS `576012288` | improved-32k `31459.104 ms`, RSS `490258432` | Full-file real log modest throughput/RSS/tail win; not GC-heavy because heap GC is under 2% of elapsed. | 2026-05-07 LogHub BGL scale probe |
 | Linear Road official Q1 | 1M events | HPZone `180.277 ms` | `162.668 ms` | recorded in source pack | Real-input CPU ceiling | Parked control |
 
 ## UnsafeZone-HP Stream Follow-Up

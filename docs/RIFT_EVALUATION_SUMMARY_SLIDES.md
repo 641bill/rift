@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-07 00:28 CEST
+Last updated: 2026-05-07 01:23 CEST
 
 Status: markdown slide deck outline. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report and this file as
@@ -134,6 +134,14 @@ Both checked rows cut RSS from about `290 MB` to `211 MB` and report zero timed
 GC. This is a modest real-input throughput/RSS/tail win, not a GC-heavy case
 study: heap GC is only about `58-62 ms` inside roughly `3.8 s` elapsed.
 
+LogHub BGL is now the next real log control. At 1M real lines, q1 heap is
+`5568.252 ms` with `99.271 ms` GC and trusted Streaming is `5491.033 ms`; q2
+heap is `5646.824 ms` with `157.198 ms` GC and improved SafeZone-32k is
+`5509.481 ms`. Full-file q2 loads all `4747963` BGL lines: heap
+`32161.391 ms`, `595.599 ms` GC, RSS `576 MB`; checked scoped page-token
+`31165.087 ms`, zero timed GC, RSS `491 MB`. This strengthens the real-input
+modest-win story, but still not the missing huge-GC case.
+
 ## Slide 9: Best Checked Stream Rows
 
 | Query | heap | improved SafeZone | best checked | Interpretation |
@@ -198,19 +206,19 @@ deadline misses. They can move in different directions.
 |---|---|
 | current Rift HP loses to improved SafeZone on linked/prior rows | learn from SafeZone internals. |
 | TableRank/rank/fold fail 1M gates | do not use them in app claims yet. |
-| real WET/WAT/Wikimedia/Linear Road mostly heap-fastest or median-GC-zero | current real inputs are not GC-heavy enough for representative claims, though WET/WAT page-token rows are modest real-input wins. |
+| real WET/WAT/Wikimedia/Linear Road mostly heap-fastest or median-GC-zero; GH Archive/LogHub are modest wins | current real inputs are not GC-heavy enough for representative claims, though page-token/log rows are useful controls. |
 | pipeline surrogate heap wins | CPU-bound workloads are not Rift targets. |
 
 ## Slide 13: Benchmark Ladder
 
 Next realistic GC-heavy search:
 
-1. larger/multiple real Common Crawl WET/WAT shards;
-2. GH Archive byte-slice file-backed and memory-budget NDJSON rows;
-3. other real NDJSON/log-event streams such as GDELT or public web/server/security logs;
-4. DSPBench local-kernel subset;
-5. NEXMark Q3/Q8/Q9/Q11 as generated controls;
-6. provenance-clean RIoTBench real input;
+1. DSPBench local-kernel subset;
+2. provenance-clean RIoTBench real input;
+3. larger/multiple real Common Crawl WET/WAT shards;
+4. other real NDJSON/log-event streams such as richer LogHub variants, GDELT, or public web/server/security logs;
+5. GH Archive and LogHub as modest-win/fixed-memory controls;
+6. NEXMark Q3/Q8/Q9/Q11 as generated controls;
 7. exact MLKit/ReML source benchmark reproduction as a non-stream typed-region axis.
 
 The first real WAT shard now validates link-object placement and modestly
@@ -223,8 +231,10 @@ page-token faster than heap. The legacy file-backed q1/q2 rows showed RSS/
 fixed-memory wins but were dominated by string parser allocation. The new
 byte-slice file-backed rows keep gzip/JSON parsing in timing while reusing
 parser scratch, and now show modest checked throughput wins plus zero timed GC
-in region rows. Heap GC remains a small share of elapsed, so next benchmark
-work still needs a real-input workload with materially higher GC pressure.
+in region rows. LogHub BGL adds a real multi-million-line system-log control,
+but full-file heap GC is still under 2% of elapsed. Heap GC remains a small
+share of elapsed in current real inputs, so next benchmark work still needs a
+real-input workload with materially higher GC pressure.
 
 The 2-hour file-backed GH Archive rows strengthen that interpretation:
 heap uses about `2.43 GB` RSS, while region rows use about `0.72-0.93 GB`.

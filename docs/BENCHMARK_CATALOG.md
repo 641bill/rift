@@ -1,7 +1,7 @@
 # Rift Benchmark Catalog
 
 Date: 2026-05-05
-Last updated: 2026-05-07 00:37 CEST
+Last updated: 2026-05-07 01:23 CEST
 
 Status: working benchmark guide. Use this document to understand what each
 benchmark is meant to test before reading the detailed result files in
@@ -20,7 +20,7 @@ should not be collapsed into a single "Rift is faster/slower" statement.
 | MLKit/ReML lineage | Does Rift address classic safe region+GC workloads with higher-order and polymorphic code? | ReML paper table, `ReMLRegionMatrix` Tier 1 ports |
 | Checked operator | Is a reusable safe API cheap enough for application use? | ObjectAllocationLowering, CheckedRegionBuffer, PageToken, AppendWindow, WindowFold, TableRank |
 | Generated stream stressor | Does a realistic stream shape create enough heap pressure to show a memory-management win? | Common Crawl WET-shaped, NEXMark Beam-default |
-| Real-input stream control | Does a public/real input preserve the same memory pressure? | real WET/WAT, GH Archive, Wikimedia, Linear Road |
+| Real-input stream control | Does a public/real input preserve the same memory pressure? | real WET/WAT, GH Archive, LogHub, Wikimedia, Linear Road |
 | Ceiling/negative | Does the workload prove heap/CPU/I/O dominates? | pipeline surrogate, real WET/WAT median-GC-zero rows |
 
 Headline claims should use the canonical memory-mode names from
@@ -134,6 +134,7 @@ operators and gates.
 | Common Crawl WET-shaped | Generated WET-like pages/lines/tokens | Strongest GC-heavy stream stressor: heap spends about `1.55-1.59 s` in timed GC at 1M generated pages; trusted and page-token checked rows win. This is not real Common Crawl input proof. |
 | Real Common Crawl WET/WAT | Public preloaded WET/WAT shards | Current shards have median timed GC of zero. Page-token rows work and win modestly on WAT, but these are ceiling/control rows. |
 | GH Archive | Real hourly NDJSON GitHub event files | Strongest current real-input modest-win candidate, but not GC-heavy proof. Uncapped preloaded heap wins median by growing to about `1.7 GiB`; under a 1G heap cap, checked SafeZone-backed q1 wins. Legacy string-parser file-backed q1/q2 rows give RSS/fixed-memory wins but are parser/string dominated. The new byte-slice file-backed parser reuses line buffers and extracts JSON fields from raw UTF-8 bytes; at two hourly files / 200k events it makes q1/q2 modest region throughput/RSS/tail wins and removes timed GC from region rows, but heap GC is only about `1.5-1.6%` of elapsed. |
+| LogHub / LogPAI BGL | Real file-backed BGL system log | New real log matrix. At 1M real lines, heap q1/q2 spends `99-157 ms` in GC inside roughly `5.6 s`; region rows remove timed GC and several rows modestly improve throughput/RSS. Full-file q2 loads `4747963` lines and heap spends `595.599 ms` in GC inside `32.161 s`, while checked scoped page-token is faster and lower-RSS. Useful real-input modest-win/fixed-memory control, not the missing huge-GC flagship. |
 | Wikimedia | Real/generated TSV/clickstream-style rows | Mostly heap or improved SafeZone wins with low median GC; parked as ceiling/regression control. |
 | Linear Road | Official/generated position-report methodology | Useful latency/window methodology, but current rows are not GC-heavy enough for a Rift case study. |
 | Yahoo-style ads | Local/generated ad-stream methodology | Some wins exist, but provenance is generated/local rather than official real input. |
@@ -165,7 +166,7 @@ record-oriented and can be processed as an event/page/window stream:
 | Candidate | Input form | First query shape |
 |---|---|---|
 | GH Archive | hourly real GitHub events, JSON/NDJSON | file-backed byte-slice parse/project fields, repo/window counts, heap-capped tails, parser/string-scratch controls |
-| LogHub / LogPAI system logs | real HDFS/BGL/Spark/Thunderbird/etc. log lines | parse log records, tokenize fields/templates, window/session/block counts |
+| LogHub / LogPAI system logs | real HDFS/BGL/Spark/Thunderbird/etc. log lines | BGL is wired and measured; parse log records, tokenize fields/templates, window/session/block counts |
 | Larger/multiple Common Crawl WET/WAT shards | public WET/WAT archive records | page/token/link object materialization and domain/window counts |
 | GDELT events | public event files | parse/project event fields and windowed country/topic counts |
 | Public web/server/security logs | Apache/NASA-style logs or JSON security events | tokenize fields, filter/project, per-window counts |
@@ -180,12 +181,15 @@ GC-heavy stream workload that beats both `heap-immix` and
 
 The nearest candidates are:
 
-1. LogHub / LogPAI real system logs, starting with HDFS or BGL.
-2. Larger or multiple real Common Crawl WET/WAT shards.
-3. GH Archive with heap-budgeted/file-backed/tail-latency runs as a modest-win
+1. DSPBench local kernels.
+2. Real RIoTBench-style input, if provenance-clean traces are available.
+3. More LogHub / LogPAI variants only if they materialize richer per-line
+   objects than the current BGL line/token/window path.
+4. Larger or multiple real Common Crawl WET/WAT shards.
+5. GH Archive with heap-budgeted/file-backed/tail-latency runs as a modest-win
    control, not GC-heavy proof.
-4. Another real NDJSON/log-event stream with heavier object churn.
-5. DSPBench/Theodolite/RIoTBench-style local kernels only if input provenance
+6. Another real NDJSON/log-event stream with heavier object churn.
+7. Theodolite/RIoTBench-style local kernels only if input provenance
    and lifetime structure are clean.
 
 ## 8. Source Files
@@ -200,6 +204,7 @@ Read these result files first for detailed numbers:
 - `evidence/COMMON_CRAWL_LIKE_MATRIX.md`
 - `evidence/REALISTIC_STREAM_GC_MATRIX.md`
 - `evidence/GITHUB_ARCHIVE_REGION_MATRIX.md`
+- `evidence/LOGHUB_REGION_MATRIX.md`
 - `evidence/SN_WIN_ENVELOPE.md`
 - `evidence/EVALUATION_SUMMARY_TABLES.md`
 - `evidence/ALL_PHASE_RESULTS.md`

@@ -1,7 +1,7 @@
 # Rift All-Phase Results Rollup
 
 Date: 2026-05-01
-Last updated: 2026-05-07 00:28 CEST
+Last updated: 2026-05-07 01:23 CEST
 
 This file gathers the current numeric and validation evidence across all
 roadmap phases. It is a rollup, not the primary raw log. Prefer the source files
@@ -2768,6 +2768,21 @@ Status:
   RSS win, and GC-tail win after removing parser-string scratch overhead. It is
   not the missing GC-heavy case study because heap GC is only about `1.5-1.6%`
   of elapsed time at this scale.
+- A real LogHub / LogPAI BGL system-log matrix is now implemented and measured.
+  The downloaded BGL input has `4747963` lines and lives at
+  `/Users/siyaoliu/rift/cache/benchmark-data/loghub/BGL/BGL.log`. At 100k,
+  q1/q2 produce about `1.25M` line+token records and region rows modestly beat
+  heap while removing timed GC. At 1M, q1 heap is `5568.252 ms`, median GC
+  `99.271 ms`, RSS `408420352`; trusted Streaming is `5491.033 ms`, and
+  checked SafeZone-backed page-token is `5552.988 ms`. q2 heap is
+  `5646.824 ms`, median GC `157.198 ms`; improved SafeZone-32k is
+  `5509.481 ms`, trusted Streaming `5605.787 ms`, and checked scoped
+  page-token `5636.357 ms`. A full-file q2 single-run probe loads all
+  `4747963` lines: heap `32161.391 ms`, `595.599 ms` GC, RSS `576012288`;
+  checked scoped page-token `31165.087 ms`, zero timed GC, RSS `490946560`;
+  trusted Streaming `30899.595 ms`. Interpretation: LogHub BGL is a useful
+  real-input modest throughput/RSS/fixed-memory control, but not the missing
+  GC-heavy flagship because full-file heap GC is still under 2% of elapsed.
 - The append-window result does not justify returning to DEBS Q1 ranking.
   TableRank remains gated out. The first DEBS integration of the passing
   cursor-close shape now exists for checked Q1 event-window entries and
