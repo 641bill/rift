@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-06 00:55 CEST
+Last updated: 2026-05-06 08:56 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -1148,6 +1148,13 @@ next action is:
    about `10%`, or materially lowers GC/RSS with at most `5%` elapsed overhead.
 6. Use `SCALANATIVE_GC_ALLOC_STATS=1` selectively for attribution, not as a
    default headline benchmark.
+7. Add official Scala Native native profiling as the next diagnostic layer
+   before more broad operator tuning. Profile representative native binaries
+   with `samply`/native profilers where available and record the result in a
+   dedicated CPU profile report. The immediate targets are Common Crawl-shaped
+   q1/q2 page-token, Dataflow AGGREGATE exact-array versus `EpochFold`,
+   StreamFlex trusted Rift versus checked `TransactionRegion`, and Common
+   Crawl q3 parser-scratch.
 
 Do not move to new runtime micro-optimizations unless a focused benchmark or
 application diagnostic points there. The next runtime change needs concrete

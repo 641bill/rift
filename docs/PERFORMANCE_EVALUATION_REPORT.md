@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-06 00:55 CEST
+Last updated: 2026-05-06 08:56 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -420,22 +420,36 @@ The next implementation work should be ordered like this:
    buffers/operators separately instead of treating that gap as raw allocation
    cost.
 
-2. **Use `StreamPageTokenAppendWindow` as the first cheap checked operator.**
+2. **Add CPU profiling before the next tuning pass.**
+   Scala Native officially recommends native profiling workflows for generated
+   binaries, including `/usr/bin/time`, Linux `perf`, flamegraph-style tools,
+   and `samply` with Scala Native symbol demangling. Use profiling as
+   diagnostic evidence, not headline timing. Create `docs/CPU_PROFILE_REPORT.md`
+   after profiling the smallest representative set:
+   Common Crawl-shaped q1/q2 (`heap-immix`, `rift-checked-page-token`,
+   `rift-checked-safezone-page-token`), Dataflow AGGREGATE exact-array versus
+   true `EpochFold`, StreamFlex trusted Rift versus checked
+   `TransactionRegion`, and Common Crawl q3 parser-scratch. The goal is to
+   attribute remaining time to object construction, checked allocation
+   lowering, operator/link/cursor traversal, SafeZone claim/reclaim/root work,
+   parser/token scratch, rank/table maintenance, or output/checksum CPU.
+
+3. **Use `StreamPageTokenAppendWindow` as the first cheap checked operator.**
    Keep the generic `StreamAppendWindow` path as the defensive control, and
    apply the owned-path/no-check idea to fold/join/rank only after equivalent
    stale-token probes exist.
 
-3. **Run the realistic stream ladder against the new operator.**
+4. **Run the realistic stream ladder against the new operator.**
    Start with larger/multiple WET shards and WAT metadata/link extraction, then
    NDJSON/logs, then DSPBench triage. Park rows where heap median/max GC is
    immaterial.
 
-4. **Advance checked SafeZone-backed backend carefully.**
+5. **Advance checked SafeZone-backed backend carefully.**
    Keep `rift-checked-safezone-improved-32k` as the safe candidate. Do not
    make rootless checked claims until mixed-reference/root-free policy tests
    prove eligibility.
 
-5. **Promote only repeated winning shapes into public APIs.**
+6. **Promote only repeated winning shapes into public APIs.**
    Do not add more TableRank/rank-style application integration until focused
    gates pass.
 

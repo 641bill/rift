@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-06 00:55 CEST
+Last updated: 2026-05-06 08:56 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -44,6 +44,16 @@ Latest representative 1M rows:
 | Common Crawl-shaped q2 | scoped page-token `3732.171 ms`, Rift page-token `3972.493 ms`, heap `5183.656 ms` with `1526.751 ms` GC | strongest checked generated window win |
 | NEXMark Beam-default | checked q3 `282.629 ms`, q8 `432.391 ms`, q9 `708.391 ms` | modest generated methodology wins |
 | Object allocation lowering | checked SafeZone-backed `14.903 ms`, checked Rift `16.039 ms`, heap `21.885 ms` | raw checked allocation is not the main remaining bottleneck |
+
+Profiling update:
+The next diagnostic layer should use the official Scala Native profiling
+workflow for native binaries (`/usr/bin/time`, native profilers, and `samply`
+where available) before more operator/runtime tuning. Add
+`docs/CPU_PROFILE_REPORT.md` after profiling Common Crawl-shaped q1/q2
+page-token rows, Dataflow AGGREGATE exact-array versus `EpochFold`,
+StreamFlex trusted Rift versus checked `TransactionRegion`, and Common Crawl
+q3 parser-scratch. Treat profile runs as attribution evidence, not headline
+timing.
 
 Active update:
 Cheap checked page/token append operator implemented and measured; real WAT
