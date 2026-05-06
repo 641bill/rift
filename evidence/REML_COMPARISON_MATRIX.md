@@ -1,6 +1,6 @@
 # ReML / MLKit Lineage Comparison Matrix
 
-Last updated: 2026-05-06 14:37 CEST
+Last updated: 2026-05-06 16:14 CEST
 
 Status: new Phase 6c evidence track. This file separates three evidence
 classes:
@@ -15,6 +15,73 @@ Default local ReML-shaped runs now include only `gc-heap`,
 `region-scoped-rooted`, `checked-region-stream`, and
 `checked-region-scoped`. Rootless/trusted lower-bound rows require
 `RIFT_BENCH_INCLUDE_CONTROLS=1` or explicit `REML_MODES`.
+
+## Exact Artifact Provenance
+
+Current status: **partial source provenance found; exact paper reproduction not
+yet run**.
+
+Local inspection, 2026-05-06:
+
+```text
+cache path: /Users/siyaoliu/rift/cache/reml/mlkit
+repository: https://github.com/melsman/mlkit.git
+commit: 8561fe6ad949b84f83e8b78508b720ceccabe902
+```
+
+This repository contains many benchmark sources that overlap the paper table:
+
+| Paper program family | Source candidates found in MLKit repo |
+|---|---|
+| `DLX` | `test/DLXSimulator.sml`, `test/DLXSimulator_smlnj.sml` |
+| `b-hut` | `test/barnes-hut.mlb`, `test/barnes-hut/*.sml` |
+| `fft` | `test/fft.sml`, `test/barry/fft.sml` |
+| `fib37` | `test/kitfib35.sml`, `test/kitfib35_mlton.sml`, `test/barry/fib35.sml` |
+| `life` | `test/life.sml`, `test/kitlife35u.sml`, `test/barry/life.sml` |
+| `logic` | `test/logic.mlb`, `test/logic/*.sml` |
+| `mandel` | `test/kitmandelbrot.sml`, `test/barry/mandelbrot.sml` |
+| `mpuz` | `test/mpuz.sml`, `test/mpuz_smlnj.sml` |
+| `msort` / `msort-r` | `test/msort.mlb`, `test/msort.sml`, `kitdemo/msort.mlb` |
+| `nucleic` | `test/nucleic.mlb`, `test/nucleic/*.sml` |
+| `prof` | `test/professor.sml`, `test/professor2.sml` |
+| `ratio` | `test/ratio-regions.sml`, `test/ratio-regions_tp.sml` |
+| `ray` | `test/ray.mlb`, `test/ray/*.sml` |
+| `simple` | `test/kitsimple.sml`, `test/barry/simple.sml` |
+| `tak` | `test/tak.sml`, `test/tak_smlnj.sml` |
+| `tsp` | `test/tsp.sml`, `test/tsp_tp.sml` |
+| `zern` | `test/zern.sml`, `test/zern_smlnj.sml` |
+
+Open provenance gaps:
+
+- The inspected commit is current MLKit HEAD, not yet pinned to the exact PLDI
+  2023 ReML paper revision.
+- Local `mlkit` and `mlton` executables are not installed, so no local exact
+  timing/RSS/GC-count run has been performed yet.
+- Full Git history/tags were fetched. The most relevant tags found are:
+
+| Tag | Commit | Date | Note |
+|---|---|---|---|
+| `v4.7.4` | `855248bf` | 2023-10-01 | initial explicit region/effect annotation support per `NEWS.md` |
+| `v4.7.5` | `5f0f811d` | 2023-10-10 | "ReML released as part of the distribution" |
+| `v4.7.6` | `71c2630e` | 2023-11-16 | later datatype-unboxing release |
+
+- The current public source has MLKit flags for region inference, no-GC region
+  mode, tracing GC, and generational GC. It does not yet give us a validated
+  mapping from the paper labels `rg`, `rg-`, and `r` to concrete command lines.
+- The mapping from paper modes `rg`, `rg-`, and `r` to concrete MLKit command
+  flags must be verified from the paper-era sources or author artifact before
+  reporting exact reproduction.
+- Several paper names may need benchmark-specific size/configuration checks
+  (`fib37` versus available `fib35` sources, `lexgen`, `mlyacc`, `vliw`,
+  `kbc`, and `zebra`).
+
+Next exact-reproduction step:
+
+1. Pin the MLKit revision or release used for the PLDI 2023 paper.
+2. Install/build `mlkit` and `mlton`.
+3. Run a small source-to-binary smoke for `msort`, `fft`, and `ratio`.
+4. Add a tracked runbook with exact commands for `rg`, `rg-`, `r`, and MLton.
+5. Only then compare raw wall-clock speed with Rift local rows.
 
 Reference paper: Martin Elsman, "Garbage-Collection Safety for Region-Based
 Type-Polymorphic Programs", PLDI 2023.

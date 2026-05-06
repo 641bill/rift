@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-06 15:57 CEST
+Last updated: 2026-05-06 16:14 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -45,6 +45,18 @@ ReML-shaped ports (`fib37`, `tak`, `mandel`, `msort`, `msort-r`, `life`,
 `ratio` port was fixed to retain allocated region objects so checked
 allocation is not optimized away. No headline ReML medians have been run yet,
 and exact MLKit/ReML artifact reproduction is still open.
+
+ReML exact-artifact reproduction update:
+The public MLKit repository has been cloned into ignored cache at
+`/Users/siyaoliu/rift/cache/reml/mlkit`, full history/tags were fetched, and
+the inspected HEAD is `8561fe6ad949b84f83e8b78508b720ceccabe902`. The clone
+contains many Figure 9-style benchmark sources under `test/` and `kitdemo/`.
+Relevant tags are `v4.7.4` (`855248bf`, initial explicit region/effect
+annotation support), `v4.7.5` (`5f0f811d`, ReML released), and `v4.7.6`
+(`71c2630e`, later datatype-unboxing release). This makes exact reproduction
+plausible, but no local `mlkit`/`mlton` executables are installed yet and the
+paper labels `rg`, `rg-`, and `r` still need verified command mappings. Do not
+claim raw "Rift beats ReML" until those exact local runs exist.
 
 ReML-inspired safety checkpoint:
 The checked compiler suite now includes local polymorphic consumer acceptance,

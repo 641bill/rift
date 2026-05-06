@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-06 15:57 CEST
+Last updated: 2026-05-06 16:14 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -28,7 +28,10 @@ programming model is not "rewrite benchmarks into primitive arrays"; it is:
 - use static capture/lifetime/rooting checks to remove runtime memory-safety
   bookkeeping that would otherwise erase the win.
 
-The current evidence is mixed but useful:
+The current evidence is mixed but useful. "Mixed" should not be read as
+"not a win." Several rows are modest throughput wins, RSS wins, or
+tail/heap-budget wins even when they are not strong enough to become final
+representative components.
 
 | Result class | Current conclusion |
 |---|---|
@@ -78,6 +81,27 @@ Latest clean final-selection headline interpretation:
 - Generated Common Crawl WET-shaped q1/q2 is the current best GC-heavy stream
   stressor; q3 parser-scratch is a negative/mixed control and real-input
   GC-heavy proof is still open.
+
+### Evidence Outcome Classes
+
+Use these labels when reading "mixed" rows:
+
+| Outcome | Meaning | Example |
+|---|---|---|
+| Representative win | Clear elapsed win, usually around `>=10%`, with correctness and a reusable workload shape. | Generated Common Crawl-shaped q1/q2 with checked scoped page-token. |
+| Modest throughput win | Correct row is faster, but margin is below the representative gate or the workload is not broad enough. | NEXMark Q8, real WET/WAT page-token controls, StreamFlex throughput. |
+| RSS win | Region row materially lowers resident memory even if elapsed is tied or slightly worse. | ReML-shaped `msort`/`ratio`, `CheckedWindowFold` style rows. |
+| Fixed-memory / tail win | Uncapped heap is competitive by growing large, but under a heap cap or in max-GC/tail runs regions improve completion or tails. | GH Archive q1 under `1G` heap cap. |
+| Speed-gated operator | Correct API has some GC/RSS benefit, but CPU overhead is too high for public performance claims. | `EpochFold`, `StreamWindowFold`, `TableRank`. |
+| Negative/ceiling | Heap is fastest and there is no material GC/RSS/tail benefit at the measured scale. | Pipeline surrogate, current Wikimedia/Linear Road rows. |
+
+Throughput and latency are different axes. Throughput asks how much total work
+finishes per unit time; in batch-style matrices we approximate it with elapsed
+time, where lower elapsed means higher throughput. Latency asks how long an
+individual event/request waits; p50/p95/max latency and deadline misses can
+improve even when average throughput changes only modestly, or worsen even when
+throughput improves. StreamFlex is the current example: scoped
+`TransactionRegion` improves throughput modestly, but latency remains mixed.
 
 The project still does not have a final checked application result on a
 real-input GC-heavy stream benchmark.
@@ -137,7 +161,7 @@ Detailed taxonomy: `docs/MEMORY_MODE_TAXONOMY.md`.
 | Checked SafeZone-backed backend | Implemented as benchmark prototype | `RiftRegion.streamingSafeZone(...)`; object allocation/close supported, raw allocation/reset unsupported. |
 | Canonical benchmark labels | Implemented for key matrices | Checked AppendWindow and Common Crawl WET-shaped runners accept new names and old aliases. |
 | Cheap checked operator families | Started | `PageTokenMapFilter`, `RegionList`, `EpochBuffer`, and `TransactionRegion` are now real reusable APIs with passing safety probes. In the latest staged sweep, scoped checked append operators remain fast (`26.461 ms` scoped EpochBuffer, `26.883 ms` scoped page-token vs heap `36.944 ms`). `TransactionRegion` fixes the stacked-EpochBuffer StreamFlex granularity issue enough that scoped checked transaction is the best checked StreamFlex row (`39.019 ms`), but trusted Rift remains faster. `EpochFold` is implemented and correct but failed the Dataflow AGGREGATE speed gate (`92.923 ms`). |
-| ReML/MLKit comparison track | Scaffolded | `ReMLRegionMatrix` implements Tier 1 Scala Native-shaped ports and `REML_COMPARISON_MATRIX.md` records paper-reported ReML data. Exact artifact reproduction and headline Tier 1 medians remain open. |
+| ReML/MLKit comparison track | Scaffolded | `ReMLRegionMatrix` implements Tier 1 Scala Native-shaped ports and `REML_COMPARISON_MATRIX.md` records paper-reported ReML data. The public MLKit repo has been cloned into ignored cache and contains many Figure 9-style benchmark sources; exact paper-era configuration and local MLKit/MLton toolchain reproduction remain open. |
 | Final component selection | Started | `docs/FINAL_COMPONENT_SELECTION.md` classifies public candidates, internal lower-bound controls, and gated/rejected operators without deleting runtime code. The parent evaluation runner and main sandbox matrices now exclude current/rootless controls by default; set `RIFT_EVAL_INCLUDE_CONTROLS=1` or `RIFT_BENCH_INCLUDE_CONTROLS=1` to reproduce lower-bound/control rows. Dirty-worktree smoke run `2026-05-06-final-selection-smoke` completed broad suites with `include_controls=0`; it validates runner behavior, not headline performance. |
 | Performance report package | In progress | This report now consolidates the main evidence; individual packs remain backing data. |
 
@@ -297,7 +321,7 @@ tracing-GC safety when region values can be hidden by polymorphic types.
 | Evidence class | Current status | Claim boundary |
 |---|---|---|
 | Paper-reported ReML table | Elsman 2023 Figure 9 is transcribed into tracked evidence. | Literature anchor only; not local measurement. |
-| Exact artifact rerun | Open. Original source/configuration provenance still needs to be found. | Required before any raw wall-clock "Rift beats ReML" claim. |
+| Exact artifact rerun | Open. Current MLKit HEAD was inspected and contains many benchmark sources; paper-era source/configuration and local `mlkit`/`mlton` toolchain runs remain to be pinned. | Required before any raw wall-clock "Rift beats ReML" claim. |
 | Scala Native ports | `ReMLRegionMatrix` has Tier 1 ports for `fib37`, `tak`, `mandel`, `msort`, `msort-r`, `life`, `fft`, and `ratio`. | Valid for local Rift-vs-Scala-Native ratios, not exact ReML reproduction. |
 | Safety probes | ReML-inspired compiler probes now include local polymorphic use, generic identity escape, generic heap-cell durable retention, widened `AnyRef`, heap arrays, closure hiding, and unrooted heap metadata. | The previous erased-generic gap is fixed at the current durable/static-retention probe level. Broader heap alias analysis remains open. |
 
@@ -371,12 +395,14 @@ operator problems with separate gates.
 |---|---|
 | Generated Common Crawl WET-shaped q1/q2 | Shows the memory-management regime Rift is built for: many ordinary stream objects, epochal lifetimes, heap spends ~1.5s in GC at 1M. |
 | NEXMark Q3/Q8 checked rows | Shows checked operator surface can beat heap and improved SafeZone on recognized stream-methodology shapes, though margins are still modest. |
+| Modest real-input page-token WET/WAT rows | Shows the operator works on real Common Crawl records and sometimes improves elapsed/RSS, even though these shards are not GC-heavy enough for a representative case study. |
+| RSS/fixed-memory wins | Shows regions can be valuable even when uncapped throughput is only tied or modestly worse; GH Archive q1 under heap cap and several ReML-shaped ports belong here. |
 | SafeZone-backed checked AppendWindow | Shows SafeZone-family backend mechanics can reduce checked overhead without changing the user-level checked API. |
 | Checked page/token append operator | Shows static lifetime ownership can remove redundant runtime checks and turn the generated Common Crawl-like q1/q2 path from checked-overhead evidence into a checked generated-stressor win. |
 | SafeZone cost decomposition | Shows old SafeZone slowness was largely root bookkeeping and page-size configuration, not inherent region cost. |
 | Rootless SafeZone lower bound | Shows what allocator mechanics might achieve when root registration is unnecessary, but only as unsafe evidence. |
 
-### Losses / Ceiling Results
+### Gated / Negative / Ceiling Results
 
 | Loss / ceiling | Interpretation |
 |---|---|
@@ -428,10 +454,11 @@ where object churn and epochal lifetimes are both present.
 |---:|---|---|---|
 | 1 | Larger/multiple Common Crawl WET/WAT shards | Same domain as current GC-heavy stressor; one WAT shard was not enough to trigger GC. | Actual loaded pages/tokens/links large enough; heap median/max GC material. |
 | 2 | GH Archive file-backed and memory-budget JSON-lines | Preloaded q1 shows heap can avoid GC by growing to GB-scale RSS; under a 1G heap cap checked regions win q1. | Include parse/string allocation in timing; report heap caps, RSS, per-run elapsed/GC tails. |
-| 3 | Other public NDJSON/log-event streams | Real records often allocate JSON fields, tokens, maps, projected events, and output rows. | Preloaded and file-backed parse/project/window-count controls. |
+| 3 | Other public NDJSON/log-event streams | Real records often allocate JSON fields, tokens, maps, projected events, and output rows. | Start with GDELT event files, public web/server/security logs, Stack Exchange-style XML/JSON dumps converted to event streams, or other provenance-clean JSON-lines sources. |
 | 4 | DSPBench local-kernel subset | Stream benchmark family with varied applications; choose high object churn kernels only. | Triage 2-3 kernels with clear windows/epochs and local no-cluster execution. |
 | 5 | NEXMark Q3/Q8/Q9/Q11 | Recognized generated stream methodology; already has promising rows. | Keep as methodology/regression, not real-input proof. |
 | 6 | RIoTBench with provenance-clean input | IoT streams may have parse/filter/window lifetimes. | Only rerun with real/provenance-clean input or clearly labeled generator. |
+| 7 | Real MLKit/ReML benchmark sources | Non-stream but real prior-system source programs; useful for region+GC safety/performance comparison. | Build/run paper-era MLKit modes and local Scala Native ports; compare ratios, RSS, and GC counts. |
 | Control | Wikimedia, Linear Road, Yahoo, DEBS | Useful regression/ceiling rows. | Revisit only after a checked operator/backend change alters allocation behavior. |
 
 Detailed ladder: `evidence/REALISTIC_STREAM_GC_MATRIX.md`.
@@ -541,6 +568,7 @@ Read these files for detail:
 - `evidence/COMMON_CRAWL_LIKE_MATRIX.md`
 - `evidence/REML_COMPARISON_MATRIX.md`
 - `docs/REML_COMPARISON_PLAN.md`
+- `docs/REML_ARTIFACT_RUNBOOK.md`
 - `docs/CPU_PROFILE_REPORT.md`
 - `docs/LITERATURE_BENCHMARK_CONTRACT.md`
 - `evidence/SN_WIN_ENVELOPE.md`

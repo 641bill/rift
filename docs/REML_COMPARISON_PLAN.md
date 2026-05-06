@@ -1,6 +1,6 @@
 # ReML / MLKit Comparison Plan
 
-Last updated: 2026-05-06 14:37 CEST
+Last updated: 2026-05-06 16:14 CEST
 
 ## Goal
 
@@ -44,6 +44,49 @@ Rootless/trusted lower-bound controls (`region-scoped-rootless`,
 `region-hp-rootless`, and `region-stream-rootless`) are still supported, but
 they are no longer default rows. Run them with `RIFT_BENCH_INCLUDE_CONTROLS=1`
 or explicit `REML_MODES`.
+
+## Artifact Provenance Checkpoint
+
+Local inspection, 2026-05-06:
+
+- Cloned public MLKit repository into ignored cache:
+  `/Users/siyaoliu/rift/cache/reml/mlkit`.
+- Repository URL: `https://github.com/melsman/mlkit.git`.
+- Inspected commit: `8561fe6ad949b84f83e8b78508b720ceccabe902`
+  (`Modular storage mode analysis (#209)`).
+- This is current MLKit HEAD, not yet the exact PLDI 2023 ReML configuration.
+- `mlkit` and `mlton` executables are not currently installed on this machine,
+  so no exact local run has been performed yet.
+- Full history/tags were fetched. Relevant tags around the paper-era ReML
+  release are:
+  - `v4.7.4` -> `855248bf`, 2023-10-01, initial explicit region/effect
+    annotation support;
+  - `v4.7.5` -> `5f0f811d`, 2023-10-10, "ReML released as part of the
+    distribution";
+  - `v4.7.6` -> `71c2630e`, 2023-11-16, later datatype-unboxing release.
+
+The clone contains many Figure 9-style benchmark sources under `test/` and
+`kitdemo/`, including `fft.sml`, `msort.mlb`, `ratio-regions.sml`,
+`tak.sml`, `tsp.sml`, `DLXSimulator.sml`, `nucleic.mlb`, `barnes-hut.mlb`,
+`logic.mlb`, `ray.mlb`, `mpuz.sml`, `zern.sml`, and Mandelbrot/life/fib
+variants. `test/all.tst` also groups several benchmark programs, and
+`src/Tools/Benchmark` contains an MLKit benchmarking harness that records real
+time, RSS, and GC count.
+
+This makes exact reproduction plausible, but not complete. The next
+provenance task is to determine whether the paper used a pre-release artifact,
+`v4.7.5`, or another revision, then pin the command flags. The current public
+source exposes MLKit options for region inference, garbage collection,
+generational GC, and no-GC region execution, but the exact Figure 9 mapping of
+`rg`, `rg-`, and `r` must be verified before running headline comparisons:
+
+- `rg`: region inference plus tracing GC with GC-safety refinement;
+- `rg-`: variant without the spurious-type-variable refinement;
+- `r`: pure region inference/no tracing GC;
+- `MLton`: optimizing SML baseline.
+
+Until those runs exist, compare Rift to ReML only by paper-reported axes and by
+local Scala Native port ratios.
 
 ## Safety Finding
 

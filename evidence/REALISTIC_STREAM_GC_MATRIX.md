@@ -1,7 +1,7 @@
 # Realistic Stream GC Matrix
 
 Date: 2026-05-03
-Last updated: 2026-05-06 00:55 CEST
+Last updated: 2026-05-06 16:14 CEST
 
 Status: benchmark ladder for realistic and real-input GC-heavy stream
 evidence. This file distinguishes generated stressors, methodology generators,
@@ -92,6 +92,9 @@ Next attempts:
    - record actual pages/tokens and shard provenance.
 3. More NDJSON/log-event streams:
    - prefer public web/server/security logs with JSON or key-value records;
+   - first concrete candidates are GDELT event files, Apache/NASA-style web
+     logs, security/event JSON lines, and Stack Exchange-style dumps converted
+     to event streams;
    - implement parse/project/window-count and token/field extraction variants.
 4. DSPBench local-kernel subset:
    - choose 2-3 kernels with high object churn and clear windows/epochs;
@@ -108,8 +111,9 @@ or allocation-pressure gate.
 | 2 | GH Archive file-backed q1/q2 | real file-backed NDJSON | parser/string allocation included; per-run latency/tail GC. |
 | 3 | More NDJSON/log stream q0/q1/q2 | real public logs | parsed records, fields/tokens, window-count output. |
 | 4 | DSPBench triage | source workloads, local kernel only | select 2-3 kernels with object churn and epoch/window lifetimes. |
-| 5 | NEXMark Q3/Q8/Q9/Q11 | Beam-default generated profile | keep 1M/5-run methodology controls. |
-| 6 | RIoTBench real/provenance-clean input | real or clearly documented generator | only continue if heap GC is material at 1M. |
+| 5 | GDELT/log-event real-data matrix | real event/log files | file-backed parse/project/window-count rows with actual loaded record count and heap max-GC. |
+| 6 | NEXMark Q3/Q8/Q9/Q11 | Beam-default generated profile | keep 1M/5-run methodology controls. |
+| 7 | RIoTBench real/provenance-clean input | real or clearly documented generator | only continue if heap GC is material at 1M. |
 
 For every row record:
 

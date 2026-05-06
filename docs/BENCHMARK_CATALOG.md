@@ -1,7 +1,7 @@
 # Rift Benchmark Catalog
 
 Date: 2026-05-05
-Last updated: 2026-05-06 15:57 CEST
+Last updated: 2026-05-06 16:14 CEST
 
 Status: working benchmark guide. Use this document to understand what each
 benchmark is meant to test before reading the detailed result files in
@@ -39,6 +39,26 @@ schema. Use the metric axes each paper reports, then add Rift's standardized
 local metrics separately. The detailed contract is
 `docs/LITERATURE_BENCHMARK_CONTRACT.md`.
 
+## 1.1 Outcome Labels
+
+Do not collapse all non-representative rows into "mixed" or "failed." Use a
+more precise label:
+
+| Label | Use when | Example |
+|---|---|---|
+| representative throughput win | elapsed win is large enough to support the final story | generated Common Crawl-shaped q1/q2 page-token |
+| modest throughput win | elapsed improves but margin or provenance is not strong enough for a representative claim | NEXMark Q8, real WET/WAT page-token controls |
+| RSS win | memory footprint improves materially even if elapsed is tied or slightly worse | ReML-shaped `ratio`, some checked fold/buffer controls |
+| fixed-memory/tail win | heap wins uncapped by growing large, but region wins under cap or reduces max-GC/tail events | GH Archive q1 under `1G` heap cap |
+| speed-gated | correct and useful API, but elapsed overhead is too high for final/public performance claims | `EpochFold`, `TableRank` |
+| ceiling/negative | no material elapsed, RSS, GC, or latency benefit | pipeline, current Wikimedia/Linear Road rows |
+
+Throughput means total completed work per unit time; in these batch matrices,
+lower elapsed time means higher throughput. Latency means time observed by one
+event/request, usually reported as p50/p95/max or deadline misses. A mode can
+win throughput and lose latency, or lose median throughput but improve max-GC
+tails.
+
 ## 2. Core Runtime Baselines
 
 | Benchmark | What it does | Input type | Main interpretation |
@@ -69,7 +89,7 @@ The ReML track has four evidence classes:
 | Class | Meaning |
 |---|---|
 | Paper-reported | Elsman 2023 Figure 9 data copied into tracked evidence, not rerun. |
-| Exact artifact | Open; only valid if original MLKit/ReML benchmarks and configurations are found and run locally. |
+| Exact artifact | Partial source provenance found in the public MLKit repo; still only valid after the paper-era revision/configuration and local `mlkit`/`mlton` runs are pinned. |
 | Scala Native ports | Local `ReMLRegionMatrix` ports; valid for Rift-vs-Scala-Native ratios, not cross-language claims. |
 | Safety probes | ReML-inspired compiler tests for polymorphic/higher-order GC-safety hazards; the current durable/static generic heap-retention probe is active and passing. |
 
@@ -135,6 +155,21 @@ beat GC" claim:
 - Heap-size controls matter: an uncapped heap can buy throughput with high RSS,
   while region modes are more interesting under fixed-memory or tail-latency
   constraints.
+
+## 6.1 Real Dataset Expansion
+
+The generated Common Crawl-shaped and NEXMark rows are useful but not enough.
+The next real-data expansion should prioritize datasets that are naturally
+record-oriented and can be processed as an event/page/window stream:
+
+| Candidate | Input form | First query shape |
+|---|---|---|
+| GH Archive | hourly real GitHub events, JSON/NDJSON | file-backed parse/project fields, repo/window counts, heap-capped tails |
+| Larger/multiple Common Crawl WET/WAT shards | public WET/WAT archive records | page/token/link object materialization and domain/window counts |
+| GDELT events | public event files | parse/project event fields and windowed country/topic counts |
+| Public web/server/security logs | Apache/NASA-style logs or JSON security events | tokenize fields, filter/project, per-window counts |
+| DSPBench local kernels | source benchmark workloads | choose kernels with clear epoch/window lifetimes and high object churn |
+| MLKit/ReML source benchmarks | real prior-system benchmark programs | non-stream region+GC comparison by elapsed/RSS/GC count |
 
 ## 7. What Has Not Been Proven Yet
 

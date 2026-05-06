@@ -1,6 +1,6 @@
 # Final Component Selection
 
-Last updated: 2026-05-06 15:57 CEST
+Last updated: 2026-05-06 16:14 CEST
 
 Status: selection policy for the final Rift story. This document classifies
 components by evidence without deleting runtime code. Losing and unsafe modes
@@ -20,6 +20,12 @@ A component can be public only if it has:
 
 Rootless modes are never public safe components. They are lower-bound controls
 for backend potential.
+
+Result classification is more fine-grained than public selection. A row can be
+a modest throughput win, RSS win, or fixed-memory/tail win without becoming a
+final public component. Public selection requires repeated support and a useful
+API shape; the evaluation report should still count modest/RSS/tail wins as
+wins on their own axes.
 
 ## Public Candidates
 
@@ -138,6 +144,7 @@ Selection changes from this run:
   ListOfLists is heap `15820.172 ms`, improved SafeZone `10133.449 ms`, and
   checked builder `6053.235 ms`.
 - `TransactionRegion` remains candidate, not final: throughput wins are
-  present, but latency remains mixed.
+  present and should be counted as modest throughput wins, but latency remains
+  mixed and trusted Rift remains faster.
 - `StreamWindowFold`, `TableRank`, JOIN, rank/window/table-heavy structures,
   and parser-scratch shapes remain gated or negative.

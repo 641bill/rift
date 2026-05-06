@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-06 15:57 CEST
+Last updated: 2026-05-06 16:14 CEST
 
 Status: markdown slide deck outline. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report and this file as
@@ -171,24 +171,41 @@ median is worse. The lesson is reusable and concrete:
 multi-stage stream operators should share one child-region lifetime, but hot
 list state must be operator-owned fields rather than generic indexed metadata.
 
-## Slide 11: What Is A Loss
+## Slide 11: What Counts As A Win
+
+| Outcome | Meaning |
+|---|---|
+| representative throughput win | large elapsed win with a reusable shape and correct outputs. |
+| modest throughput win | faster, but margin/provenance is not enough for the final headline. |
+| RSS win | materially lower resident memory, even with tied/slightly worse elapsed. |
+| fixed-memory/tail win | heap wins uncapped by growing large, but regions win under a cap or reduce max-GC tails. |
+| speed-gated | correct API, but CPU overhead too high for public performance claims. |
+| ceiling/negative | no material throughput, RSS, GC, or latency benefit. |
+
+Throughput is total completed work per unit time; lower batch elapsed means
+higher throughput. Latency is per-event/request time, usually p50/p95/max or
+deadline misses. They can move in different directions.
+
+## Slide 12: What Is Gated Or Negative
 
 | Negative result | Meaning |
 |---|---|
 | current Rift HP loses to improved SafeZone on linked/prior rows | learn from SafeZone internals. |
 | TableRank/rank/fold fail 1M gates | do not use them in app claims yet. |
-| real WET/WAT/Wikimedia/Linear Road mostly heap-fastest or median-GC-zero | current real inputs are not GC-heavy enough. |
+| real WET/WAT/Wikimedia/Linear Road mostly heap-fastest or median-GC-zero | current real inputs are not GC-heavy enough for representative claims, though WET/WAT page-token rows are modest real-input wins. |
 | pipeline surrogate heap wins | CPU-bound workloads are not Rift targets. |
 
-## Slide 12: Benchmark Ladder
+## Slide 13: Benchmark Ladder
 
 Next realistic GC-heavy search:
 
 1. larger/multiple real Common Crawl WET/WAT shards;
 2. GH Archive file-backed and memory-budget NDJSON rows;
-3. DSPBench local-kernel subset;
-4. NEXMark Q3/Q8/Q9/Q11 as generated controls;
-5. provenance-clean RIoTBench real input.
+3. other real NDJSON/log-event streams such as GDELT or public web/server/security logs;
+4. DSPBench local-kernel subset;
+5. NEXMark Q3/Q8/Q9/Q11 as generated controls;
+6. provenance-clean RIoTBench real input;
+7. exact MLKit/ReML source benchmark reproduction as a non-stream typed-region axis.
 
 The first real WAT shard now validates link-object placement and modestly
 favors SafeZone-backed page-token, but heap still reports zero timed GC.
@@ -200,21 +217,35 @@ page-token faster than heap.
 Every stream headline should now say whether the win is uncapped throughput,
 fixed-memory, RSS, or tail-latency evidence.
 
-## Slide 13: Current Claim
+## Slide 14: ReML / MLKit Lineage
+
+The ReML paper is a separate comparison axis: higher-order/polymorphic
+region+GC safety, not stream processing. We now have:
+
+- paper-reported Figure 9 data transcribed;
+- local Scala Native Tier 1 ports;
+- fixed ReML-style erased-generic heap-retention probes;
+- public MLKit source provenance in ignored cache.
+
+Exact speed comparison is still open. The public MLKit repo contains many
+Figure 9-style sources, and tags `v4.7.4`/`v4.7.5`/`v4.7.6` bracket the
+paper-era ReML release. We still need local `mlkit`/`mlton` executables and
+verified command mappings for `rg`, `rg-`, and `r`.
+
+## Slide 15: Current Claim
 
 Rift has credible trusted-runtime wins on epochal object-heavy streams and
 early checked safety/operator evidence. It now has a checked generated-stressor
 win, but it does not yet have a final checked real-input application win.
 
-## Slide 14: Next Work
+## Slide 16: Next Work
 
 1. Keep allocation and generic checked-container overhead separated; optimize buffers/operators next.
 2. Keep `StreamPageTokenAppendWindow` as the first cheap checked operator.
 3. Add heap-size-controlled rows for GH Archive, Common Crawl-shaped, and NEXMark.
-4. Test larger/multiple real WET/WAT, NDJSON/logs, and DSPBench-style local kernels.
+4. Test larger/multiple real WET/WAT, GH Archive file-backed, GDELT/logs, and DSPBench-style local kernels.
 5. Promote only repeated winning shapes; keep TableRank/rank gated out.
-6. Run the ReML/MLKit Tier 1 comparison matrix as a separate typed-region
-   lineage axis.
+6. Run exact MLKit/ReML artifact reproduction if toolchain/provenance is pinned.
 7. Apply `docs/FINAL_COMPONENT_SELECTION.md`: public candidates only in the
    default story; rootless/loss rows only as explicit controls.
 
