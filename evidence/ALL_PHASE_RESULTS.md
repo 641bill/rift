@@ -1,22 +1,24 @@
 # Rift All-Phase Results Rollup
 
 Date: 2026-05-01
-Last updated: 2026-05-07 18:14 CEST
+Last updated: 2026-05-07 18:53 CEST
 
 This file gathers the current numeric and validation evidence across all
 roadmap phases. It is a rollup, not the primary raw log. Prefer the source files
 listed below for command provenance and detailed interpretation.
 
-Latest update: `StreamAppendCursor.nextOwnedOrNull()` removes per-record link
-clearing in operator-owned page-token close callbacks while generic cursors
-remain defensive. The focused 1M cost split improves to checked scoped
-page-token `73.590/83.997/81.296 ms` on append-only/drain/aggregate versus
-heap `79.786/87.198/84.703 ms`. Real DSPBench Fraud q2 is now a modest checked
-elapsed/RSS win: checked scoped page-token `800.369 ms`, heap `807.974 ms`,
-trusted Streaming `785.682 ms`; checked RSS is about `279 MB` versus heap
+Latest update: operator-owned page-token allocation now has an
+`OpenStreamingRegion`/`allocOpen` path. Lowering
+`Classalloc(OpenStreamingRegion)` calls `RiftRegion.allocUncheckedImpl`, so the
+page-token hot path avoids the generic checked `allocImpl/checkOpen` branch
+while public APIs remain defensive. Focused 1M checked scoped page-token is
+`73.632/83.177/82.198 ms` on append-only/drain/aggregate versus heap
+`76.295/85.873/84.354 ms`. Real DSPBench Fraud q2 remains a modest checked
+elapsed/RSS win: checked scoped page-token `797.782 ms`, heap `806.697 ms`,
+trusted Streaming `778.975 ms`; checked RSS is about `279 MB` versus heap
 `358 MB`. Generated Common Crawl-shaped q1/q2 remains the strongest checked
-memory-pressure row: checked scoped page-token `3643.680/3790.138 ms` versus
-heap `5392.344/5201.862 ms`, with heap timed GC about `1.58 s`.
+memory-pressure row: checked scoped page-token `3707.214/3902.795 ms` versus
+heap `5577.965/5183.074 ms`, with heap timed GC `1741.640/1565.074 ms`.
 
 ## How To Read This File
 

@@ -1,22 +1,21 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-07 18:14 CEST
+Last updated: 2026-05-07 18:53 CEST
 
 Status: markdown slide deck outline. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report and this file as
 the talk skeleton. Use `docs/BENCHMARK_CATALOG.md` for benchmark definitions
 and evidence-class labels.
 
-Latest checkpoint: `StreamAppendCursor.nextOwnedOrNull()` removes per-record
-link clearing in operator-owned page-token close callbacks. This is a
-static-safety overhead removal: parent refs are cleared, callbacks are checked,
-and the child region closes immediately. Focused 1M checked scoped page-token
-improved to `73.590/83.997/81.296 ms` on append-only/drain/aggregate, and
-DSPBench Fraud q2 moved to a modest checked win (`800.369 ms` vs heap
-`807.974 ms`) with RSS cut from `358 MB` to `279 MB`. Trusted Streaming is
-still faster, so the next tuning slide should focus on checked operator/common
-traversal CPU and allocation lowering, not another bucket-open tweak.
+Latest checkpoint: operator-owned page-token allocation now uses
+`OpenStreamingRegion`/`allocOpen`, so checked child-bucket allocation avoids
+the generic `allocImpl/checkOpen` branch while public APIs remain defensive.
+Focused 1M checked scoped page-token is `73.632/83.177/82.198 ms` on
+append-only/drain/aggregate; DSPBench Fraud q2 is a modest checked win
+(`797.782 ms` vs heap `806.697 ms`) with RSS cut from `358 MB` to `279 MB`.
+Trusted Streaming is still faster, so the next tuning slide should focus on
+object construction, append/linking, cursor traversal, and query CPU.
 
 ## Slide 1: One-Sentence Thesis
 
@@ -93,8 +92,8 @@ clearest memory-regime detector.
 
 | Query | heap elapsed / GC | improved SafeZone 32K | checked page-token | checked scoped page-token |
 |---|---:|---:|---:|---:|
-| q1 tokenization | `5618.631 ms` / `1655.357 ms` | `4777.409 ms` | `4069.265 ms` | `3840.668 ms` |
-| q2 domain window | `5303.179 ms` / `1599.698 ms` | `4436.680 ms` | `4041.548 ms` | `3839.158 ms` |
+| q1 tokenization | `5577.965 ms` / `1741.640 ms` | `4595.446 ms` | `3933.900 ms` | `3707.214 ms` |
+| q2 domain window | `5183.074 ms` / `1565.074 ms` | `4410.391 ms` | `4040.310 ms` | `3902.795 ms` |
 
 Interpretation: region placement removes GC, and an operator-owned checked
 path can also remove enough redundant runtime overhead to win on this generated
@@ -168,9 +167,9 @@ data.
 
 The first committed-code q2 rerun was conservative: trusted Streaming was
 fastest at `788.040 ms`; checked scoped page-token was `810.770 ms`; heap was
-`820.945 ms`. After owned-cursor link-clearing removal, q2 improved to:
-trusted Streaming `785.682 ms`, checked scoped page-token `800.369 ms`, and
-heap `807.974 ms`. Checked scoped now has a modest elapsed/RSS win over heap,
+`820.945 ms`. After owned-cursor link-clearing and open-allocation removal, q2
+is now: trusted Streaming `778.975 ms`, checked scoped page-token `797.782 ms`,
+and heap `806.697 ms`. Checked scoped has a modest elapsed/RSS win over heap,
 but trusted Streaming remains the lower-bound row.
 
 Latest non-headline attribution changes the next tuning target. In DSPBench

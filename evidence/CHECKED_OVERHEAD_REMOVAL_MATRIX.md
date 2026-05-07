@@ -1,7 +1,7 @@
 # Checked Overhead Removal Matrix
 
 Date: 2026-05-03
-Last updated: 2026-05-07 16:38 CEST
+Last updated: 2026-05-07 18:53 CEST
 
 Status: overhead-removal contract plus implementation checkpoint. This matrix
 separates three states:
@@ -32,6 +32,7 @@ separates three states:
 | Per-entry close callback in append-window API | `StreamAppendCursor` closes buckets with one bucket callback and cursor traversal. | Focused 1M append-window cursor gate passed. |
 | Per-record bucket open check and child-region lookup in the page/token append path | `StreamPageTokenAppendWindow` owns bucket lookup, caches the child region once per bucket, and appends through an owned path that skips per-record `bucket.child.checkOpen()` and stale-current `isOpen` checks. | Focused 1M `rift-checked-page-token` is `27.141 ms` vs current `rift-checked-rift` `30.819 ms`; generated Common Crawl-shaped q1/q2 checked rows improve by `16.2-18.5%` versus current checked. |
 | Page-token no-drain close for append-only/aggregate-on-append shapes | `closePageTokenAppendBucketsBeforeNoDrain` and `closeAllPageTokenAppendBucketsNoDrain` clear parent bucket refs and close child regions without cursor traversal when the operator has already completed query work on append. | Safety/runtime probes pass, but the 1M cost matrix did not materially improve. Keep as an operator-owned option, not a headline speedup. |
+| Generic checked `allocImpl/checkOpen` in operator-owned page-token child buckets | `OpenStreamingRegion` plus `allocOpen(...)` lets lowering call `RiftRegion.allocUncheckedImpl(...)` only when the page-token operator owns bucket open/close order. | Validation passes. Focused 1M checked scoped page-token is `73.632/83.177/82.198 ms` on append-only/drain/aggregate versus heap `76.295/85.873/84.354 ms`; DSPBench Fraud q2 improves slightly to `797.782 ms` checked scoped versus heap `806.697 ms`. |
 | SafeZone root tracking in unsafe lower-bound mode | `safezone-rootless-32k` disables root add/remove. | Useful lower bound only; not a safety result. |
 
 ## Safe But Not Yet Removed
@@ -56,15 +57,15 @@ These should not be removed by safety claims alone:
 | Hash table probes in rank/fold/table operators | They are container algorithm work. Optimize layout/probing only if the operator shape is required by a winning benchmark. |
 | Heap maintenance in rank/TableRank | This is ranking semantics, not region safety. |
 | Object field access, token parsing, string/decimal formatting | CPU/application work. Regions only help if allocation/reclaim is material. |
-| Object construction and checked allocation lowering | Regions remove tracing/reclaim, but every object still needs header/RTTI setup, constructor work, and field stores. Checked allocation currently goes through an `allocImpl` method path until it is made more intrinsic. |
+| Object construction and remaining allocation lowering | Regions remove tracing/reclaim, but every object still needs header/RTTI setup, constructor work, and field stores. The page-token `allocOpen` path removes one checked branch, but it does not remove object construction or append/linking work. |
 | SafeZone close/reclaim bookkeeping | Required by SafeZone lifecycle unless a new reset-capable backend is designed. |
 
 ## Current Bottlenecks
 
 | Area | Evidence | Next target |
 |---|---|---|
-| Checked append/window application overhead | The new page/token operator clears the generated Common Crawl-shaped q1/q2 gate: at 1M, q1 `rift-checked-page-token` is `3956.366 ms` vs current checked `4855.133 ms`; q2 is `4039.855 ms` vs `4820.611 ms`. | Promote this shape cautiously and test real WET/WAT/NDJSON inputs; keep generic `StreamAppendWindow` as the defensive control. |
-| Allocation lowering / object construction | `ObjectAllocationLoweringMatrix` now removes stream-window/query traversal from the comparison and retains records so allocations cannot be optimized away. | The first retained-buffer rows mixed in generic checked `RegionBuffer` overhead. The refined retained-region-array rows show checked region allocation itself is fast: at 10M, checked SafeZone-backed is `143.319 ms`, checked Rift is `165.774 ms`, trusted HP is `199.627 ms`, and heap is `271.121 ms` with `105.807 ms` median GC. Next work should target generic checked buffers/operators, not raw allocation first. |
+| Checked append/window application overhead | The page-token operator clears the generated Common Crawl-shaped q1/q2 gate after open allocation: q1 checked scoped `3707.214 ms` vs heap `5577.965 ms`; q2 checked scoped `3902.795 ms` vs heap `5183.074 ms`. | Promote this shape cautiously and keep searching real WET/WAT/NDJSON/DSPBench-style inputs; generated rows prove the memory regime, not real-input prevalence. |
+| Allocation lowering / object construction | `ObjectAllocationLoweringMatrix` removes stream-window/query traversal from the comparison; page-token `allocOpen` removes the generic checked `checkOpen` branch for operator-owned buckets. | The focused and application reruns show only modest extra speedup. Remaining allocation cost is object construction, zero/init, append/linking, and query traversal. Do not spend more time on `checkOpen`; profile object construction and operator traversal next. |
 | Generic checked buffer overhead | `CheckedRegionBufferMatrix` now has exact-array and fixed-capacity `ObjectBuffer` controls. At 10 x 100k records, `rift-checked-array` is `18.574 ms`, fixed `ObjectBuffer` is `25.788 ms`, and growable `RegionBuffer` is `29.968 ms`; pre-sizing `RegionBuffer` lands near `ObjectBuffer` (`25.980 ms` vs `25.408 ms`) but still trails the exact array. A follow-up fixed-chunk append operator was correct but slower than linked page-token at 1M. | For known-size operators, prefer exact region-owned arrays when capacity is known. For append/drain stream workloads, keep linked page-token as the current fast path; do not assume chunking is faster unless a workload needs random access or substantially larger per-bucket payloads. |
 | Checked rank/table overhead | TableRank and long-key rank fail focused 1M gates. | Keep out of application claims; profile only after append/page/token path is fixed. |
 | Checked fold/aggregate overhead | `StreamWindowFold` lowers RSS/GC but loses elapsed at 1M. | Do not integrate into Common Crawl/NEXMark until focused gate passes. |
@@ -196,7 +197,8 @@ The next overhead-removal patch should not broaden no-check paths blindly:
    to fold/join/rank operators.
 3. For rootless checked SafeZone rows, add root-free eligibility checks before
    claiming safety.
-4. Use `ObjectAllocationLoweringMatrix` to distinguish allocation lowering
-   from operator/query CPU before changing more application benchmarks.
+4. Use focused cost matrices and profiles to distinguish object construction,
+   append/linking, cursor traversal, and query CPU before changing more
+   application benchmarks.
 5. Prioritize real WET/WAT/NDJSON rows that stress heap GC before optimizing
    more application-specific code.

@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-07 18:14 CEST
+Last updated: 2026-05-07 18:53 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -49,6 +49,22 @@ append-only/drain/aggregate, improving the previous no-length rows by roughly
 Streaming remains faster at `785.682 ms`, so this is a modest safe checked/RSS
 win, not the final lower bound.
 
+Latest open-allocation checkpoint:
+`RiftRegion.OpenStreamingRegion` and `RiftRegion.allocOpen(...)` now remove the
+generic checked `allocImpl/checkOpen` branch from operator-owned page-token
+child-bucket allocation. This is a static-safety cleanup, not a public
+low-level API relaxation. Focused 1M checked scoped page-token is
+`73.632/83.177/82.198 ms` on append-only/drain/aggregate versus heap
+`76.295/85.873/84.354 ms`; checked scoped count-by-key is `95.946 ms` versus
+heap `103.946 ms`. DSPBench Fraud q2 improves slightly to checked scoped
+`797.782 ms` versus heap `806.697 ms`, but trusted Streaming remains fastest
+at `778.975 ms`. Generated Common Crawl-shaped q1/q2 remains the strongest
+object-pressure row: checked scoped page-token `3707.214/3902.795 ms` versus
+heap `5577.965/5183.074 ms`; heap timed GC is `1741.640/1565.074 ms` versus
+checked scoped `30.693/27.027 ms`. Interpretation: `checkOpen` was worth
+removing, but object construction, append/linking, cursor traversal, and query
+CPU are now the larger limits.
+
 Benchmark guide: `docs/BENCHMARK_CATALOG.md` describes what each benchmark is
 meant to measure and which rows are generated, real-input, focused, or
 ceiling/control evidence.
@@ -75,8 +91,8 @@ representative components.
 | Runtime substrate | Improved SafeZone/rooted scoped regions remain the safe baseline; rootless/trusted rows are now explicit controls, not default public evidence. |
 | Checked Rift | Checked APIs are fast for simple append/window shapes. Page-token, Dataflow SELECT, RegionList, GH Archive-shaped q1/q2, and generated Common Crawl-shaped q1/q2 clear useful gates; rank/fold/table containers still add too much CPU overhead. |
 | Safe checked backend | `checked-region-scoped` is the best page-token backend in the clean final-selection sweep. It is fastest on focused page-token append and generated Common Crawl-shaped q1/q2. |
-| Real-input stream evidence | GH Archive byte-slice file-backed q1/q2, LogHub BGL, and DSPBench Fraud q2 are the strongest real-input modest-win candidates. After owned-cursor cleanup, Fraud q2 checked scoped page-token is a modest elapsed/RSS win (`800.369 ms` vs heap `807.974 ms`, RSS about `279 MB` vs heap `358 MB`), while trusted Streaming remains fastest (`785.682 ms`). This is useful real-input evidence, not a flagship GC-heavy case. |
-| Strongest memory-pressure row | Generated Common Crawl WET-shaped q1/q2 creates heavy stream object churn. After owned-cursor cleanup, heap spends about `1.58 s` timed GC on both q1/q2. Checked scoped page-token is fastest in the rerun (`3643.680 ms` q1, `3790.138 ms` q2), followed by checked Rift page-token (`3877.427 ms` q1, `4029.776 ms` q2). |
+| Real-input stream evidence | GH Archive byte-slice file-backed q1/q2, LogHub BGL, and DSPBench Fraud q2 are the strongest real-input modest-win candidates. After open allocation, Fraud q2 checked scoped page-token is a modest elapsed/RSS win (`797.782 ms` vs heap `806.697 ms`, RSS about `279 MB` vs heap `358 MB`), while trusted Streaming remains fastest (`778.975 ms`). This is useful real-input evidence, not a flagship GC-heavy case. |
+| Strongest memory-pressure row | Generated Common Crawl WET-shaped q1/q2 creates heavy stream object churn. After open allocation, heap spends `1.7/1.6 s` timed GC on q1/q2. Checked scoped page-token is fastest in the rerun (`3707.214 ms` q1, `3902.795 ms` q2), followed by checked Rift page-token (`3933.900 ms` q1, `4040.310 ms` q2). |
 | Real-input search direction | The search is tracked in `evidence/REAL_INPUT_BENCHMARK_SEARCH.md`. DSPBench Spike and Fraud q0/q1/q2 are implemented. Fraud q2 remains the best real-input regression target and now has a modest checked win, but trusted Streaming remains the lower-bound winner. Continue real RIoTBench/Theodolite-style inputs while using Fraud q2 as the checked-operator regression row. |
 | ReML/MLKit lineage | Tier 1 Scala Native ReML-shaped medians now exist. `msort`, `msort-r`, and `ratio` show useful checked-region allocation/RSS/GC behavior; exact ReML artifact rerun remains blocked by missing local `mlkit`/`mlton` and no running Docker daemon. |
 

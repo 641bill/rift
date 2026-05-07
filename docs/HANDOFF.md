@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-07 18:14 CEST
+Last updated: 2026-05-07 18:53 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -83,6 +83,32 @@ checked scoped page-token `800.369 ms` vs heap `807.974 ms`, with RSS
 `785.682 ms`. Generated Common Crawl-shaped 1M q1/q2 has checked scoped
 page-token `3643.680/3790.138 ms` vs heap `5392.344/5201.862 ms`, cutting
 timed GC from about `1.58 s` to about `32 ms`.
+
+Latest open-allocation page-token checkpoint:
+On 2026-05-07, checked page-token operators gained an internal
+`RiftRegion.OpenStreamingRegion` marker plus `RiftRegion.allocOpen(...)`.
+The Scala Native lowering now routes `Classalloc(OpenStreamingRegion)` through
+`RiftRegion.allocUncheckedImpl(...)`, avoiding the generic checked
+`allocImpl/checkOpen` path only for operator-owned page-token buckets that are
+known open by construction. Generic public checked allocation remains
+defensive. Validation passed `RiftRegionCheckedCompilerTest` `120/120`,
+`RiftRegionCheckedTest` `52/52`, and `sandbox3_next/compile`; a linker
+reachability fix was required so the lowered dynamic method table entry for
+`allocUncheckedImpl` is non-null. Focused 1M rows are modest: checked scoped
+page-token is `73.632/83.177/82.198 ms` on append-only/drain/aggregate versus
+heap `76.295/85.873/84.354 ms`; checked scoped count-by-key is `95.946 ms`
+versus heap `103.946 ms`. DSPBench Fraud q2 improves slightly to checked
+scoped `797.782 ms` versus heap `806.697 ms` and trusted Streaming
+`778.975 ms`, with checked RSS `278.5 MB` versus heap `358.3 MB`. Generated
+Common Crawl-shaped 1M q1/q2 remains strong: checked scoped page-token is
+`3707.214/3902.795 ms` versus heap `5577.965/5183.074 ms`; heap spends
+`1741.640/1565.074 ms` in timed GC while checked scoped spends
+`30.693/27.027 ms`. Interpretation: removing `checkOpen` is a real static
+safety cleanup but not the dominant remaining cost. Page-token wins now come
+mostly from the operator-owned lifetime shape and scoped backend; remaining
+costs are object construction, append/linking, cursor/query traversal, and
+shared application CPU. Sources: `evidence/CHECKED_PAGE_TOKEN_COST_MATRIX.md`,
+`evidence/DSPBENCH_REGION_MATRIX.md`, and `evidence/COMMON_CRAWL_WET_MATRIX.md`.
 
 Latest page-token attribution checkpoint:
 Child diagnostics now include `estimated_bucket_open_ms` for DSPBench and

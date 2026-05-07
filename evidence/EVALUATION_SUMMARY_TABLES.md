@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Tables
 
 Date: 2026-05-01
-Last updated: 2026-05-07 18:14 CEST
+Last updated: 2026-05-07 18:53 CEST
 
 Status: seeded summary pack for the comprehensive evaluation. Rows below are
 current checked-in evidence unless marked pending rerun.
@@ -78,6 +78,24 @@ Source rows:
 | DSPBench Fraud q2 | trusted Streaming `785.682 ms`, checked scoped page-token `800.369 ms`, heap `807.974 ms` | real-input q2 becomes a modest checked elapsed/RSS win, while trusted Streaming remains the lower bound |
 | Common Crawl-shaped q1 | checked scoped page-token `3643.680 ms`, checked Rift page-token `3877.427 ms`, heap `5392.344 ms` with `1577.850 ms` GC | strongest generated checked stream-object row improves; RSS remains a caveat |
 | Common Crawl-shaped q2 | checked scoped page-token `3790.138 ms`, checked Rift page-token `4029.776 ms`, heap `5201.862 ms` with `1579.132 ms` GC | strongest generated checked window row remains positive after the owned-cursor cleanup |
+
+## Page-Token Open-Allocation Rerun: 2026-05-07
+
+Source rows:
+
+- `cache/checked-page-token-openalloc-1m-default-2026-05-07/`
+- `cache/checked-page-token-openalloc-1m-countbykey-2026-05-07/`
+- `cache/dspbench-fraud-q2-openalloc-1m-2026-05-07/`
+- `cache/common-crawl-shaped-openalloc-q1q2-1m-2026-05-07/`
+
+| Area | Main result | Interpretation |
+|---|---|---|
+| Open checked allocation path | `OpenStreamingRegion`/`allocOpen` routes operator-owned page-token object allocation around generic checked `allocImpl/checkOpen` | static-safety cleanup is validated; public low-level checked APIs remain defensive |
+| Focused page-token cost split | checked scoped append-only/drain/aggregate `73.632/83.177/82.198 ms` vs heap `76.295/85.873/84.354 ms` | modest focused wins; aggregate is not materially better than the prior owned-cursor row |
+| Focused count-by-key | checked scoped count-by-key `95.946 ms` vs heap `103.946 ms`, with RSS `83296256` vs heap `146587648` bytes | clearest focused improvement from this checkpoint; still a modest operator win |
+| DSPBench Fraud q2 | trusted Streaming `778.975 ms`, checked scoped page-token `797.782 ms`, heap `806.697 ms` | real-input q2 modest checked elapsed/RSS win remains; trusted Streaming is still the lower bound |
+| Common Crawl-shaped q1 | checked scoped page-token `3707.214 ms`, checked Rift page-token `3933.900 ms`, heap `5577.965 ms` with `1741.640 ms` GC | generated object-pressure row stays strongest checked throughput/GC win; RSS is higher than heap |
+| Common Crawl-shaped q2 | checked scoped page-token `3902.795 ms`, checked Rift page-token `4040.310 ms`, heap `5183.074 ms` with `1565.074 ms` GC | generated window row remains strong; open allocation is not the dominant reason for the win |
 
 ## Staged Headline Sweep: 2026-05-06
 

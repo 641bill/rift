@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-07 18:14 CEST
+Last updated: 2026-05-07 18:53 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -76,6 +76,23 @@ about `278 MB` versus heap `358 MB`; trusted Streaming is still faster at
 `785.682 ms`. Generated Common Crawl-shaped 1M q1/q2 strengthens the checked
 page-token story: checked scoped page-token `3643.680/3790.138 ms` versus heap
 `5392.344/5201.862 ms`, with heap timed GC about `1.58 s`.
+
+Latest open-allocation checkpoint: checked page-token operators now have an
+internal `OpenStreamingRegion`/`allocOpen` path. Lowering
+`Classalloc(OpenStreamingRegion)` calls `RiftRegion.allocUncheckedImpl`, so
+operator-owned child-bucket allocation avoids the generic checked
+`allocImpl/checkOpen` branch while public checked APIs remain defensive.
+Validation passed the checked compiler/runtime suites and sandbox compile.
+Focused 1M checked scoped page-token is now `73.632/83.177/82.198 ms` on
+append-only/drain/aggregate versus heap `76.295/85.873/84.354 ms`; checked
+scoped count-by-key is `95.946 ms` versus heap `103.946 ms`. DSPBench Fraud q2
+improves only slightly (`797.782 ms` checked scoped versus `806.697 ms` heap
+and `778.975 ms` trusted Streaming), while generated Common Crawl-shaped 1M
+q1/q2 remains strong (`3707.214/3902.795 ms` checked scoped versus
+`5577.965/5183.074 ms` heap). Conclusion: static safety can remove this
+runtime check, but it is not the dominant remaining cost. Next performance work
+should profile object construction, append/linking, cursor traversal, and query
+CPU before adding another page-token micro-optimization.
 
 Latest CPU profile checkpoint: `docs/CPU_PROFILE_REPORT.md`. macOS
 `/usr/bin/sample` profiles for generated Common Crawl-shaped q2 at 2M pages
