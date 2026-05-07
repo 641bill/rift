@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-07 01:23 CEST
+Last updated: 2026-05-07 13:51 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -18,6 +18,35 @@ Parent evidence commit at start of latest sweep:
 Latest comprehensive sweep checkpoint:
 Staged headline runs completed after the TransactionRegion checkpoint. Source
 summary: `evidence/COMPREHENSIVE_SWEEP_2026_05_06.md`.
+
+Latest page-token fast-path checkpoint:
+On 2026-05-07, `StreamPageTokenAppendWindow` got a batch-close/current-bucket
+fast path: `StreamAppendCursor.nextOrNull()`, page-token-owned close without
+the generic leftover-drain loop, and a monotonic same-bucket region fast path.
+Validation passed `sandbox3_next/compile`, `RiftRegionCheckedCompilerTest`
+`118/118`, and `RiftRegionCheckedTest` `50/50`. Focused 1M append rows:
+heap `36.920 ms`, checked Rift page-token `29.319 ms`, checked SafeZone-backed
+page-token `27.549 ms`; chunk-token remains slower. DSPBench Fraud q2 now has
+a modest checked real-input win in the clean same-run matrix:
+checked SafeZone-backed page-token `818.574 ms` vs heap `862.834 ms`,
+improved SafeZone `873.859 ms`, and trusted Streaming `834.447 ms`, with RSS
+about `279 MB` vs heap `358 MB`. Generated Common Crawl-shaped 100k q1/q2
+also strengthened: checked SafeZone-backed page-token is fastest on q1
+(`370.758 ms`) and q2 (`377.482 ms`). Treat these as post-fast-path evidence;
+older Fraud q2 checked-loses rows remain useful as pre-optimization baseline.
+
+Latest post-fast-path selected sweep:
+`evidence/POST_FAST_PATH_SELECTED_SWEEP_2026_05_07.md` records a selected 1M
+rerun from the current dirty page-token checkpoint. Dataflow SELECT remains a
+strong reusable operator row: scoped checked page-token `18.572 ms` versus
+heap `28.942 ms` and improved SafeZone `22.463 ms`. NEXMark Beam-default q3,
+q8, q9, and q11 all have checked Rift fastest in the same-run selected pass.
+Generated Common Crawl-shaped 1M q1/q2 now have checked SafeZone-backed
+page-token fastest on both q1 (`3840.668 ms` vs heap `5618.631 ms`) and q2
+(`3839.158 ms` vs heap `5303.179 ms`); heap spends about `1.6 s` in timed GC
+on each. This strengthens checked page-token and checked scoped backend as
+public candidates, but because the sweep is dirty it should be rerun from a
+clean commit before final paper tables.
 
 Latest final-selection sweep checkpoint:
 Clean run `2026-05-06-final-selection-headline` completed after committing the
@@ -187,6 +216,50 @@ Streaming `30899.595 ms`, GC `0.000 ms`; checked scoped page-token
 useful real-input modest throughput/RSS/fixed-memory evidence, but still not
 the missing GC-heavy stream case because heap GC remains under 2% of elapsed
 at full-file scale.
+
+Latest real-input benchmark-search checkpoint:
+`evidence/REAL_INPUT_BENCHMARK_SEARCH.md` now tracks the next flagship search
+for a real GC-heavy stream benchmark. The immediate candidate family is
+DSPBench, not another DEBS/TableRank tuning pass. `GMAP/DSPBench` is cloned in
+ignored cache at `/Users/siyaoliu/rift/cache/benchmark-data/dspbench/source`,
+commit `00c20da828faf2b960fdb697c61d34cb25461875`. The first local
+single-process Spike Detection matrix is implemented in
+`scala-native-rift/sandbox/src/main/scala-next/DSPBenchRegionMatrix.scala`
+with runner `scala-native-rift/sandbox/run_dspbench_region_matrix.sh` and
+result pack `evidence/DSPBENCH_REGION_MATRIX.md`. It uses
+`dspbench-threads/data/sensors.dat` (`79999` usable lines) and reports replay
+counts explicitly. 20k smoke matched checksums/output counts. At 1M, heap GC
+is real but still small: q0 `10.880 ms`, q1 `21.421 ms`, q2 `32.793 ms`.
+Best rows are modest: checked scoped page-token q1 is `1163.045 ms` vs heap
+`1187.525 ms`, while q2 trusted Streaming is `1258.164 ms` vs heap
+`1271.677 ms`; checked scoped q2 is slightly slower. Fraud Detection q0/q1/q2
+is now implemented over `dspbench-threads/data/credit-card.dat` (`185000`
+lines). The first 1M Fraud q2 matrix made trusted Streaming the strongest row:
+heap `801.790 ms`, median GC `69.686 ms`, RSS `358252544`; trusted Streaming
+`763.819 ms`, median GC `12.492 ms`, RSS `282460160`. That made checked q2 a
+checked-overhead diagnostic. After the page-token fast path, the clean same-run
+q2 matrix has checked scoped page-token fastest (`818.574 ms`) versus heap
+`862.834 ms`, improved SafeZone `873.859 ms`, and trusted Streaming
+`834.447 ms`, with RSS about `279 MB`. A follow-up heap-cap rerun at 1M q2
+before the fast path shows heap
+caps `512M` and `384M` do not materially change heap behavior; `256M` lowers
+RSS to `272449536` but raises the max GC tail to `101.267 ms`. The useful next
+action is to keep Fraud q2 as a regression row for common checked close/open
+overhead. A diagnostic-only checked run added `DSPBENCH_DIAG=1`: it appended
+and closed `4851373` records, with visible timing in allocation+append,
+predictor CPU, close cursor traversal, and bucket switch/open-close. The
+diagnostic elapsed is not headline evidence because
+per-record timers perturb the row.
+
+The pre-fast-path diagnostic was then extended across all Fraud q2 modes.
+Mode-specific
+allocation+append times were: heap `189.524 ms`, SafeZone improved
+`134.630 ms`, trusted Streaming `135.167 ms`, checked Rift page-token
+`152.283 ms`, and checked SafeZone page-token `150.169 ms`. This means
+allocation+append is memory overhead, but region allocation is not slower than
+heap in this diagnostic. The checked gap is now mostly common checked
+operator/traversal/open-close overhead plus remaining parser/replay/predictor
+and checksum CPU.
 
 Active update:
 Cheap checked page/token append operator implemented and measured; real WAT

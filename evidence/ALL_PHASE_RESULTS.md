@@ -1,7 +1,7 @@
 # Rift All-Phase Results Rollup
 
 Date: 2026-05-01
-Last updated: 2026-05-07 01:23 CEST
+Last updated: 2026-05-07 13:51 CEST
 
 This file gathers the current numeric and validation evidence across all
 roadmap phases. It is a rollup, not the primary raw log. Prefer the source files
@@ -99,6 +99,8 @@ Outcome labels now distinguish the kind of win:
 | Phase 6 Yahoo-style ad stream detector | `evidence/YAHOO_AD_REGION_MATRIX.md` |
 | Phase 6 RIoTBench-style IoT detector | `evidence/RIOTBENCH_REGION_MATRIX.md` |
 | Stream GC benchmark candidates | `evidence/STREAM_GC_BENCHMARK_CANDIDATES.md` |
+| Real-input GC-heavy benchmark search | `evidence/REAL_INPUT_BENCHMARK_SEARCH.md` |
+| DSPBench Spike/Fraud Detection local matrix | `evidence/DSPBENCH_REGION_MATRIX.md` |
 | Stream benchmark ladder | `evidence/STREAM_BENCHMARK_LADDER.md` |
 | Phase 6 pipeline / parallel collections | `evidence/PIPELINE_PARCOLL_COMPARISON.md` |
 | Phase 7 checked stream-window rank | `evidence/CHECKED_STREAM_WINDOW_RANK_MATRIX.md` |
@@ -138,6 +140,7 @@ row. Core runtime/topology headline rows were not rerun in this pass.
 | NEXMark Beam-default | checked Rift fastest on q0/q1/q2/q3/q4/q5/q8/q9/q11 | broad generated methodology win, mostly modest |
 | Common Crawl-shaped q1 | checked SafeZone page-token `3696.284 ms`, checked Rift page-token `3905.285 ms`, heap `5350.531 ms` with `1517.640 ms` GC | strongest checked generated stream win |
 | Common Crawl-shaped q2 | checked SafeZone page-token `3732.171 ms`, checked Rift page-token `3972.493 ms`, heap `5183.656 ms` with `1526.751 ms` GC | strongest checked generated window win |
+| Page-token fast-path follow-up | focused 1M checked SafeZone page-token `27.549 ms` vs heap `36.920 ms`; generated Common Crawl-shaped 100k q1/q2 checked SafeZone page-token `370.758/377.482 ms` vs heap `533.406/513.498 ms`; DSPBench Fraud q2 checked SafeZone page-token `818.574 ms` vs heap `862.834 ms` | batch-close/current-bucket fast path strengthens the cheap checked operator and flips Fraud q2 into a modest checked real-input win |
 | Linear Road | heap fastest or tied on q0/q1/q2 | ceiling/control despite region GC reduction |
 
 ## Evidence Levels
@@ -159,7 +162,7 @@ row. Core runtime/topology headline rows were not rerun in this pass.
 | Phase 3: runtime-only evaluation | Done enough for current claim | Validated with caveats | Same-layout GCBench/ListOfLists runtime medians |
 | Phase 4: topology/layout decomposition | Done enough to move on | Validated/provisional mix | Layout, topology, targeted runtime follow-up, safety finding |
 | Phase 5: application evidence | In progress | Bounded-sample medians plus diagnostic attribution, safe-API probes, single-run full-month controls, full-month heap/checked medians, and SafeZone DEBS controls | DEBS correctness, 100k/1M trusted medians, opt-in GC heap allocation attribution, Q1 checked-output output-equivalence, Q1 checked-processing output-equivalence, Q2 checked-processing output-equivalence, checked RunBoth 100k/1M medians plus attribution, 3-run Commix control, first full-month output-equivalence control, post-pool-cap checked full-month run, post-pool-cap same-run full-month heap/checked control, trusted full-month Streaming control, checked `ChildBucket` same-order full-month 3-run median, active-memory diagnostics, region-family attribution, Q1 rank lifetime narrowing, post-fix full-month heap/checked median, checked Q1 window-rank arenas, reusable checked `StreamBucketArena` migration, checked `StreamWindowIndexedRank`, `putWindowRankInBucket` auto cleanup, entry-cleanup callbacks, lexicographic checked rank priorities, long-key stream-window rank matrix, Q2 CPU substep diagnostics, 100k SafeZone controls, and 1M current/improved SafeZone medians |
-| Phase 6: literature-aligned methodology evidence | Started | Validated methodology medians with caveats | Broom-style dataflow including checked SELECT/AGGREGATE/JOIN modes, StreamFlex-style latency/throughput, Yak-style control/data plus grouped sort, top-word/filter, GraphChi-style subintervals, and runtime promotion proxy, Stancu-style transaction accounting, NEXMark-lite Q0/Q1/Q2/Q5/Q8 stream queries, Beam-default NEXMark-profile rows including expanded Q3/Q4/Q9/Q11, generated and real/preloaded Common Crawl/Wikimedia/Linear Road stream detectors, Yahoo-style ad stream, RIoTBench-style IoT stream, Common Crawl-like q1/q2 fast-allocation-counter follow-up, plus the Scala Native win-envelope synthesis |
+| Phase 6: literature-aligned methodology evidence | Started | Validated methodology medians with caveats; real-input search in progress | Broom-style dataflow including checked SELECT/AGGREGATE/JOIN modes, StreamFlex-style latency/throughput, Yak-style control/data plus grouped sort, top-word/filter, GraphChi-style subintervals, and runtime promotion proxy, Stancu-style transaction accounting, NEXMark-lite Q0/Q1/Q2/Q5/Q8 stream queries, Beam-default NEXMark-profile rows including expanded Q3/Q4/Q9/Q11, generated and real/preloaded Common Crawl/Wikimedia/Linear Road stream detectors, Yahoo-style ad stream, RIoTBench-style IoT stream, real GH Archive and LogHub probes, Common Crawl-like q1/q2 fast-allocation-counter follow-up, DSPBench source/data triage plus Spike Detection and Fraud Detection q0/q1/q2 local matrices, and the Scala Native win-envelope synthesis |
 | Phase 6b: Broom / parallel collections API evidence | Open | Provisional surrogate only | amordo comparison and Rift raw-array surrogate |
 | Phase 6c: ReML / MLKit lineage comparison | Started | Paper-reported table plus local Tier 1 medians; no exact MLKit/ReML rerun yet | Elsman 2023 Figure 9 transcribed as paper-reported/not-rerun evidence; `ReMLRegionMatrix` Tier 1 Scala Native-shaped ports for `fib37`, `tak`, `mandel`, `msort`, `msort-r`, `life`, `fft`, and `ratio`; 2026-05-06 Tier 1 medians show `msort`, `msort-r`, and `ratio` as useful local allocation/RSS/GC rows; ReML-style durable/static generic heap-retention probe is active and passing; public MLKit source provenance has started from the ignored clone at `cache/reml/mlkit`, with Figure 9-style sources found and tags `v4.7.4`/`v4.7.5`/`v4.7.6` identified; exact local `mlkit`/`mlton` reproduction remains open and Docker is not currently running |
 | Phase 7: capture-checked safe API | Started | Compiler-probe, runtime-smoke, focused checked-container benchmark, checked dataflow evidence, and DEBS-shaped checked probes | 96 targeted checked-API compiler probes, checked child-window, child-bucket, stream-bucket-arena, stream-window-rank, window-rank auto-cleanup, entry-cleanup, lexicographic rank-priority, standalone long-key rank, long-key stream-window-rank, fused TableRank, reusable StreamAppendWindow, StreamJoinWindow, StreamWindowFold runtime probes, checked page/token append, the new ObjectAllocationLowering scaffold, `CheckedRegionBufferMatrix`, `CheckedRegionPriorityQueueMatrix`, `CheckedRegionIndexedPriorityQueueMatrix`, `CheckedStreamWindowRankMatrix`, `CheckedAppendWindowMatrix`, `CheckedWindowFoldMatrix`, Dataflow SELECT/AGGREGATE/JOIN `rift-checked`, Q1 checked-output, Q1 checked-processing, Q2 checked-processing, checked RunBoth `rift-checked` medians, plus Phase 4 safety finding |
@@ -2651,16 +2654,19 @@ Status:
   overhead-removal pass after the report rewrite. `StreamPageTokenAppendWindow`
   owns bucket lookup, child-region caching, append, and close, so the hot path
   avoids per-record child-bucket open checks and child-region lookups while
-  keeping public low-level APIs defensive. Compiler tests now pass `98/98` and
-  native checked runtime tests pass `43/43`. At 1M in the focused matrix,
-  `rift-checked-page-token` is `27.141 ms` versus current checked `30.819 ms`
-  and heap `35.652 ms`; the SafeZone-backed page-token row is `26.191 ms`.
-  Generated Common Crawl-shaped q1/q2 now pass the checked
-  application-shaped gate: q1 page-token is `3956.366 ms` and SafeZone-backed
-  page-token is `3728.286 ms` versus heap `5412.618 ms`; q2 page-token is
-  `4039.855 ms` and SafeZone-backed page-token is `3816.247 ms` versus heap
-  `5252.803 ms`. Treat this as generated stressor evidence, not real-input
-  proof.
+  keeping public low-level APIs defensive. After the 2026-05-07
+  batch-close/current-bucket fast path, compiler tests pass `118/118` and
+  native checked runtime tests pass `50/50`. At 1M in the focused matrix,
+  `rift-checked-page-token` is `29.319 ms` versus heap `36.920 ms`; the
+  SafeZone-backed page-token row is `27.549 ms`, and chunk-token remains
+  slower. The post-fast-path selected sweep strengthens the generated
+  application-shaped evidence: Common Crawl-shaped q1 page-token is
+  `4069.265 ms` and SafeZone-backed page-token is `3840.668 ms` versus heap
+  `5618.631 ms`; q2 page-token is `4041.548 ms` and SafeZone-backed
+  page-token is `3839.158 ms` versus heap `5303.179 ms`. DSPBench Fraud q2 is
+  now a modest real-input checked win: checked scoped page-token `818.574 ms`
+  versus heap `862.834 ms`, with lower RSS. Treat generated WET-shaped rows as
+  memory-pressure evidence and Fraud q2 as modest real-input evidence.
 - The next checked-overhead split is now explicit. Region close/open cost is
   small in the latest real-stream rows, but ordinary object construction,
   checked `allocImpl` lowering, bucket append/cursor work, and query traversal
@@ -2783,6 +2789,23 @@ Status:
   trusted Streaming `30899.595 ms`. Interpretation: LogHub BGL is a useful
   real-input modest throughput/RSS/fixed-memory control, but not the missing
   GC-heavy flagship because full-file heap GC is still under 2% of elapsed.
+- The real-input benchmark search now has its own ledger:
+  `evidence/REAL_INPUT_BENCHMARK_SEARCH.md`. DSPBench is the first family
+  because it is a public DSPS benchmark with varied stream applications and
+  memory-occupation characterization. Spike Detection q0/q1/q2 is implemented
+  and measured in `evidence/DSPBENCH_REGION_MATRIX.md` over `79999` usable
+  real sensor rows replayed to 1M. It is modest/control evidence: q1 checked
+  scoped page-token is `1163.045 ms` vs heap `1187.525 ms`, and q2 trusted
+  Streaming is `1258.164 ms` vs heap `1271.677 ms`, but heap GC remains below
+  3% of elapsed. Fraud Detection is also implemented and measured over
+  `credit-card.dat`; the first q2 matrix made trusted Streaming the best row
+  (`763.819 ms` vs heap `801.790 ms`, median heap GC `69.686 ms`). After the
+  2026-05-07 page-token fast path, clean same-run q2 has checked scoped
+  page-token fastest (`818.574 ms`) versus heap `862.834 ms`, improved
+  SafeZone `873.859 ms`, and trusted Streaming `834.447 ms`, with RSS about
+  `279 MB` vs heap `358 MB`. A 1M q2 heap-cap follow-up before the fast path
+  shows `512M`/`384M` caps are near uncapped heap behavior; `256M` lowers heap
+  RSS but raises max GC to `101.267 ms`, so heap caps did not create the win.
 - The append-window result does not justify returning to DEBS Q1 ranking.
   TableRank remains gated out. The first DEBS integration of the passing
   cursor-close shape now exists for checked Q1 event-window entries and

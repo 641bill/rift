@@ -1,7 +1,7 @@
 # Benchmark Data Sources
 
 Date: 2026-05-01
-Last updated: 2026-05-07 01:23 CEST
+Last updated: 2026-05-07 12:24 CEST
 
 Local data root:
 `/Users/siyaoliu/rift/cache/benchmark-data`
@@ -34,6 +34,7 @@ The ignored per-download manifest is
 | Apache Beam source checksum | `/Users/siyaoliu/rift/cache/benchmark-data/apache-beam/apache-beam-2.73.0-source-release.zip.sha512` | 168 | Official SHA-512 checksum for the Beam source archive. |
 | LogHub BGL archive | `/Users/siyaoliu/rift/cache/benchmark-data/loghub/BGL.tar.gz` | 62936967 | Real LogHub / LogPAI Blue Gene/L system log archive from the Zenodo-hosted LogHub dataset. |
 | LogHub BGL extracted log | `/Users/siyaoliu/rift/cache/benchmark-data/loghub/BGL/BGL.log` | 743185031 | Extracted real BGL log; first `LogHubRegionMatrix` input with `4747963` lines. |
+| DSPBench source clone | `/Users/siyaoliu/rift/cache/benchmark-data/dspbench/source` | directory | Ignored local clone of `GMAP/DSPBench` for real-input stream benchmark triage; inspected commit `00c20da828faf2b960fdb697c61d34cb25461875`. |
 
 All downloaded `.gz` files passed `gzip -t`. The Linear Road and LogHub
 tarballs were checked with `tar -tzf` or successfully extracted. The Apache
@@ -52,6 +53,8 @@ Beam source archive passed the official `sha512` check.
   `https://github.com/logpai/loghub`
 - LogHub dataset table:
   `https://github.com/logpai/loghub/blob/master/docs/datasets.md`
+- DSPBench paper/source:
+  `https://zenodo.org/records/4671407` and `https://github.com/GMAP/DSPBench`
 
 ## Apache Beam NEXMark
 
@@ -93,6 +96,12 @@ Those directories are also ignored by git.
   Thunderbird remain optional follow-up inputs if their query shape
   materializes more per-record objects than the current BGL line/token/window
   path.
+- DSPBench source has now been cloned into ignored cache, and Spike Detection
+  plus Fraud Detection are wired into `DSPBenchRegionMatrix`. The bundled
+  `dspbench-threads` data includes `sensors.dat` (`79999` usable lines in the
+  local parser), `credit-card.dat` (`185000` lines), and `stocks.csv`
+  (`411` lines). Treat replayed rows as real-record replay, not fresh
+  full-scale real input.
 
 ## Next Wiring Work
 
@@ -121,3 +130,9 @@ The first wiring pass is now implemented in the Scala Native sandbox:
 - `LOGHUB_INPUT=...` with `LOGHUB_INPUT_MODE=file-backed` streams extracted
   real LogHub `.log` files. First validated input:
   `/Users/siyaoliu/rift/cache/benchmark-data/loghub/BGL/BGL.log`.
+- `DSPBenchRegionMatrix` now runs Spike Detection q0/q1/q2 over
+  `/Users/siyaoliu/rift/cache/benchmark-data/dspbench/source/dspbench-threads/data/sensors.dat`.
+  It also runs Fraud Detection q0/q1/q2 over
+  `/Users/siyaoliu/rift/cache/benchmark-data/dspbench/source/dspbench-threads/data/credit-card.dat`.
+  Fraud q2 is the strongest DSPBench real-input row so far, but checked scoped
+  page-token remains speed-gated.

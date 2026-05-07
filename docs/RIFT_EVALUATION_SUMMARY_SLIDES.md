@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-07 01:23 CEST
+Last updated: 2026-05-07 13:51 CEST
 
 Status: markdown slide deck outline. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report and this file as
@@ -69,7 +69,7 @@ mechanics can do when roots are unnecessary.
 | Rift per-allocation byte-counter atomics | implemented; Common Crawl-like q1/q2 improved. |
 | SafeZone per-page root removal cliff | implemented as improved roots mode. |
 | AppendWindow per-entry close callback | implemented cursor close. |
-| Page/token append per-record open checks/lookups | implemented in `StreamPageTokenAppendWindow`; generated Common Crawl-shaped q1/q2 gate passed. |
+| Page/token append per-record open checks/lookups plus generic leftover-drain close work | implemented in `StreamPageTokenAppendWindow`; 2026-05-07 batch-close/current-bucket fast path strengthened focused and generated Common Crawl-shaped rows. |
 | Rootless SafeZone root registration | benchmark-only lower bound, not safety claim. |
 
 Remaining generic fold/join/rank hot-path checks and rootless checked backend
@@ -82,8 +82,8 @@ clearest memory-regime detector.
 
 | Query | heap elapsed / GC | improved SafeZone 32K | checked page-token | checked scoped page-token |
 |---|---:|---:|---:|---:|
-| q1 tokenization | `5619.896 ms` / `1625.936 ms` | `4710.779 ms` | `4159.837 ms` | `3860.248 ms` |
-| q2 domain window | `5429.530 ms` / `1643.346 ms` | `4577.498 ms` | `4175.633 ms` | `3895.711 ms` |
+| q1 tokenization | `5618.631 ms` / `1655.357 ms` | `4777.409 ms` | `4069.265 ms` | `3840.668 ms` |
+| q2 domain window | `5303.179 ms` / `1599.698 ms` | `4436.680 ms` | `4041.548 ms` | `3839.158 ms` |
 
 Interpretation: region placement removes GC, and an operator-owned checked
 path can also remove enough redundant runtime overhead to win on this generated
@@ -142,13 +142,27 @@ heap is `5646.824 ms` with `157.198 ms` GC and improved SafeZone-32k is
 `31165.087 ms`, zero timed GC, RSS `491 MB`. This strengthens the real-input
 modest-win story, but still not the missing huge-GC case.
 
+DSPBench Spike Detection is now measured as the first DSPS local-kernel row.
+At 1M real sensor events replayed from `79999` usable lines, checked scoped
+page-token q1 is `1163.045 ms` vs heap `1187.525 ms`; trusted Streaming q2 is
+`1258.164 ms` vs heap `1271.677 ms`. Heap GC is real but small
+(`10.880-32.793 ms`), so Spike is a real-input modest/control row. Fraud
+Detection is now measured too. The first 1M q2 matrix made trusted Streaming
+the best row (`763.819 ms` vs heap `801.790 ms`). After the 2026-05-07
+page-token batch-close fast path, checked scoped page-token is the fastest
+same-run q2 row: `818.574 ms` versus heap `862.834 ms`, improved SafeZone
+`873.859 ms`, and trusted Streaming `834.447 ms`, with RSS cut from about
+`358 MB` to `279 MB`. This is a modest checked real-input win, not a
+flagship GC-heavy case.
+
 ## Slide 9: Best Checked Stream Rows
 
 | Query | heap | improved SafeZone | best checked | Interpretation |
 |---|---:|---:|---:|---|
-| NEXMark Q3 | `317.003 ms` | `304.246 ms` | `287.541 ms` | best checked methodology row, modest win. |
-| NEXMark Q8 | `471.966 ms` | `465.297 ms` | `445.214 ms` | checked wins modestly. |
-| NEXMark Q9 | `806.418 ms` | `756.289 ms` | `731.810 ms` | strong Beam-default checked row. |
+| NEXMark Q3 | `305.799 ms` | `300.271 ms` | `285.356 ms` | best selected methodology row, modest win. |
+| NEXMark Q8 | `466.964 ms` | `452.158 ms` | `443.020 ms` | checked wins modestly. |
+| NEXMark Q9 | `798.672 ms` | `744.343 ms` | `724.479 ms` | strong Beam-default checked row. |
+| NEXMark Q11 | `215.910 ms` | `227.575 ms` | `209.918 ms` | checked wins elapsed and cuts GC. |
 
 NEXMark uses generated Beam-default methodology, not the Beam runner.
 
@@ -158,13 +172,18 @@ Focused 1M append/window rows:
 
 | Mode | Median |
 |---|---:|
-| `heap-immix` | `37.046 ms` |
-| `rift-checked-page-token` | `28.160 ms` |
-| `rift-checked-safezone-page-token` | `26.866 ms` |
+| `heap-immix` | `36.920 ms` |
+| `rift-checked-page-token` | `29.319 ms` |
+| `rift-checked-safezone-page-token` | `27.549 ms` |
 
 The generic SafeZone-backed cursor was a useful backend step. The page/token
 operator is stronger: generated Common Crawl-shaped q1/q2 improves current
 checked by about `16-23%` in the 2026-05-06 staged sweep.
+The 2026-05-07 fast-path regression keeps linked page-token ahead of
+chunk-token. The post-fast-path selected 1M sweep makes checked scoped
+page-token fastest on generated Common Crawl-shaped q1 (`3840.668 ms`) and q2
+(`3839.158 ms`), and it keeps Dataflow SELECT scoped page-token fastest at
+`18.572 ms`.
 
 `Page/token` means an operator-owned child-bucket append path: one
 page/event/window owns many short-lived records, the operator caches the child

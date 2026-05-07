@@ -1,6 +1,7 @@
 # Rift Performance Evaluation Runbook
 
 Date: 2026-05-01
+Last updated: 2026-05-07 12:24 CEST
 
 Status: executable runbook for the thesis-grade performance sweep. This is
 not a result pack; it defines how to collect comparable results.
@@ -157,7 +158,9 @@ methodology evidence. Use real/preloaded inputs for validation when available:
 - Wikimedia pageviews/clickstream TSVs under `cache/benchmark-data`;
 - decompressed Common Crawl `.warc.wet`;
 - official Linear Road data-driver files;
-- future real RIoTBench/DSPBench inputs only after provenance is documented.
+- DSPBench source and bundled sample files after provenance is documented in
+  `evidence/REAL_INPUT_BENCHMARK_SEARCH.md`;
+- future real RIoTBench inputs only after provenance is documented.
 
 Do not claim exact artifact reproduction unless the original generator,
 configuration, and validation rules are used.
@@ -176,14 +179,19 @@ move to the next candidate.
 
 ## Candidate Onboarding Order
 
-1. DSPBench local-kernel triage: inspect the source/paper app list and choose
-   the top three kernels with the clearest object churn plus window/epoch
-   lifetime.
-2. Real RIoTBench input: add `RIOTBENCH_INPUT` when clean public input is
+1. DSPBench Spike Detection: implemented as `DSPBenchRegionMatrix` q0/q1/q2
+   over `sensors.dat`; keep as modest/control evidence because 1M heap GC is
+   below 3% of elapsed.
+2. DSPBench Fraud Detection: implemented as `DSPBenchRegionMatrix` q0/q1/q2
+   over `credit-card.dat`; q2 is a trusted-runtime modest win but checked
+   scoped page-token is speed-gated.
+3. Profile checked scoped Fraud q2; heap-cap follow-up is complete and does
+   not create a fixed-memory checked win at 1M.
+4. Real RIoTBench input: add `RIOTBENCH_INPUT` when clean public input is
    available.
-3. Theodolite: port one local UC kernel without Kafka/Kubernetes.
-4. HiBench streaming: local/preloaded controls only.
-5. ShuffleBench, RiverBench, BigDataBench: lower-priority parser/routing
+5. Theodolite: port one local UC kernel without Kafka/Kubernetes.
+6. HiBench streaming: local/preloaded controls only.
+7. ShuffleBench, RiverBench, BigDataBench: lower-priority parser/routing
    controls if earlier candidates remain weak.
 
 ## Post-Run Checklist

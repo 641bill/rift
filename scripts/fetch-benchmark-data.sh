@@ -25,7 +25,9 @@ fetch() {
 }
 
 bytes() {
-  if [[ -e "$1" ]]; then
+  if [[ -d "$1" ]]; then
+    printf 'directory'
+  elif [[ -e "$1" ]]; then
     wc -c < "$1" | tr -d ' '
   else
     printf 'missing'
@@ -158,6 +160,21 @@ fetch_loghub() {
   done
 }
 
+fetch_dspbench() {
+  if [[ "${RIFT_FETCH_DSPBENCH_SOURCE:-0}" != "1" ]]; then
+    echo "skip     DSPBench source; set RIFT_FETCH_DSPBENCH_SOURCE=1 to clone it"
+    return
+  fi
+
+  local dir="$DATA_ROOT/dspbench/source"
+  if [[ -d "$dir/.git" ]]; then
+    echo "present  $dir"
+  else
+    mkdir -p "$(dirname "$dir")"
+    git clone --depth 1 https://github.com/GMAP/DSPBench.git "$dir"
+  fi
+}
+
 write_manifest() {
   cat > "$MANIFEST" <<EOF
 # Rift Benchmark Data Manifest
@@ -218,6 +235,10 @@ EOF
       record "LogHub extracted log" "$loghub_log" "https://github.com/logpai/loghub"
     fi
   done < <(find "$DATA_ROOT/loghub" -type f \( -name '*.log' -o -name '*.txt' \) 2>/dev/null | sort)
+  record "DSPBench source clone" "$DATA_ROOT/dspbench/source" "https://github.com/GMAP/DSPBench"
+  record "DSPBench Spike Detection sample" "$DATA_ROOT/dspbench/source/dspbench-threads/data/sensors.dat" "https://github.com/GMAP/DSPBench"
+  record "DSPBench Fraud Detection sample" "$DATA_ROOT/dspbench/source/dspbench-threads/data/credit-card.dat" "https://github.com/GMAP/DSPBench"
+  record "DSPBench Bargain Index sample" "$DATA_ROOT/dspbench/source/dspbench-threads/data/stocks.csv" "https://github.com/GMAP/DSPBench"
 }
 
 fetch_wikimedia
@@ -226,6 +247,7 @@ fetch_linear_road
 fetch_beam_nexmark
 fetch_gharchive
 fetch_loghub
+fetch_dspbench
 write_manifest
 
 echo "Wrote $MANIFEST"

@@ -41,9 +41,11 @@ cp -f "$FORK/sandbox/CHECKED_SAFEZONE_BACKEND_MATRIX.md" "$DEST/" 2>/dev/null ||
 cp -f "$FORK/sandbox/CHECKED_OVERHEAD_REMOVAL_MATRIX.md" "$DEST/" 2>/dev/null || true
 cp -f "$FORK/sandbox/CHEAP_OPERATOR_FAMILY_MATRIX.md" "$DEST/" 2>/dev/null || true
 cp -f "$FORK/sandbox/REALISTIC_STREAM_GC_MATRIX.md" "$DEST/" 2>/dev/null || true
+cp -f "$FORK/sandbox/REAL_INPUT_BENCHMARK_SEARCH.md" "$DEST/" 2>/dev/null || true
 cp -f "$FORK/sandbox/COMMON_CRAWL_LIKE_MATRIX.md" "$DEST/" 2>/dev/null || true
 cp -f "$FORK/sandbox/GITHUB_ARCHIVE_REGION_MATRIX.md" "$DEST/" 2>/dev/null || true
 cp -f "$FORK/sandbox/LOGHUB_REGION_MATRIX.md" "$DEST/" 2>/dev/null || true
+cp -f "$FORK/sandbox/DSPBENCH_REGION_MATRIX.md" "$DEST/" 2>/dev/null || true
 cp -f "$FORK/sandbox/REML_COMPARISON_MATRIX.md" "$DEST/" 2>/dev/null || true
 cp -f "$FORK/sandbox/SN_WIN_ENVELOPE.md" "$DEST/" 2>/dev/null || true
 
