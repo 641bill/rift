@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-07 21:44 CEST
+Last updated: 2026-05-07 22:34 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -126,6 +126,24 @@ has been removed from the targeted checked allocation path; the next code step
 should not be another open-check patch. Either profile/reduce append/cursor
 layout/zeroing with a fair heap same-shape control, or resume the real-input
 benchmark search. Source: `docs/CPU_PROFILE_REPORT.md`.
+
+Latest DSPBench Log Processing checkpoint:
+On 2026-05-07, `DSPBenchRegionMatrix` added a third real-input DSPBench
+candidate using the bundled Spark Log Processing `http-server.log` file
+(`55000` real common-log lines). New query tiers are `log-q0-parse`,
+`log-q1-status`, and `log-q2-window`. The runner now selects the log input for
+`log-*` queries. Compile passed, and 20k smoke plus 100k/1M 3-run medians
+matched checksums/output counts across heap, improved SafeZone, trusted
+Streaming, and checked scoped page-token. At 1M, q2 is the best log row:
+checked scoped page-token is fastest (`1733.654 ms` vs heap `1750.291 ms` and
+trusted Streaming `1737.469 ms`) and cuts heap max GC from `88.210 ms` to
+`18.584 ms`; however heap GC is only about `2.6%` of elapsed and region RSS is
+higher (`322.0 MB` vs heap `307.8 MB`). Interpretation: keep DSPBench Log q2
+as a real-input modest throughput/GC-tail control and page-token regression
+row, not as the flagship GC-heavy case. Sources:
+`evidence/DSPBENCH_REGION_MATRIX.md`,
+`evidence/REAL_INPUT_BENCHMARK_SEARCH.md`, and
+`evidence/EVALUATION_SUMMARY_TABLES.md`.
 
 Latest page-token attribution checkpoint:
 Child diagnostics now include `estimated_bucket_open_ms` for DSPBench and

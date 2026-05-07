@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Tables
 
 Date: 2026-05-01
-Last updated: 2026-05-07 18:53 CEST
+Last updated: 2026-05-07 22:34 CEST
 
 Status: seeded summary pack for the comprehensive evaluation. Rows below are
 current checked-in evidence unless marked pending rerun.
@@ -97,6 +97,20 @@ Source rows:
 | Common Crawl-shaped q1 | checked scoped page-token `3707.214 ms`, checked Rift page-token `3933.900 ms`, heap `5577.965 ms` with `1741.640 ms` GC | generated object-pressure row stays strongest checked throughput/GC win; RSS is higher than heap |
 | Common Crawl-shaped q2 | checked scoped page-token `3902.795 ms`, checked Rift page-token `4040.310 ms`, heap `5183.074 ms` with `1565.074 ms` GC | generated window row remains strong; open allocation is not the dominant reason for the win |
 
+## DSPBench Log Processing Real-Input Follow-Up: 2026-05-07
+
+Source rows:
+
+- `cache/dspbench-log-smoke-2026-05-07/`
+- `cache/dspbench-log-100k-2026-05-07/`
+- `cache/dspbench-log-1m-2026-05-07/`
+
+| Area | Main result | Interpretation |
+|---|---|---|
+| DSPBench Log q0 parse | trusted Streaming `1443.724 ms`, heap `1462.188 ms`, checked scoped page-token `1462.524 ms` | parser/replay dominated; trusted/SafeZone rows shave GC but checked scoped is tied with heap |
+| DSPBench Log q1 status | improved SafeZone `1645.205 ms`, trusted Streaming `1647.471 ms`, checked scoped page-token `1654.431 ms`, heap `1669.816 ms` | modest safe/trusted throughput/GC row; checked scoped beats heap but not the faster safe/trusted rows |
+| DSPBench Log q2 window | checked scoped page-token `1733.654 ms`, trusted Streaming `1737.469 ms`, heap `1750.291 ms`; heap max GC `88.210 ms` vs checked max GC `18.584 ms` | best log row: real-input modest checked throughput/GC-tail win, but RSS is higher and heap GC is only about `2.6%` of elapsed |
+
 ## Staged Headline Sweep: 2026-05-06
 
 Source: `evidence/COMPREHENSIVE_SWEEP_2026_05_06.md`
@@ -128,7 +142,7 @@ SafeZone-cost. Competitive rows skip current SafeZone by default.
 | GH Archive file-backed 2h, legacy string parser | q1 Streaming `7448.838 ms`, checked scoped page-token `7489.923 ms`, heap `7549.355 ms`; q2 Streaming `7442.005 ms`, checked scoped page-token `7498.263 ms`, heap `7641.540 ms` | real file-backed RSS/fixed-memory row: heap around `2.43 GB` RSS, region rows around `0.72-0.93 GB`; profile says parser/string/decompression dominates |
 | GH Archive file-backed 2h, byte-slice parser | q1 heap `3806.120 ms`, Streaming `3626.219 ms`, checked scoped page-token `3629.193 ms`; q2 heap `3756.950 ms`, Streaming `3645.458 ms`, checked scoped page-token `3626.107 ms` | parser-scratch follow-up: real file-backed modest throughput/RSS/tail win; region rows use about `211 MB` RSS and zero timed GC vs heap about `290 MB` RSS with GC in 2/3 runs. Not GC-heavy: heap GC is only about `1.5-1.6%` of elapsed. |
 | LogHub BGL real log | 1M q1 heap `5568.252 ms`, Streaming `5491.033 ms`, checked scoped page-token `5552.988 ms`; 1M q2 heap `5646.824 ms`, improved-32k `5509.481 ms`, checked scoped page-token `5636.357 ms`; full-file q2 heap `32161.391 ms`, Streaming `30899.595 ms`, checked scoped page-token `31165.087 ms` | real file-backed multi-million-line system-log control. Region rows remove timed GC and modestly improve selected rows; full-file q2 heap GC is `595.599 ms`, still under 2% of elapsed, so this is not the missing GC-heavy case. |
-| DSPBench Spike/Fraud real-input | Spike 1M over `sensors.dat`; Fraud 1M over `credit-card.dat` | Spike q1 checked scoped page-token `1163.045 ms` vs heap `1187.525 ms`; original Fraud q2 trusted Streaming `763.819 ms` vs heap `801.790 ms`; dirty fast-path Fraud q2 checked scoped page-token `818.574 ms` vs heap `862.834 ms`; committed-code Fraud q2 trusted Streaming `788.040 ms`, checked scoped `810.770 ms`, heap `820.945 ms` | Fraud q2 is now a modest checked/RSS win over heap in the committed-code row, but trusted Streaming is fastest; keep it as a checked-overhead regression target. |
+| DSPBench Spike/Fraud/Log real-input | Spike 1M over `sensors.dat`; Fraud 1M over `credit-card.dat`; Log 1M over `http-server.log` | Spike q1 checked scoped `1163.045 ms` vs heap `1187.525 ms`; open-allocation Fraud q2 checked scoped `797.782 ms` vs heap `806.697 ms`; Log q2 checked scoped `1733.654 ms` vs heap `1750.291 ms` | Fraud q2 and Log q2 are modest real-input checked/RSS or GC-tail rows. Neither is the missing flagship because trusted Streaming/SafeZone often remain competitive, RSS can rise, and heap GC is visible but not dominant. |
 | ReML-shaped Tier 1 | checked stream `msort` `104.358 ms` vs heap `124.983 ms`; `msort-r` `104.929 ms` vs heap `126.163 ms`; checked scoped `ratio` `48.929 ms` vs heap `51.302 ms` | local Scala Native port evidence for MLKit/ReML lineage; not exact ReML reproduction |
 | Linear Road | heap fastest or tied on q0/q1/q2 despite GC reduction in region modes | ceiling/control evidence |
 

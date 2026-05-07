@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-07 21:44 CEST
+Last updated: 2026-05-07 22:34 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -77,6 +77,15 @@ that the next useful work is not another open-check removal. The choice is now
 between lower-level append/cursor/zeroing work with fair controls and moving
 back to the real-input benchmark search.
 
+Latest real-input search checkpoint:
+`evidence/DSPBENCH_REGION_MATRIX.md` now includes DSPBench Log Processing over
+the bundled real `http-server.log` common-log file. The 1M `log-q2-window` row
+is a modest checked scoped page-token win: `1733.654 ms` versus heap
+`1750.291 ms`, with heap median/max GC `44.992/88.210 ms` reduced to
+`18.402/18.584 ms`. This is useful real-input/control evidence, but it is not
+the missing GC-heavy flagship because heap GC is still only about `2.6%` of
+elapsed and region RSS is higher.
+
 Benchmark guide: `docs/BENCHMARK_CATALOG.md` describes what each benchmark is
 meant to measure and which rows are generated, real-input, focused, or
 ceiling/control evidence.
@@ -103,9 +112,9 @@ representative components.
 | Runtime substrate | Improved SafeZone/rooted scoped regions remain the safe baseline; rootless/trusted rows are now explicit controls, not default public evidence. |
 | Checked Rift | Checked APIs are fast for simple append/window shapes. Page-token, Dataflow SELECT, RegionList, GH Archive-shaped q1/q2, and generated Common Crawl-shaped q1/q2 clear useful gates; rank/fold/table containers still add too much CPU overhead. |
 | Safe checked backend | `checked-region-scoped` is the best page-token backend in the clean final-selection sweep. It is fastest on focused page-token append and generated Common Crawl-shaped q1/q2. |
-| Real-input stream evidence | GH Archive byte-slice file-backed q1/q2, LogHub BGL, and DSPBench Fraud q2 are the strongest real-input modest-win candidates. After open allocation, Fraud q2 checked scoped page-token is a modest elapsed/RSS win (`797.782 ms` vs heap `806.697 ms`, RSS about `279 MB` vs heap `358 MB`), while trusted Streaming remains fastest (`778.975 ms`). This is useful real-input evidence, not a flagship GC-heavy case. |
+| Real-input stream evidence | GH Archive byte-slice file-backed q1/q2, LogHub BGL, DSPBench Fraud q2, and DSPBench Log q2 are the strongest real-input modest-win candidates. After open allocation, Fraud q2 checked scoped page-token is a modest elapsed/RSS win (`797.782 ms` vs heap `806.697 ms`, RSS about `279 MB` vs heap `358 MB`), while trusted Streaming remains fastest (`778.975 ms`). DSPBench Log q2 has checked scoped fastest (`1733.654 ms` vs heap `1750.291 ms`) and cuts max GC from `88.210 ms` to `18.584 ms`, but with higher RSS. These are useful real-input rows, not flagship GC-heavy cases. |
 | Strongest memory-pressure row | Generated Common Crawl WET-shaped q1/q2 creates heavy stream object churn. After open allocation, heap spends `1.7/1.6 s` timed GC on q1/q2. Checked scoped page-token is fastest in the rerun (`3707.214 ms` q1, `3902.795 ms` q2), followed by checked Rift page-token (`3933.900 ms` q1, `4040.310 ms` q2). |
-| Real-input search direction | The search is tracked in `evidence/REAL_INPUT_BENCHMARK_SEARCH.md`. DSPBench Spike and Fraud q0/q1/q2 are implemented. Fraud q2 remains the best real-input regression target and now has a modest checked win, but trusted Streaming remains the lower-bound winner. Continue real RIoTBench/Theodolite-style inputs while using Fraud q2 as the checked-operator regression row. |
+| Real-input search direction | The search is tracked in `evidence/REAL_INPUT_BENCHMARK_SEARCH.md`. DSPBench Spike, Fraud, and Log Processing q0/q1/q2 are implemented. Fraud q2 and Log q2 are the current DSPBench regression rows. Continue real RIoTBench/Theodolite-style inputs or richer log/template/session mining; current DSPBench rows are modest/control evidence. |
 | ReML/MLKit lineage | Tier 1 Scala Native ReML-shaped medians now exist. `msort`, `msort-r`, and `ratio` show useful checked-region allocation/RSS/GC behavior; exact ReML artifact rerun remains blocked by missing local `mlkit`/`mlton` and no running Docker daemon. |
 
 The strongest current claim is:
@@ -577,6 +586,7 @@ operator problems with separate gates.
 | Focused page/token append | `rift-checked-page-token`, `rift-checked-safezone-improved-32k` page-token | Same checked API idea without application parsing or aggregation. | Synthetic focused append matrix, 1M records. | Isolates append/object lifetime overhead rather than full GC pressure. | Short-lived records in child bucket regions; operator metadata on parent/heap. | Static-safety overhead-removal win; 2026-05-07 fast path is `27.549 ms` scoped checked vs heap `36.920 ms`. |
 | GH Archive q1 under heap budget | `rift-checked-safezone-page-token` compared with capped `heap-immix` | Checked page-token path over SafeZone-backed region allocation. | Real preloaded GH Archive NDJSON, 1M events / 13M event-field records. | Uncapped heap wins by growing to about `1.7 GiB`; under `1G` cap heap collects materially and slows. | Event/field records in regions; preloaded primitive input arrays and control metadata on heap. | Fixed-memory / GC-tail candidate, not uncapped throughput win. |
 | LogHub BGL full-file q2 | `rift-trusted-streaming`, `rift-checked-safezone-page-token`, and `safezone-improved-32k` | Line/token records are allocated with window/bucket lifetimes; checked scoped page-token uses the safe operator-owned path. | Real BGL system log, full `4747963` lines / `66868883` line+token records. | Heap spends `595.599 ms` in GC, but that is still under 2% of total elapsed. | Line/token records in regions; file input, severity/component classification, and aggregate counters remain heap/primitive. | Real-input modest throughput/RSS/tail control, not flagship GC-heavy proof. |
+| DSPBench Log q2 | `rift-checked-safezone-page-token` | Common-log records, status/update records, and window contributions are allocated in checked page-token buckets. | Real DSPBench `http-server.log`, `55000` common-log lines replayed to 1M events. | Heap spends `44.992 ms` median GC and has an `88.210 ms` max-GC tail, about `2.6%` of elapsed. | Log/status/window contribution records in regions; status counters and input replay state on heap/primitive arrays. | Real-input modest throughput/GC-tail control; RSS is higher than heap, so not a flagship case. |
 | NEXMark Q3/Q8 | `rift-checked-rift` | Checked region APIs on generated Beam-default methodology streams. | Generated NEXMark profile. | Moderate object/window pressure; margins are modest. | Event/window records in regions where checked operator exists; durable tables/counters on heap. | Generated methodology win/near-win. |
 | Broom-style Dataflow | `rift-checked-rift`, with SafeZone-family often fastest | Checked local epoch objects; SafeZone-family rows measure allocator substrate. | Local SELECT/AGGREGATE/JOIN methodology reproduction. | Documents/outputs are epoch-local. | Per-epoch document/output objects in regions; control state on heap. | Prior-work-shaped method evidence, not exact artifact reproduction. |
 | Real WET/WAT current shards | `rift-checked-safezone-improved-32k` page-token | Checked page/link-object path works over real preloaded data. | Real Common Crawl WET/WAT shards. | Current shards report zero timed heap GC, so this is not yet GC-heavy. | Page/link/token records in regions; input/control on heap. | Real-input ceiling/control with modest region wins only. |

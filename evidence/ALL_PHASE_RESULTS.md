@@ -1,7 +1,7 @@
 # Rift All-Phase Results Rollup
 
 Date: 2026-05-01
-Last updated: 2026-05-07 18:53 CEST
+Last updated: 2026-05-07 22:34 CEST
 
 This file gathers the current numeric and validation evidence across all
 roadmap phases. It is a rollup, not the primary raw log. Prefer the source files
@@ -19,6 +19,11 @@ trusted Streaming `778.975 ms`; checked RSS is about `279 MB` versus heap
 `358 MB`. Generated Common Crawl-shaped q1/q2 remains the strongest checked
 memory-pressure row: checked scoped page-token `3707.214/3902.795 ms` versus
 heap `5577.965/5183.074 ms`, with heap timed GC `1741.640/1565.074 ms`.
+DSPBench Log Processing is now wired as a third DSPBench real-input candidate;
+the 1M `log-q2-window` row has checked scoped page-token fastest
+(`1733.654 ms` vs heap `1750.291 ms`) and cuts heap max GC from `88.210 ms`
+to `18.584 ms`, but it remains modest/control evidence because heap GC is only
+about `2.6%` of elapsed and region RSS is higher.
 
 ## How To Read This File
 
@@ -113,7 +118,7 @@ Outcome labels now distinguish the kind of win:
 | Phase 6 RIoTBench-style IoT detector | `evidence/RIOTBENCH_REGION_MATRIX.md` |
 | Stream GC benchmark candidates | `evidence/STREAM_GC_BENCHMARK_CANDIDATES.md` |
 | Real-input GC-heavy benchmark search | `evidence/REAL_INPUT_BENCHMARK_SEARCH.md` |
-| DSPBench Spike/Fraud Detection local matrix | `evidence/DSPBENCH_REGION_MATRIX.md` |
+| DSPBench Spike/Fraud/Log Processing local matrix | `evidence/DSPBENCH_REGION_MATRIX.md` |
 | Stream benchmark ladder | `evidence/STREAM_BENCHMARK_LADDER.md` |
 | Phase 6 pipeline / parallel collections | `evidence/PIPELINE_PARCOLL_COMPARISON.md` |
 | Phase 7 checked stream-window rank | `evidence/CHECKED_STREAM_WINDOW_RANK_MATRIX.md` |
@@ -2838,6 +2843,13 @@ Status:
   versus heap `358 MB`. A 1M q2 heap-cap follow-up before the fast path shows
   `512M`/`384M` caps are near uncapped heap behavior; `256M` lowers heap RSS
   but raises max GC to `101.267 ms`, so heap caps did not create the win.
+  DSPBench Log Processing is now implemented over the bundled
+  `http-server.log` file. The 1M q2 row is a modest checked real-input
+  throughput/GC-tail win: checked scoped page-token `1733.654 ms`, trusted
+  Streaming `1737.469 ms`, heap `1750.291 ms`; heap median/max GC
+  `44.992/88.210 ms` drops to checked `18.402/18.584 ms`. It is not the
+  flagship GC-heavy benchmark because region RSS rises and heap GC is still
+  only a small share of elapsed.
 - The append-window result does not justify returning to DEBS Q1 ranking.
   TableRank remains gated out. The first DEBS integration of the passing
   cursor-close shape now exists for checked Q1 event-window entries and

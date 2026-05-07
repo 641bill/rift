@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-07 18:53 CEST
+Last updated: 2026-05-07 22:34 CEST
 
 Status: markdown slide deck outline. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report and this file as
@@ -14,8 +14,11 @@ the generic `allocImpl/checkOpen` branch while public APIs remain defensive.
 Focused 1M checked scoped page-token is `73.632/83.177/82.198 ms` on
 append-only/drain/aggregate; DSPBench Fraud q2 is a modest checked win
 (`797.782 ms` vs heap `806.697 ms`) with RSS cut from `358 MB` to `279 MB`.
-Trusted Streaming is still faster, so the next tuning slide should focus on
-object construction, append/linking, cursor traversal, and query CPU.
+DSPBench Log q2 is another modest real-input checked row (`1733.654 ms` vs
+heap `1750.291 ms`) and cuts heap max GC from `88.210 ms` to `18.584 ms`, but
+RSS is higher. Trusted Streaming is still faster in Fraud, so the next tuning
+slide should focus on object construction, append/linking, cursor traversal,
+query CPU, and finding a richer real-input stream.
 
 ## Slide 1: One-Sentence Thesis
 
@@ -171,6 +174,13 @@ fastest at `788.040 ms`; checked scoped page-token was `810.770 ms`; heap was
 is now: trusted Streaming `778.975 ms`, checked scoped page-token `797.782 ms`,
 and heap `806.697 ms`. Checked scoped has a modest elapsed/RSS win over heap,
 but trusted Streaming remains the lower-bound row.
+
+DSPBench Log Processing adds a second DSPBench real-input control using the
+bundled `http-server.log` common-log file. At 1M events, q2 is the useful row:
+checked scoped page-token is `1733.654 ms`, trusted Streaming is `1737.469 ms`,
+and heap is `1750.291 ms`; checked scoped cuts max GC from `88.210 ms` to
+`18.584 ms`. This is modest real-input throughput/GC-tail evidence, not the
+flagship: heap GC is only about `2.6%` of elapsed and region RSS is higher.
 
 Latest non-headline attribution changes the next tuning target. In DSPBench
 Fraud q2, estimated bucket open/switch is below `1 ms`; trusted Streaming

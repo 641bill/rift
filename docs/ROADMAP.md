@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-07 21:44 CEST
+Last updated: 2026-05-07 22:34 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -103,6 +103,15 @@ DSPBench Fraud q2 profile is led by byte-line parsing/replay, stable hashing,
 fraud predictor state, CSV/state parsing, append, and close traversal. This
 keeps Fraud q2 as a real-input regression row, but it argues against more
 checked allocation micro-tuning as the next default step.
+
+Latest real-input search checkpoint: DSPBench Log Processing is now wired into
+`DSPBenchRegionMatrix` with `log-q0-parse`, `log-q1-status`, and
+`log-q2-window` over the bundled real `http-server.log` file. The 1M q2 row is
+a modest checked scoped page-token win (`1733.654 ms` versus heap `1750.291 ms`)
+and reduces heap max GC from `88.210 ms` to `18.584 ms`, but it is not a
+flagship GC-heavy case because heap GC is only about `2.6%` of elapsed and RSS
+is higher for region rows. Keep it as real-input control/regression evidence
+and continue searching for richer object-materializing real streams.
 
 Latest CPU profile checkpoint: `docs/CPU_PROFILE_REPORT.md`. macOS
 `/usr/bin/sample` profiles for generated Common Crawl-shaped q2 at 2M pages
