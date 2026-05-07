@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-07 17:10 CEST
+Last updated: 2026-05-07 17:24 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -102,6 +102,22 @@ aggregate/no-drain is a valid reusable operator direction, but not a broad
 checked-overhead solution. Use it only where the query naturally updates
 aggregate metadata on append and can close buckets without per-record
 traversal. Source: `evidence/CHECKED_PAGE_TOKEN_COST_MATRIX.md`.
+
+Latest count-by-key application-gate checkpoint:
+Common Crawl-shaped q2 now has opt-in `rift-checked-count-by-key` and
+`rift-checked-safezone-count-by-key` modes. They preserve the record
+materialization shape but update domain counts during append and close buckets
+without record drain. Compile passed, and the 20k smoke matched
+checksum/output count across heap, existing page-token, and count-by-key
+modes. The 100k 3-run application gate failed: existing checked page-token is
+faster than count-by-key. q2 heap is `525.285 ms` with `151.164 ms` GC;
+checked page-token is `433.051 ms`; checked count-by-key is `476.665 ms`;
+checked SafeZone-backed page-token is `406.413 ms`; checked SafeZone-backed
+count-by-key is `450.289 ms`. Decision: keep `PageTokenCountByKey` as a
+focused modest-win operator and application-gated control. Do not replace the
+Common Crawl q2 page-token row with it unless a future workload has close-time
+traversal much more expensive than per-record primitive count updates. Source:
+`evidence/COMMON_CRAWL_LIKE_MATRIX.md`.
 
 Latest final-selection sweep checkpoint:
 Clean run `2026-05-06-final-selection-headline` completed after committing the
