@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-07 16:20 CEST
+Last updated: 2026-05-07 17:30 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -52,6 +52,16 @@ append-only/drain/aggregate same-shape rows, but no-drain close is not the main
 remaining bottleneck. Next operator work should target allocation/query CPU
 and application paths that still do bucket/region lookup too often, not more
 generic close-drain removal.
+
+Latest CPU profile checkpoint: `docs/CPU_PROFILE_REPORT.md`. macOS
+`/usr/bin/sample` profiles for generated Common Crawl-shaped q2 at 2M pages
+show the checked page-token hot paths are close cursor traversal,
+`appendWindowOwnedOpen`/`appendPageToken`, backend allocation/zeroing
+(`scalanative_zone_alloc` for scoped and `scalanative_rift_region_alloc/raw`
+for Rift), `allocImpl/checkOpen`, and token-hash/query work. Bucket opening is
+not dominant. This shifts the next optimization search toward generated
+allocation lowering/stat-check removal and operator-owned `checkOpen`/append
+specialization, with traversal/query CPU treated as a shared floor.
 
 ## 1. Roadmap Principles
 
@@ -183,6 +193,13 @@ trusted Streaming `788.040 ms`, checked scoped page-token `810.770 ms`, and
 heap `820.945 ms`. Treat generated WET-shaped rows as
 memory-pressure evidence, Fraud q2 as modest real-input regression evidence,
 and keep the remaining checked page-token CPU path as a profiling target.
+
+The first native samples of the checked page-token path confirm that target:
+Common Crawl-shaped q2 at 2M pages shows `closeRecords` /
+`StreamAppendCursor.nextOrNull`, `appendWindowOwnedOpen`, backend allocation
+and zeroing, `allocImpl/checkOpen`, and token-hash/query work as the visible
+costs. Do not spend more time on bucket-open tuning unless a new diagnostic
+contradicts this.
 
 Post-fast-path selected 1M sweep:
 `evidence/POST_FAST_PATH_SELECTED_SWEEP_2026_05_07.md` reruns selected rows
@@ -1243,13 +1260,11 @@ next action is:
    about `10%`, or materially lowers GC/RSS with at most `5%` elapsed overhead.
 6. Use `SCALANATIVE_GC_ALLOC_STATS=1` selectively for attribution, not as a
    default headline benchmark.
-7. Add official Scala Native native profiling as the next diagnostic layer
-   before more broad operator tuning. Profile representative native binaries
-   with `samply`/native profilers where available and record the result in a
-   dedicated CPU profile report. The immediate targets are Common Crawl-shaped
-   q1/q2 page-token, Dataflow AGGREGATE exact-array versus `EpochFold`,
-   StreamFlex trusted Rift versus checked `TransactionRegion`, and Common
-   Crawl q3 parser-scratch.
+7. Continue official Scala Native native profiling before more broad operator
+   tuning. The first Common Crawl-shaped q2 page-token samples are recorded;
+   next profile Dataflow AGGREGATE exact-array versus `EpochFold`, StreamFlex
+   trusted Rift versus checked `TransactionRegion`, and Common Crawl q3
+   parser-scratch. Treat profiles as diagnostic-only rows.
 
 Do not move to new runtime micro-optimizations unless a focused benchmark or
 application diagnostic points there. The next runtime change needs concrete

@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-07 17:24 CEST
+Last updated: 2026-05-07 17:30 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -118,6 +118,27 @@ focused modest-win operator and application-gated control. Do not replace the
 Common Crawl q2 page-token row with it unless a future workload has close-time
 traversal much more expensive than per-record primitive count updates. Source:
 `evidence/COMMON_CRAWL_LIKE_MATRIX.md`.
+
+Latest CPU profile checkpoint:
+Two macOS `/usr/bin/sample` diagnostics were captured for generated Common
+Crawl-shaped q2 at 2M pages after delaying past the harness's built-in heap
+expected-control phase. Artifacts:
+`/Users/siyaoliu/rift/cache/profile-common-crawl-q2-page-token-target-2026-05-07/sample.txt`
+and
+`/Users/siyaoliu/rift/cache/profile-common-crawl-q2-rift-page-token-target-2026-05-07/sample.txt`.
+The checked SafeZone-backed page-token timed row was `7719.982 ms` with
+`69.545 ms` GC and about `440 MB` physical footprint; top sampled paths are
+`closeRecords`/`StreamAppendCursor.nextOrNull`, `appendWindowOwnedOpen` /
+`appendPageToken`, `scalanative_zone_alloc`/`memset`,
+`MemorySafeZoneBackedRiftRegion.allocImpl/checkOpen`, and token-hash/query
+work. The checked Rift page-token timed row was `8190.974 ms` with
+`38.480 ms` GC, `26.032 ms` Rift op, and `274000000` region objects; top
+sampled paths add `scalanative_rift_region_alloc/raw`,
+`scalanative_rift_normalize_align`, `scalanative_rift_stats_record_alloc_bytes`,
+and `MemoryRiftRegion.allocImpl/checkOpen`. Interpretation: bucket opening is
+not the hot path; remaining overhead is allocation zeroing/lowering/stat
+checks, operator append/linking, close traversal, and shared token-hash/query
+CPU. Source: `docs/CPU_PROFILE_REPORT.md`.
 
 Latest final-selection sweep checkpoint:
 Clean run `2026-05-06-final-selection-headline` completed after committing the
