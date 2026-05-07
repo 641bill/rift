@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-07 16:20 CEST
+Last updated: 2026-05-07 16:38 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -22,6 +22,18 @@ Latest clean post-fast-path checkpoint:
 focused page-token row is checked scoped page-token `27.240 ms` versus heap
 `36.722 ms`; the new no-drain cost split shows no-drain close is safe but not
 the main remaining bottleneck.
+
+Latest attribution checkpoint:
+`docs/CPU_PROFILE_REPORT.md`, `evidence/CHECKED_OVERHEAD_REMOVAL_MATRIX.md`,
+and diagnostic logs under
+`cache/common-crawl-page-token-diag2-2026-05-07` and
+`cache/dspbench-fraud-q2-diag2-2026-05-07`. These are non-headline one-run
+diagnostics. They show that raw bucket-switch timing mostly included
+expired-bucket close work; estimated true bucket open/switch is only about
+`3-10 ms` on generated Common Crawl-shaped q1/q2 and below `1 ms` on
+DSPBench Fraud q2. Remaining cost is allocation+append plus cursor/node
+traversal and query/replay CPU. In Fraud q2, region allocation+append is
+already faster than heap in the diagnostic row.
 
 Benchmark guide: `docs/BENCHMARK_CATALOG.md` describes what each benchmark is
 meant to measure and which rows are generated, real-input, focused, or

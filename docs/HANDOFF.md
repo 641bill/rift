@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-07 16:20 CEST
+Last updated: 2026-05-07 16:38 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -66,6 +66,24 @@ not the main remaining bottleneck. The committed-code DSPBench Fraud q2 rerun
 is more conservative than the dirty run: trusted Streaming `788.040 ms`,
 checked scoped page-token `810.770 ms`, heap `820.945 ms`, with checked RSS about
 `279 MB` vs heap `358 MB`.
+
+Latest page-token attribution checkpoint:
+Child diagnostics now include `estimated_bucket_open_ms` for DSPBench and
+Common Crawl page-token rows, because raw bucket-switch timing includes
+expired-bucket close work. Non-headline one-run diagnostics show bucket
+open/switch itself is not the bottleneck. On generated Common Crawl-shaped 1M
+q1/q2, estimated bucket open is about `3-10 ms`, while allocation+append is
+about `3.18-3.52 s` and close-cursor traversal about `0.76-0.81 s` for
+`137M` records. On real DSPBench Fraud q2, estimated bucket open is below
+`1 ms`; trusted Streaming append is `131.493 ms`, checked scoped page-token
+append is `144.353 ms`, heap append is `186.048 ms`, and checked close cursor
+is about `63.456 ms` versus trusted `56.087 ms`. Interpretation: region
+allocation+append is already faster than heap in the Fraud diagnostic; the
+remaining checked gap is cursor/node traversal plus common query/replay CPU,
+not bucket opening. Source docs:
+`docs/CPU_PROFILE_REPORT.md`, `evidence/CHECKED_OVERHEAD_REMOVAL_MATRIX.md`,
+`evidence/COMMON_CRAWL_LIKE_MATRIX.md`, and
+`evidence/DSPBENCH_REGION_MATRIX.md`.
 
 Latest final-selection sweep checkpoint:
 Clean run `2026-05-06-final-selection-headline` completed after committing the

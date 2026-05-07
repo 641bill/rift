@@ -7,6 +7,7 @@ checked page/token operator follow-up recorded and clears the generated
 application-shaped gate.
 
 Date: 2026-05-03
+Last updated: 2026-05-07 16:38 CEST
 
 ## Purpose
 
@@ -120,6 +121,40 @@ the static-safety overhead-removal story: when the operator owns the lifetime
 boundary, it can avoid redundant per-record dynamic checks without changing the
 logical program. Caveat: it remains generated WET-shaped stressor evidence, not
 real Common Crawl input proof.
+
+### Page-Token Diagnostic Follow-Up
+
+Diagnostic source:
+`/Users/siyaoliu/rift/cache/common-crawl-page-token-diag2-2026-05-07`.
+
+Command shape:
+
+```sh
+COMMON_CRAWL_WET_DIAG=1 \
+COMMON_CRAWL_WET_PAGES=1000000 \
+COMMON_CRAWL_WET_BENCHMARK_RUNS=1 \
+COMMON_CRAWL_WET_WARMUPS=0 \
+COMMON_CRAWL_WET_QUERIES="q1-tokenize q2-domain-window" \
+COMMON_CRAWL_WET_MODES="rift-checked-page-token rift-checked-safezone-page-token" \
+COMMON_CRAWL_WET_OUTPUT_DIR=/Users/siyaoliu/rift/cache/common-crawl-page-token-diag2-2026-05-07 \
+zsh sandbox/run_common_crawl_wet_matrix.sh
+```
+
+These are non-headline one-run diagnostic rows. `bucket_switch_ms` includes
+expired-bucket close because `pageTokenAppendRegionFor` closes old buckets
+synchronously. Use `estimated_bucket_open_ms` for the open/switch cost after
+subtracting expired close traversal.
+
+| Query | Mode | Elapsed ms | Appended/closed records | Estimated bucket open ms | Append ms | Close cursor ms | Aggregate ms | Interpretation |
+|---|---|---:|---:|---:|---:|---:|---:|---|
+| q1-tokenize | `rift-checked-page-token` | `4231.669` | `137000000` | `2.672` | `3444.176` | `757.595` | `0.000` | Open/switch is negligible; append and close traversal dominate. |
+| q1-tokenize | `rift-checked-safezone-page-token` | `3976.030` | `137000000` | `9.829` | `3177.917` | `760.700` | `0.000` | SafeZone-backed checked is faster mainly in append/allocation. |
+| q2-domain-window | `rift-checked-page-token` | `4356.286` | `137000000` | `2.914` | `3515.311` | `810.644` | `18.309` | Domain aggregation is small relative to append/traversal. |
+| q2-domain-window | `rift-checked-safezone-page-token` | `4055.473` | `137000000` | `9.363` | `3215.592` | `802.633` | `18.347` | Same conclusion as q1; backend affects append more than traversal. |
+
+Decision: do not spend the next patch on bucket opening. The realistic
+remaining levers are reducing per-record close traversal where query work can
+be completed on append, or making cursor/node traversal cheaper.
 
 ## Real WAT Link-Metadata Control
 

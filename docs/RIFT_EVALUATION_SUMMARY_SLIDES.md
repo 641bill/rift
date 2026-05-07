@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-07 16:20 CEST
+Last updated: 2026-05-07 16:38 CEST
 
 Status: markdown slide deck outline. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report and this file as
@@ -161,6 +161,15 @@ fastest at `788.040 ms`; checked scoped page-token is `810.770 ms`; heap is
 `820.945 ms`. Checked scoped still removes most timed GC and cuts RSS by about
 `80 MB`, but this row should be presented as a modest real-input checked/RSS
 win, not as the final flagship.
+
+Latest non-headline attribution changes the next tuning target. In DSPBench
+Fraud q2, estimated bucket open/switch is below `1 ms`; trusted Streaming
+append is `131.493 ms`, checked scoped append is `144.353 ms`, and heap append
+is `186.048 ms`. Generated Common Crawl-shaped q1/q2 shows the same pattern at
+larger scale: bucket open is only about `3-10 ms`, while allocation+append is
+about `3.18-3.52 s` and close traversal is about `0.76-0.81 s` for `137M`
+records. The remaining checked work is cursor/node traversal and query CPU,
+not bucket opening.
 
 ## Slide 9: Best Checked Stream Rows
 

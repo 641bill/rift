@@ -1,7 +1,7 @@
 # Checked Overhead Removal Matrix
 
 Date: 2026-05-03
-Last updated: 2026-05-07 16:20 CEST
+Last updated: 2026-05-07 16:38 CEST
 
 Status: overhead-removal contract plus implementation checkpoint. This matrix
 separates three states:
@@ -117,6 +117,27 @@ already small for this focused matrix. The remaining performance work should
 focus on allocation lowering, object construction, query CPU, and application
 paths that accidentally call bucket/region lookup more often than once per
 bucket.
+
+Follow-up diagnostic source:
+`docs/CPU_PROFILE_REPORT.md`, `COMMON_CRAWL_WET_DIAG=1`, and
+`DSPBENCH_DIAG=1`.
+
+The 2026-05-07 diagnostic rerun clarified one misleading cost bucket:
+`pageTokenAppendRegionFor` performs expired-bucket close synchronously, so raw
+`bucket_switch_ms` includes most close traversal. After subtracting expired
+close, estimated bucket open/switch is small:
+
+| Row | Estimated bucket open | Close cursor | Allocation+append | Interpretation |
+|---|---:|---:|---:|---|
+| Common Crawl-shaped q1 checked Rift, 1M | `2.672 ms` | `757.595 ms` | `3444.176 ms` | Open/switch is not the bottleneck; allocation+append and per-record close traversal dominate. |
+| Common Crawl-shaped q1 checked scoped, 1M | `9.829 ms` | `760.700 ms` | `3177.917 ms` | SafeZone-backed checked mostly wins by cheaper append/allocation; traversal is similar. |
+| DSPBench Fraud q2 trusted Streaming, 1M | `0.188 ms` | `56.087 ms` | `131.493 ms` | Real-input row has negligible open cost and faster region append than heap. |
+| DSPBench Fraud q2 checked scoped, 1M | `0.990 ms` | `63.456 ms` | `144.353 ms` | The checked tax is close traversal plus common query/replay CPU, not bucket open. |
+
+Conclusion: the next useful optimization is not another bucket-open patch.
+Either avoid per-record close traversal for workloads whose query work can be
+completed on append, or reduce cursor/node traversal overhead itself. For real
+Fraud q2, allocator work is already below heap in the diagnostic row.
 
 Detailed source: `evidence/CHECKED_PAGE_TOKEN_APPEND_MATRIX.md`.
 

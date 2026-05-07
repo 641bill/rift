@@ -1,7 +1,7 @@
 # DSPBench Region Matrix
 
 Date: 2026-05-07
-Last updated: 2026-05-07 16:20 CEST
+Last updated: 2026-05-07 16:38 CEST
 
 Status: implemented first two local DSPBench-family real-input candidates:
 Spike Detection and Fraud Detection. This is not an exact DSPBench artifact
@@ -380,7 +380,7 @@ DSPBENCH_WARMUPS=0 \
 DSPBENCH_DIAG=1 \
 DSPBENCH_QUERIES="fraud-q2-alert-window" \
 DSPBENCH_MODES="heap-immix safezone-improved-32k rift-trusted-streaming rift-checked-page-token rift-checked-safezone-page-token" \
-DSPBENCH_OUTPUT_DIR=/Users/siyaoliu/rift/cache/dspbench-fraud-q2-memory-diag-2026-05-07 \
+DSPBENCH_OUTPUT_DIR=/Users/siyaoliu/rift/cache/dspbench-fraud-q2-diag2-2026-05-07 \
 zsh sandbox/run_dspbench_region_matrix.sh
 ```
 
@@ -389,13 +389,15 @@ each process prints a heap oracle diagnostic before the measured mode. The
 table below uses the mode-specific diagnostic line for each mode; for
 `heap-immix`, it uses the second heap diagnostic line from the heap process.
 
-| Mode | Diagnostic elapsed ms | RSS bytes | Append/alloc ms | Predictor ms | Close/traverse ms | Bucket switch/open ms | Final close ms |
+The latest diagnostic print includes `estimated_bucket_open_ms`, because
+`bucket_switch_ms` includes expired-bucket close work in page-token modes.
+
+| Mode | Diagnostic elapsed ms | RSS bytes | Append/alloc ms | Predictor ms | Close/traverse ms | Estimated bucket open ms | Final close ms |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| `heap-immix` | `990.986` | `254459904` | `189.524` | `89.340` | `57.805` | `51.502` | `6.332` |
-| `safezone-improved-32k` | `939.680` | `282378240` | `134.630` | `86.942` | `56.061` | `50.796` | `6.169` |
-| `rift-trusted-streaming` | `949.862` | `282312704` | `135.167` | `92.138` | `56.469` | `50.460` | `6.369` |
-| `rift-checked-page-token` | `971.658` | `278315008` | `152.283` | `90.501` | `63.269` | `56.722` | `6.878` |
-| `rift-checked-safezone-page-token` | `973.804` | `278413312` | `150.169` | `93.130` | `63.247` | `57.182` | `6.996` |
+| `heap-immix` | `963.747` | `254459904` | `186.048` | `84.626` | `53.764` | `0.012` | `6.241` |
+| `rift-trusted-streaming` | `930.667` | `282296320` | `131.493` | `86.917` | `56.087` | `0.188` | `6.155` |
+| `rift-checked-page-token` | `963.104` | `278331392` | `150.361` | `89.099` | `64.032` | `0.299` | `6.876` |
+| `rift-checked-safezone-page-token` | `959.978` | `278413312` | `144.353` | `91.120` | `63.456` | `0.990` | `6.994` |
 
 Interpretation:
 
@@ -403,13 +405,16 @@ Interpretation:
   It includes object construction, region/heap allocation, and linking the
   record into the bucket/page-token structure.
 - In this diagnostic, region allocation+append is not slower than heap:
-  SafeZone and trusted Streaming are around `135 ms`, while heap is about
-  `190 ms`. Checked page-token is in between at about `150-152 ms`.
-- Checked page-token still loses clean elapsed because it pays extra common
-  operator overhead: close/cursor traversal and bucket switch/open work are
-  about `6-7 ms` higher than heap/SafeZone/trusted rows, and the total program
-  still includes parser/replay, predictor, checksum, and traversal CPU outside
-  the measured buckets.
+  trusted Streaming is `131.493 ms`, checked scoped page-token is
+  `144.353 ms`, and heap is `186.048 ms`.
+- Estimated bucket open/switch is below `1 ms`; it is not a remaining
+  optimization target on Fraud q2. Older raw `bucket_switch_ms` values were
+  misleading because they included expired-bucket close traversal.
+- Checked page-token still loses or only modestly wins clean elapsed because
+  it pays extra common operator overhead: close/cursor traversal is roughly
+  `7-10 ms` higher than heap/trusted same-shape traversal, and the total
+  program still includes parser/replay, predictor, checksum, and traversal CPU
+  outside the measured buckets.
 - The “faster = higher RSS” pattern is real in some clean rows. The fastest
   path can keep more memory resident because it avoids or delays work that
   trims/reclaims pages aggressively. Do not treat lower GC time as equivalent
