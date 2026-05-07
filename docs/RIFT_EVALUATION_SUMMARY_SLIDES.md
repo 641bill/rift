@@ -1,12 +1,18 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-07 16:38 CEST
+Last updated: 2026-05-07 17:51 CEST
 
 Status: markdown slide deck outline. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report and this file as
 the talk skeleton. Use `docs/BENCHMARK_CATALOG.md` for benchmark definitions
 and evidence-class labels.
+
+Latest checkpoint: page-token live-length bookkeeping was removed for
+operator-owned page-token paths. It is a valid overhead cleanup, but DSPBench
+Fraud q2 remains a checked RSS/GC near-tie rather than a checked throughput
+flagship. The next optimization slide should focus on generated allocation
+lowering (`allocImpl`/`checkOpen`) rather than bucket open/close bookkeeping.
 
 ## Slide 1: One-Sentence Thesis
 

@@ -1,11 +1,22 @@
 # Rift All-Phase Results Rollup
 
 Date: 2026-05-01
-Last updated: 2026-05-07 17:24 CEST
+Last updated: 2026-05-07 17:51 CEST
 
 This file gathers the current numeric and validation evidence across all
 roadmap phases. It is a rollup, not the primary raw log. Prefer the source files
 listed below for command provenance and detailed interpretation.
+
+Latest update: page-token-owned appends now skip the generic
+`StreamAppendWindow.totalLength` counter. The focused 1M cost split remains
+positive but modest: checked scoped page-token is `77.135/88.840/85.362 ms`
+on append-only/drain/aggregate versus heap `81.535/90.374/86.988 ms`, and
+checked scoped count-by-key is `102.504 ms` versus heap `114.143 ms`. The
+real DSPBench Fraud q2 control is a checked RSS/GC near-tie rather than a
+throughput win: checked scoped page-token `843.380 ms`, heap `842.739 ms`,
+trusted Streaming `832.012 ms`. This reinforces that the next checked-runtime
+target is allocation lowering (`allocImpl`/`checkOpen` under static operator
+ownership), not more bucket open/close bookkeeping.
 
 ## How To Read This File
 

@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-07 17:30 CEST
+Last updated: 2026-05-07 17:51 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -102,6 +102,31 @@ aggregate/no-drain is a valid reusable operator direction, but not a broad
 checked-overhead solution. Use it only where the query naturally updates
 aggregate metadata on append and can close buckets without per-record
 traversal. Source: `evidence/CHECKED_PAGE_TOKEN_COST_MATRIX.md`.
+
+Latest page-token live-length bookkeeping checkpoint:
+Page-token, `PageTokenMapFilter`, and `PageTokenCountByKey` appends now use a
+page-token-owned helper that skips the underlying generic append-window
+`totalLength` counter while preserving per-bucket `appendLength` for close and
+cursor logic. Generic `StreamAppendWindow` and `EpochBuffer` length APIs remain
+defensive and unchanged. Validation passed: `sandbox3_next/compile`,
+`RiftRegionCheckedCompilerTest` `120/120`, and `RiftRegionCheckedTest`
+`52/52`; 20k smoke matched checksums. A source-level `inline` version was
+tried and rejected by capture checking, so the likely next speed target is
+compiler/runtime allocation lowering rather than source-level helper inlining.
+Focused 1M rows are modest: checked scoped page-token is `77.135/88.840/85.362
+ms` on append-only/drain/aggregate versus heap `81.535/90.374/86.988 ms`, and
+checked scoped count-by-key is `102.504 ms` versus heap `114.143 ms`. The
+DSPBench Fraud q2 application control did not become a representative checked
+throughput win: heap is `842.739 ms`, trusted Streaming `832.012 ms`, checked
+Rift page-token `854.207 ms`, and checked SafeZone-backed page-token
+`843.380 ms`; checked scoped still cuts RSS (`278.6 MB` vs heap `358.3 MB`)
+and timed GC (`15.245 ms` vs heap `72.387 ms`). Interpretation: the
+bookkeeping removal is justified but not a large speedup. Do not keep shaving
+bucket open/close counters unless a profile points there; next checked work
+should target the generated `allocImpl`/`checkOpen` allocation path under
+operator-owned static safety. Sources:
+`evidence/CHECKED_PAGE_TOKEN_COST_MATRIX.md`,
+`evidence/DSPBENCH_REGION_MATRIX.md`, and `docs/CPU_PROFILE_REPORT.md`.
 
 Latest count-by-key application-gate checkpoint:
 Common Crawl-shaped q2 now has opt-in `rift-checked-count-by-key` and

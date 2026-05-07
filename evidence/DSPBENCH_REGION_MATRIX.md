@@ -1,7 +1,7 @@
 # DSPBench Region Matrix
 
 Date: 2026-05-07
-Last updated: 2026-05-07 16:38 CEST
+Last updated: 2026-05-07 17:51 CEST
 
 Status: implemented first two local DSPBench-family real-input candidates:
 Spike Detection and Fraud Detection. This is not an exact DSPBench artifact
@@ -552,3 +552,37 @@ page-token remains a modest real-input win over heap and cuts RSS by about
 `80 MB`, but it is no longer the fastest row. This reinforces the next
 engineering target: the safe checked path needs lower common operator/query
 CPU to match the trusted lower bound consistently.
+
+### Fraud q2 page-token live-length bookkeeping rerun
+
+After removing page-token-owned generic live-length bookkeeping from the
+checked append helper, q2 was rerun as a focused application control:
+
+```bash
+DSPBENCH_BUILD=1 \
+DSPBENCH_EVENTS=1000000 \
+DSPBENCH_BENCHMARK_RUNS=3 \
+DSPBENCH_WARMUPS=1 \
+DSPBENCH_QUERIES="fraud-q2-alert-window" \
+DSPBENCH_MODES="heap-immix rift-trusted-streaming rift-checked-page-token rift-checked-safezone-page-token" \
+DSPBENCH_OUTPUT_DIR=/Users/siyaoliu/rift/cache/dspbench-fraud-q2-page-token-no-length-1m-2026-05-07 \
+zsh sandbox/run_dspbench_region_matrix.sh
+```
+
+All rows matched checksum `2645894572926148009` and output count `594182`.
+
+| Mode | Median ms | Median GC ms | Max GC ms | Runs with GC | RSS bytes |
+|---|---:|---:|---:|---:|---:|
+| `heap-immix` | `842.739` | `72.387` | `77.539` | `3/3` | `358252544` |
+| `rift-trusted-streaming` | `832.012` | `11.175` | `11.705` | `2/3` | `282443776` |
+| `rift-checked-page-token` | `854.207` | `12.948` | `13.054` | `2/3` | `278396928` |
+| `rift-checked-safezone-page-token` | `843.380` | `15.245` | `16.612` | `2/3` | `278593536` |
+
+Interpretation: this removes one justified hot-path counter, but it does not
+produce a reliable application throughput improvement. Checked scoped
+page-token is essentially tied with heap while cutting RSS by about `22%` and
+timed GC by about `57 ms`; trusted Streaming remains fastest. Use this as a
+negative/no-large-speedup data point for page-token bookkeeping. The next
+checked optimization target should be generated allocation lowering
+(`allocImpl`/`checkOpen` under statically proven operator ownership), not more
+bucket-open/close bookkeeping.

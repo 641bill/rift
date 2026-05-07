@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Tables
 
 Date: 2026-05-01
-Last updated: 2026-05-07 16:20 CEST
+Last updated: 2026-05-07 17:51 CEST
 
 Status: seeded summary pack for the comprehensive evaluation. Rows below are
 current checked-in evidence unless marked pending rerun.
@@ -49,6 +49,20 @@ Source rows:
 | NEXMark clean selected | checked q3/q8/q9/q11 `285.666/436.804/733.083/212.092 ms` vs heap `308.049/461.542/791.244/214.268 ms` | generated Beam-default methodology rows remain modest checked wins |
 | Common Crawl-shaped clean selected | q1 checked scoped page-token `3759.175 ms` vs heap `5466.724 ms`; q2 checked scoped rerun `3784.863 ms` vs heap `5213.380 ms` | generated GC-heavy stressor remains the strongest checked stream win |
 | DSPBench Fraud q2 committed-code safe-fast-path | trusted Streaming `788.040 ms`, checked scoped page-token `810.770 ms`, heap `820.945 ms` | checked scoped remains a modest real-input/RSS win, but trusted is faster in this rerun |
+
+## Page-Token Live-Length Bookkeeping Rerun: 2026-05-07
+
+Source rows:
+
+- `cache/checked-page-token-no-length-1m-2026-05-07/page-token/`
+- `cache/checked-page-token-no-length-1m-2026-05-07/count-by-key/`
+- `cache/dspbench-fraud-q2-page-token-no-length-1m-2026-05-07/`
+
+| Area | Main result | Interpretation |
+|---|---|---|
+| Focused page-token cost split | checked scoped append-only/drain/aggregate `77.135/88.840/85.362 ms` vs heap `81.535/90.374/86.988 ms` | removing generic live-length bookkeeping is valid and keeps scoped page-token modestly positive, but it is not a large speedup |
+| Focused count-by-key | checked scoped count-by-key `102.504 ms`, checked Rift count-by-key `104.813 ms`, heap `114.143 ms` with `15.091 ms` GC | no-drain aggregate remains the best focused win from this specific cleanup; checked scoped cuts RSS from `146604032` to `83279872` bytes |
+| DSPBench Fraud q2 | trusted Streaming `832.012 ms`, checked scoped page-token `843.380 ms`, heap `842.739 ms` | real-input q2 is now a checked RSS/GC near-tie, not a checked throughput win; next optimization should target allocation lowering rather than bucket bookkeeping |
 
 ## Staged Headline Sweep: 2026-05-06
 

@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-07 17:30 CEST
+Last updated: 2026-05-07 17:51 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -52,6 +52,16 @@ append-only/drain/aggregate same-shape rows, but no-drain close is not the main
 remaining bottleneck. Next operator work should target allocation/query CPU
 and application paths that still do bucket/region lookup too often, not more
 generic close-drain removal.
+
+Latest page-token live-length checkpoint: page-token-owned appends now skip the
+generic append-window live-length counter while keeping per-bucket length for
+close/cursor correctness. This is a valid overhead cleanup but not a large
+application speedup. Focused count-by-key remains positive (`102.504 ms`
+checked scoped versus `114.143 ms` heap), but DSPBench Fraud q2 is only a
+checked RSS/GC near-tie (`843.380 ms` checked scoped versus `842.739 ms` heap).
+This weakens the value of further page-token bookkeeping tweaks and makes
+generated allocation lowering under static operator ownership the next
+meaningful checked-runtime target.
 
 Latest CPU profile checkpoint: `docs/CPU_PROFILE_REPORT.md`. macOS
 `/usr/bin/sample` profiles for generated Common Crawl-shaped q2 at 2M pages

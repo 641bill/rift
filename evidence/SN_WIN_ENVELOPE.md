@@ -1,7 +1,7 @@
 # Scala Native Win Envelope
 
 Date: 2026-05-01
-Last updated: 2026-05-07 17:24 CEST
+Last updated: 2026-05-07 17:51 CEST
 
 Status: Phase 6/7 evidence synthesis. This note classifies where Rift currently
 wins against Scala Native Immix, where it only reduces memory pressure, and
@@ -36,6 +36,15 @@ aggregate/no-drain shape, not a broad checked-overhead fix. The first
 Common Crawl-shaped q2 application gate did not transfer the focused win:
 checked SafeZone-backed count-by-key is `450.289 ms` versus existing checked
 SafeZone-backed page-token `406.413 ms` at 100k generated pages.
+
+Latest page-token bookkeeping update:
+page-token-owned appends now skip the generic append-window live-length
+counter. This preserves the focused win envelope but is not a broad speedup:
+checked scoped count-by-key is `102.504 ms` versus heap `114.143 ms`, while
+DSPBench Fraud q2 is checked scoped `843.380 ms` versus heap `842.739 ms`.
+The useful win there is RSS/GC, not elapsed. Next checked-runtime work should
+move to allocation lowering (`allocImpl`/`checkOpen`) under static
+operator-owned safety.
 
 UnsafeZone-HP checkpoint: `evidence/UNSAFEZONE_HP_BASELINE_MATRIX.md` adds a
 benchmark-only SafeZone no-root control (`SAFEZONE_ROOTS_MODE=3`,
