@@ -1,6 +1,6 @@
 # Rift CPU Profiling Report
 
-Last updated: 2026-05-07 18:14 CEST
+Last updated: 2026-05-07 21:44 CEST
 
 Status: profiling runbook plus first sampled profile row and the first
 profile-driven implementation follow-up. The sampled GH Archive row identified
@@ -76,6 +76,8 @@ The current questions are:
 | 2026-05-07 | Page-token owned cursor link-clearing follow-up | `rift-checked-page-token`, `rift-checked-safezone-page-token` | non-profiled focused/application rerun after source change | 1M focused page-token rows, 1M generated Common Crawl-shaped q1/q2, and 1M replayed real DSPBench Fraud q2 | focused checked scoped `append-only/drain/aggregate`: `73.590/83.997/81.296 ms`; Common Crawl q1/q2 checked scoped `3643.680/3790.138 ms` vs heap `5392.344/5201.862 ms`; Fraud q2 checked scoped `800.369 ms` vs heap `807.974 ms`, RSS `278577152` vs `358301696` | `nextOwnedOrNull()` removes per-record link clearing only for operator-owned page-token close. This is a small but real static-safety overhead removal: the parent refs are cleared and the child region dies, so clearing every link is unnecessary. It improves focused rows by about `3.5-4.8 ms` versus the previous no-length checkpoint and turns Fraud q2 into a modest checked elapsed/RSS win, while leaving trusted Streaming as the lower-bound winner. |
 | 2026-05-07 | Common Crawl-shaped q2 checked page-token target profile | `rift-checked-safezone-page-token` | macOS `/usr/bin/sample`, 5s sampled diagnostic after delaying past the heap expected-control phase | 2M generated WET-shaped pages, q2 domain window; timed row `7719.982 ms`, `69.545 ms` GC, `1858678` outputs | top sampled paths: `closeRecords$5`/`StreamAppendCursor.nextOrNull`, `appendWindowOwnedOpen`/`appendPageToken`, `scalanative_zone_alloc` plus `_platform_memset`, `InputData.tokenHashAt`/`tokenHash`/`mix`, `MemorySafeZoneBackedRiftRegion.allocImpl` and `checkOpen`; physical footprint about `440 MB` | This confirms the checked scoped page-token path is split between required close traversal, append/linking, token-hash query work, and SafeZone allocation/zeroing. Bucket opening is not visible as a dominant path. The next low-level SafeZone-backed checks to investigate are allocation zeroing, `checkOpen`, and whether per-append `appendWindowOwnedOpen` can be further specialized, but traversal/query work is a large shared floor. |
 | 2026-05-07 | Common Crawl-shaped q2 checked page-token target profile | `rift-checked-page-token` | macOS `/usr/bin/sample`, 5s sampled diagnostic after delaying past the heap expected-control phase | 2M generated WET-shaped pages, q2 domain window; timed row `8190.974 ms`, `38.480 ms` GC, `26.032 ms` Rift op, `13.804 ms` slow alloc, `274000000` region objects, `1858678` outputs | top sampled paths: `closeRecords$5`/`StreamAppendCursor.nextOrNull`, `appendWindowOwnedOpen`/`appendPageToken`, `scalanative_rift_region_alloc` and `scalanative_rift_region_alloc_raw`, `_platform_memset`, `scalanative_rift_normalize_align`, `scalanative_rift_stats_record_alloc_bytes`, `MemoryRiftRegion.allocImpl` and `checkOpen`, `InputData.tokenHashAt`/`tokenHash`/`mix`; physical footprint about `440 MB` | Compared with SafeZone-backed checked, the Rift backend shows extra sampled allocator normalization/stat-check work while the same close traversal and token-hash/query paths remain. This supports focusing on generated allocation lowering/stat-check elimination and `checkOpen` removal inside operator-owned paths before inventing another close/open optimization. |
+| 2026-05-07 | Common Crawl-shaped q2 checked scoped after open allocation | `rift-checked-safezone-page-token` | macOS `/usr/bin/sample`, 5s sampled diagnostic after delaying past the heap expected-control phase | 3M generated WET-shaped pages, q2 domain window; timed row `12093.317 ms`, `93.269 ms` GC, `2788398` outputs | top sampled paths: `closeRecords$5`, `appendPageTokenOwnedOpen`/`appendPageToken`, `scalanative_zone_alloc` plus `_platform_memset`/`Util_pad`, `InputData.tokenHashAt`/`tokenHash`/`mix`, `StreamAppendCursor.nextOwnedOrNull`, and `MemorySafeZoneBackedRiftRegion.allocUncheckedImpl`; physical footprint about `440 MB` | This is the post-`allocOpen` target profile. `allocImpl/checkOpen` is no longer visible; the remaining SafeZone-backed checked costs are zone allocation/zeroing/alignment, append/linking, cursor traversal, and token-hash/query CPU. The next low-level optimization is not another `checkOpen` removal; it would need to reduce allocation zeroing/alignment or append/cursor traversal, both of which must preserve the same logical heap/Rift traversal shape. |
+| 2026-05-07 | DSPBench Fraud q2 checked scoped after open allocation | `rift-checked-safezone-page-token` | macOS `/usr/bin/sample`, 3s sampled diagnostic after delaying past the heap expected-control phase | 5M replayed real `credit-card.dat` events, q2 alert window; timed row `4245.059 ms`, `72.687 ms` GC, `3308061` outputs | top sampled paths: `BenchmarkInputSupport.stableHash`, `ByteLineReader.append`/`nextByte`/`readLine`, `FraudPredictorState.update`, CSV comma/state parsing, `appendChecked`, `closeRecords$1`, `scalanative_zone_alloc`/`memset`, `appendPageTokenOwnedOpen`, and small residual GC allocation/mark/sweep paths; physical footprint about `263 MB` | The real-input Fraud q2 path is now dominated by file replay/parsing/hash and predictor/query work before allocator overhead. Region append/close still appears, but it is not the leading sampled cost. For this row, the best next engineering move is not another region allocation micro-optimization; either reduce parser/replay overhead with fair heap/region byte-slice controls or search the next real-input stream benchmark. |
 
 Profile artifact:
 
@@ -85,10 +87,13 @@ Additional profile artifacts:
 
 - `/Users/siyaoliu/rift/cache/profile-common-crawl-q2-page-token-target-2026-05-07/sample.txt`
 - `/Users/siyaoliu/rift/cache/profile-common-crawl-q2-rift-page-token-target-2026-05-07/sample.txt`
+- `/Users/siyaoliu/rift/cache/profile-common-crawl-q2-openalloc-scoped-target-2026-05-07/sample.txt`
+- `/Users/siyaoliu/rift/cache/profile-dspbench-fraud-q2-openalloc-scoped-real-target-2026-05-07/sample.txt`
 
-Note: an earlier Common Crawl profile attempt sampled the harness's built-in
-heap expected-control run. The target profiles above delayed attachment until
-the actual checked mode was running.
+Note: earlier Common Crawl and DSPBench profile attempts sampled the harness's
+built-in heap expected-control run or generated input by mistake. The target
+profiles above delayed attachment until the actual checked mode was running and
+record the input provenance explicitly.
 
 Profiled benchmark row:
 

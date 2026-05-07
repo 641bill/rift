@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-07 18:53 CEST
+Last updated: 2026-05-07 21:44 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -93,6 +93,16 @@ q1/q2 remains strong (`3707.214/3902.795 ms` checked scoped versus
 runtime check, but it is not the dominant remaining cost. Next performance work
 should profile object construction, append/linking, cursor traversal, and query
 CPU before adding another page-token micro-optimization.
+
+Latest post-open-allocation profile checkpoint: `docs/CPU_PROFILE_REPORT.md`.
+The Common Crawl-shaped q2 checked scoped profile confirms the hot allocation
+path now goes through `allocUncheckedImpl`; `allocImpl/checkOpen` is gone from
+the target sample. Remaining sampled costs are zone allocation/zeroing/alignment,
+append/linking, close cursor traversal, and token hashing/query work. The real
+DSPBench Fraud q2 profile is led by byte-line parsing/replay, stable hashing,
+fraud predictor state, CSV/state parsing, append, and close traversal. This
+keeps Fraud q2 as a real-input regression row, but it argues against more
+checked allocation micro-tuning as the next default step.
 
 Latest CPU profile checkpoint: `docs/CPU_PROFILE_REPORT.md`. macOS
 `/usr/bin/sample` profiles for generated Common Crawl-shaped q2 at 2M pages

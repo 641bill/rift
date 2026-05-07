@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-07 18:53 CEST
+Last updated: 2026-05-07 21:44 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -109,6 +109,23 @@ mostly from the operator-owned lifetime shape and scoped backend; remaining
 costs are object construction, append/linking, cursor/query traversal, and
 shared application CPU. Sources: `evidence/CHECKED_PAGE_TOKEN_COST_MATRIX.md`,
 `evidence/DSPBENCH_REGION_MATRIX.md`, and `evidence/COMMON_CRAWL_WET_MATRIX.md`.
+
+Latest post-open-allocation profiling checkpoint:
+On 2026-05-07, macOS `/usr/bin/sample` target profiles were captured after
+delaying past each harness's built-in heap expected-control phase. Generated
+Common Crawl-shaped q2 checked scoped at 3M pages (`12093.317 ms`,
+`93.269 ms` GC, `2788398` outputs) now shows `allocUncheckedImpl` rather than
+`allocImpl/checkOpen`; the remaining sampled paths are `closeRecords`,
+`appendPageTokenOwnedOpen`/`appendPageToken`, `scalanative_zone_alloc` plus
+`memset`/alignment, `StreamAppendCursor.nextOwnedOrNull`, and token-hash/query
+work. Real DSPBench Fraud q2 checked scoped at 5M replayed `credit-card.dat`
+events (`4245.059 ms`, `72.687 ms` GC, `3308061` outputs) is dominated by
+`ByteLineReader` parsing/replay, `stableHash`, `FraudPredictorState.update`,
+CSV/state parsing, append, and close traversal. Interpretation: `checkOpen`
+has been removed from the targeted checked allocation path; the next code step
+should not be another open-check patch. Either profile/reduce append/cursor
+layout/zeroing with a fair heap same-shape control, or resume the real-input
+benchmark search. Source: `docs/CPU_PROFILE_REPORT.md`.
 
 Latest page-token attribution checkpoint:
 Child diagnostics now include `estimated_bucket_open_ms` for DSPBench and

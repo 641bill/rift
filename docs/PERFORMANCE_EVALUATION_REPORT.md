@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-07 18:53 CEST
+Last updated: 2026-05-07 21:44 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -64,6 +64,18 @@ heap `5577.965/5183.074 ms`; heap timed GC is `1741.640/1565.074 ms` versus
 checked scoped `30.693/27.027 ms`. Interpretation: `checkOpen` was worth
 removing, but object construction, append/linking, cursor traversal, and query
 CPU are now the larger limits.
+
+Latest profiling checkpoint:
+`docs/CPU_PROFILE_REPORT.md` now includes post-open-allocation target profiles.
+Generated Common Crawl-shaped q2 checked scoped samples
+`allocUncheckedImpl`, `scalanative_zone_alloc`/`memset`, append/linking,
+`nextOwnedOrNull`, close traversal, and token-hash/query work; generic
+`allocImpl/checkOpen` is no longer visible. Real DSPBench Fraud q2 checked
+scoped samples are led by byte-line parsing/replay, stable hashing, predictor
+state update, CSV/state parsing, append, and close traversal. This confirms
+that the next useful work is not another open-check removal. The choice is now
+between lower-level append/cursor/zeroing work with fair controls and moving
+back to the real-input benchmark search.
 
 Benchmark guide: `docs/BENCHMARK_CATALOG.md` describes what each benchmark is
 meant to measure and which rows are generated, real-input, focused, or
