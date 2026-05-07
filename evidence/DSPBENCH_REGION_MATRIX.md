@@ -1,7 +1,7 @@
 # DSPBench Region Matrix
 
 Date: 2026-05-07
-Last updated: 2026-05-07 13:32 CEST
+Last updated: 2026-05-07 16:20 CEST
 
 Status: implemented first two local DSPBench-family real-input candidates:
 Spike Detection and Fraud Detection. This is not an exact DSPBench artifact
@@ -449,14 +449,13 @@ All rows matched checksum `2645894572926148009` and output count `594182`.
 | `rift-checked-page-token` | `851.488` | `11.244` | `11.265` | `2/3` | `278413312` | `0.522` | `4851373` |
 | `rift-checked-safezone-page-token` | `818.574` | `17.265` | `19.309` | `2/3` | `278544384` | `0.000` | `0` |
 
-Result: the checked SafeZone-backed page-token path is now the fastest clean
-Fraud q2 row in this same-run matrix. It is about `5.1%` faster than heap,
-about `6.3%` faster than improved SafeZone, and about `1.9%` faster than
-trusted Streaming, while cutting RSS from about `358 MB` to about `279 MB`.
-This promotes Fraud q2 from checked-overhead diagnostic to a modest checked
-real-input win. It is still not a flagship GC-heavy row because heap GC is
-about `9%` of elapsed in this run and parser/replay/predictor/checksum CPU
-remains a large share of total time.
+Result: the checked SafeZone-backed page-token path is the fastest row in this
+dirty fast-path direction check. It is about `5.1%` faster than heap, about
+`6.3%` faster than improved SafeZone, and about `1.9%` faster than trusted
+Streaming, while cutting RSS from about `358 MB` to about `279 MB`. Because
+the worktree was not yet checkpointed, do not use this as final headline
+evidence. It is still valuable because it showed that q2 could become a modest
+checked real-input win after operator-overhead reduction.
 
 Diagnostic-only rerun:
 
@@ -491,8 +490,8 @@ profile confirms it is still material on the next application row.
 ## Fraud Interpretation
 
 Fraud Detection is more promising than Spike for trusted region runtime
-evidence, and the 2026-05-07 page-token fast-path run makes q2 a modest
-checked real-input win:
+evidence, and the 2026-05-07 page-token fast-path work makes q2 the best
+checked real-input regression row:
 
 - At 1M, heap GC is visible and grows with richer query shape:
   q0 `9.997 ms`, q1 `43.801 ms`, q2 `69.686 ms`.
@@ -502,11 +501,49 @@ checked real-input win:
   RSS from `358252544` to `282460160` bytes and median GC from `69.686 ms` to
   `12.492 ms`.
 - Improved SafeZone also modestly beats heap on q1/q2 and cuts RSS on q2.
-- After the page-token fast path, checked scoped page-token is the fastest
-  same-run q2 row: `818.574 ms` versus heap `862.834 ms`, improved SafeZone
-  `873.859 ms`, and trusted Streaming `834.447 ms`.
+- The dirty page-token fast-path row made checked scoped page-token fastest:
+  `818.574 ms` versus heap `862.834 ms`, improved SafeZone `873.859 ms`, and
+  trusted Streaming `834.447 ms`.
+- The committed-code rerun is more conservative: trusted Streaming is fastest
+  at `788.040 ms`, checked scoped page-token is `810.770 ms`, and heap is
+  `820.945 ms`, with checked RSS about `279 MB` versus heap `358 MB`.
 
 Decision: keep Fraud q2 as the strongest current DSPBench real-input candidate
-and a modest checked win after operator-overhead reduction. Do not overclaim it
-as the missing GC-heavy flagship: the elapsed win is modest, the input is a
-local single-process methodology port, and heap GC is material but not dominant.
+and a modest checked/RSS win over heap after operator-overhead reduction. Do
+not overclaim it as the missing GC-heavy flagship: the clean elapsed win is
+modest, trusted Streaming is fastest, the input is a local single-process
+methodology port, and heap GC is material but not dominant.
+
+### Fraud q2 committed-code safe-fast-path rerun
+
+After adding the page-token no-drain close API and refining
+`pageTokenAppendRegionFor` to return the cached child region on same-bucket
+timestamps only when the current bucket is the only live bucket, q2 was rerun
+against the committed implementation:
+
+```bash
+DSPBENCH_BUILD=1 \
+DSPBENCH_EVENTS=1000000 \
+DSPBENCH_BENCHMARK_RUNS=3 \
+DSPBENCH_WARMUPS=1 \
+DSPBENCH_QUERIES="fraud-q2-alert-window" \
+DSPBENCH_MODES="heap-immix safezone-improved-32k rift-trusted-streaming rift-checked-page-token rift-checked-safezone-page-token" \
+DSPBENCH_OUTPUT_DIR="/Users/siyaoliu/rift/cache/perf-eval/2026-05-07-dspbench-fraud-q2-safe-fast-path" \
+zsh sandbox/run_dspbench_region_matrix.sh
+```
+
+All rows matched checksum/output count.
+
+| Mode | Median ms | Median GC ms | Max GC ms | RSS bytes |
+|---|---:|---:|---:|---:|
+| `heap-immix` | `820.945` | `75.928` | `100.789` | `358154240` |
+| `safezone-improved-32k` | `817.402` | `17.407` | `17.500` | `282427392` |
+| `rift-trusted-streaming` | `788.040` | `11.547` | `12.573` | `282443776` |
+| `rift-checked-page-token` | `814.763` | `11.224` | `11.779` | `278396928` |
+| `rift-checked-safezone-page-token` | `810.770` | `15.105` | `16.853` | `278593536` |
+
+Interpretation: trusted Streaming is fastest in this rerun. Checked scoped
+page-token remains a modest real-input win over heap and cuts RSS by about
+`80 MB`, but it is no longer the fastest row. This reinforces the next
+engineering target: the safe checked path needs lower common operator/query
+CPU to match the trusted lower bound consistently.

@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-07 13:51 CEST
+Last updated: 2026-05-07 16:20 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -22,15 +22,17 @@ summary: `evidence/COMPREHENSIVE_SWEEP_2026_05_06.md`.
 Latest page-token fast-path checkpoint:
 On 2026-05-07, `StreamPageTokenAppendWindow` got a batch-close/current-bucket
 fast path: `StreamAppendCursor.nextOrNull()`, page-token-owned close without
-the generic leftover-drain loop, and a monotonic same-bucket region fast path.
+the generic leftover-drain loop, and a monotonic same-bucket region fast path
+when the current bucket is the only live bucket.
 Validation passed `sandbox3_next/compile`, `RiftRegionCheckedCompilerTest`
 `118/118`, and `RiftRegionCheckedTest` `50/50`. Focused 1M append rows:
 heap `36.920 ms`, checked Rift page-token `29.319 ms`, checked SafeZone-backed
-page-token `27.549 ms`; chunk-token remains slower. DSPBench Fraud q2 now has
-a modest checked real-input win in the clean same-run matrix:
-checked SafeZone-backed page-token `818.574 ms` vs heap `862.834 ms`,
-improved SafeZone `873.859 ms`, and trusted Streaming `834.447 ms`, with RSS
-about `279 MB` vs heap `358 MB`. Generated Common Crawl-shaped 100k q1/q2
+page-token `27.549 ms`; chunk-token remains slower. DSPBench Fraud q2 had a
+dirty fast-path direction check where checked SafeZone-backed page-token was
+fastest (`818.574 ms` vs heap `862.834 ms`), but the later clean
+committed-code rerun is more conservative: trusted Streaming `788.040 ms`,
+checked SafeZone-backed page-token `810.770 ms`, and heap `820.945 ms`, with
+checked RSS about `279 MB` vs heap `358 MB`. Generated Common Crawl-shaped 100k q1/q2
 also strengthened: checked SafeZone-backed page-token is fastest on q1
 (`370.758 ms`) and q2 (`377.482 ms`). Treat these as post-fast-path evidence;
 older Fraud q2 checked-loses rows remain useful as pre-optimization baseline.
@@ -47,6 +49,23 @@ page-token fastest on both q1 (`3840.668 ms` vs heap `5618.631 ms`) and q2
 on each. This strengthens checked page-token and checked scoped backend as
 public candidates, but because the sweep is dirty it should be rerun from a
 clean commit before final paper tables.
+
+Latest clean page-token cost checkpoint:
+The dirty page-token fast-path work was committed in child commit
+`236422fea` and parent commit `af9deb9`. A clean selected rerun then confirmed
+the direction: focused append has heap `36.722 ms`, checked page-token
+`28.397 ms`, and checked scoped page-token `27.240 ms`; Dataflow SELECT clean
+scoped page-token is `18.326 ms`; NEXMark q3/q8/q9/q11 keep checked Rift
+fastest in the selected rows; generated Common Crawl-shaped q1 checked scoped
+page-token is `3759.175 ms` vs heap `5466.724 ms`, and q2 rerun is
+`3784.863 ms` vs heap `5213.380 ms`. A new
+`CheckedPageTokenCostMatrix` splits same-shape costs into `append-only`,
+`append-drain`, and `append-aggregate`. The no-drain close API is safe and the
+runtime suite passes `51/51`, but the 1M cost matrix shows no-drain close is
+not the main remaining bottleneck. The committed-code DSPBench Fraud q2 rerun
+is more conservative than the dirty run: trusted Streaming `788.040 ms`,
+checked scoped page-token `810.770 ms`, heap `820.945 ms`, with checked RSS about
+`279 MB` vs heap `358 MB`.
 
 Latest final-selection sweep checkpoint:
 Clean run `2026-05-06-final-selection-headline` completed after committing the
@@ -237,10 +256,12 @@ is now implemented over `dspbench-threads/data/credit-card.dat` (`185000`
 lines). The first 1M Fraud q2 matrix made trusted Streaming the strongest row:
 heap `801.790 ms`, median GC `69.686 ms`, RSS `358252544`; trusted Streaming
 `763.819 ms`, median GC `12.492 ms`, RSS `282460160`. That made checked q2 a
-checked-overhead diagnostic. After the page-token fast path, the clean same-run
-q2 matrix has checked scoped page-token fastest (`818.574 ms`) versus heap
-`862.834 ms`, improved SafeZone `873.859 ms`, and trusted Streaming
-`834.447 ms`, with RSS about `279 MB`. A follow-up heap-cap rerun at 1M q2
+checked-overhead diagnostic. The dirty page-token fast-path rerun made checked
+scoped page-token fastest (`818.574 ms`) versus heap `862.834 ms`, but the
+committed-code rerun is more conservative: trusted Streaming `788.040 ms`,
+checked scoped page-token `810.770 ms`, and heap `820.945 ms`,
+with checked RSS about `279 MB` versus heap `358 MB`. A follow-up heap-cap
+rerun at 1M q2
 before the fast path shows heap
 caps `512M` and `384M` do not materially change heap behavior; `256M` lowers
 RSS to `272449536` but raises the max GC tail to `101.267 ms`. The useful next

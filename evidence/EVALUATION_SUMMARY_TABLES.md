@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Tables
 
 Date: 2026-05-01
-Last updated: 2026-05-07 13:51 CEST
+Last updated: 2026-05-07 16:20 CEST
 
 Status: seeded summary pack for the comprehensive evaluation. Rows below are
 current checked-in evidence unless marked pending rerun.
@@ -24,11 +24,31 @@ monotonic current-bucket fast path.
 | NEXMark Beam-default q3/q8/q9/q11 | checked q3 `285.356 ms`, q8 `443.020 ms`, q9 `724.479 ms`, q11 `209.918 ms` | generated methodology rows remain positive; q9 has the largest selected GC reduction |
 | Common Crawl-shaped q1 | checked scoped page-token `3840.668 ms`, checked Rift page-token `4069.265 ms`, trusted Streaming `4492.936 ms`, heap `5618.631 ms` with `1655.357 ms` GC | strongest checked generated object-pressure row; elapsed/GC win, not RSS win |
 | Common Crawl-shaped q2 | checked scoped page-token `3839.158 ms`, checked Rift page-token `4041.548 ms`, trusted Streaming `4205.312 ms`, heap `5303.179 ms` with `1599.698 ms` GC | strongest checked generated window row; checked page-token now beats trusted Streaming |
-| DSPBench Fraud q2 | checked scoped page-token `818.574 ms`, trusted Streaming `834.447 ms`, checked Rift page-token `851.488 ms`, heap `862.834 ms` | modest real-input checked win with lower RSS and lower GC |
+| DSPBench Fraud q2 | checked scoped page-token `818.574 ms`, trusted Streaming `834.447 ms`, checked Rift page-token `851.488 ms`, heap `862.834 ms` | dirty direction check: checked scoped is fastest here, but use the committed-code row below for conservative reporting |
 
 Selection consequence: `checked-page-token` and the SafeZone-backed scoped
 checked backend are now stronger public candidates. `EpochFold`, TableRank,
 chunk-token, and rank-heavy operators remain gated.
+
+## Clean Post-Fast-Path Baseline And Cost Split: 2026-05-07
+
+Source rows:
+
+- `cache/perf-eval/2026-05-07-clean-post-fast-path-selected/`
+- `cache/perf-eval/2026-05-07-page-token-cost-1m-baseline/`
+- `cache/perf-eval/2026-05-07-page-token-cost-1m-safe-fast-path/`
+- `cache/perf-eval/2026-05-07-page-token-focused-post-nodrain/`
+
+| Area | Main result | Interpretation |
+|---|---|---|
+| Focused page-token append | checked scoped page-token `27.240 ms`, checked page-token `28.397 ms`, heap `36.722 ms` | clean committed rerun confirms the page-token headline path did not regress |
+| Cost matrix append-only | checked scoped page-token `74.743 ms`, checked page-token `77.185 ms`, heap `78.130 ms` after no-drain and safe same-bucket tightening | no-drain close is safe, but not the main speedup; allocation/query CPU dominates |
+| Cost matrix append-drain | checked scoped page-token `81.628 ms`, heap `83.447 ms` | cursor traversal remains a small cost; checked scoped is modestly faster while removing timed GC |
+| Cost matrix append-aggregate | checked scoped page-token `82.623 ms`, heap `85.500 ms` | aggregate-on-append shape is competitive, but not a large standalone win |
+| Dataflow clean selected | SELECT scoped page-token `18.326 ms`; checked RegionBuffer SELECT/AGG/JOIN `20.266/37.223/21.084 ms` vs heap `28.158/48.687/31.460 ms` | prior-work-shaped rows remain positive from the clean checkpoint |
+| NEXMark clean selected | checked q3/q8/q9/q11 `285.666/436.804/733.083/212.092 ms` vs heap `308.049/461.542/791.244/214.268 ms` | generated Beam-default methodology rows remain modest checked wins |
+| Common Crawl-shaped clean selected | q1 checked scoped page-token `3759.175 ms` vs heap `5466.724 ms`; q2 checked scoped rerun `3784.863 ms` vs heap `5213.380 ms` | generated GC-heavy stressor remains the strongest checked stream win |
+| DSPBench Fraud q2 committed-code safe-fast-path | trusted Streaming `788.040 ms`, checked scoped page-token `810.770 ms`, heap `820.945 ms` | checked scoped remains a modest real-input/RSS win, but trusted is faster in this rerun |
 
 ## Staged Headline Sweep: 2026-05-06
 
@@ -61,7 +81,7 @@ SafeZone-cost. Competitive rows skip current SafeZone by default.
 | GH Archive file-backed 2h, legacy string parser | q1 Streaming `7448.838 ms`, checked scoped page-token `7489.923 ms`, heap `7549.355 ms`; q2 Streaming `7442.005 ms`, checked scoped page-token `7498.263 ms`, heap `7641.540 ms` | real file-backed RSS/fixed-memory row: heap around `2.43 GB` RSS, region rows around `0.72-0.93 GB`; profile says parser/string/decompression dominates |
 | GH Archive file-backed 2h, byte-slice parser | q1 heap `3806.120 ms`, Streaming `3626.219 ms`, checked scoped page-token `3629.193 ms`; q2 heap `3756.950 ms`, Streaming `3645.458 ms`, checked scoped page-token `3626.107 ms` | parser-scratch follow-up: real file-backed modest throughput/RSS/tail win; region rows use about `211 MB` RSS and zero timed GC vs heap about `290 MB` RSS with GC in 2/3 runs. Not GC-heavy: heap GC is only about `1.5-1.6%` of elapsed. |
 | LogHub BGL real log | 1M q1 heap `5568.252 ms`, Streaming `5491.033 ms`, checked scoped page-token `5552.988 ms`; 1M q2 heap `5646.824 ms`, improved-32k `5509.481 ms`, checked scoped page-token `5636.357 ms`; full-file q2 heap `32161.391 ms`, Streaming `30899.595 ms`, checked scoped page-token `31165.087 ms` | real file-backed multi-million-line system-log control. Region rows remove timed GC and modestly improve selected rows; full-file q2 heap GC is `595.599 ms`, still under 2% of elapsed, so this is not the missing GC-heavy case. |
-| DSPBench Spike/Fraud real-input | Spike 1M over `sensors.dat`; Fraud 1M over `credit-card.dat` | Spike q1 checked scoped page-token `1163.045 ms` vs heap `1187.525 ms`; original Fraud q2 trusted Streaming `763.819 ms` vs heap `801.790 ms`; after page-token fast path, Fraud q2 checked scoped page-token `818.574 ms` vs heap `862.834 ms` | Fraud q2 is now a modest checked real-input win and remains a regression target for checked close/open overhead. |
+| DSPBench Spike/Fraud real-input | Spike 1M over `sensors.dat`; Fraud 1M over `credit-card.dat` | Spike q1 checked scoped page-token `1163.045 ms` vs heap `1187.525 ms`; original Fraud q2 trusted Streaming `763.819 ms` vs heap `801.790 ms`; dirty fast-path Fraud q2 checked scoped page-token `818.574 ms` vs heap `862.834 ms`; committed-code Fraud q2 trusted Streaming `788.040 ms`, checked scoped `810.770 ms`, heap `820.945 ms` | Fraud q2 is now a modest checked/RSS win over heap in the committed-code row, but trusted Streaming is fastest; keep it as a checked-overhead regression target. |
 | ReML-shaped Tier 1 | checked stream `msort` `104.358 ms` vs heap `124.983 ms`; `msort-r` `104.929 ms` vs heap `126.163 ms`; checked scoped `ratio` `48.929 ms` vs heap `51.302 ms` | local Scala Native port evidence for MLKit/ReML lineage; not exact ReML reproduction |
 | Linear Road | heap fastest or tied on q0/q1/q2 despite GC reduction in region modes | ceiling/control evidence |
 

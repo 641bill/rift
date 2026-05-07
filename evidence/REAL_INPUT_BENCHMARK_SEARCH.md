@@ -1,7 +1,7 @@
 # Real-Input GC-Heavy Stream Benchmark Search
 
 Date: 2026-05-07
-Last updated: 2026-05-07 12:24 CEST
+Last updated: 2026-05-07 16:20 CEST
 
 Status: active Phase 6 search ledger. This file tracks public real-input
 stream/dataflow candidates before implementation work. It is deliberately a
@@ -40,7 +40,7 @@ modest/control row and move to the next candidate.
 | Rank | Candidate | Source / provenance | Query shape to test | Expected object materialization | Lifetime boundary | Local status | Decision |
 |---:|---|---|---|---|---|---|---|
 | 1 | DSPBench Spike Detection | DSPBench paper/source; local clone at `cache/benchmark-data/dspbench/source`, commit `00c20da828faf2b960fdb697c61d34cb25461875`; bundled `dspbench-threads/data/sensors.dat` has `79999` usable lines after filtering. | `q0-parse` sensor readings; `q1-moving-average` emits moving-average records; `q2-spike-window` groups spike alerts by time/device. | `SensorReading`, `MovingAverageRecord`, `SpikeCandidate`, optional per-device window contribution objects. The original threads implementation uses parser `Values`, tuples, and per-device `LinkedList[Double]` state. | Sensor-event bucket and moving-average window; durable per-device sums/windows stay heap/primitive. | Implemented as `DSPBenchRegionMatrix`; 20k smoke, 100k medians, and 1M medians completed. | Park as real-input modest/control evidence. At 1M, heap GC is real but only `10.880-32.793 ms`; best throughput wins are modest and checked q2 loses slightly. Move to Fraud Detection next. |
-| 2 | DSPBench Fraud Detection | Same DSPBench clone; bundled `dspbench-threads/data/credit-card.dat` has `185000` lines plus Markov model resources. | `fraud-q0-parse` transaction records; `fraud-q1-predict` creates prediction/state records; `fraud-q2-alert-window` windows outlier alerts. | `Transaction`, `Prediction`, state-token list/string pieces, alert records. | Transaction/alert bucket; Markov model remains durable heap metadata. | Implemented as `DSPBenchRegionMatrix`; 20k smoke, 100k medians, 1M medians, and a 1M q2 heap-cap follow-up completed. | Strongest DSPBench row so far is trusted Streaming q2: `763.819 ms` vs heap `801.790 ms`; checked scoped q2 remains speed-gated. Heap caps do not create a fixed-memory checked win at 1M. |
+| 2 | DSPBench Fraud Detection | Same DSPBench clone; bundled `dspbench-threads/data/credit-card.dat` has `185000` lines plus Markov model resources. | `fraud-q0-parse` transaction records; `fraud-q1-predict` creates prediction/state records; `fraud-q2-alert-window` windows outlier alerts. | `Transaction`, `Prediction`, state-token list/string pieces, alert records. | Transaction/alert bucket; Markov model remains durable heap metadata. | Implemented as `DSPBenchRegionMatrix`; 20k smoke, 100k medians, 1M medians, q2 heap-cap follow-up, dirty fast-path row, and committed-code safe-fast-path rerun completed. | Keep as the best DSPBench real-input regression row. The dirty fast-path row made checked scoped page-token fastest (`818.574 ms` vs heap `862.834 ms`), but the committed-code rerun is more conservative: trusted Streaming `788.040 ms`, checked scoped page-token `810.770 ms`, heap `820.945 ms`, with checked RSS about `279 MB` vs heap `358 MB`. Heap caps did not create a fixed-memory checked win at 1M. |
 | 3 | DSPBench Machine Outlier / Log Processing | Same DSPBench clone; bundled `machine-usage.csv` is only `35 KB`, `http-server.log` has `55000` lines. | Machine usage anomaly or common-log status/volume windows. | Observation/profile/score/alert or HTTP log/token/status records. | Observation or minute/window bucket; durable anomaly model/status counters on heap. | Source located but not deeply triaged. | Backup DSPBench target if Spike/Fraud are not GC-heavy. |
 | 4 | DSPBench Bargain Index | Same DSPBench clone; bundled `stocks.csv` has `411` lines. | Parse quotes/trades, compute VWAP, join quotes with trade summaries, emit bargain records. | `Quote`, `Trade`, `VwapRecord`, `TradeSummary`, `BargainCandidate`. | Quote/trade window or day/interval boundary; summary table durable. | Source inspected; sample input is too small for headline real-input rows. | Do not implement first unless a larger public quote/trade stream is found. |
 | 5 | Real RIoTBench-style input | RIoTBench paper describes 27 IoT tasks and four real smart-city/health observation workloads with high-rate streams. | Parse sensor/health records, clean/filter, annotate, sliding-window statistics, anomaly output. | Sensor reading, cleaned reading, annotation, statistic contribution, anomaly records. | Sensor/window/session bucket; device metadata durable. | Source/provenance not yet pinned locally. | Second family after DSPBench; only proceed with provenance-clean input. |
@@ -137,13 +137,21 @@ The 20k smoke matched checksums/output counts. The 1M run replays the
 |---|---:|---:|---|
 | `fraud-q0-parse` | improved SafeZone `431.301 ms`, GC `0.000 ms`, RSS `134709248` | heap `433.606 ms`, GC `9.997 ms`, RSS `129204224` | near tie; parse-only row is not GC-heavy. |
 | `fraud-q1-predict` | trusted Streaming `658.144 ms`, GC `0.000 ms`, RSS `276725760` | heap `673.635 ms`, GC `43.801 ms`, RSS `254427136` | modest trusted throughput win; checked scoped page-token loses elapsed. |
-| `fraud-q2-alert-window` | trusted Streaming `763.819 ms`, GC `12.492 ms`, RSS `282460160` | heap `801.790 ms`, GC `69.686 ms`, RSS `358252544` | best DSPBench row so far: modest trusted throughput/RSS/GC win. Checked scoped page-token cuts GC/RSS but loses elapsed at `822.846 ms`. |
+| `fraud-q2-alert-window` | trusted Streaming `763.819 ms`, GC `12.492 ms`, RSS `282460160` | heap `801.790 ms`, GC `69.686 ms`, RSS `358252544` | first q2 matrix: modest trusted throughput/RSS/GC win. Checked scoped page-token cuts GC/RSS but loses elapsed at `822.846 ms`. |
 
-Decision: keep Fraud q2 as a trusted-runtime/modest real-input win and checked
-overhead diagnostic. Heap-cap follow-up is complete: `512M`/`384M` caps are
-near uncapped behavior, and `256M` raises the max GC tail to `101.267 ms`
-without making checked scoped page-token a throughput win. Profile the checked
-scoped page-token path before trying another DSPBench kernel.
+Post-fast-path follow-up:
+
+| Run | Best row | Heap row | Interpretation |
+|---|---:|---:|---|
+| Dirty page-token fast-path q2 | checked scoped page-token `818.574 ms`, GC `14.151 ms`, RSS about `279 MB` | heap `862.834 ms`, GC `74.513 ms`, RSS about `358 MB` | useful direction check, but the worktree was dirty and should not be used as a final headline row. |
+| Committed-code safe-fast-path q2 | trusted Streaming `788.040 ms`, GC `11.547 ms`, RSS `282443776`; checked scoped page-token `810.770 ms`, GC `15.105 ms`, RSS `278593536` | heap `820.945 ms`, GC `75.928 ms`, RSS `358154240` | conservative checkpoint: checked scoped page-token is a modest throughput/RSS/GC win over heap but not fastest; trusted Streaming is fastest. |
+
+Decision: keep Fraud q2 as a trusted-runtime modest win and checked-overhead
+regression row. Heap-cap follow-up is complete: `512M`/`384M` caps are near
+uncapped behavior, and `256M` raises the max GC tail to `101.267 ms` without
+making checked scoped page-token a fixed-memory throughput win. The next action
+is to profile checked scoped page-token q2 before trying another DSPBench
+kernel.
 
 ## Sources
 

@@ -1,7 +1,7 @@
 # Checked Overhead Removal Matrix
 
 Date: 2026-05-03
-Last updated: 2026-05-05 13:43:52 CEST
+Last updated: 2026-05-07 16:20 CEST
 
 Status: overhead-removal contract plus implementation checkpoint. This matrix
 separates three states:
@@ -31,6 +31,7 @@ separates three states:
 | SafeZone per-page root-removal cliff | Improved roots mode coalesces root removal. | `safezone-improved` is now the real SafeZone baseline. |
 | Per-entry close callback in append-window API | `StreamAppendCursor` closes buckets with one bucket callback and cursor traversal. | Focused 1M append-window cursor gate passed. |
 | Per-record bucket open check and child-region lookup in the page/token append path | `StreamPageTokenAppendWindow` owns bucket lookup, caches the child region once per bucket, and appends through an owned path that skips per-record `bucket.child.checkOpen()` and stale-current `isOpen` checks. | Focused 1M `rift-checked-page-token` is `27.141 ms` vs current `rift-checked-rift` `30.819 ms`; generated Common Crawl-shaped q1/q2 checked rows improve by `16.2-18.5%` versus current checked. |
+| Page-token no-drain close for append-only/aggregate-on-append shapes | `closePageTokenAppendBucketsBeforeNoDrain` and `closeAllPageTokenAppendBucketsNoDrain` clear parent bucket refs and close child regions without cursor traversal when the operator has already completed query work on append. | Safety/runtime probes pass, but the 1M cost matrix did not materially improve. Keep as an operator-owned option, not a headline speedup. |
 | SafeZone root tracking in unsafe lower-bound mode | `safezone-rootless-32k` disables root add/remove. | Useful lower bound only; not a safety result. |
 
 ## Safe But Not Yet Removed
@@ -88,6 +89,34 @@ the dominant cost at 10M (`~11-12 ms` measured Rift allocator-op time), and
 checked allocation is not slower in the clean retained-array shape. The earlier
 checked gap came mostly from generic `RegionBuffer` retention overhead, so
 checked buffers/operators need the next focused optimization pass.
+
+Detailed source: `evidence/CHECKED_PAGE_TOKEN_COST_MATRIX.md`.
+
+The new page-token cost-decomposition matrix splits the remaining page-token
+work into `append-only`, `append-drain`, and `append-aggregate` same-shape
+rows. Baseline 1M rows before the no-drain API were:
+
+| Workload | Heap same-shape | Checked page-token | Checked scoped page-token |
+|---|---:|---:|---:|
+| `append-only` | `76.696 ms`, GC `11.240` | `76.831` | `74.787` |
+| `append-drain` | `83.176 ms`, GC `11.147` | `84.563` | `82.569` |
+| `append-aggregate` | `86.338 ms`, GC `11.523` | `87.106` | `83.484` |
+
+After adding no-drain close and tightening the same-bucket fast path to skip
+expiry checks only when the current bucket is the only live bucket, the same
+1M rows were:
+
+| Workload | Heap same-shape | Checked page-token | Checked scoped page-token |
+|---|---:|---:|---:|
+| `append-only` | `78.130 ms`, GC `11.508` | `77.185` | `74.743` |
+| `append-drain` | `83.447 ms`, GC `11.351` | `84.698` | `81.628` |
+| `append-aggregate` | `85.500 ms`, GC `11.465` | `84.928` | `82.623` |
+
+Conclusion: no-drain close is safe, but close/traversal/open bookkeeping is
+already small for this focused matrix. The remaining performance work should
+focus on allocation lowering, object construction, query CPU, and application
+paths that accidentally call bucket/region lookup more often than once per
+bucket.
 
 Detailed source: `evidence/CHECKED_PAGE_TOKEN_APPEND_MATRIX.md`.
 

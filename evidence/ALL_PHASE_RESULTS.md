@@ -1,7 +1,7 @@
 # Rift All-Phase Results Rollup
 
 Date: 2026-05-01
-Last updated: 2026-05-07 13:51 CEST
+Last updated: 2026-05-07 16:20 CEST
 
 This file gathers the current numeric and validation evidence across all
 roadmap phases. It is a rollup, not the primary raw log. Prefer the source files
@@ -106,6 +106,7 @@ Outcome labels now distinguish the kind of win:
 | Phase 7 checked stream-window rank | `evidence/CHECKED_STREAM_WINDOW_RANK_MATRIX.md` |
 | Phase 7 TableRank profile | `evidence/TABLERANK_PROFILE.md` |
 | Phase 7 checked append-window operator | `evidence/CHECKED_APPEND_WINDOW_MATRIX.md`; `evidence/COMPREHENSIVE_SWEEP_2026_05_05.md` |
+| Phase 7 checked page-token cost decomposition | `evidence/CHECKED_PAGE_TOKEN_COST_MATRIX.md`; `evidence/CHECKED_PAGE_TOKEN_APPEND_MATRIX.md` |
 | Phase 7 object allocation lowering | `evidence/OBJECT_ALLOCATION_LOWERING_MATRIX.md` |
 | Phase 7 cheap operator families | `evidence/CHEAP_OPERATOR_FAMILY_MATRIX.md`; `evidence/COMPREHENSIVE_SWEEP_2026_05_05.md` |
 | Phase 7 checked window-fold operator | `evidence/CHECKED_WINDOW_FOLD_MATRIX.md` |
@@ -140,7 +141,7 @@ row. Core runtime/topology headline rows were not rerun in this pass.
 | NEXMark Beam-default | checked Rift fastest on q0/q1/q2/q3/q4/q5/q8/q9/q11 | broad generated methodology win, mostly modest |
 | Common Crawl-shaped q1 | checked SafeZone page-token `3696.284 ms`, checked Rift page-token `3905.285 ms`, heap `5350.531 ms` with `1517.640 ms` GC | strongest checked generated stream win |
 | Common Crawl-shaped q2 | checked SafeZone page-token `3732.171 ms`, checked Rift page-token `3972.493 ms`, heap `5183.656 ms` with `1526.751 ms` GC | strongest checked generated window win |
-| Page-token fast-path follow-up | focused 1M checked SafeZone page-token `27.549 ms` vs heap `36.920 ms`; generated Common Crawl-shaped 100k q1/q2 checked SafeZone page-token `370.758/377.482 ms` vs heap `533.406/513.498 ms`; DSPBench Fraud q2 checked SafeZone page-token `818.574 ms` vs heap `862.834 ms` | batch-close/current-bucket fast path strengthens the cheap checked operator and flips Fraud q2 into a modest checked real-input win |
+| Page-token fast-path and cost follow-up | clean focused 1M checked scoped page-token `27.240 ms` vs heap `36.722 ms`; generated Common Crawl-shaped clean q1/q2 checked scoped page-token `3759.175/3784.863 ms` vs heap `5466.724/5213.380 ms`; committed-code DSPBench Fraud q2 checked scoped page-token `810.770 ms` vs heap `820.945 ms`, while trusted Streaming is fastest at `788.040 ms` | page-token remains the strongest checked append/window family; no-drain close is safe but the new cost matrix shows close/traverse/open are not the main remaining bottleneck |
 | Linear Road | heap fastest or tied on q0/q1/q2 | ceiling/control despite region GC reduction |
 
 ## Evidence Levels
@@ -2655,22 +2656,27 @@ Status:
   owns bucket lookup, child-region caching, append, and close, so the hot path
   avoids per-record child-bucket open checks and child-region lookups while
   keeping public low-level APIs defensive. After the 2026-05-07
-  batch-close/current-bucket fast path, compiler tests pass `118/118` and
-  native checked runtime tests pass `50/50`. At 1M in the focused matrix,
-  `rift-checked-page-token` is `29.319 ms` versus heap `36.920 ms`; the
-  SafeZone-backed page-token row is `27.549 ms`, and chunk-token remains
-  slower. The post-fast-path selected sweep strengthens the generated
-  application-shaped evidence: Common Crawl-shaped q1 page-token is
-  `4069.265 ms` and SafeZone-backed page-token is `3840.668 ms` versus heap
-  `5618.631 ms`; q2 page-token is `4041.548 ms` and SafeZone-backed
-  page-token is `3839.158 ms` versus heap `5303.179 ms`. DSPBench Fraud q2 is
-  now a modest real-input checked win: checked scoped page-token `818.574 ms`
-  versus heap `862.834 ms`, with lower RSS. Treat generated WET-shaped rows as
-  memory-pressure evidence and Fraud q2 as modest real-input evidence.
+  batch-close/current-bucket fast path, compiler tests passed `118/118` and
+  native checked runtime tests passed `50/50`; after the no-drain close API,
+  runtime tests pass `51/51`. The clean focused append row is heap
+  `36.722 ms`, checked page-token `28.397 ms`, and checked scoped page-token
+  `27.240 ms`. The clean generated application-shaped rows remain strong:
+  Common Crawl-shaped q1 checked scoped page-token is `3759.175 ms` versus
+  heap `5466.724 ms`, and q2 rerun is `3784.863 ms` versus heap
+  `5213.380 ms`. DSPBench Fraud q2 is a modest real-input checked/RSS win in
+  the committed-code rerun, but trusted Streaming is fastest: trusted
+  `788.040 ms`, checked scoped page-token `810.770 ms`, heap `820.945 ms`.
+  Treat generated WET-shaped rows as memory-pressure evidence and Fraud q2 as
+  modest real-input regression evidence.
 - The next checked-overhead split is now explicit. Region close/open cost is
   small in the latest real-stream rows, but ordinary object construction,
   checked `allocImpl` lowering, bucket append/cursor work, and query traversal
-  can still dominate. `ObjectAllocationLoweringMatrix` was added to isolate
+  can still dominate. `CheckedPageTokenCostMatrix` adds same-shape
+  `append-only`, `append-drain`, and `append-aggregate` controls and shows the
+  no-drain close path is safe but not a headline speed lever at 1M. Its clean
+  safe-fast-path rows are checked scoped page-token `74.743/81.628/82.623 ms`
+  versus heap `78.130/83.447/85.500 ms` for append-only/drain/aggregate.
+  `ObjectAllocationLoweringMatrix` was added to isolate
   ordinary Scala object construction through heap, trusted Rift, checked Rift,
   and checked SafeZone-backed paths without stream-window or query traversal.
   The refined retained-region-array rows now validate the split: the first
@@ -2799,13 +2805,14 @@ Status:
   Streaming is `1258.164 ms` vs heap `1271.677 ms`, but heap GC remains below
   3% of elapsed. Fraud Detection is also implemented and measured over
   `credit-card.dat`; the first q2 matrix made trusted Streaming the best row
-  (`763.819 ms` vs heap `801.790 ms`, median heap GC `69.686 ms`). After the
-  2026-05-07 page-token fast path, clean same-run q2 has checked scoped
-  page-token fastest (`818.574 ms`) versus heap `862.834 ms`, improved
-  SafeZone `873.859 ms`, and trusted Streaming `834.447 ms`, with RSS about
-  `279 MB` vs heap `358 MB`. A 1M q2 heap-cap follow-up before the fast path
-  shows `512M`/`384M` caps are near uncapped heap behavior; `256M` lowers heap
-  RSS but raises max GC to `101.267 ms`, so heap caps did not create the win.
+  (`763.819 ms` vs heap `801.790 ms`, median heap GC `69.686 ms`). The dirty
+  2026-05-07 page-token fast-path row made checked scoped page-token fastest
+  (`818.574 ms`) versus heap `862.834 ms`, but the committed-code rerun is
+  more conservative: trusted Streaming `788.040 ms`, checked scoped
+  page-token `810.770 ms`, heap `820.945 ms`, with checked RSS about `279 MB`
+  versus heap `358 MB`. A 1M q2 heap-cap follow-up before the fast path shows
+  `512M`/`384M` caps are near uncapped heap behavior; `256M` lowers heap RSS
+  but raises max GC to `101.267 ms`, so heap caps did not create the win.
 - The append-window result does not justify returning to DEBS Q1 ranking.
   TableRank remains gated out. The first DEBS integration of the passing
   cursor-close shape now exists for checked Q1 event-window entries and

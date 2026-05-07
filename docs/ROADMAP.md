@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-07 13:51 CEST
+Last updated: 2026-05-07 16:20 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -45,6 +45,13 @@ It completed prior-work, checked-operator, SafeZone-cost, and stream rows with
 current SafeZone skipped in competitive rows. Core runtime/topology headline
 rows remain from the earlier clean core runs until a separate current-skipped
 core sweep is added.
+
+Latest page-token cost checkpoint: `evidence/CHECKED_PAGE_TOKEN_COST_MATRIX.md`.
+The focused cost split shows checked scoped page-token is competitive on
+append-only/drain/aggregate same-shape rows, but no-drain close is not the main
+remaining bottleneck. Next operator work should target allocation/query CPU
+and application paths that still do bucket/region lookup too often, not more
+generic close-drain removal.
 
 ## 1. Roadmap Principles
 
@@ -159,20 +166,23 @@ ownership. The operator owns bucket lookup, child-region caching, append, and
 close, so the hot path avoids per-record `bucket.child.checkOpen()`, per-record
 `streamBucketRegion(...)`, stale-current `isOpen` checks, page-token-owned
 generic leftover-drain close work, and repeated close/open work for monotonic
-same-bucket streams while keeping public low-level APIs defensive. New
+same-bucket streams when the current bucket is the only live bucket while
+keeping public low-level APIs defensive. New
 stale-bucket probes and compiler guards validate the boundary. After the
 2026-05-07 batch-close fast path, validation is `sandbox3_next/compile`
-passed, compiler tests `118/118`, and runtime tests `50/50`. Focused 1M rows
-are heap `36.920 ms`, `rift-checked-page-token` `29.319 ms`, and
-SafeZone-backed checked page-token `27.549 ms`; chunk-token remains slower.
-Generated Common Crawl-shaped q1/q2 still pass the checked application-shaped
-gate, and the fast-path 100k regression makes SafeZone-backed checked
-page-token fastest on both q1 (`370.758 ms`) and q2 (`377.482 ms`). DSPBench
-Fraud q2 also flips from checked-overhead diagnostic to modest checked
-real-input win in the clean same-run matrix: checked scoped page-token
-`818.574 ms` versus heap `862.834 ms`. Treat generated WET-shaped rows as
-memory-pressure evidence, Fraud q2 as modest real-input evidence, and keep the
-remaining checked close/open gap as a regression target.
+passed, compiler tests `118/118`, and runtime tests `50/50`; after the
+no-drain close API, runtime tests pass `51/51`. Focused 1M rows are heap
+`36.920 ms`, `rift-checked-page-token` `29.319 ms`, and SafeZone-backed
+checked page-token `27.549 ms`; chunk-token remains slower. Generated Common
+Crawl-shaped q1/q2 still pass the checked application-shaped gate, and the
+fast-path 100k regression makes SafeZone-backed checked page-token fastest on
+both q1 (`370.758 ms`) and q2 (`377.482 ms`). DSPBench Fraud q2 had a dirty
+direction-check row where checked scoped page-token was fastest (`818.574 ms`
+versus heap `862.834 ms`), but the committed-code rerun is more conservative:
+trusted Streaming `788.040 ms`, checked scoped page-token `810.770 ms`, and
+heap `820.945 ms`. Treat generated WET-shaped rows as
+memory-pressure evidence, Fraud q2 as modest real-input regression evidence,
+and keep the remaining checked page-token CPU path as a profiling target.
 
 Post-fast-path selected 1M sweep:
 `evidence/POST_FAST_PATH_SELECTED_SWEEP_2026_05_07.md` reruns selected rows

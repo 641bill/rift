@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-07 13:51 CEST
+Last updated: 2026-05-07 16:20 CEST
 
 Status: markdown slide deck outline. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report and this file as
@@ -70,6 +70,7 @@ mechanics can do when roots are unnecessary.
 | SafeZone per-page root removal cliff | implemented as improved roots mode. |
 | AppendWindow per-entry close callback | implemented cursor close. |
 | Page/token append per-record open checks/lookups plus generic leftover-drain close work | implemented in `StreamPageTokenAppendWindow`; 2026-05-07 batch-close/current-bucket fast path strengthened focused and generated Common Crawl-shaped rows. |
+| Page/token no-drain close | implemented as an operator-owned option; cost matrix says it is safe but not the main bottleneck. |
 | Rootless SafeZone root registration | benchmark-only lower bound, not safety claim. |
 
 Remaining generic fold/join/rank hot-path checks and rootless checked backend
@@ -148,12 +149,18 @@ page-token q1 is `1163.045 ms` vs heap `1187.525 ms`; trusted Streaming q2 is
 `1258.164 ms` vs heap `1271.677 ms`. Heap GC is real but small
 (`10.880-32.793 ms`), so Spike is a real-input modest/control row. Fraud
 Detection is now measured too. The first 1M q2 matrix made trusted Streaming
-the best row (`763.819 ms` vs heap `801.790 ms`). After the 2026-05-07
-page-token batch-close fast path, checked scoped page-token is the fastest
-same-run q2 row: `818.574 ms` versus heap `862.834 ms`, improved SafeZone
+the best row (`763.819 ms` vs heap `801.790 ms`). The dirty 2026-05-07
+page-token batch-close fast-path direction check made checked scoped
+page-token fastest: `818.574 ms` versus heap `862.834 ms`, improved SafeZone
 `873.859 ms`, and trusted Streaming `834.447 ms`, with RSS cut from about
-`358 MB` to `279 MB`. This is a modest checked real-input win, not a
-flagship GC-heavy case.
+`358 MB` to `279 MB`. This was useful direction evidence, not final headline
+data.
+
+The final committed-code q2 rerun is conservative: trusted Streaming is
+fastest at `788.040 ms`; checked scoped page-token is `810.770 ms`; heap is
+`820.945 ms`. Checked scoped still removes most timed GC and cuts RSS by about
+`80 MB`, but this row should be presented as a modest real-input checked/RSS
+win, not as the final flagship.
 
 ## Slide 9: Best Checked Stream Rows
 

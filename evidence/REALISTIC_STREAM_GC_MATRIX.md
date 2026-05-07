@@ -1,7 +1,7 @@
 # Realistic Stream GC Matrix
 
 Date: 2026-05-03
-Last updated: 2026-05-07 13:51 CEST
+Last updated: 2026-05-07 16:20 CEST
 
 Status: benchmark ladder for realistic and real-input GC-heavy stream
 evidence. This file distinguishes generated stressors, methodology generators,
@@ -16,7 +16,7 @@ for why some real datasets are parked instead of tuned.
 | Common Crawl real WET/WAT q1/q2/q4/q5 | real preloaded WET/WAT shards | Page-token modes match output. SafeZone-backed page-token is fastest on the current WET shard and on real WAT q4/q5, but heap median/max timed GC remains zero on the measured shards. | Park current shards as ceiling/control evidence; try larger/multiple shards or a different real log/NDJSON workload. |
 | NEXMark Q3/Q8/Q9/Q11 | official-style generated auction profile | Latest post-fast-path selected Beam-default sweep has checked Rift fastest on q3/q8/q9/q11, with q9 the strongest selected row (`724.479 ms` vs heap `798.672 ms`). Margins remain mostly modest. | Keep as methodology/regression evidence. |
 | DSPBench Spike Detection | public DSPBench source and real bundled sensor sample, local single-process methodology port | `DSPBenchRegionMatrix` now runs q0/q1/q2 over `79999` usable `sensors.dat` rows, replayed with explicit counts. At 1M, heap GC is material but small (`10.880-32.793 ms` inside `1068.850-1271.677 ms`). Checked scoped page-token q1 is a modest win (`1163.045 ms` vs heap `1187.525 ms`); q2 trusted Streaming is a modest win, but checked scoped q2 is slightly slower. | Keep as real-input modest/control evidence; Fraud is now the stronger DSPBench follow-up row. |
-| DSPBench Fraud Detection | public DSPBench source and real bundled `credit-card.dat`, local single-process methodology port | Implemented q0/q1/q2. Original full Fraud q2 made trusted Streaming the strongest row (`763.819 ms` vs heap `801.790 ms`) while checked scoped page-token lost elapsed. After the 2026-05-07 page-token batch-close fast path, same-run q2 has checked scoped page-token fastest: `818.574 ms` vs heap `862.834 ms`, improved SafeZone `873.859 ms`, and trusted Streaming `834.447 ms`, with RSS about `279 MB` vs heap `358 MB`. Diagnostic-only timing still shows checked close/traverse and bucket switching about `6-8 ms` above trusted/heap same-shape traversal. | Promote to modest checked real-input win and keep as checked-operator overhead regression target. Not a flagship GC-heavy case: heap GC is material but not dominant. |
+| DSPBench Fraud Detection | public DSPBench source and real bundled `credit-card.dat`, local single-process methodology port | Implemented q0/q1/q2. Original full Fraud q2 made trusted Streaming the strongest row (`763.819 ms` vs heap `801.790 ms`) while checked scoped page-token lost elapsed. The dirty 2026-05-07 page-token fast-path row looked stronger: checked scoped page-token `818.574 ms` vs heap `862.834 ms`. The committed-code rerun is more conservative: trusted Streaming `788.040 ms`, checked scoped page-token `810.770 ms`, and heap `820.945 ms`, with checked RSS about `279 MB` vs heap `358 MB`. | Keep as a real-input modest checked/RSS win and checked-operator overhead regression target, not a flagship GC-heavy case. The committed-code row says trusted Streaming is fastest and checked scoped is a modest win over heap. |
 | RIoTBench | generated local probe so far; real input desired | Current generated rows are not strong enough. | Revisit only with provenance-clean real IoT-style input. |
 | LogHub / LogPAI BGL | real file-backed system log | New matrix loads the real BGL log (`4747963` lines). At 1M, heap GC is material enough to appear in every run (`99-157 ms`) but still a small share of roughly `5.6 s` elapsed. Region rows remove timed GC and produce modest throughput/RSS/fixed-memory wins. Full-file q2 single-run heap spends `595.599 ms` in GC inside `32.161 s`; checked scoped page-token is faster and lower-RSS than heap, but the win is not large enough for a flagship GC-heavy case. | Keep as real-input modest-win/control evidence. Do not overclaim as the missing GC-heavy stream case; move to DSPBench/real RIoTBench/other logs next. |
 | GH Archive NDJSON/log-event stream | generated/real-shaped local GitHub-event rows plus real file-backed hourly events | The legacy string-parser file-backed rows showed timed heap GC in every run and large RSS reductions from regions, but parser/string allocation dominated elapsed. The new byte-slice parser-scratch path cuts 100k elapsed/RSS sharply and makes the two-hour 200k q1/q2 rows modest real-input throughput/RSS/tail wins: heap uses about `290 MB` RSS and collects in 2/3 runs, while region rows use about `211 MB` RSS and report zero timed GC. Heap GC is still only about `58-62 ms` inside `3.8 s` total elapsed, so this is not the missing GC-heavy case study. | Keep as the strongest current real-input modest-win candidate, not GC-heavy proof. Next target is scaling byte-slice file-backed rows and generalizing byte-slice NDJSON/log extraction beyond GH-specific code. |
@@ -115,8 +115,11 @@ Next attempts:
      elapsed at 1M;
    - Fraud Detection q0/q1/q2 is implemented and q2 is the strongest DSPBench
      real-input row so far;
-   - after the page-token fast path, checked scoped page-token q2 is a modest
-     same-run win over heap, improved SafeZone, and trusted Streaming;
+   - after the dirty page-token fast path, checked scoped page-token q2 was a
+     same-run win over heap, improved SafeZone, and trusted Streaming; the
+     committed-code rerun is more conservative, with trusted Streaming
+     fastest and checked scoped page-token a modest throughput/RSS/GC win over
+     heap;
    - keep q2 as a regression row for checked close/traverse overhead, but do
      not treat it as the final GC-heavy flagship;
    - remove distributed runtime dependencies from headline memory rows;
@@ -147,7 +150,7 @@ or allocation-pressure gate.
 
 | Step | Benchmark | Input | Required rows before scaling |
 |---:|---|---|---|
-| 1 | DSPBench triage | source workloads, local kernel only | Spike and Fraud q0/q1/q2 implemented and measured; Fraud q2 is now a modest checked win after page-token fast-close optimization. |
+| 1 | DSPBench triage | source workloads, local kernel only | Spike and Fraud q0/q1/q2 implemented and measured; Fraud q2 is now a modest checked/RSS win over heap in the committed-code rerun, but trusted Streaming is fastest. |
 | 2 | Real RIoTBench-style traces | real or provenance-clean sensor traces | parse/filter/window-stat rows with material heap GC gate. |
 | 3 | LogHub BGL q1/q2 | real file-backed system log | completed first 100k/1M/full-file controls; keep as modest-win baseline. |
 | 4 | More NDJSON/log stream q0/q1/q2 | real public logs | parsed records, fields/tokens, window-count output. |
