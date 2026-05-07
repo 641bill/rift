@@ -1,7 +1,7 @@
 # Rift All-Phase Results Rollup
 
 Date: 2026-05-01
-Last updated: 2026-05-07 16:20 CEST
+Last updated: 2026-05-07 17:10 CEST
 
 This file gathers the current numeric and validation evidence across all
 roadmap phases. It is a rollup, not the primary raw log. Prefer the source files
@@ -141,7 +141,7 @@ row. Core runtime/topology headline rows were not rerun in this pass.
 | NEXMark Beam-default | checked Rift fastest on q0/q1/q2/q3/q4/q5/q8/q9/q11 | broad generated methodology win, mostly modest |
 | Common Crawl-shaped q1 | checked SafeZone page-token `3696.284 ms`, checked Rift page-token `3905.285 ms`, heap `5350.531 ms` with `1517.640 ms` GC | strongest checked generated stream win |
 | Common Crawl-shaped q2 | checked SafeZone page-token `3732.171 ms`, checked Rift page-token `3972.493 ms`, heap `5183.656 ms` with `1526.751 ms` GC | strongest checked generated window win |
-| Page-token fast-path and cost follow-up | clean focused 1M checked scoped page-token `27.240 ms` vs heap `36.722 ms`; generated Common Crawl-shaped clean q1/q2 checked scoped page-token `3759.175/3784.863 ms` vs heap `5466.724/5213.380 ms`; committed-code DSPBench Fraud q2 checked scoped page-token `810.770 ms` vs heap `820.945 ms`, while trusted Streaming is fastest at `788.040 ms` | page-token remains the strongest checked append/window family; no-drain close is safe but the new cost matrix shows close/traverse/open are not the main remaining bottleneck |
+| Page-token fast-path and cost follow-up | clean focused 1M checked scoped page-token `27.240 ms` vs heap `36.722 ms`; generated Common Crawl-shaped clean q1/q2 checked scoped page-token `3759.175/3784.863 ms` vs heap `5466.724/5213.380 ms`; committed-code DSPBench Fraud q2 checked scoped page-token `810.770 ms` vs heap `820.945 ms`, while trusted Streaming is fastest at `788.040 ms`; new append-time count-by-key 1M checked scoped row `97.860 ms` vs heap `105.915 ms` | page-token remains the strongest checked append/window family; no-drain close is safe but not the main remaining bottleneck; append-time aggregate/no-drain is a modest reusable win at 1M but not at 100k |
 | Linear Road | heap fastest or tied on q0/q1/q2 | ceiling/control despite region GC reduction |
 
 ## Evidence Levels
@@ -2676,6 +2676,14 @@ Status:
   no-drain close path is safe but not a headline speed lever at 1M. Its clean
   safe-fast-path rows are checked scoped page-token `74.743/81.628/82.623 ms`
   versus heap `78.130/83.447/85.500 ms` for append-only/drain/aggregate.
+  The follow-up `PageTokenCountByKey[T]` operator updates per-key count/sum
+  metadata during append and closes buckets without record traversal. It is
+  safety-validated (`RiftRegionCheckedCompilerTest` `120/120`,
+  `RiftRegionCheckedTest` `52/52`) and modestly wins at 1M
+  (`97.860 ms` checked scoped count-by-key vs heap `105.915 ms`, removing
+  `14.026 ms` heap GC), but it is not a 100k win (`9.836 ms` vs heap
+  `8.906 ms`). Treat it as reusable append-time aggregate evidence, not a
+  broad checked-overhead solution.
   `ObjectAllocationLoweringMatrix` was added to isolate
   ordinary Scala object construction through heap, trusted Rift, checked Rift,
   and checked SafeZone-backed paths without stream-window or query traversal.

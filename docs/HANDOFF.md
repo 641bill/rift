@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-07 16:38 CEST
+Last updated: 2026-05-07 17:10 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -84,6 +84,24 @@ not bucket opening. Source docs:
 `docs/CPU_PROFILE_REPORT.md`, `evidence/CHECKED_OVERHEAD_REMOVAL_MATRIX.md`,
 `evidence/COMMON_CRAWL_LIKE_MATRIX.md`, and
 `evidence/DSPBENCH_REGION_MATRIX.md`.
+
+Latest append-time aggregate/no-drain checkpoint:
+`RiftRegion.PageTokenCountByKey[T]` is now implemented as a reusable checked
+page-token aggregate operator. Ordinary records still live in child bucket
+regions, but parent-owned primitive arrays track per-key counts/sums during
+append, so close can emit summaries without walking every record. Safety
+validation passed: `sandbox3_next/compile`, `RiftRegionCheckedCompilerTest`
+`120/120`, and `RiftRegionCheckedTest` `52/52`. The compiler guard was fixed
+for this API because the checked value is not the last argument. Focused
+`append-count-by-key` 100k rows did not beat heap (`heap-same-shape`
+`8.906 ms`, checked SafeZone-backed count-by-key `9.836 ms`). At 1M, the
+shape is a modest win: heap `105.915 ms` with `14.026 ms` GC, checked Rift
+count-by-key `98.761 ms` with `0.000 ms` GC, and checked SafeZone-backed
+count-by-key `97.860 ms` with `0.000 ms` GC. Interpretation: append-time
+aggregate/no-drain is a valid reusable operator direction, but not a broad
+checked-overhead solution. Use it only where the query naturally updates
+aggregate metadata on append and can close buckets without per-record
+traversal. Source: `evidence/CHECKED_PAGE_TOKEN_COST_MATRIX.md`.
 
 Latest final-selection sweep checkpoint:
 Clean run `2026-05-06-final-selection-headline` completed after committing the

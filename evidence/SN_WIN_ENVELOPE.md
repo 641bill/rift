@@ -1,7 +1,7 @@
 # Scala Native Win Envelope
 
 Date: 2026-05-01
-Last updated: 2026-05-07 16:20 CEST
+Last updated: 2026-05-07 17:10 CEST
 
 Status: Phase 6/7 evidence synthesis. This note classifies where Rift currently
 wins against Scala Native Immix, where it only reduces memory pressure, and
@@ -28,7 +28,11 @@ focused append row is checked scoped page-token `27.240 ms` versus heap
 `36.722 ms`. The committed-code DSPBench Fraud q2 rerun is more conservative
 than the dirty row: trusted Streaming `788.040 ms`, checked scoped page-token
 `810.770 ms`, and heap `820.945 ms`, with checked RSS about `279 MB` versus
-heap `358 MB`.
+heap `358 MB`. The latest append-time aggregate follow-up adds
+`PageTokenCountByKey[T]`: it is a modest 1M checked win
+(`97.860 ms` checked scoped count-by-key vs heap `105.915 ms`) and removes
+`14.026 ms` heap GC, but it loses at 100k. Treat it as a narrow reusable
+aggregate/no-drain shape, not a broad checked-overhead fix.
 
 UnsafeZone-HP checkpoint: `evidence/UNSAFEZONE_HP_BASELINE_MATRIX.md` adds a
 benchmark-only SafeZone no-root control (`SAFEZONE_ROOTS_MODE=3`,
