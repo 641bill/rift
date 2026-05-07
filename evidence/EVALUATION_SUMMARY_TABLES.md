@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Tables
 
 Date: 2026-05-01
-Last updated: 2026-05-07 17:51 CEST
+Last updated: 2026-05-07 18:14 CEST
 
 Status: seeded summary pack for the comprehensive evaluation. Rows below are
 current checked-in evidence unless marked pending rerun.
@@ -63,6 +63,21 @@ Source rows:
 | Focused page-token cost split | checked scoped append-only/drain/aggregate `77.135/88.840/85.362 ms` vs heap `81.535/90.374/86.988 ms` | removing generic live-length bookkeeping is valid and keeps scoped page-token modestly positive, but it is not a large speedup |
 | Focused count-by-key | checked scoped count-by-key `102.504 ms`, checked Rift count-by-key `104.813 ms`, heap `114.143 ms` with `15.091 ms` GC | no-drain aggregate remains the best focused win from this specific cleanup; checked scoped cuts RSS from `146604032` to `83279872` bytes |
 | DSPBench Fraud q2 | trusted Streaming `832.012 ms`, checked scoped page-token `843.380 ms`, heap `842.739 ms` | real-input q2 is now a checked RSS/GC near-tie, not a checked throughput win; next optimization should target allocation lowering rather than bucket bookkeeping |
+
+## Page-Token Owned Cursor Rerun: 2026-05-07
+
+Source rows:
+
+- `cache/checked-page-token-cost-nextowned-1m-2026-05-07/`
+- `cache/dspbench-fraud-q2-nextowned-1m-2026-05-07/`
+- `cache/common-crawl-page-token-nextowned-1m-2026-05-07/`
+
+| Area | Main result | Interpretation |
+|---|---|---|
+| Focused page-token cost split | checked scoped append-only/drain/aggregate `73.590/83.997/81.296 ms` vs heap `79.786/87.198/84.703 ms` | `nextOwnedOrNull()` removes per-record link clearing under page-token static ownership; scoped checked improves by about `3.5-4.8 ms` versus the previous no-length rows |
+| DSPBench Fraud q2 | trusted Streaming `785.682 ms`, checked scoped page-token `800.369 ms`, heap `807.974 ms` | real-input q2 becomes a modest checked elapsed/RSS win, while trusted Streaming remains the lower bound |
+| Common Crawl-shaped q1 | checked scoped page-token `3643.680 ms`, checked Rift page-token `3877.427 ms`, heap `5392.344 ms` with `1577.850 ms` GC | strongest generated checked stream-object row improves; RSS remains a caveat |
+| Common Crawl-shaped q2 | checked scoped page-token `3790.138 ms`, checked Rift page-token `4029.776 ms`, heap `5201.862 ms` with `1579.132 ms` GC | strongest generated checked window row remains positive after the owned-cursor cleanup |
 
 ## Staged Headline Sweep: 2026-05-06
 

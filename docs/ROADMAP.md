@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-07 17:51 CEST
+Last updated: 2026-05-07 18:14 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -62,6 +62,20 @@ checked RSS/GC near-tie (`843.380 ms` checked scoped versus `842.739 ms` heap).
 This weakens the value of further page-token bookkeeping tweaks and makes
 generated allocation lowering under static operator ownership the next
 meaningful checked-runtime target.
+
+Latest owned-cursor checkpoint: `StreamAppendCursor.nextOwnedOrNull()` removes
+per-record link clearing only for operator-owned page-token close callbacks;
+generic cursors stay defensive. This is a validated static-safety overhead
+removal, not a new benchmark algorithm. Validation passed compile,
+`RiftRegionCheckedCompilerTest` `120/120`, and `RiftRegionCheckedTest` `52/52`.
+The focused 1M checked scoped page-token rows improved to
+`73.590/83.997/81.296 ms` for append-only/drain/aggregate. Real DSPBench Fraud
+q2 moved from checked/RSS near-tie to a modest checked elapsed win:
+checked scoped page-token `800.369 ms` versus heap `807.974 ms`, with RSS
+about `278 MB` versus heap `358 MB`; trusted Streaming is still faster at
+`785.682 ms`. Generated Common Crawl-shaped 1M q1/q2 strengthens the checked
+page-token story: checked scoped page-token `3643.680/3790.138 ms` versus heap
+`5392.344/5201.862 ms`, with heap timed GC about `1.58 s`.
 
 Latest CPU profile checkpoint: `docs/CPU_PROFILE_REPORT.md`. macOS
 `/usr/bin/sample` profiles for generated Common Crawl-shaped q2 at 2M pages

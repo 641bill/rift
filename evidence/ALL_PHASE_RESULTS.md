@@ -1,22 +1,22 @@
 # Rift All-Phase Results Rollup
 
 Date: 2026-05-01
-Last updated: 2026-05-07 17:51 CEST
+Last updated: 2026-05-07 18:14 CEST
 
 This file gathers the current numeric and validation evidence across all
 roadmap phases. It is a rollup, not the primary raw log. Prefer the source files
 listed below for command provenance and detailed interpretation.
 
-Latest update: page-token-owned appends now skip the generic
-`StreamAppendWindow.totalLength` counter. The focused 1M cost split remains
-positive but modest: checked scoped page-token is `77.135/88.840/85.362 ms`
-on append-only/drain/aggregate versus heap `81.535/90.374/86.988 ms`, and
-checked scoped count-by-key is `102.504 ms` versus heap `114.143 ms`. The
-real DSPBench Fraud q2 control is a checked RSS/GC near-tie rather than a
-throughput win: checked scoped page-token `843.380 ms`, heap `842.739 ms`,
-trusted Streaming `832.012 ms`. This reinforces that the next checked-runtime
-target is allocation lowering (`allocImpl`/`checkOpen` under static operator
-ownership), not more bucket open/close bookkeeping.
+Latest update: `StreamAppendCursor.nextOwnedOrNull()` removes per-record link
+clearing in operator-owned page-token close callbacks while generic cursors
+remain defensive. The focused 1M cost split improves to checked scoped
+page-token `73.590/83.997/81.296 ms` on append-only/drain/aggregate versus
+heap `79.786/87.198/84.703 ms`. Real DSPBench Fraud q2 is now a modest checked
+elapsed/RSS win: checked scoped page-token `800.369 ms`, heap `807.974 ms`,
+trusted Streaming `785.682 ms`; checked RSS is about `279 MB` versus heap
+`358 MB`. Generated Common Crawl-shaped q1/q2 remains the strongest checked
+memory-pressure row: checked scoped page-token `3643.680/3790.138 ms` versus
+heap `5392.344/5201.862 ms`, with heap timed GC about `1.58 s`.
 
 ## How To Read This File
 
@@ -152,7 +152,7 @@ row. Core runtime/topology headline rows were not rerun in this pass.
 | NEXMark Beam-default | checked Rift fastest on q0/q1/q2/q3/q4/q5/q8/q9/q11 | broad generated methodology win, mostly modest |
 | Common Crawl-shaped q1 | checked SafeZone page-token `3696.284 ms`, checked Rift page-token `3905.285 ms`, heap `5350.531 ms` with `1517.640 ms` GC | strongest checked generated stream win |
 | Common Crawl-shaped q2 | checked SafeZone page-token `3732.171 ms`, checked Rift page-token `3972.493 ms`, heap `5183.656 ms` with `1526.751 ms` GC | strongest checked generated window win |
-| Page-token fast-path and cost follow-up | clean focused 1M checked scoped page-token `27.240 ms` vs heap `36.722 ms`; generated Common Crawl-shaped clean q1/q2 checked scoped page-token `3759.175/3784.863 ms` vs heap `5466.724/5213.380 ms`; committed-code DSPBench Fraud q2 checked scoped page-token `810.770 ms` vs heap `820.945 ms`, while trusted Streaming is fastest at `788.040 ms`; new append-time count-by-key 1M focused checked scoped row `97.860 ms` vs heap `105.915 ms`; Common Crawl-shaped q2 100k count-by-key application row loses to existing page-token (`450.289 ms` vs `406.413 ms` for scoped checked) | page-token remains the strongest checked append/window family; no-drain close is safe but not the main remaining bottleneck; append-time aggregate/no-drain is a modest focused win but missed the first application gate |
+| Page-token fast-path and cost follow-up | clean focused 1M checked scoped page-token `27.240 ms` vs heap `36.722 ms`; owned-cursor focused checked scoped rows `73.590/83.997/81.296 ms` on append-only/drain/aggregate; generated Common Crawl-shaped q1/q2 checked scoped page-token `3643.680/3790.138 ms` vs heap `5392.344/5201.862 ms`; DSPBench Fraud q2 checked scoped page-token `800.369 ms` vs heap `807.974 ms`, while trusted Streaming is fastest at `785.682 ms`; append-time count-by-key 1M focused checked scoped row `97.860 ms` vs heap `105.915 ms`; Common Crawl-shaped q2 100k count-by-key application row loses to existing page-token (`450.289 ms` vs `406.413 ms` for scoped checked) | page-token remains the strongest checked append/window family; static-safety cleanup of live-length and link-clearing is measurable but modest; append-time aggregate/no-drain is a focused win but missed the first application gate |
 | Linear Road | heap fastest or tied on q0/q1/q2 | ceiling/control despite region GC reduction |
 
 ## Evidence Levels

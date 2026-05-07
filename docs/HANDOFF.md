@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-07 17:51 CEST
+Last updated: 2026-05-07 18:14 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -66,6 +66,23 @@ not the main remaining bottleneck. The committed-code DSPBench Fraud q2 rerun
 is more conservative than the dirty run: trusted Streaming `788.040 ms`,
 checked scoped page-token `810.770 ms`, heap `820.945 ms`, with checked RSS about
 `279 MB` vs heap `358 MB`.
+
+Latest owned-cursor page-token checkpoint:
+On 2026-05-07, `StreamAppendCursor.nextOwnedOrNull()` was added for
+operator-owned page-token close callbacks. It advances without clearing each
+record link; generic `next()`/`nextOrNull()` remain defensive. Static safety
+justification: page-token close clears parent bucket refs before the callback,
+the callback cannot retain region records, and the child region closes
+immediately after cleanup. Validation passed `sandbox3_next/compile`,
+`RiftRegionCheckedCompilerTest` `120/120`, and `RiftRegionCheckedTest`
+`52/52`. Focused 1M checked scoped page-token improved to
+`73.590/83.997/81.296 ms` on append-only/drain/aggregate, compared with the
+previous no-length rows `77.135/88.840/85.362 ms`. DSPBench Fraud q2 now has
+checked scoped page-token `800.369 ms` vs heap `807.974 ms`, with RSS
+`278577152` vs heap `358301696`; trusted Streaming remains fastest at
+`785.682 ms`. Generated Common Crawl-shaped 1M q1/q2 has checked scoped
+page-token `3643.680/3790.138 ms` vs heap `5392.344/5201.862 ms`, cutting
+timed GC from about `1.58 s` to about `32 ms`.
 
 Latest page-token attribution checkpoint:
 Child diagnostics now include `estimated_bucket_open_ms` for DSPBench and

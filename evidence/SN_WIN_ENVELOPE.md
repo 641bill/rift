@@ -1,7 +1,7 @@
 # Scala Native Win Envelope
 
 Date: 2026-05-01
-Last updated: 2026-05-07 17:51 CEST
+Last updated: 2026-05-07 18:14 CEST
 
 Status: Phase 6/7 evidence synthesis. This note classifies where Rift currently
 wins against Scala Native Immix, where it only reduces memory pressure, and
@@ -45,6 +45,17 @@ DSPBench Fraud q2 is checked scoped `843.380 ms` versus heap `842.739 ms`.
 The useful win there is RSS/GC, not elapsed. Next checked-runtime work should
 move to allocation lowering (`allocImpl`/`checkOpen`) under static
 operator-owned safety.
+
+Latest owned-cursor update:
+`StreamAppendCursor.nextOwnedOrNull()` removes per-record link clearing in
+operator-owned page-token close callbacks while keeping generic cursors
+defensive. This improves the focused 1M checked scoped page-token rows to
+`73.590/83.997/81.296 ms` on append-only/drain/aggregate. DSPBench Fraud q2
+now has checked scoped page-token `800.369 ms` versus heap `807.974 ms`, with
+RSS `278577152` versus heap `358301696`; trusted Streaming remains fastest at
+`785.682 ms`. Generated Common Crawl-shaped 1M q1/q2 now has checked scoped
+page-token `3643.680/3790.138 ms` versus heap `5392.344/5201.862 ms`, with
+heap spending about `1.58 s` in timed GC.
 
 UnsafeZone-HP checkpoint: `evidence/UNSAFEZONE_HP_BASELINE_MATRIX.md` adds a
 benchmark-only SafeZone no-root control (`SAFEZONE_ROOTS_MODE=3`,
@@ -165,7 +176,7 @@ live window payload still dominate.
 | Common Crawl WET-shaped tokenization | 1M generated pages / 137M token records | trusted HPZone `4386.590 ms`; checked `5088.712 ms` in RSS-complete rerun | heap `5466.535 ms` / RSS rerun `5670.270 ms`; improved SafeZone-32k `4608.641 ms` / RSS rerun `4644.747 ms` | Trusted GC-heavy stream-object win; checked beats heap but misses improved-SafeZone/trusted gate | Generated input; checked q1/q2 follow-up recorded |
 | Common Crawl WET-shaped q2 domain window | 1M generated pages / 137M token records | trusted Streaming `4164.288 ms`; checked `5061.479 ms` in RSS-complete rerun | heap `5267.784 ms` / RSS rerun `5342.373 ms`; improved SafeZone-32k `4425.273 ms` / RSS rerun `4444.954 ms` | Trusted GC-heavy stream/window win; checked beats heap modestly but misses improved-SafeZone/trusted gate | Generated input; checked q1/q2 follow-up recorded |
 | Common Crawl checked SafeZone-backed q1/q2 | 1M generated pages / 137M token records | q1 checked SafeZone-backed `4512.743 ms`; q2 `4431.865 ms` | q1 current checked `4744.872 ms`; q2 current checked `4698.903 ms` | Backend helps checked path but misses application gate | Focused backend follow-up, not final application claim |
-| Common Crawl checked page/token q1/q2 | 1M generated pages / 137M token records | q1 checked page-token `3956.366 ms`, SafeZone-backed page-token `3728.286 ms`; q2 checked page-token `4039.855 ms`, SafeZone-backed page-token `3816.247 ms` | q1 heap `5412.618 ms`, current checked `4855.133 ms`; q2 heap `5252.803 ms`, current checked `4820.611 ms` | First checked Common Crawl-shaped application gate pass | Generated stressor evidence; real-input proof still open |
+| Common Crawl checked page/token q1/q2 | 1M generated pages / 137M token records | q1 checked page-token `3877.427 ms`, SafeZone-backed page-token `3643.680 ms`; q2 checked page-token `4029.776 ms`, SafeZone-backed page-token `3790.138 ms` | q1 heap `5392.344 ms`; q2 heap `5201.862 ms`; heap timed GC about `1.58 s` on both | Checked Common Crawl-shaped application gate remains strong after owned-cursor cleanup | Generated stressor evidence; real-input proof still open |
 | Common Crawl WET-shaped q3 parser scratch | 1M generated pages / 137M token records | Streaming `11206.504 ms`, HPZone `11233.751 ms` | heap `10330.962 ms` with `859.220 ms` GC | Negative scratch-shape control where heap wins elapsed despite GC | Generated input; checked modes absent |
 | Common Crawl WET small-bucket control | 100k pages / 13.7M records | Streaming `419.779 ms` | heap `386.807 ms`; improved SafeZone `381.109 ms` | Heap/SafeZone recover with tighter lifetimes | Generated input; not a case-study row |
 | Common Crawl real WET tokenization | 10k requested pages / 349709 token records | Streaming `15.651 ms` | heap `12.079 ms`; improved SafeZone `16.093 ms` | Real preloaded WET is CPU/live-input-bound, not GC-bound | Real preloaded input; no parser/decompression timing |
@@ -173,7 +184,7 @@ live window payload still dominate.
 | Common Crawl real WAT link metadata | 50k requested pages / 1006742 page-link records | SafeZone-backed page-token `31.792 ms` q4, `33.937 ms` q5 | q4 heap `33.646 ms`; q5 heap `35.066 ms`; improved-32k q4 `39.551 ms`, q5 `39.579 ms` | Real link-object path works and checked SafeZone-backed wins modestly, but heap timed GC is zero | Real preloaded WAT input; ceiling/control row |
 | GH Archive real JSON fields | 8-hour oracle, 1M events / 13M event-field records | Streaming rerun `340.820 ms`; SafeZone-backed page-token `348.817 ms` | heap `293.204 ms`, max GC `135.368 ms`, 1/3 runs with GC; improved-32k `374.923 ms` | Heap wins uncapped median by growing to ~1.7 GiB; 1G heap-cap diagnostic makes checked SafeZone-backed faster than heap | Memory-budget/tail-latency candidate, not uncapped throughput win |
 | DSPBench Spike Detection | real bundled `sensors.dat`, 1M replayed sensor events | q1 checked scoped page-token `1163.045 ms`; q2 trusted Streaming `1258.164 ms` | q1 heap `1187.525 ms`, GC `21.421 ms`; q2 heap `1271.677 ms`, GC `32.793 ms` | Real-input modest/control evidence: heap GC is visible but below 3% of elapsed, checked q1 wins modestly, checked q2 loses slightly | Local single-process methodology port, not exact DSPBench engine reproduction |
-| DSPBench Fraud Detection | real bundled `credit-card.dat`, 1M replayed transaction events | committed-code q2 trusted Streaming `788.040 ms`, RSS `282443776`; checked scoped page-token `810.770 ms`, RSS `278593536`; dirty fast-path checked scoped direction check `818.574 ms` | committed-code heap `820.945 ms`, GC `75.928 ms`, RSS `358154240`; original full q2 heap `801.790 ms`, GC `69.686 ms`, RSS `358252544` | Modest checked/RSS win plus trusted-runtime win; still not flagship GC-heavy because parser/replay/predictor/checksum CPU dominates and trusted Streaming is fastest in the committed-code row | Local single-process methodology port with deterministic Markov-style proxy |
+| DSPBench Fraud Detection | real bundled `credit-card.dat`, 1M replayed transaction events | owned-cursor q2 trusted Streaming `785.682 ms`, RSS `282443776`; checked scoped page-token `800.369 ms`, RSS `278577152` | owned-cursor heap `807.974 ms`, GC `71.317 ms`, RSS `358301696`; original full q2 heap `801.790 ms`, GC `69.686 ms`, RSS `358252544` | Modest checked elapsed/RSS win plus trusted-runtime win; still not flagship GC-heavy because parser/replay/predictor/checksum CPU dominates and trusted Streaming is fastest | Local single-process methodology port with deterministic Markov-style proxy |
 | Wikimedia generated clickstream | 1M events / 2M records | HPZone `147.163 ms`, Streaming `148.364 ms` | heap `159.746 ms`; improved SafeZone `147.936 ms` | Promising Q2 row but not a 10% win over improved SafeZone | Generated TSV-shaped input only |
 | Wikimedia generated clickstream scale check | 10M events / 20M records | HPZone `1462.015 ms`, Streaming `1464.663 ms` | heap `1459.438 ms`; improved SafeZone `1473.088 ms` | Lower GC but elapsed near-tie | Single run only |
 | Wikimedia real enwiki clickstream | 1M events / 2M records | Streaming `157.449 ms` | heap `126.800 ms`; improved SafeZone `149.062 ms` | Heap wins; median timed GC zero, with one heap collection outlier | Real preloaded TSV input |
