@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-08 10:04 CEST
+Last updated: 2026-05-08 21:20 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -104,14 +104,73 @@ fraud predictor state, CSV/state parsing, append, and close traversal. This
 keeps Fraud q2 as a real-input regression row, but it argues against more
 checked allocation micro-tuning as the next default step.
 
-Latest real-input search checkpoint: DSPBench Log Processing is now wired into
-`DSPBenchRegionMatrix` with `log-q0-parse`, `log-q1-status`, and
-`log-q2-window` over the bundled real `http-server.log` file. The 1M q2 row is
-a modest checked scoped page-token win (`1733.654 ms` versus heap `1750.291 ms`)
-and reduces heap max GC from `88.210 ms` to `18.584 ms`, but it is not a
-flagship GC-heavy case because heap GC is only about `2.6%` of elapsed and RSS
-is higher for region rows. Keep it as real-input control/regression evidence
-and continue searching for richer object-materializing real streams.
+Latest real-input search checkpoint: LogHub HDFS v1 and Theodolite source were
+added to the search ledger. HDFS v1 has `11175629` real Hadoop log lines; the
+1M q2 row is the strongest checked real-log result so far, with checked scoped
+page-token `7871.856 ms` versus heap `8227.369 ms`, removing heap's
+`92.659 ms` median timed GC and lowering RSS. This is a useful modest
+throughput/RSS/GC row, but still not the flagship GC-heavy case because heap GC
+is only about 1-2% of elapsed. Theodolite UC2/UC4 source is cloned and has good
+industrial-IoT methodology shapes, but its bundled load generator simulates
+active-power records; pair it with a real industrial-energy trace before
+claiming real-input evidence.
+
+Latest Yak real-input checkpoint: `YakRegionMatrix` now includes `graphreal`
+over SNAP Twitter ego and SNAP LiveJournal edge lists. LiveJournal is the
+stronger row and now has checked topology coverage. At 50M replayed real
+edges, `gc-heap` is `1618.105 ms`, median timed GC is `273.410 ms`, and RSS is
+`2761261056`. The best low-RSS checked shape is epochal:
+`checked-epoch-scoped` is `1069.241 ms` and `checked-epoch-stream` is
+`1113.261 ms`, both around `1.53 GB` RSS. Whole-run checked scoped is faster
+(`1048.751 ms`) but uses `2977742848` RSS; page-token checked still beats heap
+but is slower (`1403.878/1457.811 ms`) because Yak is an epoch workload, not a
+page/window-token workload. A reusable `EpochBuffer` follow-up confirms the
+API direction but not the current implementation: at 50M, reusable
+`checked-epoch-buffer-scoped` beats heap (`1343.071 ms` vs `1514.313 ms`) and
+keeps low RSS, but trails benchmark-local linked epoch (`1022.643 ms`). This
+is now the strongest current real-input prior-work-shaped row and the clearest
+evidence that the user-facing API should expose `Rift.stream { epoch { ... };
+window(...) { ... }; page { ... } }` while the implementation chooses the
+backend/operator. It remains local methodology evidence: not exact Yak, not
+exact GraphChi, and not Yak-scale Twitter-2010/SampleTwitter evidence. Next
+`RiftRegion.epoch { ... }` now provides that reusable checked linked-epoch
+block: streaming backends reset at the epoch boundary, SafeZone-backed checked
+regions open/close a scoped child region, and callers get an
+`OpenStreamingRegion` for `allocOpen`. A small `graphreal` smoke matched
+checksums across heap, direct checked epoch, and `EpochBuffer`. The 10M and
+apples-to-apples 50M API-backed reruns confirm the direction: direct checked epoch is
+`212.691/229.532 ms` scoped/stream versus heap `317.779 ms` and reusable
+`EpochBuffer` about `286 ms` at 10M; at 50M, API-backed
+`checked-epoch-scoped` is `1055.958 ms` with `1.53 GB` RSS versus heap
+`1604.811 ms`, `288.801 ms` timed GC, and `2.76 GB` RSS. The same reusable
+epoch topology now covers local Yak-shaped `wordcount`, `graphstep`, `sort`,
+`topword`, and `graphchi`; at 10M logical objects, `checked-epoch-scoped` is
+fastest among measured rows for wordcount/graphstep/topword/graphchi, and the
+new 1M sort row is a modest checked array win. The same direct epoch topology
+now covers Broom/Dataflow SELECT, AGGREGATE, and JOIN: at 10 epochs x 100k
+documents, `checked-epoch-scoped` is `19.318/36.016/20.082 ms` versus heap
+`26.996/52.754/31.281 ms` and improved SafeZone `23.339/44.737/24.136 ms`.
+Yak grouped sort now uses a checked region-captured array topology:
+`checked-epoch-stream` `230.000 ms` and `checked-epoch-scoped` `230.799 ms`
+versus heap `235.554 ms` and improved SafeZone `233.068 ms`. Treat sort as
+coverage/modest CPU-bound evidence, not a flagship GC win.
+The same direct epoch topology now covers StreamFlex-shaped throughput and
+latency: at 1M throughput, scoped direct checked epoch is `163.339 ms` versus
+heap `218.582 ms`, improved SafeZone `208.653 ms`, trusted Streaming
+`182.246 ms`, and scoped checked `TransactionRegion` `205.929 ms`. This
+changes the StreamFlex checked direction from "TransactionRegion is best" to
+"direct epoch is best when the pipeline stages share one batch lifetime."
+Stancu-style transaction batches now follow the same direct epoch direction:
+at 1M transactions, scoped direct checked epoch is `160.198 ms`, direct stream
+epoch is `174.137 ms`, improved SafeZone is `186.122 ms`, trusted Streaming is
+`219.668 ms`, and heap is `225.798 ms`.
+
+Stancu/SPECjbb2005 reproduction boundary: the current Stancu matrix remains a
+local transaction-shaped probe. The next stronger target is a documented
+SPECjbb2005-workload Scala Native port, not an official SPECjbb2005 run on
+Scala Native. The plan is tracked in `docs/STANCU_SPECJBB2005_PORT_PLAN.md`;
+it distinguishes optional JVM artifact controls, Scala Native workload-port
+rows, and Stancu paper-axis reproduction metrics.
 
 Latest CPU profile checkpoint: `docs/CPU_PROFILE_REPORT.md`. macOS
 `/usr/bin/sample` profiles for generated Common Crawl-shaped q2 at 2M pages
@@ -299,11 +358,12 @@ reusable Dataflow AGGREGATE row is `92.923 ms` in the latest staged headline run
 aggregate evidence, not `EpochFold` evidence. The next roadmap gate is
 lower-overhead fold/epoch operators after `EpochBuffer` and
 `TransactionRegion`. `EpochBuffer` passed a focused 1M gate, and
-`TransactionRegion` is now partially validated on StreamFlex-shaped
-multi-stage epochs: scoped checked transaction beats heap/improved SafeZone in
-the latest throughput sweep (`39.019 ms` vs heap `42.860 ms` and improved
-SafeZone `41.327 ms`), while trusted Rift remains fastest and Rift-native
-checked transaction remains speed-gated. Real hash/join/rank/median operators
+`TransactionRegion` is validated as a useful multi-list control, but direct
+`RiftRegion.epoch` now supersedes it for the current StreamFlex-shaped
+multi-stage pipeline and for local Stancu-style transaction batches. StreamFlex
+scoped direct epoch is `163.339 ms` at 1M versus heap `218.582 ms`; Stancu
+scoped direct epoch is `160.198 ms` at 1M versus heap `225.798 ms` and
+improved SafeZone `186.122 ms`. Real hash/join/rank/median operators
 remain open.
 
 Current fixed-chunk append checkpoint:
@@ -1056,6 +1116,10 @@ Current status:
   transaction/accounting workloads. A 2026-04-26 boundary sweep confirms that
   one transaction per region is too fine-grained, while 64 transactions per
   region gives a Rift-vs-heap win; SafeZone remains faster.
+- `docs/STANCU_SPECJBB2005_PORT_PLAN.md` defines the stronger
+  SPECjbb2005-workload port target. It keeps official JVM controls, Scala
+  Native workload-port rows, and Stancu paper-axis reproduction metrics as
+  separate evidence classes.
 - `sandbox/PIPELINE_PARCOLL_COMPARISON.md` records the amordo
   `ZoneParVector` benchmark and the Rift raw-array surrogate.
 - `evidence/REML_COMPARISON_MATRIX.md` starts Phase 6c for the MLKit/ReML

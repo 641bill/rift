@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-08 10:04 CEST
+Last updated: 2026-05-08 21:07 CEST
 
 Status: markdown slide deck outline. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report and this file as
@@ -16,11 +16,49 @@ append-only/drain/aggregate; DSPBench Fraud q2 is a modest checked win
 (`797.782 ms` vs heap `806.697 ms`) with RSS cut from `358 MB` to `279 MB`.
 DSPBench Log q2 is another modest real-input checked row (`1733.654 ms` vs
 heap `1750.291 ms`) and cuts heap max GC from `88.210 ms` to `18.584 ms`, but
-RSS is higher. LogHub q3 template/session now validates richer real log-object
-placement and cuts RSS from `290 MB` to about `237 MB`, but checked scoped is
-slightly slower than heap. Trusted Streaming is still faster in Fraud, so the
-next tuning slide should focus on object construction, append/linking, cursor
-traversal, query CPU, and finding a richer real-input stream.
+RSS is higher. LogHub HDFS v1 q2 is the strongest new real-log row: checked
+scoped page-token `7871.856 ms` vs heap `8227.369 ms`, removing heap's
+`92.659 ms` median GC and lowering RSS; it is still a modest win because heap
+GC is only about 1-2% of elapsed. Trusted Streaming is still faster in Fraud,
+so the next tuning slide should focus on object construction, append/linking,
+cursor traversal, query CPU, and finding a richer real-input stream.
+
+Latest real-input addition: Yak `graphreal` now replays real SNAP edge lists as
+epoch-local `EdgeUpdate` objects. Twitter ego proved the input path; the
+larger LiveJournal row is now the representative result. This is a promising
+real-input prior-work-shaped row, but it is not exact Yak/GraphChi evidence.
+
+Latest stronger Yak row: SNAP LiveJournal `graphreal` now gives the best
+real-input prior-work-shaped result and a clearer topology lesson. At 50M
+replayed real edges, `gc-heap` is `1618.105 ms`, with `273.410 ms` median
+timed GC and `2.76 GB` RSS. Low-RSS epoch rows are much faster:
+`checked-epoch-scoped` `1069.241 ms`, `checked-epoch-stream` `1113.261 ms`,
+`region-scoped-rooted` `1256.538 ms`, and `region-stream-rootless`
+`1345.479 ms`, all around `1.53 GB` RSS. Whole-run checked scoped is fastest
+at `1048.751 ms`, but it uses `2.98 GB` RSS. Page-token checked rows still
+beat heap but are the wrong topology for Yak. The slide-level lesson is:
+Rift should expose checked `epoch`, `window`, and `page` blocks, then lower the
+chosen topology to the fastest safe backend.
+
+Follow-up implementation: `RiftRegion.epoch { ... }` now exists as the direct
+checked linked-epoch block. It is the reusable form of the fast Yak topology;
+the 10M LiveJournal rerun confirms the direction (`212.691 ms` scoped checked
+epoch versus heap `317.779 ms` and `EpochBuffer` `285.605 ms`). The 50M
+API-backed rerun also confirms it: `checked-epoch-scoped` is `1055.958 ms`
+with `1.53 GB` RSS versus heap `1604.811 ms`, `288.801 ms` timed GC, and
+`2.76 GB` RSS. The same reusable epoch topology now covers local Yak-shaped
+`wordcount`, `graphstep`, `topword`, and `graphchi`, where checked scoped
+epoch is fastest among measured rows at 10M logical objects.
+
+Newest reusable-epoch extension: the same `RiftRegion.epoch { ... }` API now
+covers Broom/Dataflow SELECT, AGGREGATE, and JOIN. At 10 epochs x 100k
+documents, checked scoped epoch is `19.318/36.016/20.082 ms` versus heap
+`26.996/52.754/31.281 ms` and improved SafeZone
+`23.339/44.737/24.136 ms`. Page-token is still narrowly faster for SELECT
+alone (`19.010 ms`), but direct epoch is the general operator-family topology.
+The last Yak epoch gap, grouped sort, now uses region-owned arrays:
+checked stream/scoped epoch `230.000/230.799 ms` versus heap `235.554 ms`.
+This is a modest CPU-bound coverage win, not a flagship GC result.
 
 ## Slide 1: One-Sentence Thesis
 
@@ -242,12 +280,19 @@ improved SafeZone `10133.449 ms`. Dataflow AGGREGATE checked is a near-tie
 with improved SafeZone (`41.827 ms` vs `41.810 ms`) and should not be
 presented as a generic `EpochFold` win.
 
-The first multi-list `TransactionRegion` row is a partial checked win:
-StreamFlex 1M-shape throughput scoped checked transaction is `40.512 ms`,
-faster than heap `42.431 ms` and improved SafeZone `42.236 ms`, but latency
-median is worse. The lesson is reusable and concrete:
-multi-stage stream operators should share one child-region lifetime, but hot
-list state must be operator-owned fields rather than generic indexed metadata.
+The StreamFlex follow-up strengthens that lesson. `TransactionRegion` was a
+partial checked win, but direct checked epoch is better when all temporary
+stage objects share one batch lifetime: at 1M, scoped direct epoch is
+`163.339 ms` versus heap `218.582 ms`, improved SafeZone `208.653 ms`,
+trusted Streaming `182.246 ms`, and scoped checked transaction `205.929 ms`.
+The user-facing topology should be `epoch { ... }` first; specialized
+operators are for shapes direct epoch cannot express cleanly.
+
+Stancu-style transaction batches now show the same pattern. At 1M
+transactions, scoped direct epoch is `160.198 ms` versus heap `225.798 ms`,
+improved SafeZone `186.122 ms`, trusted Streaming `219.668 ms`, and direct
+stream epoch `174.137 ms`. This is the clearest local transaction-boundary
+checked win so far.
 
 ## Slide 11: What Counts As A Win
 
@@ -270,15 +315,15 @@ deadline misses. They can move in different directions.
 |---|---|
 | current Rift HP loses to improved SafeZone on linked/prior rows | learn from SafeZone internals. |
 | TableRank/rank/fold fail 1M gates | do not use them in app claims yet. |
-| real WET/WAT/Wikimedia/Linear Road/RIoTBench-MHEALTH mostly heap-fastest or median-GC-zero; GH Archive/LogHub/DSPBench are modest wins | current real inputs are not GC-heavy enough for representative claims, though page-token/log rows are useful controls. |
+| real WET/WAT/Wikimedia/Linear Road/RIoTBench-MHEALTH mostly heap-fastest or median-GC-zero; GH Archive/LogHub/DSPBench are modest wins | current real inputs are not GC-heavy enough for representative claims, though HDFS q2 and other page-token/log rows are useful controls. |
 | pipeline surrogate heap wins | CPU-bound workloads are not Rift targets. |
 
 ## Slide 13: Benchmark Ladder
 
 Next realistic GC-heavy search:
 
-1. Theodolite-style IoT or larger provenance-clean machine/security traces;
-2. richer real NDJSON/log-event streams such as LogHub variants, GDELT, or public web/server/security logs;
+1. Theodolite UC2/UC4-style industrial energy over a real power-meter trace;
+2. larger provenance-clean machine/security traces such as LogHub Spark/Windows, GDELT, or public SOC/NDJSON logs;
 3. larger/multiple real Common Crawl WET/WAT shards;
 4. GH Archive, LogHub, DSPBench, and RIoTBench/MHEALTH as modest-win or ceiling controls;
 5. NEXMark Q3/Q8/Q9/Q11 as generated controls;
@@ -287,6 +332,8 @@ Next realistic GC-heavy search:
 The first real WAT shard now validates link-object placement and modestly
 favors SafeZone-backed page-token, but heap still reports zero timed GC.
 RIoTBench/MHEALTH fixes one IoT provenance gap but is also zero-GC at 1M.
+Theodolite source is cloned, but its official load generator is simulated
+smart-meter input; use it as methodology unless paired with real energy data.
 GH Archive is now the strongest real-input modest-win candidate, but not the
 missing GC-heavy proof. The 8-hour preloaded
 oracle row has heap winning uncapped median by growing to about `1.7 GB`, but

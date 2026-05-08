@@ -1,7 +1,7 @@
 # Real-Input GC-Heavy Stream Benchmark Search
 
 Date: 2026-05-07
-Last updated: 2026-05-08 10:04 CEST
+Last updated: 2026-05-08 17:52 CEST
 
 Status: active Phase 6 search ledger. This file tracks public real-input
 stream/dataflow candidates before implementation work. It is deliberately a
@@ -40,15 +40,16 @@ modest/control row and move to the next candidate.
 
 | Rank | Candidate | Source / provenance | Query shape to test | Expected object materialization | Lifetime boundary | Local status | Decision |
 |---:|---|---|---|---|---|---|---|
-| 1 | DSPBench Spike Detection | DSPBench paper/source; local clone at `cache/benchmark-data/dspbench/source`, commit `00c20da828faf2b960fdb697c61d34cb25461875`; bundled `dspbench-threads/data/sensors.dat` has `79999` usable lines after filtering. | `q0-parse` sensor readings; `q1-moving-average` emits moving-average records; `q2-spike-window` groups spike alerts by time/device. | `SensorReading`, `MovingAverageRecord`, `SpikeCandidate`, optional per-device window contribution objects. The original threads implementation uses parser `Values`, tuples, and per-device `LinkedList[Double]` state. | Sensor-event bucket and moving-average window; durable per-device sums/windows stay heap/primitive. | Implemented as `DSPBenchRegionMatrix`; 20k smoke, 100k medians, and 1M medians completed. | Park as real-input modest/control evidence. At 1M, heap GC is real but only `10.880-32.793 ms`; best throughput wins are modest and checked q2 loses slightly. Move to Fraud Detection next. |
-| 2 | DSPBench Fraud Detection | Same DSPBench clone; bundled `dspbench-threads/data/credit-card.dat` has `185000` lines plus Markov model resources. | `fraud-q0-parse` transaction records; `fraud-q1-predict` creates prediction/state records; `fraud-q2-alert-window` windows outlier alerts. | `Transaction`, `Prediction`, state-token list/string pieces, alert records. | Transaction/alert bucket; Markov model remains durable heap metadata. | Implemented as `DSPBenchRegionMatrix`; 20k smoke, 100k medians, 1M medians, q2 heap-cap follow-up, dirty fast-path row, and committed-code safe-fast-path rerun completed. | Keep as the best DSPBench real-input regression row. The dirty fast-path row made checked scoped page-token fastest (`818.574 ms` vs heap `862.834 ms`), but the committed-code rerun is more conservative: trusted Streaming `788.040 ms`, checked scoped page-token `810.770 ms`, heap `820.945 ms`, with checked RSS about `279 MB` vs heap `358 MB`. Heap caps did not create a fixed-memory checked win at 1M. |
-| 3 | DSPBench Log Processing | Same DSPBench clone; bundled Spark `logprocessing/http-server.log` has `55000` common-log lines. | `log-q0-parse`, `log-q1-status`, and `log-q2-window`. | HTTP log records, status/update records, and window contribution records. | Event/window bucket; durable status counters on heap/primitive arrays. | Implemented as `DSPBenchRegionMatrix`; 20k smoke, 100k medians, and 1M medians completed. | Keep q2 as a modest real-input throughput/GC-tail control. At 1M, checked scoped page-token is fastest (`1733.654 ms` vs heap `1750.291 ms`) and cuts heap max GC from `88.210 ms` to `18.584 ms`, but heap GC is only about `2.6%` of elapsed and region RSS is higher. |
-| 4 | DSPBench Machine Outlier | Same DSPBench clone; bundled `machine-usage.csv` is only `1012` lines. | Machine usage anomaly scoring and alert windows. | Observation/profile/score/alert records. | Observation/window bucket; anomaly model on heap. | Source inspected; sample input is tiny. | Defer unless a larger public Alibaba machine-usage trace is pinned. |
-| 5 | DSPBench Bargain Index | Same DSPBench clone; bundled `stocks.csv` has `411` lines. | Parse quotes/trades, compute VWAP, join quotes with trade summaries, emit bargain records. | `Quote`, `Trade`, `VwapRecord`, `TradeSummary`, `BargainCandidate`. | Quote/trade window or day/interval boundary; summary table durable. | Source inspected; sample input is too small for headline real-input rows. | Do not implement first unless a larger public quote/trade stream is found. |
-| 6 | Real RIoTBench-style input | RIoTBench source clone at `cache/benchmark-data/riot-bench/source`, commit `c86414f7f926ed5ae0fab756bb3d82fbfb6e5bf7`; bundled SenML samples are tiny, so UCI MHEALTH (`1215745` rows) is used as the FIT-style real sensor source. | Parse sensor/health records, clean/filter, annotate, sliding-window statistics, anomaly output. | Sensor reading, cleaned reading, annotation, statistic contribution, anomaly records. | Sensor/window/session bucket; device metadata durable. | `RiotBenchRegionMatrix` now accepts `RIOTBENCH_INPUT_KIND=mhealth` and directory input; 20k smoke and 1M q1/q2 medians completed. | Park as provenance-clean real-input ceiling/control. MHEALTH q1/q2 have zero timed heap GC at 1M; q1 is near-tie with heap fastest, q2 gives a small SafeZone win. |
-| 7 | Richer LogHub template/session mining | LogHub BGL already local and measured; other LogHub datasets can be fetched. | Parse log events, tokenize templates, infer block/session candidates, window template counts. | `LogEvent`, `TemplateToken`, `TemplateCandidate`, `SessionEvent`, `WindowSummary`. | Log-line/template/session/window bucket; template dictionary and block index durable. | Implemented as `LogHubRegionMatrix` `q3-template-session`; 20k smoke, 100k medians, and 1M medians completed on real BGL. | Park as richer real-input modest/control evidence. At 1M, heap GC is visible (`84.166 ms` median, `117.946 ms` max) and RSS is higher than region rows, but GC is still under 1% of `8683.558 ms` elapsed; trusted Streaming is only modestly faster and checked scoped page-token is slightly slower. |
-| 8 | Theodolite UC2 / UC4 local kernel | Theodolite has industrial IoT stream benchmarks and implementations for Kafka Streams, Flink, Hazelcast Jet, and Beam. UC2 is downsampling; UC4 is hierarchical aggregation. | Local single-process downsampling or hierarchical aggregation without Kafka/Kubernetes. | Measurement records, hierarchy updates, duplicated group contributions, aggregate outputs. | Window/group bucket; hierarchy table durable. | Source not cloned locally in this pass. | Later target if DSPBench/RIoTBench do not produce stronger pressure. Remove external systems from headline rows. |
-| 9 | GDELT / security NDJSON logs | Public event/log streams; exact dataset not selected. | Byte-slice parse/project, enrichment, session/window counts, alert candidates. | Event records, field slices, enrichment records, alert/session/window contributions. | Line/session/window bucket; enrichment dictionary durable. | Not selected or downloaded. | Lower-priority public-log fallback after DSPBench/RIoTBench/LogHub. |
+| 1 | Yak-style real graph replay | SNAP Twitter ego graph at `cache/benchmark-data/yak/snap/twitter_combined.txt.gz`; SNAP LiveJournal graph at `cache/benchmark-data/yak/snap/soc-LiveJournal1.txt.gz`; future larger candidate is SNAP Twitter-2010. | `graphreal`: preload real edge pairs into primitive control arrays, replay source/destination pairs as epoch-local `EdgeUpdate` objects, and update durable vertex state. | `EdgeUpdate` objects from real graph edges. | Epoch boundary; durable vertex array remains heap/primitive. | Implemented in `YakRegionMatrix`; Twitter ego smoke/1M/2M and LiveJournal 5M/10M/50M medians completed, including checked page-token, checked epoch topology, and reusable `EpochBuffer` rows. `RiftRegion.epoch { ... }` now exposes direct checked epoch topology; it has a 2-epoch smoke, a 10M API-backed rerun, and an apples-to-apples 50M API-backed rerun with the same 10 x 5M topology as the earlier topology table. | Current top real-input Yak-shaped row. LiveJournal 50M topology follow-up has `gc-heap` `1618.105 ms`, median GC `273.410 ms`, RSS `2.76 GB`; low-RSS epoch rows are `checked-epoch-scoped` `1069.241 ms`, `checked-epoch-stream` `1113.261 ms`, `region-scoped-rooted` `1256.538 ms`, and `region-stream-rootless` `1345.479 ms`, with region RSS about `1.53 GB`. Whole-run checked scoped is faster (`1048.751 ms`) but high-RSS (`2.98 GB`). Reusable `EpochBuffer` scoped also beats heap (`1343.071 ms` vs same-rerun heap `1514.313 ms`) but is not yet the fastest checked epoch lowering. The API-backed 10M row confirms direct checked epoch (`212.691/229.532 ms` scoped/stream) stays ahead of heap (`317.779 ms`) and `EpochBuffer` (`285.605/287.201 ms`); the apples-to-apples 50M API-backed row has `checked-epoch-scoped` `1055.958 ms`, `checked-epoch-stream` `1101.001 ms`, and heap `1604.811 ms` with `288.801 ms` GC. This is still not exact Yak/GraphChi artifact evidence, but it is a strong real graph ladder row and shows that checked epoch topology is the right safe shape. |
+| 2 | DSPBench Spike Detection | DSPBench paper/source; local clone at `cache/benchmark-data/dspbench/source`, commit `00c20da828faf2b960fdb697c61d34cb25461875`; bundled `dspbench-threads/data/sensors.dat` has `79999` usable lines after filtering. | `q0-parse` sensor readings; `q1-moving-average` emits moving-average records; `q2-spike-window` groups spike alerts by time/device. | `SensorReading`, `MovingAverageRecord`, `SpikeCandidate`, optional per-device window contribution objects. The original threads implementation uses parser `Values`, tuples, and per-device `LinkedList[Double]` state. | Sensor-event bucket and moving-average window; durable per-device sums/windows stay heap/primitive. | Implemented as `DSPBenchRegionMatrix`; 20k smoke, 100k medians, and 1M medians completed. | Park as real-input modest/control evidence. At 1M, heap GC is real but only `10.880-32.793 ms`; best throughput wins are modest and checked q2 loses slightly. Move to Fraud Detection next. |
+| 3 | DSPBench Fraud Detection | Same DSPBench clone; bundled `dspbench-threads/data/credit-card.dat` has `185000` lines plus Markov model resources. | `fraud-q0-parse` transaction records; `fraud-q1-predict` creates prediction/state records; `fraud-q2-alert-window` windows outlier alerts. | `Transaction`, `Prediction`, state-token list/string pieces, alert records. | Transaction/alert bucket; Markov model remains durable heap metadata. | Implemented as `DSPBenchRegionMatrix`; 20k smoke, 100k medians, 1M medians, q2 heap-cap follow-up, dirty fast-path row, and committed-code safe-fast-path rerun completed. | Keep as the best DSPBench real-input regression row. The dirty fast-path row made checked scoped page-token fastest (`818.574 ms` vs heap `862.834 ms`), but the committed-code rerun is more conservative: trusted Streaming `788.040 ms`, checked scoped page-token `810.770 ms`, heap `820.945 ms`, with checked RSS about `279 MB` vs heap `358 MB`. Heap caps did not create a fixed-memory checked win at 1M. |
+| 4 | DSPBench Log Processing | Same DSPBench clone; bundled Spark `logprocessing/http-server.log` has `55000` common-log lines. | `log-q0-parse`, `log-q1-status`, and `log-q2-window`. | HTTP log records, status/update records, and window contribution records. | Event/window bucket; durable status counters on heap/primitive arrays. | Implemented as `DSPBenchRegionMatrix`; 20k smoke, 100k medians, and 1M medians completed. | Keep q2 as a modest real-input throughput/GC-tail control. At 1M, checked scoped page-token is fastest (`1733.654 ms` vs heap `1750.291 ms`) and cuts heap max GC from `88.210 ms` to `18.584 ms`, but heap GC is only about `2.6%` of elapsed and region RSS is higher. |
+| 5 | DSPBench Machine Outlier | Same DSPBench clone; bundled `machine-usage.csv` is only `1012` lines. | Machine usage anomaly scoring and alert windows. | Observation/profile/score/alert records. | Observation/window bucket; anomaly model on heap. | Source inspected; sample input is tiny. | Defer unless a larger public Alibaba machine-usage trace is pinned. |
+| 6 | DSPBench Bargain Index | Same DSPBench clone; bundled `stocks.csv` has `411` lines. | Parse quotes/trades, compute VWAP, join quotes with trade summaries, emit bargain records. | `Quote`, `Trade`, `VwapRecord`, `TradeSummary`, `BargainCandidate`. | Quote/trade window or day/interval boundary; summary table durable. | Source inspected; sample input is too small for headline real-input rows. | Do not implement first unless a larger public quote/trade stream is found. |
+| 7 | Real RIoTBench-style input | RIoTBench source clone at `cache/benchmark-data/riot-bench/source`, commit `c86414f7f926ed5ae0fab756bb3d82fbfb6e5bf7`; bundled SenML samples are tiny, so UCI MHEALTH (`1215745` rows) is used as the FIT-style real sensor source. | Parse sensor/health records, clean/filter, annotate, sliding-window statistics, anomaly output. | Sensor reading, cleaned reading, annotation, statistic contribution, anomaly records. | Sensor/window/session bucket; device metadata durable. | `RiotBenchRegionMatrix` now accepts `RIOTBENCH_INPUT_KIND=mhealth` and directory input; 20k smoke and 1M q1/q2 medians completed. | Park as provenance-clean real-input ceiling/control. MHEALTH q1/q2 have zero timed heap GC at 1M; q1 is near-tie with heap fastest, q2 gives a small SafeZone win. |
+| 8 | Richer LogHub template/session mining | LogHub BGL and HDFS v1 are local and measured. BGL has `4747963` lines; HDFS v1 has `11175629` lines from Zenodo v7. | Parse log events, tokenize templates, infer block/session candidates, window template counts. | `LogEvent`, `TemplateToken`, `TemplateCandidate`, `SessionEvent`, `WindowSummary`. | Log-line/template/session/window bucket; template dictionary and block index durable. | Implemented as `LogHubRegionMatrix` q1/q2/q3; 20k smoke and 1M medians completed on real BGL and HDFS v1. | Keep as real-input modest throughput/RSS/tail evidence. HDFS q2 is the strongest checked LogHub row so far: checked scoped page-token `7871.856 ms` vs heap `8227.369 ms`, removing heap's `92.659 ms` median GC and lowering RSS. Still not flagship GC-heavy because heap GC is about 1-2% of elapsed. |
+| 9 | Theodolite UC2 / UC4 local kernel | Theodolite source clone at `cache/benchmark-data/theodolite/source`, commit `dfa768a25eec3c3f5a57b7d4839a0c255fd6fa7d`. The docs describe official generated active-power load generators, not a static real input file. | Local single-process downsampling or hierarchical aggregation without Kafka/Kubernetes. | Measurement records, hierarchy updates, duplicated group contributions, aggregate outputs. | Window/group bucket; hierarchy table durable. | Source cloned and inspected. UC2/UC4 are good methodology shapes, but the bundled input path is generated smart-meter active-power records. | Do not spend the next real-input slot on Theodolite alone unless paired with a separate public real industrial-energy trace. Candidate real sources include SPARK/SPARK-Raw or another open industrial power-meter dataset. |
+| 10 | GDELT / security NDJSON logs | Public event/log streams; exact dataset not selected. | Byte-slice parse/project, enrichment, session/window counts, alert candidates. | Event records, field slices, enrichment records, alert/session/window contributions. | Line/session/window bucket; enrichment dictionary durable. | Not selected or downloaded. | Lower-priority public-log fallback after DSPBench/RIoTBench/LogHub. |
 
 ## DSPBench Triage Notes
 
@@ -199,6 +200,48 @@ but heap GC is still less than 1% of elapsed. The row is useful for proving the
 template/session shape works with checked page-token, not for the flagship
 GC-heavy claim.
 
+## LogHub HDFS v1 Result
+
+HDFS v1 was added after BGL q3 and MHEALTH to test a larger real machine-log
+input without writing another matrix. The data came from LogHub / LogPAI's
+Zenodo v7 record:
+
+`/Users/siyaoliu/rift/cache/benchmark-data/loghub/HDFS_1/HDFS.log`
+
+The extracted log has `11175629` lines and `1576383671` bytes. The 20k smoke
+matched checksums/output counts for q1/q2/q3 across heap, improved SafeZone,
+trusted Streaming, and checked scoped page-token. The 1M medians were:
+
+| Query | Best region row | Heap row | Interpretation |
+|---|---:|---:|---|
+| `q1-tokens` | safezone-improved-32k `7919.352 ms`; checked scoped page-token `7923.079 ms` | heap `8059.155 ms`, GC `139.906 ms`, RSS `408551424` | modest real-input throughput/RSS/GC win; checked scoped is close to best region row. |
+| `q2-window-counts` | trusted Streaming `7871.713 ms`; checked scoped page-token `7871.856 ms` | heap `8227.369 ms`, GC `92.659 ms`, RSS `408666112` | best HDFS row: checked scoped page-token beats heap by about 4.3%, removes timed GC, and lowers RSS. |
+| `q3-template-session` | safezone-improved-32k `8360.487 ms`; trusted Streaming `8439.205 ms` | heap `8460.928 ms`, GC `81.910 ms`, RSS `408666112` | RSS/GC-tail evidence, but checked scoped page-token loses elapsed at `8506.708 ms`. |
+
+Decision: keep HDFS q2 as a real-input checked/modest-win regression row. It
+is stronger than the MHEALTH ceiling result and comparable to the best LogHub
+BGL rows, but it still does not satisfy the flagship GC-heavy gate because heap
+GC is only about 1-2% of elapsed.
+
+## Theodolite Source Triage
+
+The public Theodolite source has been cloned locally:
+
+`/Users/siyaoliu/rift/cache/benchmark-data/theodolite/source`
+
+Clone commit:
+
+`dfa768a25eec3c3f5a57b7d4839a0c255fd6fa7d`
+
+The repo contains UC2 downsampling and UC4 hierarchical aggregation
+implementations plus load generators. The load generator simulates active-power
+records with fields `identifier`, `timestamp`, and `valueInW`. This is a good
+recognized stream methodology shape, but it is generated input, not the
+missing real-data proof. The next useful Theodolite step is to pair UC2/UC4
+logic with a real industrial-energy trace such as SPARK/SPARK-Raw or another
+open power-meter dataset, rather than porting Theodolite's generated load
+alone.
+
 ## RIoTBench / MHEALTH Result
 
 RIoTBench is a good benchmark-family match because it defines IoT parse,
@@ -255,13 +298,18 @@ object-materializing real stream.
   `https://www.theodolite.rocks/theodolite-benchmarks/`
 - Theodolite UC2:
   `https://www.theodolite.rocks/theodolite-benchmarks/benchmark-uc2.html`
+- Theodolite source:
+  `https://github.com/cau-se/theodolite`
+- LogHub Zenodo v7:
+  `https://zenodo.org/records/3227177`
 
 ## Next Action
 
-Continue the real-input search beyond DSPBench Log, LogHub BGL q3, and
-RIoTBench/MHEALTH. Prioritize Theodolite-style IoT records, a larger
-provenance-clean machine or security trace, or another public NDJSON/log
-workload that naturally materializes many more objects per record. Keep
-DSPBench Fraud q2, DSPBench Log q2, LogHub q3, and RIoTBench/MHEALTH q1/q2 as
-regression rows for page-token overhead and real-input modest/RSS/tail or
+Continue beyond the new HDFS q2 modest win. The next best search path is a
+real industrial-energy trace for Theodolite UC2/UC4-style downsampling or
+hierarchical aggregation, not Theodolite's generated load alone. If that is too
+large or hard to pin quickly, try another larger LogHub/security stream such as
+Spark, Windows, or a public NDJSON SOC/security dataset. Keep DSPBench Fraud
+q2, DSPBench Log q2, LogHub BGL q3, LogHub HDFS q2, and RIoTBench/MHEALTH q1/q2
+as regression rows for page-token overhead and real-input modest/RSS/tail or
 ceiling behavior.

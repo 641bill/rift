@@ -136,7 +136,7 @@ fetch_loghub() {
   fi
 
   local dir="$DATA_ROOT/loghub"
-  local datasets="${RIFT_LOGHUB_DATASETS:-HDFS BGL}"
+  local datasets="${RIFT_LOGHUB_DATASETS:-HDFS_1 BGL}"
   local dataset
   for dataset in $datasets; do
     case "$dataset" in
@@ -146,6 +146,12 @@ fetch_loghub() {
         mkdir -p "$dir/HDFS"
         tar -xzf "$dir/HDFS.tar.gz" -C "$dir/HDFS"
         ;;
+      HDFS_1)
+        fetch "https://zenodo.org/records/3227177/files/HDFS_1.tar.gz?download=1" \
+          "$dir/HDFS_1.tar.gz"
+        mkdir -p "$dir/HDFS_1"
+        tar -xzf "$dir/HDFS_1.tar.gz" -C "$dir/HDFS_1"
+        ;;
       BGL)
         fetch "https://zenodo.org/records/1147681/files/BGL.tar.gz?download=1" \
           "$dir/BGL.tar.gz"
@@ -153,11 +159,58 @@ fetch_loghub() {
         tar -xzf "$dir/BGL.tar.gz" -C "$dir/BGL"
         ;;
       *)
-        echo "unknown LogHub dataset '$dataset'; expected HDFS or BGL" >&2
+        echo "unknown LogHub dataset '$dataset'; expected HDFS, HDFS_1, or BGL" >&2
         exit 1
         ;;
     esac
   done
+}
+
+fetch_yak_inputs() {
+  local dir="$DATA_ROOT/yak"
+
+  if [[ "${RIFT_FETCH_YAK_TWITTER_EGO:-0}" == "1" ]]; then
+    fetch "https://snap.stanford.edu/data/twitter_combined.txt.gz" \
+      "$dir/snap/twitter_combined.txt.gz"
+  else
+    echo "skip     SNAP Twitter ego graph; set RIFT_FETCH_YAK_TWITTER_EGO=1 to fetch it"
+  fi
+
+  if [[ "${RIFT_FETCH_YAK_LIVEJOURNAL:-0}" == "1" ]]; then
+    fetch "https://snap.stanford.edu/data/soc-LiveJournal1.txt.gz" \
+      "$dir/snap/soc-LiveJournal1.txt.gz"
+  else
+    echo "skip     SNAP LiveJournal graph; set RIFT_FETCH_YAK_LIVEJOURNAL=1 to fetch it"
+  fi
+
+  if [[ "${RIFT_FETCH_YAK_TWITTER2010:-0}" == "1" ]]; then
+    fetch "https://snap.stanford.edu/data/twitter-2010.txt.gz" \
+      "$dir/snap/twitter-2010.txt.gz"
+  else
+    echo "skip     SNAP Twitter-2010 graph; set RIFT_FETCH_YAK_TWITTER2010=1 to fetch it"
+  fi
+
+  if [[ "${RIFT_FETCH_STACKOVERFLOW_POSTS:-0}" == "1" ]]; then
+    fetch "https://archive.org/download/stackexchange/stackoverflow.com-Posts.7z" \
+      "$dir/stackexchange/stackoverflow.com-Posts.7z"
+  else
+    echo "skip     Stack Overflow Posts.7z; set RIFT_FETCH_STACKOVERFLOW_POSTS=1 to fetch it"
+  fi
+}
+
+fetch_theodolite() {
+  if [[ "${RIFT_FETCH_THEODOLITE_SOURCE:-0}" != "1" ]]; then
+    echo "skip     Theodolite source; set RIFT_FETCH_THEODOLITE_SOURCE=1 to clone it"
+    return
+  fi
+
+  local dir="$DATA_ROOT/theodolite/source"
+  if [[ -d "$dir/.git" ]]; then
+    echo "present  $dir"
+  else
+    mkdir -p "$(dirname "$dir")"
+    git clone --depth 1 https://github.com/cau-se/theodolite.git "$dir"
+  fi
 }
 
 fetch_dspbench() {
@@ -252,7 +305,14 @@ EOF
   local loghub_archive
   while IFS= read -r loghub_archive; do
     if [[ -n "$loghub_archive" ]]; then
-      record "LogHub archive" "$loghub_archive" "https://zenodo.org/records/1147681"
+      case "$(basename "$loghub_archive")" in
+        HDFS_1.tar.gz)
+          record "LogHub HDFS v1 archive" "$loghub_archive" "https://zenodo.org/records/3227177"
+          ;;
+        *)
+          record "LogHub archive" "$loghub_archive" "https://zenodo.org/records/1147681"
+          ;;
+      esac
     fi
   done < <(find "$DATA_ROOT/loghub" -maxdepth 1 \( -name '*.tar.gz' -o -name '*.zip' \) 2>/dev/null | sort)
   local loghub_log
@@ -261,6 +321,11 @@ EOF
       record "LogHub extracted log" "$loghub_log" "https://github.com/logpai/loghub"
     fi
   done < <(find "$DATA_ROOT/loghub" -type f \( -name '*.log' -o -name '*.txt' \) 2>/dev/null | sort)
+  record "SNAP Twitter ego graph" "$DATA_ROOT/yak/snap/twitter_combined.txt.gz" "https://snap.stanford.edu/data/ego-Twitter.html"
+  record "SNAP LiveJournal graph" "$DATA_ROOT/yak/snap/soc-LiveJournal1.txt.gz" "https://snap.stanford.edu/data/soc-LiveJournal1.html"
+  record "SNAP Twitter-2010 graph" "$DATA_ROOT/yak/snap/twitter-2010.txt.gz" "https://snap.stanford.edu/data/twitter-2010.html"
+  record "Stack Overflow Posts archive" "$DATA_ROOT/yak/stackexchange/stackoverflow.com-Posts.7z" "https://archive.org/download/stackexchange"
+  record "Theodolite source clone" "$DATA_ROOT/theodolite/source" "https://github.com/cau-se/theodolite"
   record "DSPBench source clone" "$DATA_ROOT/dspbench/source" "https://github.com/GMAP/DSPBench"
   record "DSPBench Spike Detection sample" "$DATA_ROOT/dspbench/source/dspbench-threads/data/sensors.dat" "https://github.com/GMAP/DSPBench"
   record "DSPBench Fraud Detection sample" "$DATA_ROOT/dspbench/source/dspbench-threads/data/credit-card.dat" "https://github.com/GMAP/DSPBench"
@@ -278,6 +343,8 @@ fetch_linear_road
 fetch_beam_nexmark
 fetch_gharchive
 fetch_loghub
+fetch_yak_inputs
+fetch_theodolite
 fetch_dspbench
 fetch_riotbench
 write_manifest

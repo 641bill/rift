@@ -2,7 +2,7 @@
 
 Status: active research design for the Scala Native fork.
 
-Last updated: 2026-05-06 14:20 CEST
+Last updated: 2026-05-08 17:19 CEST
 
 Active worktree: `/Users/siyaoliu/rift/scala-native-rift`
 
@@ -49,6 +49,44 @@ that GC root registration or region scanning is unnecessary, and otherwise
 prefer improved-root or chunk-root configurations. Unsupported mixed-reference
 cases should be rejected in v1 rather than silently falling back to a different
 backend.
+
+The latest Yak `graphreal` topology evidence clarifies the user-facing API
+target. Checked regions should not force every workload into the page-token
+operator. Programmers should express logical lifetime topology, and Rift should
+check and lower that topology:
+
+```scala
+Rift.stream {
+  epoch {
+    // batch/epoch-local data
+  }
+
+  window(...) {
+    // sliding or tumbling window-local data
+  }
+
+  page {
+    // page or record-group-local data
+  }
+}
+```
+
+Backend and topology are distinct. A scoped SafeZone-backed checked backend may
+be fastest for one row, a streaming reset backend may be better for another,
+and page-token is only the right checked operator when the data lifetime is
+actually page/window/bucket shaped. The 50M SNAP LiveJournal `graphreal`
+follow-up shows this concretely: checked epoch topology gives the low-RSS safe
+win, whole-run checked topology is faster but high-RSS, and page-token checked
+topology remains safe but slower for Yak because the workload is epochal.
+The reusable `EpochBuffer` follow-up turns that into an implementation task:
+it is safe and beats heap on LiveJournal, but it trails the benchmark-local
+linked epoch path. `RiftRegion.epoch { ... }` is now the direct checked
+linked-epoch API: it gives the block an `OpenStreamingRegion`, resets Rift
+streaming epochs in bulk, and opens/closes scoped SafeZone-backed child regions
+for the scoped backend. Epoch workloads should use this direct topology when
+they can consume their object graph inside the epoch; `EpochBuffer` remains for
+append/drain API compatibility rather than as the fastest possible epoch
+lowering.
 
 ## 2. Evidence Levels
 

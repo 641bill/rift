@@ -1,7 +1,7 @@
 # Rift All-Phase Results Rollup
 
 Date: 2026-05-01
-Last updated: 2026-05-08 10:04 CEST
+Last updated: 2026-05-08 21:07 CEST
 
 This file gathers the current numeric and validation evidence across all
 roadmap phases. It is a rollup, not the primary raw log. Prefer the source files
@@ -28,11 +28,55 @@ template/session mining is also now implemented; at 1M real BGL lines, heap is
 `8683.558 ms`, median/max GC `84.166/117.946 ms`, RSS `290242560`, while
 trusted Streaming is `8615.627 ms` and checked scoped page-token is
 `8722.008 ms` with about `237 MB` RSS. It is richer real-input placement/RSS
-evidence, not the missing GC-heavy case. RIoTBench/MHEALTH is now wired as a
-provenance-clean real IoT input: the UCI MHEALTH dataset has `1215745` rows,
-and 1M q1/q2 medians matched checksums but showed zero timed heap GC. q1 is a
-near-tie with heap fastest (`117.977 ms`) and q2 gives a small SafeZone win
-(`107.194 ms` vs heap `109.589 ms`). Treat it as a ceiling/control row.
+evidence, not the missing GC-heavy case. LogHub HDFS v1 is now added as a
+larger real log input with `11175629` lines. Its strongest 1M row is
+q2-window-counts: checked scoped page-token is `7871.856 ms` vs heap
+`8227.369 ms`, removes heap median GC `92.659 ms`, and lowers RSS from
+`408666112` to `394969088`. HDFS q2 is the strongest checked LogHub row so
+far, but still modest because heap GC is about 1% of elapsed. RIoTBench/MHEALTH
+is now wired as a provenance-clean real IoT input: the UCI MHEALTH dataset has
+`1215745` rows, and 1M q1/q2 medians matched checksums but showed zero timed
+heap GC. q1 is a near-tie with heap fastest (`117.977 ms`) and q2 gives a
+small SafeZone win (`107.194 ms` vs heap `109.589 ms`). Treat it as a
+ceiling/control row. A Yak real-input `graphreal` row is now implemented over
+SNAP Twitter ego and LiveJournal edge lists. Twitter ego proved the path; the
+stronger LiveJournal follow-up now includes checked topology rows. At 50M
+replayed real edges, `gc-heap` is `1618.105 ms`, median timed GC is
+`273.410 ms`, and RSS is `2761261056`. The low-RSS epoch rows are the best
+safe/topology signal: `checked-epoch-scoped` is `1069.241 ms`,
+`checked-epoch-stream` is `1113.261 ms`, `region-scoped-rooted` is
+`1256.538 ms`, and `region-stream-rootless` is `1345.479 ms`, all with about
+`1.53 GB` RSS and zero timed GC. Whole-run checked scoped is faster
+(`1048.751 ms`) but reaches `2977742848` RSS because it does not reclaim until
+the end. Page-token checked rows also beat heap but are slower for Yak
+(`1403.878/1457.811 ms`). Reusable `EpochBuffer` is now wired into the same
+path and beats heap in a 50M same-run comparison (`1343.071 ms` scoped versus
+heap `1514.313 ms`), but trails the benchmark-local linked epoch path
+(`1022.643 ms` scoped). `RiftRegion.epoch { ... }` now implements the direct
+checked linked-epoch reusable API and passes smoke/tests; the 10M LiveJournal
+API-backed rerun gives direct checked epoch `212.691/229.532 ms` scoped/stream
+versus heap `317.779 ms` and `EpochBuffer` about `286 ms`; the apples-to-apples
+50M API-backed rerun gives `checked-epoch-scoped` `1055.958 ms` and
+`checked-epoch-stream` `1101.001 ms` versus heap `1604.811 ms` with
+`288.801 ms` timed GC. The same reusable epoch topology now covers
+`wordcount`, `graphstep`, `sort`, `topword`, and `graphchi`. The new checked
+sort row uses `Array[SortRecord^{epoch}]^{epoch}` and region-owned
+`SortRecord` objects, so it is not a heap-array fallback. At 1M sort records,
+`checked-epoch-stream` is `230.000 ms` and `checked-epoch-scoped` is
+`230.799 ms` versus heap `235.554 ms` and improved SafeZone `233.068 ms`.
+Sort remains CPU-bound because heap timed GC is only `3.333 ms`.
+LiveJournal is now the strongest real-input
+prior-work-shaped row, while still not exact Yak/GraphChi artifact evidence.
+The reusable `RiftRegion.epoch { ... }` API has now also been applied to the
+Broom/Dataflow methodology harness. At 10 epochs x 100k documents,
+`checked-epoch-scoped` is the fastest full-operator row for
+SELECT/AGGREGATE/JOIN: `19.318/36.016/20.082 ms` versus `gc-heap`
+`26.996/52.754/31.281 ms` and improved SafeZone `23.339/44.737/24.136 ms`.
+Heap median timed GC is `6.355/13.209/9.672 ms`; direct checked epoch removes
+that GC. The scoped page-token SELECT row is slightly faster (`19.010 ms`) but
+only covers SELECT/filter/project, while direct epoch covers the whole
+Dataflow operator family. The old generic `checked-epoch-fold` aggregate row
+is still a negative control at `93.491 ms`.
 
 ## How To Read This File
 
@@ -161,7 +205,8 @@ row. Core runtime/topology headline rows were not rerun in this pass.
 |---|---|---|
 | Dataflow SELECT | checked scoped page-token `18.458 ms` vs heap `29.347 ms` | reusable checked page-token remains the strongest simple map/filter operator |
 | Dataflow AGGREGATE | checked exact-array aggregate `40.098 ms`; true `EpochFold` `92.923 ms` | current checked aggregate wins, reusable fold remains speed-gated |
-| StreamFlex | scoped checked TransactionRegion `39.019 ms`; heap `42.860 ms`; trusted Rift HP `36.436 ms` | TransactionRegion is the best checked multi-stage stream shape so far |
+| StreamFlex | scoped direct checked epoch `163.339 ms` at 1M vs heap `218.582 ms`, improved SafeZone `208.653 ms`, trusted Streaming `182.246 ms`, and scoped checked TransactionRegion `205.929 ms`; 200k scoped direct epoch `32.029 ms` vs heap `46.737 ms` | direct `RiftRegion.epoch` is now the best checked StreamFlex-shaped topology; `TransactionRegion` is no longer the best row for this shape |
+| Stancu transaction boundary | scoped direct checked epoch `160.198 ms`, direct checked epoch `174.137 ms`, improved SafeZone `186.122 ms`, trusted Streaming `219.668 ms`, heap `225.798 ms` at 1M | direct checked epoch turns the local Stancu-style accounting row into a checked win; durable accounting arrays remain heap metadata |
 | Object allocation lowering | checked SafeZone-backed `14.903 ms`; checked Rift `16.039 ms`; heap `21.885 ms` | focused checked allocation is not the main bottleneck |
 | Checked append/window | scoped EpochBuffer `26.461 ms`; scoped page-token `26.883 ms`; heap `36.944 ms` | cheap checked append operators beat heap |
 | Table/rank | checked rank `344.918 ms` vs heap `227.736 ms` | ranking/index maintenance remains negative |
@@ -190,7 +235,7 @@ row. Core runtime/topology headline rows were not rerun in this pass.
 | Phase 3: runtime-only evaluation | Done enough for current claim | Validated with caveats | Same-layout GCBench/ListOfLists runtime medians |
 | Phase 4: topology/layout decomposition | Done enough to move on | Validated/provisional mix | Layout, topology, targeted runtime follow-up, safety finding |
 | Phase 5: application evidence | In progress | Bounded-sample medians plus diagnostic attribution, safe-API probes, single-run full-month controls, full-month heap/checked medians, and SafeZone DEBS controls | DEBS correctness, 100k/1M trusted medians, opt-in GC heap allocation attribution, Q1 checked-output output-equivalence, Q1 checked-processing output-equivalence, Q2 checked-processing output-equivalence, checked RunBoth 100k/1M medians plus attribution, 3-run Commix control, first full-month output-equivalence control, post-pool-cap checked full-month run, post-pool-cap same-run full-month heap/checked control, trusted full-month Streaming control, checked `ChildBucket` same-order full-month 3-run median, active-memory diagnostics, region-family attribution, Q1 rank lifetime narrowing, post-fix full-month heap/checked median, checked Q1 window-rank arenas, reusable checked `StreamBucketArena` migration, checked `StreamWindowIndexedRank`, `putWindowRankInBucket` auto cleanup, entry-cleanup callbacks, lexicographic checked rank priorities, long-key stream-window rank matrix, Q2 CPU substep diagnostics, 100k SafeZone controls, and 1M current/improved SafeZone medians |
-| Phase 6: literature-aligned methodology evidence | Started | Validated methodology medians with caveats; real-input search in progress | Broom-style dataflow including checked SELECT/AGGREGATE/JOIN modes, StreamFlex-style latency/throughput, Yak-style control/data plus grouped sort, top-word/filter, GraphChi-style subintervals, and runtime promotion proxy, Stancu-style transaction accounting, NEXMark-lite Q0/Q1/Q2/Q5/Q8 stream queries, Beam-default NEXMark-profile rows including expanded Q3/Q4/Q9/Q11, generated and real/preloaded Common Crawl/Wikimedia/Linear Road stream detectors, Yahoo-style ad stream, RIoTBench-style IoT stream, real GH Archive and LogHub probes, Common Crawl-like q1/q2 fast-allocation-counter follow-up, DSPBench source/data triage plus Spike Detection and Fraud Detection q0/q1/q2 local matrices, and the Scala Native win-envelope synthesis |
+| Phase 6: literature-aligned methodology evidence | Started | Validated methodology medians with caveats; real-input search in progress | Broom-style dataflow including checked SELECT/AGGREGATE/JOIN modes, StreamFlex-style latency/throughput with direct checked epoch, Yak-style control/data plus grouped sort, top-word/filter, GraphChi-style subintervals, and runtime promotion proxy, Stancu-style transaction accounting with direct checked epoch, NEXMark-lite Q0/Q1/Q2/Q5/Q8 stream queries, Beam-default NEXMark-profile rows including expanded Q3/Q4/Q9/Q11, generated and real/preloaded Common Crawl/Wikimedia/Linear Road stream detectors, Yahoo-style ad stream, RIoTBench-style IoT stream, real GH Archive and LogHub probes, Common Crawl-like q1/q2 fast-allocation-counter follow-up, DSPBench source/data triage plus Spike Detection and Fraud Detection q0/q1/q2 local matrices, and the Scala Native win-envelope synthesis |
 | Phase 6b: Broom / parallel collections API evidence | Open | Provisional surrogate only | amordo comparison and Rift raw-array surrogate |
 | Phase 6c: ReML / MLKit lineage comparison | Started | Paper-reported table plus local Tier 1 medians; no exact MLKit/ReML rerun yet | Elsman 2023 Figure 9 transcribed as paper-reported/not-rerun evidence; `ReMLRegionMatrix` Tier 1 Scala Native-shaped ports for `fib37`, `tak`, `mandel`, `msort`, `msort-r`, `life`, `fft`, and `ratio`; 2026-05-06 Tier 1 medians show `msort`, `msort-r`, and `ratio` as useful local allocation/RSS/GC rows; ReML-style durable/static generic heap-retention probe is active and passing; public MLKit source provenance has started from the ignored clone at `cache/reml/mlkit`, with Figure 9-style sources found and tags `v4.7.4`/`v4.7.5`/`v4.7.6` identified; exact local `mlkit`/`mlton` reproduction remains open and Docker is not currently running |
 | Phase 7: capture-checked safe API | Started | Compiler-probe, runtime-smoke, focused checked-container benchmark, checked dataflow evidence, and DEBS-shaped checked probes | 96 targeted checked-API compiler probes, checked child-window, child-bucket, stream-bucket-arena, stream-window-rank, window-rank auto-cleanup, entry-cleanup, lexicographic rank-priority, standalone long-key rank, long-key stream-window-rank, fused TableRank, reusable StreamAppendWindow, StreamJoinWindow, StreamWindowFold runtime probes, checked page/token append, the new ObjectAllocationLowering scaffold, `CheckedRegionBufferMatrix`, `CheckedRegionPriorityQueueMatrix`, `CheckedRegionIndexedPriorityQueueMatrix`, `CheckedStreamWindowRankMatrix`, `CheckedAppendWindowMatrix`, `CheckedWindowFoldMatrix`, Dataflow SELECT/AGGREGATE/JOIN `rift-checked`, Q1 checked-output, Q1 checked-processing, Q2 checked-processing, checked RunBoth `rift-checked` medians, plus Phase 4 safety finding |
@@ -198,8 +243,10 @@ row. Core runtime/topology headline rows were not rerun in this pass.
 | Runtime substrate control: UnsafeZone-HP | Headline core/prior, stream, and bounded DEBS rows started | Validated for covered local harnesses; unsafe by design | SafeZone no-root mode `SAFEZONE_ROOTS_MODE=3` with 32 KiB pages. Clean core/prior sweep shows it usually beats improved SafeZone slightly and beats current Rift HPZone on linked/prior-work rows, while Rift HPZone still wins flat ListOfLists. Clean stream sweep shows the same pattern: UnsafeZone-HP is often best or near-best, but mostly only slightly ahead of improved SafeZone. Bounded DEBS 1M normal single-run row has unsafezone-hp fastest (`4639.791 ms`), with trusted Streaming close (`4663.529 ms`) and checked heap-adjacent (`4844.738 ms`). |
 | SafeZone-family cost decomposition | Headline diagnostic run completed | Validated diagnostic rows; trace-instrumented elapsed caveat | `sandbox/run_safezone_cost_matrix.sh` records SafeZone pool trace counters (`SAFEZONE_TRACE=1`) alongside benchmark medians/RSS for root-mode and page-size configurations. Current SafeZone root removal dominates old pathologies; improved roots plus 32 KiB pages match or beat rootless UnsafeZone-HP on several key trace rows. The trace-mode Common Crawl q1 unsafe pathology does not reproduce in non-trace q1/q2. After the Rift fast-allocation counter cleanup, Common Crawl-like q1/q2 now favor trusted Rift over improved-32k/unsafezone-hp, so keep rootless UnsafeZone-HP as an unsafe comparator and treat improved-32k/chunk roots as backend candidates rather than the only next direction. |
 | Checked SafeZone-backed backend prototype | Focused backend gate passed; application gate missed | Validated compile/tests plus focused and application medians | `RiftRegion.streamingSafeZone(...)` delegates checked object allocation to SafeZone allocator internals while preserving the checked programming model. `CheckedAppendWindowMatrix` 1M passes (`rift-checked-safezone-32k` `29.444 ms` vs current checked cursor `30.922 ms`). Common Crawl-like q1/q2 improve current checked by `4.9-5.7%` at 1M but miss the application gate against trusted Rift/improved SafeZone. |
-| Cheap checked operator families | Started, first reusable APIs validated | Compile/tests plus focused 1M-shape 3-run, StreamFlex transaction rows, RSS rows, and staged headline sweep | `PageTokenMapFilter`, `RegionList`, `EpochBuffer`, and `TransactionRegion` are now real reusable APIs. Latest staged sweep rows are positive for SELECT and cheap append/drain: SELECT scoped page-token `18.458 ms` vs heap `29.347 ms`; scoped checked EpochBuffer `26.461 ms` and scoped checked page-token `26.883 ms` vs heap `36.944 ms`. `RegionList` remains the linked-topology reusable API from the previous focused gate. `TransactionRegion` is partially positive in StreamFlex-shaped code: scoped checked transaction `39.019 ms` beats heap `42.860 ms` and improved SafeZone `41.327 ms`, but trusted Rift HP remains faster at `36.436 ms` and Rift-native checked transaction remains speed-gated at `45.620 ms`. `EpochFold` is implemented and correct but failed the latest speed gate at `92.923 ms`; the `40.098 ms` aggregate row remains exact-array checked aggregate evidence, not true `EpochFold` evidence. |
-| StreamFlex checked TransactionRegion integration | Partial checked win | Compile, compiler/runtime safety, smoke, 200k/1M-shape throughput, and latency rows | `StreamFlexRegionMatrix` now accepts `rift-checked-transaction-region` and `rift-checked-safezone-transaction-region` in addition to EpochBuffer controls. Checksums match. `TransactionRegion` reduces checked Rift opens/closes compared with stacked EpochBuffer and keeps one child region per transaction. Scoped checked transaction is the best checked StreamFlex-shaped throughput row in the latest sweep (`39.019 ms`) and beats heap/improved SafeZone, but trusted Rift HP/Streaming remain faster around `36.4 ms`. |
+| Cheap checked operator families | Started, first reusable APIs validated | Compile/tests plus focused 1M-shape 3-run, direct epoch rows, StreamFlex transaction rows, RSS rows, and staged headline sweep | `PageTokenMapFilter`, `RegionList`, direct `RiftRegion.epoch`, `EpochBuffer`, and `TransactionRegion` are now real reusable APIs. Latest staged sweep rows are positive for SELECT and cheap append/drain: SELECT scoped page-token `18.458 ms` vs heap `29.347 ms`; scoped checked EpochBuffer `26.461 ms` and scoped checked page-token `26.883 ms` vs heap `36.944 ms`. `RegionList` remains the linked-topology reusable API from the previous focused gate. Direct checked epoch now supersedes `TransactionRegion` on StreamFlex-shaped throughput: at 1M, scoped direct epoch is `163.339 ms` vs heap `218.582 ms`, improved SafeZone `208.653 ms`, trusted Streaming `182.246 ms`, and scoped checked TransactionRegion `205.929 ms`. `EpochFold` is implemented and correct but failed the latest speed gate at `92.923 ms`; the `40.098 ms` aggregate row remains exact-array checked aggregate evidence, not true `EpochFold` evidence. |
+| StreamFlex direct checked epoch integration | Representative checked win | Compile, smoke, 200k throughput/latency, and 1M throughput rows | `StreamFlexRegionMatrix` now accepts `rift-checked-direct-epoch` and `rift-checked-safezone-direct-epoch`. Checksums match. The direct epoch path uses one checked epoch block and ordinary linked Scala objects for all four pipeline stages. At 200k, scoped direct epoch is fastest for throughput (`32.029 ms`) and latency (`9.636 ms`); at 1M throughput, scoped direct epoch is `163.339 ms` versus heap `218.582 ms`, improved SafeZone `208.653 ms`, trusted Streaming `182.246 ms`, and scoped checked TransactionRegion `205.929 ms`. |
+| Stancu direct checked epoch integration | Representative checked win | Compile, smoke, 200k, and 1M rows | `StancuRegionMatrix` now accepts `rift-checked-direct-epoch` and `rift-checked-safezone-direct-epoch`. Checksums match. The direct epoch path uses one checked epoch block per transaction batch; ordinary order/line objects live in the epoch, while stock/revenue/customer arrays stay on heap. At 1M, scoped direct epoch is `160.198 ms`, checked stream epoch is `174.137 ms`, improved SafeZone is `186.122 ms`, trusted Streaming is `219.668 ms`, and heap is `225.798 ms`. |
+| StreamFlex checked TransactionRegion integration | Superseded for this shape; still useful as multi-list control | Compile, compiler/runtime safety, smoke, 200k/1M-shape throughput, and latency rows | `StreamFlexRegionMatrix` accepts `rift-checked-transaction-region` and `rift-checked-safezone-transaction-region` in addition to EpochBuffer controls. `TransactionRegion` reduces checked Rift opens/closes compared with stacked EpochBuffer and keeps one child region per transaction, but the direct checked epoch row is now faster on this benchmark because the stage objects can be consumed as ordinary epoch-local linked lists. |
 | Final component selection and default-run pruning | Started | Syntax-validated runner/script update, dirty-worktree smoke validation, and clean headline medians | `docs/FINAL_COMPONENT_SELECTION.md` now defines public candidates, internal controls, and gated/rejected operators. The parent performance runner plus the main sandbox matrix scripts now exclude current SafeZone and rootless/unsafe controls by default. Set `RIFT_EVAL_INCLUDE_CONTROLS=1`, `RIFT_BENCH_INCLUDE_CONTROLS=1`, or explicit `*_MODES` variables to reproduce lower-bound/control rows. Run `2026-05-06-final-selection-smoke` validated the default path. Clean run `2026-05-06-final-selection-headline` then completed `preflight core prior checked streams reml` with `include_controls=0`; see `evidence/FINAL_SELECTION_HEADLINE_2026_05_06.md`. Key rows: checked scoped page-token q1/q2 Common Crawl-shaped `3860.248/3895.711 ms` vs heap `5619.896/5429.530 ms`; checked page-token GH Archive-shaped q1/q2 `262.139/261.762 ms` vs heap `293.716/279.743 ms`; checked ListOfLists builder `6053.235 ms` vs heap `15820.172 ms`; checked stream ReML-shaped `msort-r` `103.878 ms` vs heap `127.936 ms`. |
 | Phase 9: Lean mechanization | Open | No data | None |
 | Phase 10: writing | Not started beyond notes | No data | None |
@@ -1385,7 +1432,7 @@ artifacts are available or reproduced.
 |---|---|---|---|
 | Broom dataflow vertices | SELECT/AGGREGATE/JOIN over ordinary epoch-local Scala objects | Post-counter-fix 10 x 100k medians show HPZone ahead of heap and improved SafeZone on SELECT, AGGREGATE, and JOIN; checked `rift-checked` modes are now fastest in local SELECT, AGGREGATE, and JOIN medians. Broom-scale 40 x 500k is still single-run. | Methodology reproduction, not exact Naiad/Broom. |
 | StreamFlex stream latency | Throughput and per-event latency/deadline-miss workloads | Pressure rerun shows Rift throughput around `330 ms` vs heap `634 ms`; Streaming has zero deadline misses in that run. | Does not run StreamIt/Ovm kernels or model scheduler/queueing delay. |
-| Yak control/data split | Wordcount, graphstep, grouped sort, top-word/filter, GraphChi-style subintervals, and promotion/escape epoch workloads with durable heap control state | No-escape pressure rerun shows raw Rift and `yak-runtime` both beat heap and remove measured heap GC. Grouped sort gives a modest HPZone-vs-heap win (`227.393 ms` vs `237.354 ms`) with little heap GC. Top-word/filter is stronger: Streaming is `262.980 ms` vs heap `311.527 ms` and improved SafeZone `271.273 ms`. GraphChi-style subintervals show Streaming at `236.388 ms` vs heap `302.599 ms`, but improved SafeZone remains faster at `228.252 ms`. The corrected runtime-promotion proxy records 10M barrier checks, 10k remembered refs, and 20k promoted objects, but Yak-runtime is slower than heap: `513.465 ms` vs `424.768 ms`. | Not distributed Yak; sort/topword/graphchi are local Hyracks/Hadoop/GraphChi-shaped methodology probes, and promotion is a memory-API-level proxy with object-specific `RuntimePromoter`, not real JVM field barriers, stack scanning, STW coordination, or generic object movement. |
+| Yak control/data split | Wordcount, graphstep, grouped sort, top-word/filter, GraphChi-style subintervals, promotion/escape epoch workloads, and SNAP `graphreal` replay with durable heap control state | No-escape pressure rerun shows raw Rift and `yak-runtime` both beat heap and remove measured heap GC. Grouped sort now has a checked direct-epoch array row: `checked-epoch-stream` `230.000 ms` and `checked-epoch-scoped` `230.799 ms` versus heap `235.554 ms` and improved SafeZone `233.068 ms`; the older trusted HPZone row remains `227.393 ms`. Top-word/filter and GraphChi-style rows are now also covered by the reusable `RiftRegion.epoch` API: at 10M logical objects, `checked-epoch-scoped` is fastest among measured rows for wordcount (`164.825 ms`), graphstep (`181.341 ms`), topword (`239.507 ms`), and graphchi (`195.816 ms`), while heap spends `46-56 ms` in timed GC. The corrected runtime-promotion proxy records 10M barrier checks, 10k remembered refs, and 20k promoted objects, but Yak-runtime is slower than heap: `513.465 ms` vs `424.768 ms`. The real LiveJournal `graphreal` topology row is now the best Yak-shaped signal: the apples-to-apples API-backed 50M rerun has `checked-epoch-scoped` `1055.958 ms` and `checked-epoch-stream` `1101.001 ms` versus `gc-heap` `1604.811 ms` with `288.801 ms` timed GC, and region RSS around `1.53 GB` versus heap `2.76 GB`. Whole-run checked scoped is faster in the older topology table but high-RSS; page-token checked remains a win but is not the right Yak topology. Reusable `EpochBuffer` integrates with this path but is slower than direct checked epoch. | Not distributed Yak; sort/topword/graphchi/graphreal are local Hyracks/Hadoop/GraphChi-shaped methodology probes, and promotion is a memory-API-level proxy with object-specific `RuntimePromoter`, not real JVM field barriers, stack scanning, STW coordination, or generic object movement. Sort is now covered by checked region-captured arrays but remains CPU-bound. |
 | Stancu transaction accounting | Warehouse transaction-shaped object graph with durable heap state | Boundary sweep confirms a Rift-vs-heap win only when transaction regions are coarse enough: at 200k transactions, 64 tx/region gives Streaming `38.844 ms` vs heap `43.189 ms`. | Not SPECjbb2005 or static analysis; SafeZone remains faster. |
 | NEXMark-lite / Beam-default streaming | Deterministic auction stream with Q0 passthrough, Q1 currency conversion, Q2 selection, Q3 incremental join/filter, Q4 category average, Q5 hot-items window, Q8 new-user/new-auction window join, Q9 winning-bid core, and Q11 session windows | Local 1M medians show Q1 checked `374.767 ms` vs heap `384.595 ms`, Q2 checked `287.808 ms` vs heap `297.053 ms`, and generic Q8 checked `291.832 ms` vs heap `322.210 ms`. Beam-default Q0 is a trusted-runtime win, Q1 remains promising, Q3 is the best new checked row (`287.169 ms` checked vs heap `304.190 ms` and improved SafeZone `293.586 ms`), Q8 is a modest checked win, and Q11 is a trusted HPZone win. Q2/Q4/Q9 are ceiling or improved-SafeZone-favored controls. | Local methodology benchmark and Beam-default generated profile, not exact Apache Beam runner evidence. |
 | Common Crawl WET tokenization | Generated and real preloaded page/line/token streams with bucket-owned ordinary Scala records | Corrected generated 100k default tokenization stresses heap (`149.149 ms` GC, `408305664` RSS bytes), but improved SafeZone is fastest in that older row (`381.006 ms` vs Streaming `403.935 ms`). After the Rift fast-allocation counter cleanup, generated 1M q1/q2 become trusted-Rift wins: q1 HPZone `4386.590 ms` vs heap `5466.535 ms` and improved-32k `4608.641 ms`; q2 Streaming `4164.288 ms` vs heap `5267.784 ms` and improved-32k `4425.273 ms`. Checked q1/q2 validate safe record placement and beat heap in the RSS-complete rerun, but miss improved-SafeZone/trusted gates. Real WET preloaded rows are heap-fastest with median-zero timed GC: 10k pages heap `12.079 ms` vs Streaming `15.651 ms`; 50k requested / 21425 actual pages heap `26.452 ms` vs Streaming `33.103 ms`. | Real preloaded WET does not clear the case-study gate; generated q1/q2 are trusted runtime wins; checked q1/q2 are checked-overhead evidence. |
@@ -2838,6 +2885,22 @@ Status:
   template-token/session-candidate region placement and cuts RSS from
   `290242560` to about `236.9 MB`, but checked scoped is slightly slower
   (`8722.008 ms` vs heap `8683.558 ms`) and heap GC remains under 1% elapsed.
+- A larger LogHub / LogPAI HDFS v1 system-log input is now downloaded and
+  measured. The extracted file has `11175629` lines and lives at
+  `/Users/siyaoliu/rift/cache/benchmark-data/loghub/HDFS_1/HDFS.log`; archive
+  SHA-256 is
+  `6ca6c5bc2671c66afecee9369a2fdac606bf33997a2494ac66aa411fe3e95169`.
+  At 1M, q1 heap is `8059.155 ms`, median/max GC `139.906/191.623 ms`, RSS
+  `408551424`; checked scoped page-token is `7923.079 ms`, zero timed GC, RSS
+  `356319232`, and improved SafeZone-32k is `7919.352 ms`. q2 is the strongest
+  checked LogHub row so far: heap `8227.369 ms`, median/max GC
+  `92.659/104.790 ms`, RSS `408666112`; checked scoped page-token
+  `7871.856 ms`, zero timed GC, RSS `394969088`; trusted Streaming
+  `7871.713 ms`, zero timed GC, RSS `356073472`. q3 cuts RSS but checked
+  elapsed loses slightly (`8506.708 ms` vs heap `8460.928 ms`). Interpretation:
+  HDFS is a real-input modest checked throughput/RSS/GC-tail win, especially
+  q2, but not a flagship GC-heavy case because parser/token/template CPU
+  dominates and heap GC is still only about 1% of elapsed.
 - The real-input benchmark search now has its own ledger:
   `evidence/REAL_INPUT_BENCHMARK_SEARCH.md`. DSPBench is the first family
   because it is a public DSPS benchmark with varied stream applications and
@@ -2866,6 +2929,12 @@ Status:
   wired: MHEALTH provides `1215745` real sensor rows, but 1M q1/q2 have zero
   timed heap GC and only near-tie/small-SafeZone-win elapsed results, so
   MHEALTH is parked as a provenance-clean ceiling/control row.
+  Theodolite source has also been cloned and inspected at
+  `/Users/siyaoliu/rift/cache/benchmark-data/theodolite/source`; UC2/UC4 are
+  relevant industrial-IoT stream shapes, but the checked source provides
+  simulated active-power load generation rather than a static real input
+  dataset, so Theodolite remains methodology evidence unless paired with a
+  real industrial-energy trace.
 - The append-window result does not justify returning to DEBS Q1 ranking.
   TableRank remains gated out. The first DEBS integration of the passing
   cursor-close shape now exists for checked Q1 event-window entries and

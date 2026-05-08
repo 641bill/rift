@@ -1,7 +1,7 @@
 # Rift Memory Mode Taxonomy
 
 Date: 2026-05-03
-Last updated: 2026-05-05 15:07:01 CEST
+Last updated: 2026-05-08 17:52 CEST
 
 Status: canonical reporting-name contract for future reports and benchmark
 tables. Older benchmark labels and code symbols remain accepted as aliases
@@ -13,6 +13,11 @@ Mode names should expose two separate axes:
 
 1. safety surface: GC heap, SafeZone, trusted Rift, or checked Rift;
 2. runtime backend: Immix, SafeZone root strategy, Rift HP, or Rift Streaming.
+
+Result tables should expose a third axis separately when it affects the row:
+logical lifetime topology or operator shape. Examples are whole-run region,
+epoch region, window/page-token append, transaction region, region list, or
+rank/table structure. Do not hide topology inside backend names.
 
 Avoid names such as `UnsafeZone-HP` in new prose. They hide the mechanism and
 make unsafe lower-bound rows sound like a user-facing system.
@@ -36,6 +41,30 @@ programming model and backend without exposing old implementation labels.
 The project name remains Rift, but the descriptive system concept for
 presentation is **checked stream regions**: safe APIs and reusable operators on
 top of a choice of region backends.
+
+## Topology Names
+
+Use these in a separate `Topology/operator` column when a benchmark has several
+checked shapes over the same backend:
+
+| Topology/operator name | Meaning |
+|---|---|
+| `whole-run` | One region for the full timed computation. Safe when captures do not escape, but it gives up intermediate reclaim and can have heap-like RSS. |
+| `epoch` | One region per batch/epoch, closed or reset at the epoch boundary. This is the right shape for Yak-style control/data splits. |
+| `window` | Region lifetime follows a sliding/tumbling window or child bucket. |
+| `page-token` | Operator-owned page/event/bucket append path; fastest when data naturally belongs to page/window buckets, not a universal checked topology. |
+| `transaction` | Batch of operations committed/exported at a transaction boundary. |
+| `region-list` | Linked object topology where a whole list/list-of-lists region dies together. |
+
+User-facing design target:
+
+```scala
+Rift.stream {
+  epoch { /* epoch-local data */ }
+  window(...) { /* window-local data */ }
+  page { /* page or record-group-local data */ }
+}
+```
 
 ## Implementation Labels And Aliases
 
@@ -78,6 +107,7 @@ Use the reporting names above in rollups unless quoting raw output.
 | Flat region-friendly layout | `region-hp-rootless` | Rift slab/bump path wins on favorable topology. |
 | Focused append-window checked backend | `checked-region-scoped` | Backend mechanics help when the operator is simple. |
 | Focused page/event append | `checked-page-token` | Operator ownership removes per-record checks/lookups. |
+| Yak-style real graph replay | `checked-region-scoped` or `checked-region-stream` with `epoch` topology | The 50M LiveJournal topology/API-backed runs show epoch checked rows beat heap strongly while preserving low RSS; page-token is slower because Yak is not page/window-shaped. `RiftRegion.epoch { ... }` is now the reusable checked API for this direct linked-epoch topology and also covers local Yak-shaped `wordcount`, `graphstep`, `topword`, and `graphchi`; `EpochBuffer` is correct but slower. |
 | Generated Common Crawl WET-shaped q1/q2 | `region-hp-rootless`, `region-stream-rootless`, and `checked-page-token` | Strongest trusted and checked generated GC-heavy stream evidence. |
 | Dataflow SELECT staged probe | `checked-page-token` over scoped backend | First cheap SELECT/filter/project family row; clean medians pending. |
 | Checked Common Crawl-like q1/q2 | `checked-page-token` over scoped backend | First checked generated application-gate pass; real-input proof remains open. |

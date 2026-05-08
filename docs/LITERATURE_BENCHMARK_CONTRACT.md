@@ -1,7 +1,7 @@
 # Rift Literature Benchmark Contract
 
 Date: 2026-04-25
-Last updated: 2026-05-06 13:30 CEST
+Last updated: 2026-05-08 21:20 CEST
 
 Status: extracted from local PDFs under `docs/literature/`. The PDFs are local
 research references and are not committed as project source unless explicitly
@@ -36,7 +36,7 @@ The standard for new benchmarks is:
 | Yak | GraphChi connected components, community detection, PageRank | One node; Sampletwitter-2010, 100M edges, 62M vertices; epochs around sub-intervals. | Overall normalized runtime 0.70-0.86; GC time 0.15-0.56. | Started locally with a subinterval edge-update workload: durable vertex values stay on heap and per-subinterval edge-update objects live in regions. |
 | StreamFlex | StreamIt BeamFormer and FilterBank | Ovm and HotSpot Java baselines; 10,000 iterations. | StreamFlex reported substantially lower run time than Java baselines on those stream kernels. | Started locally with a StreamFlex-style throughput/latency matrix over ordinary Scala packet/event objects. Still not exact BeamFormer/FilterBank. |
 | StreamFlex | IDS and event-correlation latency | Periodic stream processing; deadline miss and per-item latency measurements. | StreamFlex avoids large GC-induced deadline misses in the reported event-correlation case. | Started locally: collect per-event latency distributions, max-pause proxies, and deadline misses for heap/SafeZone/Rift modes. |
-| Stancu et al. | SPECjbb2005 transaction regions | 7 annotations; each warehouse 100k iterations; young gen varied 1MB-256MB. | About 77%-78% memory region-freed; up to 22% speedup at small young gen; fewer young collections. | Started locally with a transaction-shaped accounting probe. Initial per-transaction regions lost; batching 64 transactions per region plus lower-overhead Rift counters gives a Rift-vs-heap win, but SafeZone remains faster. |
+| Stancu et al. | SPECjbb2005 transaction regions | 7 annotations; each warehouse 100k iterations; young gen varied 1MB-256MB. | About 77%-78% memory region-freed; up to 22% speedup at small young gen; fewer young collections. | Started locally with a transaction-shaped accounting probe. Direct checked epoch now gives a checked-region win on that local probe. The stronger planned target is a SPECjbb2005-workload Scala Native port, tracked in `docs/STANCU_SPECJBB2005_PORT_PLAN.md`; it is not an official SPEC run. |
 
 ## Immediate Reproduction Order
 
@@ -165,3 +165,6 @@ Every benchmark result intended for comparison should include:
   a local accounting probe, but it does not yet have compiler-produced
   annotation counts, region-freed byte accounting, or safe API rejection
   reports.
+- The official SPECjbb2005 artifact is JVM-based. A Scala Native result must
+  be reported as a workload port or methodology reproduction unless an official
+  JVM artifact is run separately as a control.

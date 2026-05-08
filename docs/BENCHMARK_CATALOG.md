@@ -1,7 +1,7 @@
 # Rift Benchmark Catalog
 
 Date: 2026-05-05
-Last updated: 2026-05-08 10:04 CEST
+Last updated: 2026-05-08 21:20 CEST
 
 Status: working benchmark guide. Use this document to understand what each
 benchmark is meant to test before reading the detailed result files in
@@ -20,7 +20,7 @@ should not be collapsed into a single "Rift is faster/slower" statement.
 | MLKit/ReML lineage | Does Rift address classic safe region+GC workloads with higher-order and polymorphic code? | ReML paper table, `ReMLRegionMatrix` Tier 1 ports |
 | Checked operator | Is a reusable safe API cheap enough for application use? | ObjectAllocationLowering, CheckedRegionBuffer, PageToken, AppendWindow, WindowFold, TableRank |
 | Generated stream stressor | Does a realistic stream shape create enough heap pressure to show a memory-management win? | Common Crawl WET-shaped, NEXMark Beam-default |
-| Real-input stream control | Does a public/real input preserve the same memory pressure? | real WET/WAT, GH Archive, LogHub, Wikimedia, Linear Road |
+| Real-input stream control | Does a public/real input preserve the same memory pressure? | Yak `graphreal`, real WET/WAT, GH Archive, LogHub, Wikimedia, Linear Road |
 | Ceiling/negative | Does the workload prove heap/CPU/I/O dominates? | pipeline surrogate, real WET/WAT median-GC-zero rows |
 
 Headline claims should use the canonical memory-mode names from
@@ -77,8 +77,8 @@ so it is layout evidence, not a pure allocator comparison.
 |---|---|---|---|
 | Dataflow SELECT/AGGREGATE/JOIN | Broom-style dataflow | Stream operators with short-lived tuples and operator-local lifetimes. | Good prior-work-shaped runtime evidence; SafeZone-family rows are often strong. |
 | StreamFlex matrix | StreamFlex-style memory pressure/latency | Windowed stream pressure and latency-style measurements. | Methodology evidence, not exact artifact reproduction. |
-| Yak matrix | Yak-style epochs and promotion pressure | Topword/filter, GraphChi-like intervals, grouped sort, escape/promotion proxies. | Useful to compare static checked regions against dynamic region/promotion ideas. |
-| Stancu matrix | RegionScope/static hybrid analysis | Transaction/region-boundary style workloads. | Safety/methodology anchor; not full SPECjbb reproduction. |
+| Yak matrix | Yak-style epochs and promotion pressure | Topword/filter, GraphChi-like intervals, grouped sort, escape/promotion proxies, and `graphreal` over real SNAP edge lists. The LiveJournal topology follow-up separately measures whole-run checked regions, per-epoch checked regions, and page-token checked regions. | Useful to compare static checked regions against dynamic region/promotion ideas and to choose a region topology. `graphreal` is real-input Yak-shaped evidence, not exact Yak/GraphChi reproduction. |
+| Stancu matrix | RegionScope/static hybrid analysis | Transaction/region-boundary style workloads. | Safety/methodology anchor; not full SPECjbb reproduction. The stronger planned target is a documented SPECjbb2005-workload Scala Native port in `docs/STANCU_SPECJBB2005_PORT_PLAN.md`. |
 | ReML / MLKit lineage | Elsman 2023 / MLKit typed-region lineage | Paper-reported benchmark table plus local Scala Native-shaped ports for classic SML benchmark programs. | New comparison axis for region polymorphism and GC-safety; not stream evidence and not exact ReML reproduction yet. |
 
 These rows are intentionally labeled as methodology reproductions unless the
@@ -134,7 +134,7 @@ operators and gates.
 | Common Crawl WET-shaped | Generated WET-like pages/lines/tokens | Strongest GC-heavy stream stressor: heap spends about `1.55-1.59 s` in timed GC at 1M generated pages; trusted and page-token checked rows win. This is not real Common Crawl input proof. |
 | Real Common Crawl WET/WAT | Public preloaded WET/WAT shards | Current shards have median timed GC of zero. Page-token rows work and win modestly on WAT, but these are ceiling/control rows. |
 | GH Archive | Real hourly NDJSON GitHub event files | Strongest current real-input modest-win candidate, but not GC-heavy proof. Uncapped preloaded heap wins median by growing to about `1.7 GiB`; under a 1G heap cap, checked SafeZone-backed q1 wins. Legacy string-parser file-backed q1/q2 rows give RSS/fixed-memory wins but are parser/string dominated. The new byte-slice file-backed parser reuses line buffers and extracts JSON fields from raw UTF-8 bytes; at two hourly files / 200k events it makes q1/q2 modest region throughput/RSS/tail wins and removes timed GC from region rows, but heap GC is only about `1.5-1.6%` of elapsed. |
-| LogHub / LogPAI BGL | Real file-backed BGL system log | Real log matrix with q1 tokens, q2 window counts, and q3 template/session mining. At 1M real lines, heap q1/q2 spends `99-157 ms` in GC inside roughly `5.6 s`; region rows remove timed GC and several rows modestly improve throughput/RSS. Full-file q2 loads `4747963` lines and heap spends `595.599 ms` in GC inside `32.161 s`, while checked scoped page-token is faster and lower-RSS. The richer q3 template/session row cuts RSS from `290 MB` to about `237 MB`, but checked scoped is slightly slower and heap GC is under 1% elapsed. Useful real-input modest-win/fixed-memory control, not the missing huge-GC flagship. |
+| LogHub / LogPAI BGL and HDFS v1 | Real file-backed system logs | Real log matrix with q1 tokens, q2 window counts, and q3 template/session mining. BGL q1/q2 and full-file q2 are modest throughput/RSS/tail controls. HDFS v1 adds an 11.2M-line Hadoop log; its 1M q2 row is the strongest checked log row so far: checked scoped page-token `7871.856 ms` vs heap `8227.369 ms`, removing heap's `92.659 ms` median GC and lowering RSS. Still not the missing huge-GC flagship because heap GC is only about 1-2% of elapsed. |
 | DSPBench Spike/Fraud/Log Processing | Public DSPS benchmark source and bundled real sample files | `DSPBENCH_REGION_MATRIX.md` now includes local single-process Spike, Fraud, and Log rows. Spike is modest/control only. Fraud q2 and Log q2 are the useful real-input regression rows. After open allocation, Fraud q2 checked scoped page-token is `797.782 ms` vs heap `806.697 ms` and RSS about `279 MB` vs heap `358 MB`; trusted Streaming remains fastest at `778.975 ms`. Log q2 checked scoped page-token is fastest in its 1M matrix (`1733.654 ms` vs heap `1750.291 ms`) and cuts max GC from `88.210 ms` to `18.584 ms`, but region RSS is higher. Both are modest/control evidence, not final checked application proof. |
 | Wikimedia | Real/generated TSV/clickstream-style rows | Mostly heap or improved SafeZone wins with low median GC; parked as ceiling/regression control. |
 | Linear Road | Official/generated position-report methodology | Useful latency/window methodology, but current rows are not GC-heavy enough for a Rift case study. |
@@ -169,10 +169,12 @@ record-oriented and can be processed as an event/page/window stream:
 | GH Archive | hourly real GitHub events, JSON/NDJSON | file-backed byte-slice parse/project fields, repo/window counts, heap-capped tails, parser/string-scratch controls |
 | LogHub / LogPAI system logs | real HDFS/BGL/Spark/Thunderbird/etc. log lines | BGL is wired and measured; parse log records, tokenize fields/templates, window/session/block counts |
 | Larger/multiple Common Crawl WET/WAT shards | public WET/WAT archive records | page/token/link object materialization and domain/window counts |
+| Theodolite plus real industrial energy data | Theodolite UC2/UC4 methodology plus a real public power-meter trace | downsampling or hierarchical aggregation over real active-power measurements |
 | GDELT events | public event files | parse/project event fields and windowed country/topic counts |
 | Public web/server/security logs | Apache/NASA-style logs or JSON security events | tokenize fields, filter/project, per-window counts |
 | DSPBench local kernels | source benchmark workloads | choose kernels with clear epoch/window lifetimes and high object churn |
 | MLKit/ReML source benchmarks | real prior-system benchmark programs | non-stream region+GC comparison by elapsed/RSS/GC count |
+| SPECjbb2005 workload port | licensed SPECjbb2005 source/workload if obtained, or a documented Scala Native port of the transaction core | Stancu/SPECjbb2005 methodology comparison by elapsed, GC time/count, RSS, heap-cap behavior, region-freed fraction, and annotation/API-boundary count |
 
 ## 7. What Has Not Been Proven Yet
 
@@ -185,7 +187,7 @@ The nearest candidates are:
 1. DSPBench local kernels: Spike/Fraud/Log q0/q1/q2 are implemented. Fraud q2
    and Log q2 are regression rows; continue only with richer DSPBench kernels
    or larger provenance-clean inputs.
-2. Theodolite-style IoT input or larger machine/security traces. RIoTBench/MHEALTH is now wired but parked as zero-GC ceiling evidence.
+2. Theodolite-style IoT input paired with real industrial-energy data, or larger machine/security traces. RIoTBench/MHEALTH is now wired but parked as zero-GC ceiling evidence; Theodolite source is cloned but its official load generator is simulated input.
 3. More LogHub / LogPAI variants only if they materialize richer per-line
    objects than the current BGL line/token/window path.
 4. Larger or multiple real Common Crawl WET/WAT shards.

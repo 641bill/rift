@@ -1,10 +1,51 @@
 # Rift Evaluation Summary Tables
 
 Date: 2026-05-01
-Last updated: 2026-05-08 10:04 CEST
+Last updated: 2026-05-08 21:07 CEST
 
 Status: seeded summary pack for the comprehensive evaluation. Rows below are
 current checked-in evidence unless marked pending rerun.
+
+## Reusable Direct Epoch Dataflow Rerun: 2026-05-08
+
+Source: `evidence/DATAFLOW_REGION_MATRIX.md`
+
+| Area | Main result | Interpretation |
+|---|---|---|
+| Dataflow SELECT | checked scoped page-token `19.010 ms`; direct `checked-epoch-scoped` `19.318 ms`; heap `26.996 ms`; improved SafeZone `23.339 ms` | page-token remains the fastest SELECT-only operator, but direct epoch is nearly tied and generalizes to all three Dataflow operators |
+| Dataflow AGGREGATE | direct `checked-epoch-scoped` `36.016 ms`, `checked-epoch-stream` `39.926 ms`, improved SafeZone `44.737 ms`, heap `52.754 ms`, generic `checked-epoch-fold` `93.491 ms` | reusable direct epoch is now the right checked topology; generic `EpochFold` remains speed-gated |
+| Dataflow JOIN | direct `checked-epoch-scoped` `20.082 ms`, `checked-epoch-stream` `21.307 ms`, improved SafeZone `24.136 ms`, heap `31.281 ms` | direct epoch removes heap GC and beats both heap and the rooted SafeZone baseline in this run |
+| Dataflow conclusion | `RiftRegion.epoch { ... }` now covers Broom/Dataflow-style SELECT/AGGREGATE/JOIN after the Yak/LiveJournal win | apply reusable epoch topology to other epoch-shaped benchmarks before designing new operator families |
+
+## Checked Direct Epoch Sort Rerun: 2026-05-08
+
+Source: `evidence/YAK_REGION_MATRIX.md`
+
+| Area | Main result | Interpretation |
+|---|---|---|
+| Yak grouped sort | checked stream epoch `230.000 ms`, checked scoped epoch `230.799 ms`, trusted streaming `231.458 ms`, improved SafeZone `233.068 ms`, heap `235.554 ms` | checked direct epoch now covers the region-captured array topology; modest win because sort CPU dominates and heap GC is only `3.333 ms` |
+| Safety/topology | checked rows allocate `Array[SortRecord^{epoch}]^{epoch}` plus region-owned `SortRecord` objects | closes the previous Yak `sort` gap without using a heap-array fallback |
+
+## StreamFlex Direct Epoch Rerun: 2026-05-08
+
+Source: `evidence/STREAMFLEX_REGION_MATRIX.md`
+
+| Area | Main result | Interpretation |
+|---|---|---|
+| StreamFlex 200k throughput | scoped direct epoch `32.029 ms`, direct epoch `34.874 ms`, scoped `TransactionRegion` `41.173 ms`, heap `46.737 ms`, improved SafeZone `59.703 ms` | direct `RiftRegion.epoch` supersedes `TransactionRegion` for this batch-shaped stream pipeline |
+| StreamFlex 10k latency | scoped direct epoch `9.636 ms`, trusted Streaming `9.901 ms`, direct epoch `10.692 ms`, heap `11.219 ms`; no deadline misses for direct checked rows | direct epoch improves latency versus `TransactionRegion`; still local StreamFlex-methodology evidence, not exact Ovm/StreamFlex |
+| StreamFlex 1M throughput | scoped direct epoch `163.339 ms`, trusted Streaming `182.246 ms`, direct epoch `185.550 ms`, improved SafeZone `208.653 ms`, heap `218.582 ms`, scoped `TransactionRegion` `205.929 ms` | same topology now gives a representative checked StreamFlex-shaped throughput win; RSS stays near `8.1 MB` for all rows |
+| StreamFlex conclusion | one checked epoch block with ordinary linked Scala objects is faster than stacked `EpochBuffer`s or `TransactionRegion` here | apply direct epoch to epoch-shaped workloads first; reserve specialized operators for shapes direct linked epoch cannot express |
+
+## Stancu Direct Epoch Rerun: 2026-05-08
+
+Source: `evidence/STANCU_REGION_MATRIX.md`
+
+| Area | Main result | Interpretation |
+|---|---|---|
+| Stancu 200k transaction boundary | scoped direct epoch `31.638 ms`, direct epoch `35.196 ms`, improved SafeZone `37.468 ms`, trusted Streaming `44.880 ms`, heap `45.211 ms` | checked direct epoch turns the Stancu-shaped row into a checked win rather than only a trusted/SafeZone-family win |
+| Stancu 1M transaction boundary | scoped direct epoch `160.198 ms`, direct epoch `174.137 ms`, improved SafeZone `186.122 ms`, trusted Streaming `219.668 ms`, heap `225.798 ms` | transaction line/order objects are a good fit for coarse checked epoch regions; durable accounting arrays stay heap control metadata |
+| Stancu conclusion | direct checked epoch now beats heap and improved SafeZone on the local Stancu-style accounting shape | this is still a local methodology probe, not exact Stancu/SPECjbb2005 reproduction |
 
 ## Post Fast-Path Selected Sweep: 2026-05-07
 
@@ -122,6 +163,91 @@ Source rows:
 |---|---|---|
 | RIoTBench MHEALTH q1 clean/annotate | heap `117.977 ms`, trusted Streaming `119.077 ms`, improved SafeZone `121.024 ms`; all rows median/max GC `0.000 ms` | provenance-clean real IoT sensor row, but not GC-heavy; park as ceiling/control |
 | RIoTBench MHEALTH q2 window stats | improved SafeZone `107.194 ms`, heap `109.589 ms`, trusted Streaming `110.760 ms`; all rows median/max GC `0.000 ms` | small SafeZone throughput win, but zero heap GC means it does not justify region tuning |
+
+## LogHub HDFS v1 Real-Input Follow-Up: 2026-05-08
+
+Source rows:
+
+- `/tmp/loghub-hdfs-smoke/summary.tsv`
+- `cache/loghub-hdfs-1m-2026-05-08/summary.tsv`
+
+| Area | Main result | Interpretation |
+|---|---|---|
+| HDFS q1 tokens | safezone-improved-32k `7919.352 ms`, checked scoped page-token `7923.079 ms`, heap `8059.155 ms`; heap GC `139.906 ms`, RSS `408551424` vs region RSS about `356 MB` | modest real-input throughput/RSS/GC win; checked scoped is competitive with the best region row |
+| HDFS q2 window counts | trusted Streaming `7871.713 ms`, checked scoped page-token `7871.856 ms`, heap `8227.369 ms`; heap GC `92.659 ms`, RSS `408666112` | best HDFS row: checked scoped page-token beats heap by about 4.3%, removes timed GC, and lowers RSS |
+| HDFS q3 template/session | safezone-improved-32k `8360.487 ms`, heap `8460.928 ms`, checked scoped page-token `8506.708 ms`; heap GC `81.910 ms`, region RSS about `319 MB` vs heap `408 MB` | useful RSS/GC-tail row, but checked scoped loses elapsed; not a flagship GC-heavy result |
+
+HDFS q2 is also the clearest reminder that timed GC is not total memory cost.
+The checked scoped page-token row is about `355 ms` faster than heap, while
+heap timed GC is only `92.659 ms`. The rest of the gap should be interpreted
+as mutator-side memory behavior: allocation-path work, heap growth/metadata,
+RSS/cache locality, object lifetime placement, and operator append/close
+bookkeeping. Headline tables should therefore keep elapsed, timed GC, RSS, and
+diagnostic allocation/append/close attribution separate.
+
+## Yak Real-Input Graph Replay: 2026-05-08
+
+Source rows:
+
+- `cache/yak-graphreal-smoke-2026-05-08/summary.tsv`
+- `cache/yak-graphreal-twitter-1m-2026-05-08/summary.tsv`
+
+Input:
+`cache/benchmark-data/yak/snap/twitter_combined.txt.gz`, the SNAP Twitter ego
+combined edge list. Vertex IDs are mapped into the configured `100000`-vertex
+control array, so this is a local Yak-shaped graph replay, not exact Yak or
+GraphChi artifact evidence.
+
+| Area | Main result | Interpretation |
+|---|---|---|
+| 20k smoke | `gc-heap`, `region-scoped-rooted`, and `region-stream-rootless` checksums matched; `region-stream-rootless` `0.821 ms` vs `gc-heap` `1.643 ms` | path correctness and real edge parsing validated on a tiny slice |
+| 1M `graphreal` | `region-scoped-rooted` `23.919 ms`, `region-stream-rootless` `24.315 ms`, `region-hp-rootless` `24.383 ms`, `yak-runtime-proxy` internal control `27.566 ms`, `gc-heap` `31.202 ms` | first real-input Yak-shaped region win; region rows remove heap timed GC and cut RSS |
+| Memory/GC signal | `gc-heap` median GC `5.267 ms`, RSS `74792960`; region rows GC `0.000 ms`, RSS about `42.2 MB` | materially stronger timed-GC share than recent real-log rows, but still small absolute scale |
+| 2M `graphreal` follow-up | `region-scoped-rooted` `47.967 ms`, `region-hp-rootless` `48.474 ms`, `region-stream-rootless` `49.557 ms`, `gc-heap` `63.454 ms` | throughput/RSS direction holds; `gc-heap` RSS rises to `172523520` while region rows stay about `65 MB` |
+| 2M GC/tail signal | `gc-heap` median GC `0.000 ms`, max observed heap run GC `16.857 ms`; region rows GC `0.000 ms` | 2M is a throughput/RSS/tail row, not a median-GC-heavy row |
+
+## Yak LiveJournal Real-Input Graph Replay: 2026-05-08
+
+Source rows:
+
+- `cache/yak-graphreal-livejournal-5m-2026-05-08/summary.tsv`
+- `cache/yak-graphreal-livejournal-10m-2026-05-08/summary.tsv`
+- `cache/yak-checked-livejournal-5m-2026-05-08/summary.tsv`
+- `cache/yak-checked-livejournal-10m-2026-05-08/summary.tsv`
+- `cache/yak-checked-livejournal-50m-2026-05-08/summary.tsv`
+- `cache/yak-topology-livejournal-10m-2026-05-08/summary.tsv`
+- `cache/yak-topology-livejournal-50m-2026-05-08/summary.tsv`
+- `cache/yak-epoch-buffer-livejournal-10m-2026-05-08/summary.tsv`
+- `cache/yak-epoch-buffer-livejournal-50m-2026-05-08/summary.tsv`
+- `cache/yak-epoch-api-livejournal-10m-2026-05-08/summary.tsv`
+
+Input: SNAP LiveJournal graph,
+`cache/benchmark-data/yak/snap/soc-LiveJournal1.txt.gz`, `68993777`
+edge-list lines.
+
+| Area | Main result | Interpretation |
+|---|---|---|
+| 5M `graphreal` | `region-stream-rootless` `130.716 ms`, `region-scoped-rooted` `139.264 ms`, `checked-region-scoped` `146.845 ms`, `checked-region-stream` `150.667 ms`, `gc-heap` `173.832 ms` | trusted/rooted and checked region rows all beat `gc-heap`; checked scoped is about 15.5% faster than heap |
+| 5M memory/GC | `gc-heap` GC `33.456 ms`, RSS `322699264`; region rows GC `0.000 ms`, RSS about `190 MB` | region rows remove timed GC and cut about `132 MB` RSS |
+| 10M `graphreal` | `region-scoped-rooted` `249.543 ms`, `region-stream-rootless` `257.299 ms`, `checked-region-scoped` `272.072 ms`, `checked-region-stream` `286.336 ms`, `gc-heap` `319.560 ms` | first checked page-token LiveJournal scale row; superseded by topology follow-up for final interpretation |
+| 10M memory/GC | `gc-heap` GC `51.987 ms`, RSS `605569024`; region rows GC `0.000 ms`, RSS about `328.6 MB` | region rows cut about `277 MB` RSS; checked rows keep the RSS benefit but still pay page-token bookkeeping over trusted/rooted rows |
+| 50M page-token `graphreal` | `region-scoped-rooted` `1262.347 ms`, `region-stream-rootless` `1401.406 ms`, `checked-region-scoped` `1436.514 ms`, `checked-region-stream` `1575.633 ms`, `gc-heap` `1743.673 ms` | longer page-token scale row; checked scoped page-token beats heap but is superseded by checked epoch topology |
+| 50M page-token memory/GC | `gc-heap` GC `307.992 ms`, RSS `2759245824`; region rows GC `0.000 ms`, RSS about `1.53 GB` | region rows cut about `1.23 GB` RSS; this is less dominated by sub-second benchmark noise |
+| 50M topology follow-up | `checked-whole-run-scoped` `1048.751 ms`, RSS `2977742848`; `checked-epoch-scoped` `1069.241 ms`, RSS `1534918656`; `checked-epoch-stream` `1113.261 ms`, RSS `1534705664`; `checked-page-token-scoped` `1403.878 ms` | checked epoch topology is the right low-RSS Yak shape; whole-run is faster but gives up epochal reclaim; page-token is safe but over-general here |
+| 50M topology memory/GC | topology `gc-heap` `1618.105 ms`, GC `273.410 ms`, RSS `2761261056`; per-epoch checked rows have zero timed GC and about `1.53 GB` RSS | topology rerun confirms the win and clarifies that users should choose epoch/page/window topology explicitly |
+| 50M reusable `EpochBuffer` follow-up | `checked-epoch-buffer-scoped` `1343.071 ms`, RSS `1534902272`; `checked-epoch-buffer-stream` `1462.975 ms`, RSS `1534738432`; same-rerun `gc-heap` `1514.313 ms`, GC `279.226 ms`, RSS `2761244672` | reusable checked epoch API beats heap and preserves low RSS, but trails benchmark-local linked epoch (`1022.643 ms` scoped); next implementation target is a linked-epoch lowering for the reusable API |
+| Checked `epoch` API smoke + 10M/50M reruns | 2 epochs x 1k SNAP Twitter edge updates; 10M and 50M LiveJournal edges | `RiftRegion.epoch { ... }` matched checksum across heap, direct checked epoch, and reusable `EpochBuffer` modes; compiler/runtime suites passed `123/123` and `55/55`. At 10M, API-backed checked epoch is `212.691/229.532 ms` scoped/stream versus heap `317.779 ms` and `EpochBuffer` `285.605/287.201 ms`. At 50M with the same 10 x 5M topology as the topology table, API-backed `checked-epoch-scoped` is `1055.958 ms`, `checked-epoch-stream` is `1101.001 ms`, and heap is `1604.811 ms` with `288.801 ms` GC. | reusable linked-epoch API implemented and confirmed at 10M/50M; direct epoch is the right reusable Yak topology, while `EpochBuffer` remains a slower generic abstraction |
+
+Decision: LiveJournal replaces Twitter ego as the top prior-work-shaped
+real-input ladder row. The first checked follow-up showed page-token also wins
+over `gc-heap`; the topology follow-up is stronger because it shows the
+epochal checked API shape directly. Do not call it exact Yak reproduction: it
+lacks Hyracks/Hadoop/GraphChi, distributed runtime behavior, and Yak's JVM
+dynamic region/promotion machinery. New Yak tables must include explicit
+backend and topology/operator columns because `checked-region-scoped` and
+`checked-region-stream` alone do not tell whether the row used whole-run,
+epoch, or page-token lifetimes. The next larger/adjacent candidates are SNAP
+Twitter-2010 if disk/time allow and StackOverflow text for top-word/filter.
 
 ## Staged Headline Sweep: 2026-05-06
 
@@ -393,6 +519,7 @@ trusted HPZone `4403.007 ms`; q2 `rift-checked` is `5061.479 ms` versus heap
 | StreamFlex pressure | throughput row | Streaming `46.108 ms`, HPZone `46.436 ms` | `42.712 ms` | `39.920 ms`; unsafezone-hp `39.591 ms` | SafeZone-family throughput win; Rift removes misses but loses elapsed | Clean UnsafeZone core/prior sweep |
 | Yak top-word/filter | local methodology | Streaming `68.959 ms`, HPZone `68.848 ms` | `70.370 ms` | `59.286 ms`; unsafezone-hp `58.686 ms` | SafeZone-family win | Clean UnsafeZone core/prior sweep |
 | Yak GraphChi-style | local methodology | Streaming `47.907 ms`, HPZone `47.554 ms` | `42.384 ms` | `35.456 ms`; unsafezone-hp `35.008 ms` | SafeZone-family win; Rift loses | Clean UnsafeZone core/prior sweep |
+| Yak `graphreal` | 50M replayed real SNAP LiveJournal edges | API-backed direct epoch: `checked-epoch-scoped` `1055.958 ms`, `checked-epoch-stream` `1101.001 ms`, RSS about `1.53 GB`; reusable `EpochBuffer` scoped `1361.752 ms`; older topology rows: checked epoch `1069.241/1113.261 ms`, region baselines `1256.538/1345.479 ms`, whole-run checked scoped `1048.751 ms` but RSS `2977742848` | API-backed `gc-heap` `1604.811 ms`, GC `288.801 ms`, RSS `2759835648`; older topology heap `1618.105 ms`, GC `273.410 ms`, RSS `2761261056` | direct epoch region rows about `1.53 GB` RSS in the API rerun | Strongest real-input Yak-shaped win; checked direct epoch is now reusable API evidence. `EpochBuffer` is positive but slower. Not exact Yak/GraphChi artifact reproduction | 2026-05-08 real-input ladder |
 | Stancu-style tx boundary | 200k tx, 64/region | Streaming `51.478 ms`, HPZone `51.380 ms` | `44.141 ms` | `33.720 ms`; unsafezone-hp `33.335 ms` | SafeZone-family win; Rift loses | Clean UnsafeZone core/prior sweep |
 
 ## Checked Operator Costs
@@ -441,6 +568,7 @@ trusted HPZone `4403.007 ms`; q2 `rift-checked` is `5061.479 ms` versus heap
 | LogHub BGL Q1 tokens | 1M real BGL lines / 13.4M line+token records | Streaming `5491.033 ms`, RSS `357679104`; checked scoped page-token `5552.988 ms` | heap `5568.252 ms`, median GC `99.271 ms`, RSS `408420352`; 256M cap heap `5807.256 ms`, median GC `194.609 ms` | improved-32k `5589.860 ms`, RSS `357842944` | Trusted Streaming is a modest throughput/RSS win; checked scoped page-token is near-tied but high-RSS. Heap GC is steady but still a small share of elapsed. | 2026-05-07 LogHub BGL follow-up |
 | LogHub BGL Q2 window counts | full real BGL file, 4.75M lines / 66.9M line+token records | Streaming `30899.595 ms`; checked scoped page-token `31165.087 ms`, RSS `490946560` | heap `32161.391 ms`, GC `595.599 ms`, RSS `576012288` | improved-32k `31459.104 ms`, RSS `490258432` | Full-file real log modest throughput/RSS/tail win; not GC-heavy because heap GC is under 2% of elapsed. | 2026-05-07 LogHub BGL scale probe |
 | LogHub BGL Q3 template/session | 1M real BGL lines / richer line+template-token+session records | Streaming `8615.627 ms`, RSS `236814336`; checked scoped page-token `8722.008 ms`, RSS `236961792` | heap `8683.558 ms`, median GC `84.166 ms`, max GC `117.946 ms`, RSS `290242560` | improved-32k `8635.167 ms`, RSS `236945408` | Richer real-input query validates template/session object placement and cuts RSS/tails, but heap GC remains under 1% of elapsed; park as modest/control evidence. | 2026-05-08 LogHub BGL q3 follow-up |
+| LogHub HDFS v1 Q2 window counts | 1M real HDFS lines / 13.5M line+token records | Streaming `7871.713 ms`; checked scoped page-token `7871.856 ms`, RSS `394969088` | heap `8227.369 ms`, median GC `92.659 ms`, max GC `104.790 ms`, RSS `408666112` | improved-32k `7924.213 ms`, RSS `394887168` | Strongest HDFS row: modest checked throughput/RSS/GC win, but heap GC is still only about 1-2% of elapsed. | 2026-05-08 LogHub HDFS follow-up |
 | Linear Road official Q1 | 1M events | HPZone `180.277 ms` | `162.668 ms` | recorded in source pack | Real-input CPU ceiling | Parked control |
 
 ## UnsafeZone-HP Stream Follow-Up
@@ -489,8 +617,8 @@ so they are diagnostic cost rows rather than normal elapsed headline rows.
 | Candidate | Current status | First headline question | Gate |
 |---|---|---|---|
 | DSPBench | Not ported | Which 2-3 local kernels have highest stream object churn and clear epoch/window close? | Add only after triage doc records selected kernels and provenance. |
-| Real RIoTBench input | Wired with UCI MHEALTH | Does real sensor input keep q1 heap pressure while preserving improved-SafeZone comparison? | Answered for MHEALTH: no material heap GC at 1M; park and move to Theodolite/larger machine/security traces. |
-| Theodolite | Not ported | Does a local UC kernel expose allocator pressure without Kafka/Kubernetes? | Port one UC only after DSPBench/RIoTBench. |
+| Real RIoTBench input | Wired with UCI MHEALTH | Does real sensor input keep q1 heap pressure while preserving improved-SafeZone comparison? | Answered for MHEALTH: no material heap GC at 1M; parked. |
+| Theodolite | Source cloned and inspected | Does a local UC kernel expose allocator pressure without Kafka/Kubernetes? | The official load generator is generated smart-meter data. Pair UC2/UC4 with a real industrial-energy trace before treating it as the next real-input candidate. |
 | HiBench streaming | Not ported | Do simple streaming controls reproduce CPU/GC ceilings? | Keep as controls, not primary evidence. |
 | ShuffleBench / RiverBench / BigDataBench | Not ported | Are routing/parser-heavy streams better candidates? | Lower priority after earlier candidates. |
 
