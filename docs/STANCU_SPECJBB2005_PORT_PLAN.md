@@ -1,10 +1,10 @@
 # Stancu / SPECjbb2005 Workload Port Plan
 
 Date: 2026-05-08
-Last updated: 2026-05-08 21:20 CEST
+Last updated: 2026-05-08 22:16 CEST
 
-Status: planning document. No SPECjbb2005 workload port has been implemented
-yet.
+Status: initial clean-room Scala Native workload port implemented and measured.
+Detailed rows are in `evidence/SPECJBB2005_PORT_MATRIX.md`.
 
 ## Decision
 
@@ -17,6 +17,30 @@ with `spec.jbb.JBBmain`, and compliant/public SPEC results use the provided
 bytecodes rather than recompiling the benchmark. Scala Native cannot execute
 that official Java bytecode artifact directly. A Scala Native result therefore
 has to be reported as a port or methodology reproduction.
+
+## Initial Port Result
+
+`SpecJbb2005PortMatrix` now implements a deterministic single-process
+SPECjbb2005-workload Scala Native port. It is not an official SPECjbb2005
+result and does not report bops. It preserves the memory-management shape:
+durable warehouse/product/customer/stock/accounting state stays in heap
+primitive arrays, while transaction request, line-item, stock-probe, and
+receipt objects are allocated on the heap or in transaction/batch epochs.
+
+Clean rows were run for warehouses 4 through 8 with 100,000 transactions per
+warehouse and 64 transactions per epoch. Checksums match across all modes.
+
+| Warehouses | Heap ms / GC ms | `checked-epoch-scoped` ms | Region-freed object proxy |
+|---:|---:|---:|---:|
+| 4 | `64.717 / 7.389` | `53.953` | `2,080,320` |
+| 5 | `80.617 / 9.245` | `67.630` | `2,600,944` |
+| 6 | `96.729 / 10.880` | `80.594` | `3,123,056` |
+| 7 | `113.241 / 13.242` | `95.169` | `3,643,016` |
+| 8 | `129.674 / 15.125` | `108.649` | `4,163,936` |
+
+Interpretation: this reproduces the transaction-lifetime shape and Stancu-style
+measurement axes locally. It does **not** prove an exact Stancu or official
+SPECjbb2005 comparison.
 
 ## Evidence Classes
 
@@ -85,19 +109,18 @@ placement are validated.
    or `paper-method-control`, not a Scala Native/Rift result.
 
 3. **Build `SpecJbb2005PortMatrix`.**
-   Add a Scala Native sandbox matrix that starts with one deterministic
-   transaction core and then expands to the Stancu paper range: warehouses 4..8
-   and 100k iterations per warehouse.
+   Done for the first deterministic transaction core and the Stancu paper
+   range: warehouses 4..8 and 100k iterations per warehouse.
 
 4. **Add allocation-placement modes.**
-   Use the reporting taxonomy: `gc-heap`, `region-scoped-rooted`,
-   `checked-region-stream`, `checked-region-scoped`, and optional explicit
-   lower-bound controls only when needed.
+   Done for `gc-heap`, `region-scoped-rooted`, `region-stream-rootless`,
+   `checked-epoch-stream`, and `checked-epoch-scoped`.
 
 5. **Add Stancu-style metrics.**
-   Record elapsed, GC time/count, RSS, correctness checksum, allocated logical
+   Done for elapsed, GC time/count, RSS, correctness checksum, logical
    transaction objects, region-freed byte/object proxy, max live region
-   payload, region enter/exit count, and annotation/API-boundary count.
+   payload proxy, region enter/exit count where available, and
+   annotation/API-boundary count.
 
 6. **Run young-generation / heap-budget controls.**
    Scala Native does not expose the same young/old generation knobs as the

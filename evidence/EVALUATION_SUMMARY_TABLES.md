@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Tables
 
 Date: 2026-05-01
-Last updated: 2026-05-08 22:00 CEST
+Last updated: 2026-05-08 22:16 CEST
 
 Status: seeded summary pack for the comprehensive evaluation. Rows below are
 current checked-in evidence unless marked pending rerun.
@@ -61,6 +61,21 @@ Source: `evidence/STANCU_REGION_MATRIX.md`
 | Stancu 200k transaction boundary | scoped direct epoch `31.638 ms`, direct epoch `35.196 ms`, improved SafeZone `37.468 ms`, trusted Streaming `44.880 ms`, heap `45.211 ms` | checked direct epoch turns the Stancu-shaped row into a checked win rather than only a trusted/SafeZone-family win |
 | Stancu 1M transaction boundary | scoped direct epoch `160.198 ms`, direct epoch `174.137 ms`, improved SafeZone `186.122 ms`, trusted Streaming `219.668 ms`, heap `225.798 ms` | transaction line/order objects are a good fit for coarse checked epoch regions; durable accounting arrays stay heap control metadata |
 | Stancu conclusion | direct checked epoch now beats heap and improved SafeZone on the local Stancu-style accounting shape | this is still a local methodology probe, not exact Stancu/SPECjbb2005 reproduction |
+
+## SPECjbb2005 Workload Port: 2026-05-08
+
+Source: `evidence/SPECJBB2005_PORT_MATRIX.md`
+
+This is a clean-room Scala Native workload port, not an official SPECjbb2005
+result. It preserves the Stancu/SPECjbb transaction-lifetime shape and reports
+the same local axes: elapsed, GC time/count, RSS, transaction-local object
+proxy, max live region payload proxy, and API-boundary count.
+
+| Area | Main result | Interpretation |
+|---|---|---|
+| 4 warehouses x 100k tx | checked epoch scoped `53.953 ms`, checked epoch stream `57.779 ms`, heap `64.717 ms` with `7.389 ms` GC | scoped checked epoch is fastest; candidate region object fraction is `9825` basis points |
+| 8 warehouses x 100k tx | checked epoch scoped `108.649 ms`, checked epoch stream `114.651 ms`, heap `129.674 ms` with `15.125 ms` GC | same direction holds across the Stancu warehouse range; checksums match |
+| Port conclusion | checked epoch scoped is fastest at every warehouse count, and heap GC/count grows with warehouses | stronger Stancu/SPECjbb methodology evidence than the small local transaction probe, but still not official SPEC or exact Stancu reproduction |
 
 ## Post Fast-Path Selected Sweep: 2026-05-07
 

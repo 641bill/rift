@@ -1,6 +1,6 @@
 # ReML / MLKit Comparison Plan
 
-Last updated: 2026-05-06 23:45 CEST
+Last updated: 2026-05-08 22:16 CEST
 
 ## Goal
 
@@ -43,6 +43,12 @@ ReML-shaped ports**:
   little or no timed GC.
 - `fft` is a very small row at the current default and is better treated as an
   RSS/tiny-allocation control until scaled or matched to the MLKit input.
+
+`evidence/REML_COMPARISON_MATRIX.md` now also includes a paper-style combined
+snapshot: paper-reported `rg`/`rg-`/`r`/MLton columns on the left and local
+Scala Native `gc-heap` plus best checked row on the right. This is the table
+shape to use for the thesis, with evidence class labels rather than raw
+cross-language "Rift beats ReML" claims.
 
 The matrix supports the canonical reporting modes:
 
@@ -181,6 +187,9 @@ Design issue to fix:
    - RSS ratio;
    - GC time/count reduction;
    - checked overhead versus trusted/rooted rows.
+
+   The combined table already records the current Tier 1 ratios for `msort`,
+   `msort-r`, `ratio`, and compute-control rows.
 
 3. Compare with existing Scala Native benchmarks where names overlap.
    `scala-native-benchmarks` includes a Mandelbrot-style benchmark, which

@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-08 22:00 CEST
+Last updated: 2026-05-08 22:16 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -54,6 +54,14 @@ Broom-style Dataflow SELECT/AGGREGATE/JOIN, StreamFlex throughput/latency, and
 Stancu-style transaction batches. The strongest row is 50M LiveJournal:
 checked epoch scoped is `1030.943 ms` and about `1.53 GB` RSS versus heap
 `1612.834 ms`, `274.756 ms` timed GC, and about `2.76 GB` RSS.
+
+Latest SPECjbb2005-workload port: `evidence/SPECJBB2005_PORT_MATRIX.md`.
+`SpecJbb2005PortMatrix` is a clean-room Scala Native workload port, not an
+official SPECjbb2005 result. It covers warehouses 4 through 8 with 100,000
+transactions per warehouse. `checked-epoch-scoped` is fastest across the range;
+at 8 warehouses it is `108.649 ms` versus heap `129.674 ms` with `15.125 ms`
+timed GC. This strengthens the Stancu/SPECjbb methodology track while keeping
+exact-artifact claims out of scope.
 
 Latest page-token cost checkpoint: `evidence/CHECKED_PAGE_TOKEN_COST_MATRIX.md`.
 The focused cost split shows checked scoped page-token is competitive on
@@ -175,11 +183,12 @@ is `155.992 ms`, direct stream epoch is `168.617 ms`, improved SafeZone is
 `180.912 ms`, trusted Streaming is `214.052 ms`, and heap is `222.415 ms`.
 
 Stancu/SPECjbb2005 reproduction boundary: the current Stancu matrix remains a
-local transaction-shaped probe. The next stronger target is a documented
-SPECjbb2005-workload Scala Native port, not an official SPECjbb2005 run on
-Scala Native. The plan is tracked in `docs/STANCU_SPECJBB2005_PORT_PLAN.md`;
-it distinguishes optional JVM artifact controls, Scala Native workload-port
-rows, and Stancu paper-axis reproduction metrics.
+local transaction-shaped probe. The stronger target now has an initial
+documented SPECjbb2005-workload Scala Native port, not an official SPECjbb2005
+run on Scala Native. The plan is tracked in
+`docs/STANCU_SPECJBB2005_PORT_PLAN.md`; it distinguishes optional JVM artifact
+controls, Scala Native workload-port rows, and Stancu paper-axis reproduction
+metrics.
 
 Latest CPU profile checkpoint: `docs/CPU_PROFILE_REPORT.md`. macOS
 `/usr/bin/sample` profiles for generated Common Crawl-shaped q2 at 2M pages
@@ -1126,9 +1135,11 @@ Current status:
   one transaction per region is too fine-grained, while 64 transactions per
   region gives a Rift-vs-heap win; SafeZone remains faster.
 - `docs/STANCU_SPECJBB2005_PORT_PLAN.md` defines the stronger
-  SPECjbb2005-workload port target. It keeps official JVM controls, Scala
-  Native workload-port rows, and Stancu paper-axis reproduction metrics as
-  separate evidence classes.
+  SPECjbb2005-workload port target, and
+  `evidence/SPECJBB2005_PORT_MATRIX.md` now records the first clean-room
+  Scala Native port rows. Official JVM controls, Scala Native workload-port
+  rows, and Stancu paper-axis reproduction metrics remain separate evidence
+  classes.
 - `sandbox/PIPELINE_PARCOLL_COMPARISON.md` records the amordo
   `ZoneParVector` benchmark and the Rift raw-array surrogate.
 - `evidence/REML_COMPARISON_MATRIX.md` starts Phase 6c for the MLKit/ReML

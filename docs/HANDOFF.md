@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-08 22:00 CEST
+Last updated: 2026-05-08 23:44 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -262,14 +262,36 @@ stream epoch `35.196 ms`, improved SafeZone `37.468 ms`, trusted Streaming
 from a trusted/SafeZone-family story into a checked direct-epoch win. It is
 still local methodology evidence, not exact Stancu/SPECjbb2005 reproduction.
 
-SPECjbb2005-workload port decision:
+SPECjbb2005-workload port checkpoint:
 The official SPECjbb2005 artifact is a JVM benchmark, so it cannot be an
-official Scala Native/Rift run. The agreed next target is a documented
-SPECjbb2005 workload port or methodology reproduction. New plan:
-`docs/STANCU_SPECJBB2005_PORT_PLAN.md`. It separates optional official JVM
-controls, Scala Native workload-port rows, and Stancu paper-axis reproduction
-metrics such as region-freed fraction, GC time/count, RSS, heap-cap behavior,
-and annotation/API-boundary count.
+official Scala Native/Rift run. The new `SpecJbb2005PortMatrix` is therefore a
+documented clean-room Scala Native workload port, not an official SPEC result.
+It covers warehouses 4 through 8 with 100,000 transactions per warehouse and
+64 transactions per epoch. Checksums match across all modes. At 8 warehouses,
+`checked-epoch-scoped` is `108.649 ms`, `checked-epoch-stream` is
+`114.651 ms`, and heap is `129.674 ms` with `15.125 ms` timed GC. The port
+records Stancu-style axes including region-freed object/byte proxy, max live
+region payload proxy, GC time/count, RSS, and annotation/API-boundary count.
+Use `evidence/SPECJBB2005_PORT_MATRIX.md` and
+`docs/STANCU_SPECJBB2005_PORT_PLAN.md`.
+
+ReML/MLKit table checkpoint:
+`evidence/REML_COMPARISON_MATRIX.md` now includes a paper-style combined
+snapshot: paper-reported ReML/MLKit columns on the left and local Scala Native
+port ratios on the right. Exact MLKit/ReML artifact rerun remains open and is
+not required for the current table, but it is still required before any raw
+cross-language "Rift beats ReML" timing claim.
+
+Validation for the SPECjbb/ReML update:
+
+- child `git diff --check`: passed;
+- parent `git diff --check`: passed;
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile`:
+  passed before the SPECjbb scale rows;
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"`:
+  passed `123/123`;
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionCheckedTest"`:
+  passed `57/57`.
 
 Clean direct-epoch sweep:
 After checkpointing parent commit `b462db8` and child commit `c71e56ae0`, a

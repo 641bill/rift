@@ -1,11 +1,20 @@
 # Rift All-Phase Results Rollup
 
 Date: 2026-05-01
-Last updated: 2026-05-08 21:07 CEST
+Last updated: 2026-05-08 22:16 CEST
 
 This file gathers the current numeric and validation evidence across all
 roadmap phases. It is a rollup, not the primary raw log. Prefer the source files
 listed below for command provenance and detailed interpretation.
+
+Latest SPECjbb2005-workload port update: `SpecJbb2005PortMatrix` now provides
+a clean-room Scala Native port for the Stancu/SPECjbb2005 transaction-lifetime
+shape. It is not an official SPEC result. The 4..8 warehouse range uses
+100,000 transactions per warehouse and 64 transactions per epoch. At 8
+warehouses, `checked-epoch-scoped` is `108.649 ms` versus heap `129.674 ms`
+with `15.125 ms` timed GC; the port reports `4,163,936` transaction-local
+objects as the region-freed object proxy and `9835` basis points candidate
+region objects. See `evidence/SPECJBB2005_PORT_MATRIX.md`.
 
 Latest update: operator-owned page-token allocation now has an
 `OpenStreamingRegion`/`allocOpen` path. Lowering
@@ -161,6 +170,7 @@ Outcome labels now distinguish the kind of win:
 | Phase 6 StreamFlex-style stream latency | `evidence/STREAMFLEX_REGION_MATRIX.md` |
 | Phase 6 Yak-style control/data split | `evidence/YAK_REGION_MATRIX.md` |
 | Phase 6 Stancu-style transaction accounting | `evidence/STANCU_REGION_MATRIX.md` |
+| Phase 6 Stancu/SPECjbb2005 workload port | `evidence/SPECJBB2005_PORT_MATRIX.md`; `docs/STANCU_SPECJBB2005_PORT_PLAN.md` |
 | Phase 6c ReML / MLKit lineage comparison | `evidence/REML_COMPARISON_MATRIX.md`; `docs/REML_COMPARISON_PLAN.md`; `docs/REML_ARTIFACT_RUNBOOK.md` |
 | Phase 6 NEXMark-lite streaming | `evidence/NEXMARK_REGION_MATRIX.md` |
 | Phase 6 Common Crawl WET-shaped detector | `evidence/COMMON_CRAWL_WET_MATRIX.md` |
@@ -208,6 +218,7 @@ row. Core runtime/topology headline rows were not rerun in this pass.
 | StreamFlex | scoped direct checked epoch `163.339 ms` at 1M vs heap `218.582 ms`, improved SafeZone `208.653 ms`, trusted Streaming `182.246 ms`, and scoped checked TransactionRegion `205.929 ms`; 200k scoped direct epoch `32.029 ms` vs heap `46.737 ms` | direct `RiftRegion.epoch` is now the best checked StreamFlex-shaped topology; `TransactionRegion` is no longer the best row for this shape |
 | Stancu transaction boundary | scoped direct checked epoch `160.198 ms`, direct checked epoch `174.137 ms`, improved SafeZone `186.122 ms`, trusted Streaming `219.668 ms`, heap `225.798 ms` at 1M | direct checked epoch turns the local Stancu-style accounting row into a checked win; durable accounting arrays remain heap metadata |
 | Clean direct-epoch topology sweep | 50M LiveJournal checked epoch scoped `1030.943 ms`, `1.53 GB` RSS vs heap `1612.834 ms`, `274.756 ms` GC, `2.76 GB` RSS; Dataflow checked epoch scoped SELECT/AGGREGATE/JOIN `18.483/33.896/19.581 ms`; StreamFlex 1M scoped direct epoch `159.767 ms`; Stancu 1M scoped direct epoch `155.992 ms` | `evidence/DIRECT_EPOCH_TOPOLOGY_MATRIX.md` is now the clean canonical direct-epoch evidence pack from parent `b462db8` and child `c71e56ae0` |
+| SPECjbb2005 workload port | 8 warehouses x 100k transactions: checked epoch scoped `108.649 ms`, checked epoch stream `114.651 ms`, heap `129.674 ms` with `15.125 ms` GC | clean-room Scala Native port, not official SPEC; extends the Stancu transaction-lifetime comparison to the paper warehouse range |
 | Object allocation lowering | checked SafeZone-backed `14.903 ms`; checked Rift `16.039 ms`; heap `21.885 ms` | focused checked allocation is not the main bottleneck |
 | Checked append/window | scoped EpochBuffer `26.461 ms`; scoped page-token `26.883 ms`; heap `36.944 ms` | cheap checked append operators beat heap |
 | Table/rank | checked rank `344.918 ms` vs heap `227.736 ms` | ranking/index maintenance remains negative |

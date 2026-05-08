@@ -1,7 +1,7 @@
 # Rift Benchmark Catalog
 
 Date: 2026-05-05
-Last updated: 2026-05-08 22:00 CEST
+Last updated: 2026-05-08 22:16 CEST
 
 Status: working benchmark guide. Use this document to understand what each
 benchmark is meant to test before reading the detailed result files in
@@ -81,7 +81,8 @@ so it is layout evidence, not a pure allocator comparison.
 | Dataflow SELECT/AGGREGATE/JOIN | Broom-style dataflow | Stream operators with short-lived tuples and operator-local lifetimes. | Good prior-work-shaped runtime evidence; SafeZone-family rows are often strong. |
 | StreamFlex matrix | StreamFlex-style memory pressure/latency | Windowed stream pressure and latency-style measurements. | Methodology evidence, not exact artifact reproduction. |
 | Yak matrix | Yak-style epochs and promotion pressure | Topword/filter, GraphChi-like intervals, grouped sort, escape/promotion proxies, and `graphreal` over real SNAP edge lists. The LiveJournal topology follow-up separately measures whole-run checked regions, per-epoch checked regions, and page-token checked regions. | Useful to compare static checked regions against dynamic region/promotion ideas and to choose a region topology. `graphreal` is real-input Yak-shaped evidence, not exact Yak/GraphChi reproduction. |
-| Stancu matrix | RegionScope/static hybrid analysis | Transaction/region-boundary style workloads. | Safety/methodology anchor; not full SPECjbb reproduction. The stronger planned target is a documented SPECjbb2005-workload Scala Native port in `docs/STANCU_SPECJBB2005_PORT_PLAN.md`. |
+| Stancu matrix | RegionScope/static hybrid analysis | Transaction/region-boundary style workloads. | Safety/methodology anchor; not full SPECjbb reproduction. |
+| SPECjbb2005 workload port | Stancu/SPECjbb2005 methodology | Deterministic single-process Scala Native port of the transaction workload shape, with durable warehouse/customer/stock state on heap arrays and transaction-local request/line/probe/receipt objects in epochs. | Clean-room workload port, not official SPECjbb2005. First rows cover warehouses 4..8 and are reported in `evidence/SPECJBB2005_PORT_MATRIX.md`. |
 | ReML / MLKit lineage | Elsman 2023 / MLKit typed-region lineage | Paper-reported benchmark table plus local Scala Native-shaped ports for classic SML benchmark programs. | New comparison axis for region polymorphism and GC-safety; not stream evidence and not exact ReML reproduction yet. |
 
 These rows are intentionally labeled as methodology reproductions unless the
