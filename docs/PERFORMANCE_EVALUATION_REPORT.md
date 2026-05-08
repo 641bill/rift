@@ -492,11 +492,11 @@ continuation also excludes `current-default`.
 
 | Area | Best / key row | Heap row | Interpretation |
 |---|---:|---:|---|
-| Dataflow SELECT | checked scoped page-token `19.010 ms`; direct `checked-epoch-scoped` `19.318 ms` | `26.996 ms` / `6.355 ms` GC | page-token is still the fastest SELECT-only row; direct epoch is nearly tied and reusable across all operators |
-| Dataflow AGGREGATE | direct `checked-epoch-scoped` `36.016 ms`; generic `EpochFold` `93.491 ms` | `52.754 ms` / `13.209 ms` GC | direct epoch is the reusable win; generic `EpochFold` remains gated |
-| Dataflow JOIN | direct `checked-epoch-scoped` `20.082 ms` | `31.281 ms` / `9.672 ms` GC | direct epoch beats heap and improved SafeZone in this rerun |
-| StreamFlex throughput | scoped direct checked epoch `163.339 ms`; trusted Streaming `182.246 ms` | `218.582 ms` / `44.681 ms` GC | direct epoch is now the right checked shape for the StreamFlex batch pipeline; `TransactionRegion` is superseded on this row |
-| Stancu transaction boundary | scoped direct checked epoch `160.198 ms`; direct checked epoch `174.137 ms` | `225.798 ms` / `23.901 ms` GC | direct epoch is now the checked Stancu-shaped win; durable accounting arrays stay heap control metadata |
+| Dataflow SELECT | checked scoped page-token `17.946 ms`; direct `checked-epoch-scoped` `18.483 ms` | `26.686 ms` / `6.300 ms` GC | page-token is still the fastest SELECT-only row; direct epoch is nearly tied and reusable across all operators |
+| Dataflow AGGREGATE | direct `checked-epoch-scoped` `33.896 ms`; generic `EpochFold` remains gated | `49.611 ms` / `12.438 ms` GC | direct epoch is the reusable win |
+| Dataflow JOIN | direct `checked-epoch-scoped` `19.581 ms` | `29.622 ms` / `9.512 ms` GC | direct epoch beats heap and improved SafeZone in the clean direct-epoch sweep |
+| StreamFlex throughput | scoped direct checked epoch `159.767 ms`; trusted Streaming `178.028 ms` | `215.097 ms` / `46.023 ms` GC | direct epoch is now the right checked shape for the StreamFlex batch pipeline; `TransactionRegion` is superseded on this row |
+| Stancu transaction boundary | scoped direct checked epoch `155.992 ms`; direct checked epoch `168.617 ms` | `222.415 ms` / `23.573 ms` GC | direct epoch is now the checked Stancu-shaped win; durable accounting arrays stay heap control metadata |
 | Object allocation lowering | checked SafeZone-backed `14.903 ms`, checked Rift `16.039 ms` | `21.885 ms` | focused allocation path is not the main bottleneck now |
 | Checked append/window | checked scoped EpochBuffer `26.461 ms`, checked scoped page-token `26.883 ms` | heap Immix `36.944 ms` / `10.900 ms` GC | cheap checked append operators beat heap |
 | Page-token fast path | checked scoped page-token `27.549 ms`; checked Rift page-token `29.319 ms` | heap `36.920 ms` / `10.995 ms` GC | batch-close/current-bucket fast path keeps linked page-token ahead of chunk-token |

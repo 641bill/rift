@@ -41,6 +41,7 @@ cp -f "$FORK/sandbox/SAFEZONE_HP_BACKEND_PROTOTYPE.md" "$DEST/" 2>/dev/null || t
 cp -f "$FORK/sandbox/CHECKED_SAFEZONE_BACKEND_MATRIX.md" "$DEST/" 2>/dev/null || true
 cp -f "$FORK/sandbox/CHECKED_OVERHEAD_REMOVAL_MATRIX.md" "$DEST/" 2>/dev/null || true
 cp -f "$FORK/sandbox/CHEAP_OPERATOR_FAMILY_MATRIX.md" "$DEST/" 2>/dev/null || true
+cp -f "$FORK/sandbox/DIRECT_EPOCH_TOPOLOGY_MATRIX.md" "$DEST/" 2>/dev/null || true
 cp -f "$FORK/sandbox/REALISTIC_STREAM_GC_MATRIX.md" "$DEST/" 2>/dev/null || true
 cp -f "$FORK/sandbox/REAL_INPUT_BENCHMARK_SEARCH.md" "$DEST/" 2>/dev/null || true
 cp -f "$FORK/sandbox/COMMON_CRAWL_LIKE_MATRIX.md" "$DEST/" 2>/dev/null || true

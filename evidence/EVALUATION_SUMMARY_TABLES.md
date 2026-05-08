@@ -1,10 +1,25 @@
 # Rift Evaluation Summary Tables
 
 Date: 2026-05-01
-Last updated: 2026-05-08 21:07 CEST
+Last updated: 2026-05-08 22:00 CEST
 
 Status: seeded summary pack for the comprehensive evaluation. Rows below are
 current checked-in evidence unless marked pending rerun.
+
+## Clean Direct Epoch Topology Sweep: 2026-05-08
+
+Source: `evidence/DIRECT_EPOCH_TOPOLOGY_MATRIX.md`. Parent commit `b462db8`;
+child commit `c71e56ae0`.
+
+| Area | Main result | Interpretation |
+|---|---|---|
+| Yak local wordcount/graphstep/topword/graphchi | checked epoch scoped `31.774/36.144/52.987/31.387 ms` vs heap `46.951/58.461/70.156/43.841 ms` | direct checked epoch is fastest for these epoch-shaped Yak local rows |
+| Yak sort | checked epoch stream `74.570 ms`, checked epoch scoped `74.784 ms`, heap `78.274 ms` | coverage win; sorting CPU dominates |
+| Yak LiveJournal 50M | checked epoch scoped `1030.943 ms`, checked epoch stream `1083.050 ms`, heap `1612.834 ms` with `274.756 ms` GC | strongest clean direct-epoch row; checked epoch keeps RSS near `1.53 GB` vs heap `2.76 GB` |
+| Dataflow SELECT/AGGREGATE/JOIN | checked epoch scoped `18.483/33.896/19.581 ms` vs heap `26.686/49.611/29.622 ms` | direct epoch is the reusable full-family Dataflow win |
+| StreamFlex 1M throughput | scoped checked direct epoch `159.767 ms` vs heap `215.097 ms` and scoped TransactionRegion `202.604 ms` | direct epoch supersedes TransactionRegion for this batch pipeline shape |
+| StreamFlex 10k latency | scoped checked direct epoch `9.042 ms`, p99 `875 ns`, zero deadline misses; heap has 4 misses | direct epoch is also a latency row, not only throughput |
+| Stancu 1M transaction boundary | scoped checked direct epoch `155.992 ms`, direct stream epoch `168.617 ms`, heap `222.415 ms` | direct checked epoch is the clean Stancu-shaped transaction win |
 
 ## Reusable Direct Epoch Dataflow Rerun: 2026-05-08
 

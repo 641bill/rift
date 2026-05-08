@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-08 21:20 CEST
+Last updated: 2026-05-08 22:00 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -270,6 +270,18 @@ SPECjbb2005 workload port or methodology reproduction. New plan:
 controls, Scala Native workload-port rows, and Stancu paper-axis reproduction
 metrics such as region-freed fraction, GC time/count, RSS, heap-cap behavior,
 and annotation/API-boundary count.
+
+Clean direct-epoch sweep:
+After checkpointing parent commit `b462db8` and child commit `c71e56ae0`, a
+clean direct-epoch sweep was run and recorded in
+`evidence/DIRECT_EPOCH_TOPOLOGY_MATRIX.md`. Main rows: 50M LiveJournal checked
+epoch scoped `1030.943 ms`, `0.000 ms` GC, about `1.53 GB` RSS versus heap
+`1612.834 ms`, `274.756 ms` GC, about `2.76 GB` RSS; Dataflow
+SELECT/AGGREGATE/JOIN checked epoch scoped `18.483/33.896/19.581 ms` versus
+heap `26.686/49.611/29.622 ms`; StreamFlex 1M scoped checked direct epoch
+`159.767 ms` versus heap `215.097 ms`; Stancu 1M scoped checked direct epoch
+`155.992 ms` versus heap `222.415 ms`. This is now the canonical clean
+direct-epoch evidence pack.
 
 Important interpretation note: timed GC is collection time only, not total
 memory-management cost. In HDFS q2, checked scoped page-token is about

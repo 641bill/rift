@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-08 21:20 CEST
+Last updated: 2026-05-08 22:00 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -45,6 +45,15 @@ It completed prior-work, checked-operator, SafeZone-cost, and stream rows with
 current SafeZone skipped in competitive rows. Core runtime/topology headline
 rows remain from the earlier clean core runs until a separate current-skipped
 core sweep is added.
+
+Latest direct-epoch sweep: `evidence/DIRECT_EPOCH_TOPOLOGY_MATRIX.md`. It was
+run from parent commit `b462db8` and child commit `c71e56ae0`. It confirms
+direct checked epoch as a reusable positive topology across Yak local
+wordcount/graphstep/topword/graphchi, Yak real LiveJournal graph replay,
+Broom-style Dataflow SELECT/AGGREGATE/JOIN, StreamFlex throughput/latency, and
+Stancu-style transaction batches. The strongest row is 50M LiveJournal:
+checked epoch scoped is `1030.943 ms` and about `1.53 GB` RSS versus heap
+`1612.834 ms`, `274.756 ms` timed GC, and about `2.76 GB` RSS.
 
 Latest page-token cost checkpoint: `evidence/CHECKED_PAGE_TOKEN_COST_MATRIX.md`.
 The focused cost split shows checked scoped page-token is competitive on
@@ -161,9 +170,9 @@ heap `218.582 ms`, improved SafeZone `208.653 ms`, trusted Streaming
 changes the StreamFlex checked direction from "TransactionRegion is best" to
 "direct epoch is best when the pipeline stages share one batch lifetime."
 Stancu-style transaction batches now follow the same direct epoch direction:
-at 1M transactions, scoped direct checked epoch is `160.198 ms`, direct stream
-epoch is `174.137 ms`, improved SafeZone is `186.122 ms`, trusted Streaming is
-`219.668 ms`, and heap is `225.798 ms`.
+in the clean direct-epoch sweep at 1M transactions, scoped direct checked epoch
+is `155.992 ms`, direct stream epoch is `168.617 ms`, improved SafeZone is
+`180.912 ms`, trusted Streaming is `214.052 ms`, and heap is `222.415 ms`.
 
 Stancu/SPECjbb2005 reproduction boundary: the current Stancu matrix remains a
 local transaction-shaped probe. The next stronger target is a documented
