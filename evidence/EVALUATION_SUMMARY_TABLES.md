@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Tables
 
 Date: 2026-05-01
-Last updated: 2026-05-07 22:34 CEST
+Last updated: 2026-05-08 10:04 CEST
 
 Status: seeded summary pack for the comprehensive evaluation. Rows below are
 current checked-in evidence unless marked pending rerun.
@@ -111,6 +111,18 @@ Source rows:
 | DSPBench Log q1 status | improved SafeZone `1645.205 ms`, trusted Streaming `1647.471 ms`, checked scoped page-token `1654.431 ms`, heap `1669.816 ms` | modest safe/trusted throughput/GC row; checked scoped beats heap but not the faster safe/trusted rows |
 | DSPBench Log q2 window | checked scoped page-token `1733.654 ms`, trusted Streaming `1737.469 ms`, heap `1750.291 ms`; heap max GC `88.210 ms` vs checked max GC `18.584 ms` | best log row: real-input modest checked throughput/GC-tail win, but RSS is higher and heap GC is only about `2.6%` of elapsed |
 
+## RIoTBench / MHEALTH Real-Input Follow-Up: 2026-05-08
+
+Source rows:
+
+- `/tmp/riotbench-mhealth-smoke/summary.tsv`
+- `/tmp/riotbench-mhealth-1m/summary.tsv`
+
+| Area | Main result | Interpretation |
+|---|---|---|
+| RIoTBench MHEALTH q1 clean/annotate | heap `117.977 ms`, trusted Streaming `119.077 ms`, improved SafeZone `121.024 ms`; all rows median/max GC `0.000 ms` | provenance-clean real IoT sensor row, but not GC-heavy; park as ceiling/control |
+| RIoTBench MHEALTH q2 window stats | improved SafeZone `107.194 ms`, heap `109.589 ms`, trusted Streaming `110.760 ms`; all rows median/max GC `0.000 ms` | small SafeZone throughput win, but zero heap GC means it does not justify region tuning |
+
 ## Staged Headline Sweep: 2026-05-06
 
 Source: `evidence/COMPREHENSIVE_SWEEP_2026_05_06.md`
@@ -141,8 +153,9 @@ SafeZone-cost. Competitive rows skip current SafeZone by default.
 | GH Archive-shaped | q1 trusted Streaming `246.174 ms` and q2 trusted HP `233.427 ms`; heap q1/q2 `286.721` / `268.717 ms` | generated GH-shaped row favors regions; still not real-input proof |
 | GH Archive file-backed 2h, legacy string parser | q1 Streaming `7448.838 ms`, checked scoped page-token `7489.923 ms`, heap `7549.355 ms`; q2 Streaming `7442.005 ms`, checked scoped page-token `7498.263 ms`, heap `7641.540 ms` | real file-backed RSS/fixed-memory row: heap around `2.43 GB` RSS, region rows around `0.72-0.93 GB`; profile says parser/string/decompression dominates |
 | GH Archive file-backed 2h, byte-slice parser | q1 heap `3806.120 ms`, Streaming `3626.219 ms`, checked scoped page-token `3629.193 ms`; q2 heap `3756.950 ms`, Streaming `3645.458 ms`, checked scoped page-token `3626.107 ms` | parser-scratch follow-up: real file-backed modest throughput/RSS/tail win; region rows use about `211 MB` RSS and zero timed GC vs heap about `290 MB` RSS with GC in 2/3 runs. Not GC-heavy: heap GC is only about `1.5-1.6%` of elapsed. |
-| LogHub BGL real log | 1M q1 heap `5568.252 ms`, Streaming `5491.033 ms`, checked scoped page-token `5552.988 ms`; 1M q2 heap `5646.824 ms`, improved-32k `5509.481 ms`, checked scoped page-token `5636.357 ms`; full-file q2 heap `32161.391 ms`, Streaming `30899.595 ms`, checked scoped page-token `31165.087 ms` | real file-backed multi-million-line system-log control. Region rows remove timed GC and modestly improve selected rows; full-file q2 heap GC is `595.599 ms`, still under 2% of elapsed, so this is not the missing GC-heavy case. |
+| LogHub BGL real log | 1M q1 heap `5568.252 ms`, Streaming `5491.033 ms`, checked scoped page-token `5552.988 ms`; 1M q2 heap `5646.824 ms`, improved-32k `5509.481 ms`, checked scoped page-token `5636.357 ms`; full-file q2 heap `32161.391 ms`, Streaming `30899.595 ms`, checked scoped page-token `31165.087 ms`; new q3 template/session 1M heap `8683.558 ms`, Streaming `8615.627 ms`, checked scoped `8722.008 ms` | real file-backed multi-million-line system-log control. Region rows remove or reduce timed GC and modestly improve selected rows; q3 reduces RSS by about `53 MB`, but q3 heap GC is `84.166 ms`, still under 1% of elapsed. This is not the missing GC-heavy case. |
 | DSPBench Spike/Fraud/Log real-input | Spike 1M over `sensors.dat`; Fraud 1M over `credit-card.dat`; Log 1M over `http-server.log` | Spike q1 checked scoped `1163.045 ms` vs heap `1187.525 ms`; open-allocation Fraud q2 checked scoped `797.782 ms` vs heap `806.697 ms`; Log q2 checked scoped `1733.654 ms` vs heap `1750.291 ms` | Fraud q2 and Log q2 are modest real-input checked/RSS or GC-tail rows. Neither is the missing flagship because trusted Streaming/SafeZone often remain competitive, RSS can rise, and heap GC is visible but not dominant. |
+| RIoTBench / MHEALTH real input | UCI MHEALTH, 1M real sensor rows loaded by `RiotBenchRegionMatrix` | q1 heap `117.977 ms`, Streaming `119.077 ms`; q2 improved SafeZone `107.194 ms` vs heap `109.589 ms`; heap GC `0.000 ms` for q1/q2 | provenance-clean RIoTBench/FIT-style row, but zero timed GC and near-ties make it a ceiling/control, not a case study |
 | ReML-shaped Tier 1 | checked stream `msort` `104.358 ms` vs heap `124.983 ms`; `msort-r` `104.929 ms` vs heap `126.163 ms`; checked scoped `ratio` `48.929 ms` vs heap `51.302 ms` | local Scala Native port evidence for MLKit/ReML lineage; not exact ReML reproduction |
 | Linear Road | heap fastest or tied on q0/q1/q2 despite GC reduction in region modes | ceiling/control evidence |
 
@@ -427,6 +440,7 @@ trusted HPZone `4403.007 ms`; q2 `rift-checked` is `5061.479 ms` versus heap
 | GH Archive Q2 repo window, file-backed byte-slice | 200k real JSON events / 2.6M event-field records, 2 hourly gzip files | Streaming `3645.458 ms`; checked SafeZone-backed page-token `3626.107 ms` | heap `3756.950 ms`, median GC `61.625 ms`, RSS `290193408` | not rerun in this subset | Byte-slice parser-scratch makes q2 a modest checked scoped page-token win; region rows report zero timed GC and about `211 MB` RSS | 2026-05-07 byte parser follow-up |
 | LogHub BGL Q1 tokens | 1M real BGL lines / 13.4M line+token records | Streaming `5491.033 ms`, RSS `357679104`; checked scoped page-token `5552.988 ms` | heap `5568.252 ms`, median GC `99.271 ms`, RSS `408420352`; 256M cap heap `5807.256 ms`, median GC `194.609 ms` | improved-32k `5589.860 ms`, RSS `357842944` | Trusted Streaming is a modest throughput/RSS win; checked scoped page-token is near-tied but high-RSS. Heap GC is steady but still a small share of elapsed. | 2026-05-07 LogHub BGL follow-up |
 | LogHub BGL Q2 window counts | full real BGL file, 4.75M lines / 66.9M line+token records | Streaming `30899.595 ms`; checked scoped page-token `31165.087 ms`, RSS `490946560` | heap `32161.391 ms`, GC `595.599 ms`, RSS `576012288` | improved-32k `31459.104 ms`, RSS `490258432` | Full-file real log modest throughput/RSS/tail win; not GC-heavy because heap GC is under 2% of elapsed. | 2026-05-07 LogHub BGL scale probe |
+| LogHub BGL Q3 template/session | 1M real BGL lines / richer line+template-token+session records | Streaming `8615.627 ms`, RSS `236814336`; checked scoped page-token `8722.008 ms`, RSS `236961792` | heap `8683.558 ms`, median GC `84.166 ms`, max GC `117.946 ms`, RSS `290242560` | improved-32k `8635.167 ms`, RSS `236945408` | Richer real-input query validates template/session object placement and cuts RSS/tails, but heap GC remains under 1% of elapsed; park as modest/control evidence. | 2026-05-08 LogHub BGL q3 follow-up |
 | Linear Road official Q1 | 1M events | HPZone `180.277 ms` | `162.668 ms` | recorded in source pack | Real-input CPU ceiling | Parked control |
 
 ## UnsafeZone-HP Stream Follow-Up
@@ -475,7 +489,7 @@ so they are diagnostic cost rows rather than normal elapsed headline rows.
 | Candidate | Current status | First headline question | Gate |
 |---|---|---|---|
 | DSPBench | Not ported | Which 2-3 local kernels have highest stream object churn and clear epoch/window close? | Add only after triage doc records selected kernels and provenance. |
-| Real RIoTBench input | Not wired | Does real sensor input keep q1 heap pressure while preserving improved-SafeZone comparison? | Add `RIOTBENCH_INPUT`; rerun q1/q2. |
+| Real RIoTBench input | Wired with UCI MHEALTH | Does real sensor input keep q1 heap pressure while preserving improved-SafeZone comparison? | Answered for MHEALTH: no material heap GC at 1M; park and move to Theodolite/larger machine/security traces. |
 | Theodolite | Not ported | Does a local UC kernel expose allocator pressure without Kafka/Kubernetes? | Port one UC only after DSPBench/RIoTBench. |
 | HiBench streaming | Not ported | Do simple streaming controls reproduce CPU/GC ceilings? | Keep as controls, not primary evidence. |
 | ShuffleBench / RiverBench / BigDataBench | Not ported | Are routing/parser-heavy streams better candidates? | Lower priority after earlier candidates. |

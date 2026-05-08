@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-07 22:34 CEST
+Last updated: 2026-05-08 10:04 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -78,13 +78,18 @@ between lower-level append/cursor/zeroing work with fair controls and moving
 back to the real-input benchmark search.
 
 Latest real-input search checkpoint:
-`evidence/DSPBENCH_REGION_MATRIX.md` now includes DSPBench Log Processing over
-the bundled real `http-server.log` common-log file. The 1M `log-q2-window` row
-is a modest checked scoped page-token win: `1733.654 ms` versus heap
-`1750.291 ms`, with heap median/max GC `44.992/88.210 ms` reduced to
-`18.402/18.584 ms`. This is useful real-input/control evidence, but it is not
-the missing GC-heavy flagship because heap GC is still only about `2.6%` of
-elapsed and region RSS is higher.
+`evidence/DSPBENCH_REGION_MATRIX.md` includes DSPBench Log Processing over the
+bundled real `http-server.log` common-log file, and
+`evidence/LOGHUB_REGION_MATRIX.md` now includes richer real BGL
+`q3-template-session`. DSPBench Log 1M `log-q2-window` is a modest checked
+scoped page-token win: `1733.654 ms` versus heap `1750.291 ms`, with heap
+median/max GC `44.992/88.210 ms` reduced to `18.402/18.584 ms`. LogHub q3
+materializes template-token/session-candidate records and cuts RSS from
+`290 MB` to about `237 MB`, but heap GC is `84.166 ms` inside `8683.558 ms`
+elapsed. RIoTBench/MHEALTH is now wired as a provenance-clean IoT source:
+the UCI MHEALTH dataset has `1215745` rows, but 1M q1/q2 report zero timed
+heap GC and only near-tie/small-SafeZone-win elapsed results. These are useful
+real-input/control rows, not the missing GC-heavy flagship.
 
 Benchmark guide: `docs/BENCHMARK_CATALOG.md` describes what each benchmark is
 meant to measure and which rows are generated, real-input, focused, or
@@ -112,9 +117,9 @@ representative components.
 | Runtime substrate | Improved SafeZone/rooted scoped regions remain the safe baseline; rootless/trusted rows are now explicit controls, not default public evidence. |
 | Checked Rift | Checked APIs are fast for simple append/window shapes. Page-token, Dataflow SELECT, RegionList, GH Archive-shaped q1/q2, and generated Common Crawl-shaped q1/q2 clear useful gates; rank/fold/table containers still add too much CPU overhead. |
 | Safe checked backend | `checked-region-scoped` is the best page-token backend in the clean final-selection sweep. It is fastest on focused page-token append and generated Common Crawl-shaped q1/q2. |
-| Real-input stream evidence | GH Archive byte-slice file-backed q1/q2, LogHub BGL, DSPBench Fraud q2, and DSPBench Log q2 are the strongest real-input modest-win candidates. After open allocation, Fraud q2 checked scoped page-token is a modest elapsed/RSS win (`797.782 ms` vs heap `806.697 ms`, RSS about `279 MB` vs heap `358 MB`), while trusted Streaming remains fastest (`778.975 ms`). DSPBench Log q2 has checked scoped fastest (`1733.654 ms` vs heap `1750.291 ms`) and cuts max GC from `88.210 ms` to `18.584 ms`, but with higher RSS. These are useful real-input rows, not flagship GC-heavy cases. |
+| Real-input stream evidence | GH Archive byte-slice file-backed q1/q2, LogHub BGL q1/q2/q3, DSPBench Fraud q2, and DSPBench Log q2 are the strongest real-input modest-win candidates. After open allocation, Fraud q2 checked scoped page-token is a modest elapsed/RSS win (`797.782 ms` vs heap `806.697 ms`, RSS about `279 MB` vs heap `358 MB`), while trusted Streaming remains fastest (`778.975 ms`). DSPBench Log q2 has checked scoped fastest (`1733.654 ms` vs heap `1750.291 ms`) and cuts max GC from `88.210 ms` to `18.584 ms`, but with higher RSS. LogHub q3 reduces RSS/tails but not elapsed for checked scoped. RIoTBench/MHEALTH fixes an IoT real-input provenance gap but is zero-GC/ceiling evidence. These are useful real-input rows, not flagship GC-heavy cases. |
 | Strongest memory-pressure row | Generated Common Crawl WET-shaped q1/q2 creates heavy stream object churn. After open allocation, heap spends `1.7/1.6 s` timed GC on q1/q2. Checked scoped page-token is fastest in the rerun (`3707.214 ms` q1, `3902.795 ms` q2), followed by checked Rift page-token (`3933.900 ms` q1, `4040.310 ms` q2). |
-| Real-input search direction | The search is tracked in `evidence/REAL_INPUT_BENCHMARK_SEARCH.md`. DSPBench Spike, Fraud, and Log Processing q0/q1/q2 are implemented. Fraud q2 and Log q2 are the current DSPBench regression rows. Continue real RIoTBench/Theodolite-style inputs or richer log/template/session mining; current DSPBench rows are modest/control evidence. |
+| Real-input search direction | The search is tracked in `evidence/REAL_INPUT_BENCHMARK_SEARCH.md`. DSPBench Spike, Fraud, and Log Processing q0/q1/q2 are implemented; LogHub BGL q3 template/session mining and RIoTBench/MHEALTH q1/q2 have been tried. Fraud q2, Log q2, LogHub q3, and MHEALTH q1/q2 are regression/control rows. Continue Theodolite-style inputs or a larger provenance-clean machine/security trace; current DSPBench/LogHub/RIoTBench rows are modest/control or ceiling evidence. |
 | ReML/MLKit lineage | Tier 1 Scala Native ReML-shaped medians now exist. `msort`, `msort-r`, and `ratio` show useful checked-region allocation/RSS/GC behavior; exact ReML artifact rerun remains blocked by missing local `mlkit`/`mlton` and no running Docker daemon. |
 
 The strongest current claim is:
@@ -184,7 +189,12 @@ Latest clean final-selection headline interpretation:
   improved SafeZone-32k is `5509.481 ms`. A full-file q2 single-run probe
   loads `4747963` lines: heap `32161.391 ms`, `595.599 ms` GC, RSS
   `576012288`; checked scoped page-token `31165.087 ms`, zero timed GC, RSS
-  `490946560`.
+  `490946560`. A richer q3 template/session query over 1M real BGL lines
+  validates template-token/session-candidate object placement: heap
+  `8683.558 ms`, GC `84.166 ms`, RSS `290242560`; trusted Streaming
+  `8615.627 ms`, RSS `236814336`; checked scoped page-token `8722.008 ms`,
+  RSS `236961792`. This is an RSS/tail/modest control, not a GC-heavy
+  flagship.
 - DSPBench Spike Detection is measured as a local single-process methodology
   port over `79999` usable real sensor lines from `sensors.dat`. Treat Spike
   as real-input modest/control evidence. DSPBench Fraud Detection is measured
@@ -548,6 +558,7 @@ operator problems with separate gates.
 | GH Archive q2 repo window | real file-backed NDJSON, 2 hourly files, byte-slice parser | 200k heap `3756.950 ms`, median GC `61.625 ms`, RSS `290 MB` | not rerun in this subset | Streaming `3645.458 ms`, RSS `211 MB`; SafeZone-backed page-token `3626.107 ms`, RSS `211 MB` | Byte-slice parser-scratch turns q2 into a modest checked scoped page-token win with zero timed GC in region rows. Not GC-heavy: heap GC is about `1.6%` of elapsed. |
 | LogHub BGL q1 tokens | real file-backed BGL system log | 1M heap `5568.252 ms`, median GC `99.271 ms`, RSS `408 MB`; 256M heap cap `5807.256 ms`, median GC `194.609 ms` | improved-32k `5589.860 ms`, RSS `358 MB` | Streaming `5491.033 ms`, RSS `358 MB`; checked scoped page-token `5552.988 ms`, RSS `476 MB` | Real log stream modest win/control: heap GC appears in every 1M run but remains only about 1.8% of elapsed. Trusted Streaming wins modestly and reduces RSS; checked scoped page-token is near-tied but high-RSS in this row. |
 | LogHub BGL q2 window counts | real file-backed BGL system log | 1M heap `5646.824 ms`, median GC `157.198 ms`, RSS `409 MB`; full-file q2 heap `32161.391 ms`, GC `595.599 ms`, RSS `576 MB` | 1M improved-32k `5509.481 ms`; full-file improved-32k `31459.104 ms`, RSS `490 MB` | 1M Streaming `5605.787 ms`; full-file Streaming `30899.595 ms`; full-file checked scoped page-token `31165.087 ms`, RSS `491 MB` | Full-file q2 is a real-input modest throughput/RSS/tail win for region rows, but heap GC is still under 2% of elapsed, so it is not the missing huge-GC case. |
+| LogHub BGL q3 template/session | real file-backed BGL system log | 1M heap `8683.558 ms`, median GC `84.166 ms`, max GC `117.946 ms`, RSS `290 MB` | improved-32k `8635.167 ms`, RSS `237 MB` | Streaming `8615.627 ms`, RSS `237 MB`; checked scoped page-token `8722.008 ms`, RSS `237 MB` | Richer real log query with template/session objects. Regions cut RSS/tails, but checked scoped loses elapsed and heap GC is under 1% of elapsed. |
 | Wikimedia real clickstream | real preloaded TSV | heap `126.800 ms` | improved `149.062 ms` | Streaming `157.449 ms` | Heap wins; ceiling control. |
 | Linear Road official q1 | official input | heap `162.668 ms` | source pack | HPZone `180.277 ms` | Heap wins; ceiling control. |
 
@@ -622,7 +633,7 @@ where object churn and epochal lifetimes are both present.
 | 1 | DSPBench local-kernel subset | Stream benchmark family with varied applications; choose high object churn kernels only. | Triage 2-3 kernels with clear windows/epochs and local no-cluster execution. |
 | 2 | Real RIoTBench-style input | Current local RIoTBench is generated; real sensor traces may have richer parse/window pressure. | Find provenance-clean traces and require material heap GC before tuning. |
 | 3 | Larger/multiple Common Crawl WET/WAT shards | Same domain as current GC-heavy stressor; one WAT shard was not enough to trigger GC. | Actual loaded pages/tokens/links large enough; heap median/max GC material. |
-| 4 | More real log/NDJSON streams | LogHub BGL and GH Archive are modest wins but not GC-heavy. | Try HDFS/Thunderbird/Spark logs, GDELT, or security logs only if they materialize more per-record objects. |
+| 4 | More real log/NDJSON streams | LogHub BGL q1/q2/q3 and GH Archive are modest wins but not GC-heavy. | Try HDFS/Thunderbird/Spark logs, GDELT, or security logs only if they materialize more per-record objects. |
 | 5 | GH Archive file-backed and memory-budget JSON-lines | Preloaded q1 shows heap can avoid GC by growing to GB-scale RSS; under a 1G heap cap checked regions win q1. File-backed q1/q2 rows show RSS/fixed-memory wins, but byte-slice parser rows are not GC-heavy. | Keep as modest-win parser-scratch control. |
 | 6 | NEXMark Q3/Q8/Q9/Q11 | Recognized generated stream methodology; already has promising rows. | Keep as methodology/regression, not real-input proof. |
 | 7 | Real MLKit/ReML benchmark sources | Non-stream but real prior-system source programs; useful for region+GC safety/performance comparison. | Build/run paper-era MLKit modes and local Scala Native ports; compare ratios, RSS, and GC counts. |
@@ -660,8 +671,10 @@ The next implementation work should be ordered like this:
 2. **Add CPU profiling before the next tuning pass.**
    Scala Native's official profiling guidance treats Scala Native output as a
    native binary: use external time/RSS tools, platform native profilers, and
-   `samply`/flamegraph-style sampled profiles where available. Use profiling as
-   diagnostic evidence, not headline timing. The first GH Archive file-backed
+   `samply`/flamegraph-style sampled profiles where available. Use `samply` on
+   the linked Scala Native binary, not `sbt run`, to inspect CPU composition and
+   visible GC pause/collection frames. Use profiling as diagnostic evidence, not
+   headline timing. The first GH Archive file-backed
    q1 profile is now recorded in `docs/CPU_PROFILE_REPORT.md`; it points to
    `BufferedReader`/UTF-8/StringBuilder/field-count/hashing/gzip work, not
    region close, as the next bottleneck. Continue profiling the smallest

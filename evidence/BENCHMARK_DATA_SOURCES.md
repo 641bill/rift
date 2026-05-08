@@ -1,7 +1,7 @@
 # Benchmark Data Sources
 
 Date: 2026-05-01
-Last updated: 2026-05-07 12:24 CEST
+Last updated: 2026-05-08 10:04 CEST
 
 Local data root:
 `/Users/siyaoliu/rift/cache/benchmark-data`
@@ -35,6 +35,9 @@ The ignored per-download manifest is
 | LogHub BGL archive | `/Users/siyaoliu/rift/cache/benchmark-data/loghub/BGL.tar.gz` | 62936967 | Real LogHub / LogPAI Blue Gene/L system log archive from the Zenodo-hosted LogHub dataset. |
 | LogHub BGL extracted log | `/Users/siyaoliu/rift/cache/benchmark-data/loghub/BGL/BGL.log` | 743185031 | Extracted real BGL log; first `LogHubRegionMatrix` input with `4747963` lines. |
 | DSPBench source clone | `/Users/siyaoliu/rift/cache/benchmark-data/dspbench/source` | directory | Ignored local clone of `GMAP/DSPBench` for real-input stream benchmark triage; inspected commit `00c20da828faf2b960fdb697c61d34cb25461875`. |
+| RIoTBench source clone | `/Users/siyaoliu/rift/cache/benchmark-data/riot-bench/source` | directory | Ignored local clone of `dream-lab/riot-bench`; inspected commit `c86414f7f926ed5ae0fab756bb3d82fbfb6e5bf7`. |
+| UCI MHEALTH archive | `/Users/siyaoliu/rift/cache/benchmark-data/riot-bench/mhealth/mhealth_dataset.zip` | 75503476 | Public MHEALTH sensor dataset used as the RIoTBench FIT-style real-input candidate. SHA-256: `16ad0ce709f3f00df18f348610d15bce0884b79e2143f57f446493673f02b8e0`. |
+| UCI MHEALTH extracted logs | `/Users/siyaoliu/rift/cache/benchmark-data/riot-bench/mhealth/MHEALTHDATASET` | directory | Ten real subject logs, `1215745` total rows, `216M` extracted. |
 
 All downloaded `.gz` files passed `gzip -t`. The Linear Road and LogHub
 tarballs were checked with `tar -tzf` or successfully extracted. The Apache
@@ -55,6 +58,10 @@ Beam source archive passed the official `sha512` check.
   `https://github.com/logpai/loghub/blob/master/docs/datasets.md`
 - DSPBench paper/source:
   `https://zenodo.org/records/4671407` and `https://github.com/GMAP/DSPBench`
+- RIoTBench source:
+  `https://github.com/dream-lab/riot-bench`
+- UCI MHEALTH dataset:
+  `https://archive.ics.uci.edu/dataset/319/mhealth+dataset`
 
 ## Apache Beam NEXMark
 
@@ -102,6 +109,12 @@ Those directories are also ignored by git.
   local parser), `credit-card.dat` (`185000` lines), and `stocks.csv`
   (`411` lines). Treat replayed rows as real-record replay, not fresh
   full-scale real input.
+- RIoTBench source has now been cloned into ignored cache. Its bundled real
+  SenML samples are tiny (`SYS_sample_data_senml.csv` has `1000` lines,
+  `TAXI_sample_data_senml.csv` has `999`, and `FIT_sample_data_senml.csv`
+  has `45`), so they are useful for provenance but not for headline rows.
+  RIoTBench's FIT configuration points to MHEALTH-style data, so the UCI
+  MHEALTH dataset was downloaded as the real-input IoT scale candidate.
 
 ## Next Wiring Work
 
@@ -136,3 +149,8 @@ The first wiring pass is now implemented in the Scala Native sandbox:
   `/Users/siyaoliu/rift/cache/benchmark-data/dspbench/source/dspbench-threads/data/credit-card.dat`.
   Fraud q2 is the strongest DSPBench real-input row so far, but checked scoped
   page-token remains speed-gated.
+- `RiotBenchRegionMatrix` now accepts `RIOTBENCH_INPUT_KIND=mhealth` and a
+  directory path:
+  `/Users/siyaoliu/rift/cache/benchmark-data/riot-bench/mhealth/MHEALTHDATASET`.
+  It preloads up to `RIOTBENCH_EVENTS` real MHEALTH sensor rows from the
+  subject logs.

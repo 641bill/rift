@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-07 22:34 CEST
+Last updated: 2026-05-08 10:04 CEST
 
 Status: markdown slide deck outline. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report and this file as
@@ -16,9 +16,11 @@ append-only/drain/aggregate; DSPBench Fraud q2 is a modest checked win
 (`797.782 ms` vs heap `806.697 ms`) with RSS cut from `358 MB` to `279 MB`.
 DSPBench Log q2 is another modest real-input checked row (`1733.654 ms` vs
 heap `1750.291 ms`) and cuts heap max GC from `88.210 ms` to `18.584 ms`, but
-RSS is higher. Trusted Streaming is still faster in Fraud, so the next tuning
-slide should focus on object construction, append/linking, cursor traversal,
-query CPU, and finding a richer real-input stream.
+RSS is higher. LogHub q3 template/session now validates richer real log-object
+placement and cuts RSS from `290 MB` to about `237 MB`, but checked scoped is
+slightly slower than heap. Trusted Streaming is still faster in Fraud, so the
+next tuning slide should focus on object construction, append/linking, cursor
+traversal, query CPU, and finding a richer real-input stream.
 
 ## Slide 1: One-Sentence Thesis
 
@@ -155,6 +157,13 @@ heap is `5646.824 ms` with `157.198 ms` GC and improved SafeZone-32k is
 `31165.087 ms`, zero timed GC, RSS `491 MB`. This strengthens the real-input
 modest-win story, but still not the missing huge-GC case.
 
+The richer BGL q3 template/session query materializes line, template-token, and
+session-candidate records. At 1M real lines, heap is `8683.558 ms` with
+`84.166 ms` median GC and RSS `290 MB`; trusted Streaming is `8615.627 ms` with
+RSS `237 MB`; checked scoped page-token is `8722.008 ms` with RSS `237 MB`.
+This is an RSS/tail control and a correctness validation for the richer log
+shape, not a throughput flagship.
+
 DSPBench Spike Detection is now measured as the first DSPS local-kernel row.
 At 1M real sensor events replayed from `79999` usable lines, checked scoped
 page-token q1 is `1163.045 ms` vs heap `1187.525 ms`; trusted Streaming q2 is
@@ -261,23 +270,23 @@ deadline misses. They can move in different directions.
 |---|---|
 | current Rift HP loses to improved SafeZone on linked/prior rows | learn from SafeZone internals. |
 | TableRank/rank/fold fail 1M gates | do not use them in app claims yet. |
-| real WET/WAT/Wikimedia/Linear Road mostly heap-fastest or median-GC-zero; GH Archive/LogHub are modest wins | current real inputs are not GC-heavy enough for representative claims, though page-token/log rows are useful controls. |
+| real WET/WAT/Wikimedia/Linear Road/RIoTBench-MHEALTH mostly heap-fastest or median-GC-zero; GH Archive/LogHub/DSPBench are modest wins | current real inputs are not GC-heavy enough for representative claims, though page-token/log rows are useful controls. |
 | pipeline surrogate heap wins | CPU-bound workloads are not Rift targets. |
 
 ## Slide 13: Benchmark Ladder
 
 Next realistic GC-heavy search:
 
-1. DSPBench local-kernel subset;
-2. provenance-clean RIoTBench real input;
+1. Theodolite-style IoT or larger provenance-clean machine/security traces;
+2. richer real NDJSON/log-event streams such as LogHub variants, GDELT, or public web/server/security logs;
 3. larger/multiple real Common Crawl WET/WAT shards;
-4. other real NDJSON/log-event streams such as richer LogHub variants, GDELT, or public web/server/security logs;
-5. GH Archive and LogHub as modest-win/fixed-memory controls;
-6. NEXMark Q3/Q8/Q9/Q11 as generated controls;
-7. exact MLKit/ReML source benchmark reproduction as a non-stream typed-region axis.
+4. GH Archive, LogHub, DSPBench, and RIoTBench/MHEALTH as modest-win or ceiling controls;
+5. NEXMark Q3/Q8/Q9/Q11 as generated controls;
+6. exact MLKit/ReML source benchmark reproduction as a non-stream typed-region axis.
 
 The first real WAT shard now validates link-object placement and modestly
 favors SafeZone-backed page-token, but heap still reports zero timed GC.
+RIoTBench/MHEALTH fixes one IoT provenance gap but is also zero-GC at 1M.
 GH Archive is now the strongest real-input modest-win candidate, but not the
 missing GC-heavy proof. The 8-hour preloaded
 oracle row has heap winning uncapped median by growing to about `1.7 GB`, but
@@ -287,9 +296,10 @@ fixed-memory wins but were dominated by string parser allocation. The new
 byte-slice file-backed rows keep gzip/JSON parsing in timing while reusing
 parser scratch, and now show modest checked throughput wins plus zero timed GC
 in region rows. LogHub BGL adds a real multi-million-line system-log control,
-but full-file heap GC is still under 2% of elapsed. Heap GC remains a small
-share of elapsed in current real inputs, so next benchmark work still needs a
-real-input workload with materially higher GC pressure.
+including q3 template/session mining, but full-file q2 heap GC is still under
+2% of elapsed and q3 heap GC is under 1%. Heap GC remains a small share of
+elapsed in current real inputs, so next benchmark work still needs a real-input
+workload with materially higher GC pressure.
 
 The 2-hour file-backed GH Archive rows strengthen that interpretation:
 heap uses about `2.43 GB` RSS, while region rows use about `0.72-0.93 GB`.

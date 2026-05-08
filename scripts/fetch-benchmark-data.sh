@@ -175,6 +175,32 @@ fetch_dspbench() {
   fi
 }
 
+fetch_riotbench() {
+  local dir="$DATA_ROOT/riot-bench"
+
+  if [[ "${RIFT_FETCH_RIOTBENCH_SOURCE:-0}" == "1" ]]; then
+    local source_dir="$dir/source"
+    if [[ -d "$source_dir/.git" ]]; then
+      echo "present  $source_dir"
+    else
+      mkdir -p "$(dirname "$source_dir")"
+      git clone --depth 1 https://github.com/dream-lab/riot-bench.git "$source_dir"
+    fi
+  else
+    echo "skip     RIoTBench source; set RIFT_FETCH_RIOTBENCH_SOURCE=1 to clone it"
+  fi
+
+  if [[ "${RIFT_FETCH_MHEALTH:-0}" == "1" ]]; then
+    local mhealth_dir="$dir/mhealth"
+    fetch "https://archive.ics.uci.edu/static/public/319/mhealth+dataset.zip" \
+      "$mhealth_dir/mhealth_dataset.zip"
+    mkdir -p "$mhealth_dir"
+    unzip -q -o "$mhealth_dir/mhealth_dataset.zip" -d "$mhealth_dir"
+  else
+    echo "skip     UCI MHEALTH dataset; set RIFT_FETCH_MHEALTH=1 to fetch it"
+  fi
+}
+
 write_manifest() {
   cat > "$MANIFEST" <<EOF
 # Rift Benchmark Data Manifest
@@ -239,6 +265,11 @@ EOF
   record "DSPBench Spike Detection sample" "$DATA_ROOT/dspbench/source/dspbench-threads/data/sensors.dat" "https://github.com/GMAP/DSPBench"
   record "DSPBench Fraud Detection sample" "$DATA_ROOT/dspbench/source/dspbench-threads/data/credit-card.dat" "https://github.com/GMAP/DSPBench"
   record "DSPBench Bargain Index sample" "$DATA_ROOT/dspbench/source/dspbench-threads/data/stocks.csv" "https://github.com/GMAP/DSPBench"
+  record "RIoTBench source clone" "$DATA_ROOT/riot-bench/source" "https://github.com/dream-lab/riot-bench"
+  record "RIoTBench bundled SYS SenML sample" "$DATA_ROOT/riot-bench/source/modules/tasks/src/main/resources/SYS_sample_data_senml.csv" "https://github.com/dream-lab/riot-bench"
+  record "RIoTBench bundled TAXI SenML sample" "$DATA_ROOT/riot-bench/source/modules/tasks/src/main/resources/TAXI_sample_data_senml.csv" "https://github.com/dream-lab/riot-bench"
+  record "UCI MHEALTH archive" "$DATA_ROOT/riot-bench/mhealth/mhealth_dataset.zip" "https://archive.ics.uci.edu/dataset/319/mhealth+dataset"
+  record "UCI MHEALTH extracted logs" "$DATA_ROOT/riot-bench/mhealth/MHEALTHDATASET" "https://archive.ics.uci.edu/dataset/319/mhealth+dataset"
 }
 
 fetch_wikimedia
@@ -248,6 +279,7 @@ fetch_beam_nexmark
 fetch_gharchive
 fetch_loghub
 fetch_dspbench
+fetch_riotbench
 write_manifest
 
 echo "Wrote $MANIFEST"

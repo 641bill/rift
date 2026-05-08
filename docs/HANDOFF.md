@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-07 22:34 CEST
+Last updated: 2026-05-08 10:04 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -84,6 +84,19 @@ checked scoped page-token `800.369 ms` vs heap `807.974 ms`, with RSS
 page-token `3643.680/3790.138 ms` vs heap `5392.344/5201.862 ms`, cutting
 timed GC from about `1.58 s` to about `32 ms`.
 
+Latest real-input search checkpoint:
+On 2026-05-08, the official RIoTBench source was cloned into ignored cache
+at `/Users/siyaoliu/rift/cache/benchmark-data/riot-bench/source`, commit
+`c86414f7f926ed5ae0fab756bb3d82fbfb6e5bf7`. The bundled RIoTBench SenML
+samples are tiny (`45-1000` rows), so UCI MHEALTH was downloaded as the
+RIoTBench/FIT-style real input. `RiotBenchRegionMatrix` now accepts
+`RIOTBENCH_INPUT_KIND=mhealth` and a directory of subject logs. The MHEALTH
+dataset has `1215745` rows. A 1M q1/q2 pass matched checksums but showed zero
+timed heap GC: q1 heap `117.977 ms`, SafeZone `121.024 ms`, trusted Streaming
+`119.077 ms`; q2 heap `109.589 ms`, SafeZone `107.194 ms`, trusted Streaming
+`110.760 ms`. Decision: MHEALTH is provenance-clean RIoTBench evidence but a
+ceiling/control row, not the missing GC-heavy real stream case.
+
 Latest open-allocation page-token checkpoint:
 On 2026-05-07, checked page-token operators gained an internal
 `RiftRegion.OpenStreamingRegion` marker plus `RiftRegion.allocOpen(...)`.
@@ -142,6 +155,26 @@ higher (`322.0 MB` vs heap `307.8 MB`). Interpretation: keep DSPBench Log q2
 as a real-input modest throughput/GC-tail control and page-token regression
 row, not as the flagship GC-heavy case. Sources:
 `evidence/DSPBENCH_REGION_MATRIX.md`,
+`evidence/REAL_INPUT_BENCHMARK_SEARCH.md`, and
+`evidence/EVALUATION_SUMMARY_TABLES.md`.
+
+Latest LogHub richer real-input checkpoint:
+On 2026-05-08, `LogHubRegionMatrix` added `q3-template-session`, a richer BGL
+query that parses message suffixes into template buckets, derives session
+buckets from node/template fields, allocates template-token and
+session-candidate records, and counts sessions by window. Compile passed, and
+20k smoke plus 100k/1M medians matched checksums/output counts across heap,
+improved SafeZone-32k, trusted Streaming, and checked scoped page-token. At 1M
+real BGL lines, heap is `8683.558 ms`, median/max GC `84.166/117.946 ms`, RSS
+`290242560`; trusted Streaming is `8615.627 ms`, median GC `21.841 ms`, RSS
+`236814336`; checked scoped page-token is `8722.008 ms`, median GC `34.865 ms`,
+RSS `236961792`. Interpretation: q3 validates richer real log object placement
+and cuts RSS/tails, but heap GC is still under 1% of elapsed and checked scoped
+does not win throughput. Park LogHub q3 as real-input modest/control evidence;
+continue toward RIoTBench/Theodolite-style IoT records, larger provenance-clean
+machine/security traces, or another real stream with naturally heavier
+intermediate object materialization. Sources:
+`evidence/LOGHUB_REGION_MATRIX.md`,
 `evidence/REAL_INPUT_BENCHMARK_SEARCH.md`, and
 `evidence/EVALUATION_SUMMARY_TABLES.md`.
 

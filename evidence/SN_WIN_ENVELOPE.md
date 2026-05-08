@@ -1,7 +1,7 @@
 # Scala Native Win Envelope
 
 Date: 2026-05-01
-Last updated: 2026-05-07 22:34 CEST
+Last updated: 2026-05-08 09:10 CEST
 
 Status: Phase 6/7 evidence synthesis. This note classifies where Rift currently
 wins against Scala Native Immix, where it only reduces memory pressure, and
@@ -34,7 +34,12 @@ DSPBench Log Processing has also been added. Its 1M q2 row has checked scoped
 page-token fastest (`1733.654 ms` versus heap `1750.291 ms`) and cuts heap max
 GC from `88.210 ms` to `18.584 ms`, but RSS is higher and heap GC remains only
 about `2.6%` of elapsed. Treat Fraud q2 and Log q2 as real-input modest/control
-rows, not the flagship GC-heavy case.
+rows, not the flagship GC-heavy case. LogHub BGL q3 template/session mining was
+then added as a richer real-log object path. At 1M lines, trusted Streaming is
+`8615.627 ms` versus heap `8683.558 ms`, and checked scoped page-token is
+`8722.008 ms`; all region/scoped rows cut RSS from `290 MB` to about `237 MB`.
+Heap GC is still only `84.166 ms` median, under 1% of elapsed, so this also
+belongs in modest/control evidence.
 
 UnsafeZone-HP checkpoint: `evidence/UNSAFEZONE_HP_BASELINE_MATRIX.md` adds a
 benchmark-only SafeZone no-root control (`SAFEZONE_ROOTS_MODE=3`,

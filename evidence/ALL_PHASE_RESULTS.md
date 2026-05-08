@@ -1,7 +1,7 @@
 # Rift All-Phase Results Rollup
 
 Date: 2026-05-01
-Last updated: 2026-05-07 22:34 CEST
+Last updated: 2026-05-08 10:04 CEST
 
 This file gathers the current numeric and validation evidence across all
 roadmap phases. It is a rollup, not the primary raw log. Prefer the source files
@@ -23,7 +23,16 @@ DSPBench Log Processing is now wired as a third DSPBench real-input candidate;
 the 1M `log-q2-window` row has checked scoped page-token fastest
 (`1733.654 ms` vs heap `1750.291 ms`) and cuts heap max GC from `88.210 ms`
 to `18.584 ms`, but it remains modest/control evidence because heap GC is only
-about `2.6%` of elapsed and region RSS is higher.
+about `2.6%` of elapsed and region RSS is higher. LogHub BGL q3
+template/session mining is also now implemented; at 1M real BGL lines, heap is
+`8683.558 ms`, median/max GC `84.166/117.946 ms`, RSS `290242560`, while
+trusted Streaming is `8615.627 ms` and checked scoped page-token is
+`8722.008 ms` with about `237 MB` RSS. It is richer real-input placement/RSS
+evidence, not the missing GC-heavy case. RIoTBench/MHEALTH is now wired as a
+provenance-clean real IoT input: the UCI MHEALTH dataset has `1215745` rows,
+and 1M q1/q2 medians matched checksums but showed zero timed heap GC. q1 is a
+near-tie with heap fastest (`117.977 ms`) and q2 gives a small SafeZone win
+(`107.194 ms` vs heap `109.589 ms`). Treat it as a ceiling/control row.
 
 ## How To Read This File
 
@@ -1383,7 +1392,7 @@ artifacts are available or reproduced.
 | Wikimedia pageview/clickstream | Generated and real preloaded TSV-shaped pageview/count/clickstream event buckets | Generated Q2 clickstream is promising at 1M: HPZone `147.163 ms` vs heap `159.746 ms` and improved SafeZone `147.936 ms`. The 10M generated scale check is a near-tie. Real enwiki Q2 reverses the result: heap `126.800 ms`, improved SafeZone `149.062 ms`, Streaming `157.449 ms`, all with `0.000 ms` timed GC. | Keep as ladder/regression evidence, not a case study from current real TSV rows. |
 | Linear Road position/toll stream | Generated and official preloaded position reports, toll outputs, and accident/congestion candidate objects with durable heap primitive metadata | Generated q1/q2 remove measured GC but heap remains fastest. Official preloaded 1M rows are stricter: q1 heap `162.668 ms` vs HPZone `180.277 ms`; q2 heap `167.811 ms` vs Streaming `198.863 ms`; median GC is `0.000 ms`, but each 1M heap query had one collection outlier. | Methodology/ceiling evidence only, no checked mode, and not a Rift case-study win. |
 | Yahoo-style ad stream | Generated/preloaded ad events with parse, filter/project, and campaign-window count shapes | Q2 looked promising at 100k, but the 1M scale check is not a case-study win: heap `104.512 ms`, HPZone `105.216 ms`, Streaming `105.961 ms`; median GC drops from heap `6.253 ms` to `2.1-2.4 ms`. Q0/Q1 are heap-fast at 100k. | Local Yahoo-style probe, not Kafka/Flink/Redis or exact Yahoo Streaming Benchmark. |
-| RIoTBench-style IoT ETL/statistics | Generated sensor readings with parse, clean/annotate, and window-stat shapes | 100k q1 stresses heap GC and region modes lower RSS: heap `16.643 ms`, improved SafeZone `13.980 ms`, HPZone `14.516 ms`, Streaming `14.445 ms`. Q2 lowers RSS/max-GC but does not beat heap elapsed. | Local RIoTBench-style probe, not distributed RIoTBench artifact; no checked mode yet. |
+| RIoTBench-style IoT ETL/statistics | Generated sensor readings plus UCI MHEALTH real sensor logs with parse, clean/annotate, and window-stat shapes | Generated 100k q1 stresses heap GC and region modes lower RSS: heap `16.643 ms`, improved SafeZone `13.980 ms`, HPZone `14.516 ms`, Streaming `14.445 ms`. Real MHEALTH 1M q1/q2 corrects provenance but is not GC-heavy: q1 heap `117.977 ms`, Streaming `119.077 ms`, SafeZone `121.024 ms`; q2 SafeZone `107.194 ms` vs heap `109.589 ms`; all rows report zero timed GC. | Local RIoTBench-style probe, not distributed RIoTBench artifact; MHEALTH is real-input ceiling/control evidence, no checked mode yet. |
 | Checked window-fold operator | Additive per-key stream-window aggregate with child-bucket ordinary Scala records and parent-owned primitive metadata | Checked mode removes measured GC and cuts 1M RSS (`40402944` bytes vs heap `75022336` bytes), but fails elapsed gate: `118.726 ms` checked vs `103.244 ms` heap. | Focused framework profile only; blocks Common Crawl WET and NEXMark Q5 fold integration until overhead is reduced. |
 
 ### NEXMark-Lite Stream Matrix, 2026-04-30
@@ -2825,6 +2834,10 @@ Status:
   trusted Streaming `30899.595 ms`. Interpretation: LogHub BGL is a useful
   real-input modest throughput/RSS/fixed-memory control, but not the missing
   GC-heavy flagship because full-file heap GC is still under 2% of elapsed.
+  The richer q3 template/session row over 1M real lines validates
+  template-token/session-candidate region placement and cuts RSS from
+  `290242560` to about `236.9 MB`, but checked scoped is slightly slower
+  (`8722.008 ms` vs heap `8683.558 ms`) and heap GC remains under 1% elapsed.
 - The real-input benchmark search now has its own ledger:
   `evidence/REAL_INPUT_BENCHMARK_SEARCH.md`. DSPBench is the first family
   because it is a public DSPS benchmark with varied stream applications and
@@ -2849,7 +2862,10 @@ Status:
   Streaming `1737.469 ms`, heap `1750.291 ms`; heap median/max GC
   `44.992/88.210 ms` drops to checked `18.402/18.584 ms`. It is not the
   flagship GC-heavy benchmark because region RSS rises and heap GC is still
-  only a small share of elapsed.
+  only a small share of elapsed. RIoTBench source and UCI MHEALTH are now also
+  wired: MHEALTH provides `1215745` real sensor rows, but 1M q1/q2 have zero
+  timed heap GC and only near-tie/small-SafeZone-win elapsed results, so
+  MHEALTH is parked as a provenance-clean ceiling/control row.
 - The append-window result does not justify returning to DEBS Q1 ranking.
   TableRank remains gated out. The first DEBS integration of the passing
   cursor-close shape now exists for checked Q1 event-window entries and

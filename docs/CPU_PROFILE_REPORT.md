@@ -1,6 +1,6 @@
 # Rift CPU Profiling Report
 
-Last updated: 2026-05-07 21:44 CEST
+Last updated: 2026-05-08 09:26 CEST
 
 Status: profiling runbook plus first sampled profile row and the first
 profile-driven implementation follow-up. The sampled GH Archive row identified
@@ -34,6 +34,47 @@ The current questions are:
 - Record command, binary path, benchmark mode, input scale, environment,
   profiler tool, and whether the profile was sampled or instrumented.
 - Do not use profiler elapsed time as a headline median.
+
+## Samply Plan
+
+Use `samply` as the preferred macOS flamegraph profiler when it is available.
+It complements `/usr/bin/sample`: `sample` is fast and easy to script, while
+`samply` gives an interactive profile UI and can expose both CPU composition
+and visible GC pause/collection frames.
+
+The profiling questions for `samply` are:
+
+- how much time is in Immix GC pause/mark/sweep/collection frames;
+- how much time is in region allocation, `scalanative_zone_alloc`,
+  `scalanative_rift_region_alloc`, zeroing, alignment, or stats paths;
+- how much time is in object construction and constructor field stores;
+- how much time is in checked lowering such as `allocImpl`, `checkOpen`, or
+  `allocUncheckedImpl`;
+- how much time is in operator CPU: append/linking, cursor traversal,
+  bucket-close callbacks, aggregation, hashing, parser work, and checksum/output
+  logic.
+
+Profiles must target the Scala Native binary directly, not `sbt run`, so sbt
+and JVM launcher work do not pollute the profile:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" nativeLink
+samply record <path-to-linked-sandbox-binary> <mode> <query>
+```
+
+First `samply` targets:
+
+| Target | Modes | What to inspect |
+|---|---|---|
+| Generated Common Crawl-shaped q2 | `heap-immix`, `rift-checked-page-token`, `rift-checked-safezone-page-token` | Immix GC pause frames versus checked allocation/append/cursor/query CPU. |
+| DSPBench Fraud q2 | `heap-immix`, `rift-trusted-streaming`, `rift-checked-safezone-page-token` | Whether the remaining real-input gap is parser/predictor CPU, cursor traversal, or allocation. |
+| LogHub BGL q3 | `heap-immix`, `rift-trusted-streaming`, `rift-checked-safezone-page-token` | Whether richer real log template/session rows spend visible time in GC or mostly parser/hash/window CPU. |
+| Focused page-token cost matrix | heap same-shape and checked scoped page-token rows | Fine-grained append, allocation, cursor, and close attribution without application parser noise. |
+
+At the time of this note, `samply` was not on this shell's `PATH`; install or
+expose it before running these rows. Keep resulting `samply` profiles under an
+ignored cache directory and summarize only the findings in this report.
 
 ## Useful Scala Native Profiling Tips
 

@@ -1,7 +1,7 @@
 # Rift Benchmark Catalog
 
 Date: 2026-05-05
-Last updated: 2026-05-07 22:34 CEST
+Last updated: 2026-05-08 10:04 CEST
 
 Status: working benchmark guide. Use this document to understand what each
 benchmark is meant to test before reading the detailed result files in
@@ -134,12 +134,12 @@ operators and gates.
 | Common Crawl WET-shaped | Generated WET-like pages/lines/tokens | Strongest GC-heavy stream stressor: heap spends about `1.55-1.59 s` in timed GC at 1M generated pages; trusted and page-token checked rows win. This is not real Common Crawl input proof. |
 | Real Common Crawl WET/WAT | Public preloaded WET/WAT shards | Current shards have median timed GC of zero. Page-token rows work and win modestly on WAT, but these are ceiling/control rows. |
 | GH Archive | Real hourly NDJSON GitHub event files | Strongest current real-input modest-win candidate, but not GC-heavy proof. Uncapped preloaded heap wins median by growing to about `1.7 GiB`; under a 1G heap cap, checked SafeZone-backed q1 wins. Legacy string-parser file-backed q1/q2 rows give RSS/fixed-memory wins but are parser/string dominated. The new byte-slice file-backed parser reuses line buffers and extracts JSON fields from raw UTF-8 bytes; at two hourly files / 200k events it makes q1/q2 modest region throughput/RSS/tail wins and removes timed GC from region rows, but heap GC is only about `1.5-1.6%` of elapsed. |
-| LogHub / LogPAI BGL | Real file-backed BGL system log | New real log matrix. At 1M real lines, heap q1/q2 spends `99-157 ms` in GC inside roughly `5.6 s`; region rows remove timed GC and several rows modestly improve throughput/RSS. Full-file q2 loads `4747963` lines and heap spends `595.599 ms` in GC inside `32.161 s`, while checked scoped page-token is faster and lower-RSS. Useful real-input modest-win/fixed-memory control, not the missing huge-GC flagship. |
+| LogHub / LogPAI BGL | Real file-backed BGL system log | Real log matrix with q1 tokens, q2 window counts, and q3 template/session mining. At 1M real lines, heap q1/q2 spends `99-157 ms` in GC inside roughly `5.6 s`; region rows remove timed GC and several rows modestly improve throughput/RSS. Full-file q2 loads `4747963` lines and heap spends `595.599 ms` in GC inside `32.161 s`, while checked scoped page-token is faster and lower-RSS. The richer q3 template/session row cuts RSS from `290 MB` to about `237 MB`, but checked scoped is slightly slower and heap GC is under 1% elapsed. Useful real-input modest-win/fixed-memory control, not the missing huge-GC flagship. |
 | DSPBench Spike/Fraud/Log Processing | Public DSPS benchmark source and bundled real sample files | `DSPBENCH_REGION_MATRIX.md` now includes local single-process Spike, Fraud, and Log rows. Spike is modest/control only. Fraud q2 and Log q2 are the useful real-input regression rows. After open allocation, Fraud q2 checked scoped page-token is `797.782 ms` vs heap `806.697 ms` and RSS about `279 MB` vs heap `358 MB`; trusted Streaming remains fastest at `778.975 ms`. Log q2 checked scoped page-token is fastest in its 1M matrix (`1733.654 ms` vs heap `1750.291 ms`) and cuts max GC from `88.210 ms` to `18.584 ms`, but region RSS is higher. Both are modest/control evidence, not final checked application proof. |
 | Wikimedia | Real/generated TSV/clickstream-style rows | Mostly heap or improved SafeZone wins with low median GC; parked as ceiling/regression control. |
 | Linear Road | Official/generated position-report methodology | Useful latency/window methodology, but current rows are not GC-heavy enough for a Rift case study. |
 | Yahoo-style ads | Local/generated ad-stream methodology | Some wins exist, but provenance is generated/local rather than official real input. |
-| RIoTBench-style IoT | Local/generated IoT ETL/statistics methodology | Some q1 wins exist, but real/provenance-clean input remains open. |
+| RIoTBench-style IoT / MHEALTH | Local/generated IoT ETL/statistics methodology plus UCI MHEALTH real sensor logs | The real/provenance gap is fixed for one FIT-style input, but MHEALTH 1M q1/q2 report zero timed heap GC. q1 is a near-tie with heap fastest; q2 gives a small SafeZone win. Park as ceiling/control evidence. |
 
 ## 6. Current Interpretation
 
@@ -185,15 +185,15 @@ The nearest candidates are:
 1. DSPBench local kernels: Spike/Fraud/Log q0/q1/q2 are implemented. Fraud q2
    and Log q2 are regression rows; continue only with richer DSPBench kernels
    or larger provenance-clean inputs.
-2. Real RIoTBench-style input, if provenance-clean traces are available.
+2. Theodolite-style IoT input or larger machine/security traces. RIoTBench/MHEALTH is now wired but parked as zero-GC ceiling evidence.
 3. More LogHub / LogPAI variants only if they materialize richer per-line
    objects than the current BGL line/token/window path.
 4. Larger or multiple real Common Crawl WET/WAT shards.
 5. GH Archive with heap-budgeted/file-backed/tail-latency runs as a modest-win
    control, not GC-heavy proof.
 6. Another real NDJSON/log-event stream with heavier object churn.
-7. Theodolite/RIoTBench-style local kernels only if input provenance
-   and lifetime structure are clean.
+7. Additional RIoTBench-style local kernels only if they use richer tasks or
+   a different provenance-clean input that shows material heap pressure.
 
 ## 8. Source Files
 

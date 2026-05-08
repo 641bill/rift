@@ -1,7 +1,7 @@
 # Real-Input GC-Heavy Stream Benchmark Search
 
 Date: 2026-05-07
-Last updated: 2026-05-07 22:34 CEST
+Last updated: 2026-05-08 10:04 CEST
 
 Status: active Phase 6 search ledger. This file tracks public real-input
 stream/dataflow candidates before implementation work. It is deliberately a
@@ -15,11 +15,12 @@ intermediate Scala objects are naturally materialized, share a page, batch,
 window, session, transaction, or epoch lifetime, and make `gc-heap` spend
 material time or memory on garbage collection.
 
-Current real-input rows are useful but not decisive. GH Archive byte-slice and
-LogHub BGL produce modest throughput/RSS/tail wins, but parser/query CPU
-dominates and heap GC remains under a few percent of elapsed at the measured
-scale. The next benchmark must force more natural object materialization, not
-just read more bytes.
+Current real-input rows are useful but not decisive. GH Archive byte-slice,
+LogHub BGL line/token/window rows, and the richer LogHub BGL template/session
+q3 row produce modest throughput/RSS/tail wins or near-ties, but parser/query
+CPU dominates and heap GC remains under a few percent of elapsed at the
+measured scale. The next benchmark must force more natural object
+materialization, not just read more bytes.
 
 ## Search Gates
 
@@ -44,8 +45,8 @@ modest/control row and move to the next candidate.
 | 3 | DSPBench Log Processing | Same DSPBench clone; bundled Spark `logprocessing/http-server.log` has `55000` common-log lines. | `log-q0-parse`, `log-q1-status`, and `log-q2-window`. | HTTP log records, status/update records, and window contribution records. | Event/window bucket; durable status counters on heap/primitive arrays. | Implemented as `DSPBenchRegionMatrix`; 20k smoke, 100k medians, and 1M medians completed. | Keep q2 as a modest real-input throughput/GC-tail control. At 1M, checked scoped page-token is fastest (`1733.654 ms` vs heap `1750.291 ms`) and cuts heap max GC from `88.210 ms` to `18.584 ms`, but heap GC is only about `2.6%` of elapsed and region RSS is higher. |
 | 4 | DSPBench Machine Outlier | Same DSPBench clone; bundled `machine-usage.csv` is only `1012` lines. | Machine usage anomaly scoring and alert windows. | Observation/profile/score/alert records. | Observation/window bucket; anomaly model on heap. | Source inspected; sample input is tiny. | Defer unless a larger public Alibaba machine-usage trace is pinned. |
 | 5 | DSPBench Bargain Index | Same DSPBench clone; bundled `stocks.csv` has `411` lines. | Parse quotes/trades, compute VWAP, join quotes with trade summaries, emit bargain records. | `Quote`, `Trade`, `VwapRecord`, `TradeSummary`, `BargainCandidate`. | Quote/trade window or day/interval boundary; summary table durable. | Source inspected; sample input is too small for headline real-input rows. | Do not implement first unless a larger public quote/trade stream is found. |
-| 6 | Real RIoTBench-style input | RIoTBench paper describes 27 IoT tasks and four real smart-city/health observation workloads with high-rate streams. | Parse sensor/health records, clean/filter, annotate, sliding-window statistics, anomaly output. | Sensor reading, cleaned reading, annotation, statistic contribution, anomaly records. | Sensor/window/session bucket; device metadata durable. | Source/provenance not yet pinned locally. | Next family after DSPBench Log unless a richer public log/session input is easier to pin. |
-| 7 | Richer LogHub template/session mining | LogHub BGL already local and measured; other LogHub datasets can be fetched. | Parse log events, tokenize templates, infer block/session candidates, window template counts. | `LogEvent`, `TemplateToken`, `TemplateCandidate`, `SessionEvent`, `WindowSummary`. | Log-line/template/session/window bucket; template dictionary and block index durable. | Current BGL line/token/window path implemented but not GC-heavy. | Worth a richer query only if it materializes more objects than the current token-count path. |
+| 6 | Real RIoTBench-style input | RIoTBench source clone at `cache/benchmark-data/riot-bench/source`, commit `c86414f7f926ed5ae0fab756bb3d82fbfb6e5bf7`; bundled SenML samples are tiny, so UCI MHEALTH (`1215745` rows) is used as the FIT-style real sensor source. | Parse sensor/health records, clean/filter, annotate, sliding-window statistics, anomaly output. | Sensor reading, cleaned reading, annotation, statistic contribution, anomaly records. | Sensor/window/session bucket; device metadata durable. | `RiotBenchRegionMatrix` now accepts `RIOTBENCH_INPUT_KIND=mhealth` and directory input; 20k smoke and 1M q1/q2 medians completed. | Park as provenance-clean real-input ceiling/control. MHEALTH q1/q2 have zero timed heap GC at 1M; q1 is near-tie with heap fastest, q2 gives a small SafeZone win. |
+| 7 | Richer LogHub template/session mining | LogHub BGL already local and measured; other LogHub datasets can be fetched. | Parse log events, tokenize templates, infer block/session candidates, window template counts. | `LogEvent`, `TemplateToken`, `TemplateCandidate`, `SessionEvent`, `WindowSummary`. | Log-line/template/session/window bucket; template dictionary and block index durable. | Implemented as `LogHubRegionMatrix` `q3-template-session`; 20k smoke, 100k medians, and 1M medians completed on real BGL. | Park as richer real-input modest/control evidence. At 1M, heap GC is visible (`84.166 ms` median, `117.946 ms` max) and RSS is higher than region rows, but GC is still under 1% of `8683.558 ms` elapsed; trusted Streaming is only modestly faster and checked scoped page-token is slightly slower. |
 | 8 | Theodolite UC2 / UC4 local kernel | Theodolite has industrial IoT stream benchmarks and implementations for Kafka Streams, Flink, Hazelcast Jet, and Beam. UC2 is downsampling; UC4 is hierarchical aggregation. | Local single-process downsampling or hierarchical aggregation without Kafka/Kubernetes. | Measurement records, hierarchy updates, duplicated group contributions, aggregate outputs. | Window/group bucket; hierarchy table durable. | Source not cloned locally in this pass. | Later target if DSPBench/RIoTBench do not produce stronger pressure. Remove external systems from headline rows. |
 | 9 | GDELT / security NDJSON logs | Public event/log streams; exact dataset not selected. | Byte-slice parse/project, enrichment, session/window counts, alert candidates. | Event records, field slices, enrichment records, alert/session/window contributions. | Line/session/window bucket; enrichment dictionary durable. | Not selected or downloaded. | Lower-priority public-log fallback after DSPBench/RIoTBench/LogHub. |
 
@@ -177,6 +178,67 @@ The next real-input search should target richer object materialization:
 RIoTBench/Theodolite-style IoT records, richer LogHub template/session mining,
 or a larger provenance-clean machine/outlier trace.
 
+## LogHub Template/Session Result
+
+`LogHubRegionMatrix` now includes `q3-template-session`, a richer real BGL query
+that parses message suffixes into template buckets, derives session buckets
+from node/template fields, allocates template-token and session-candidate
+records, and counts sessions by window. The 20k smoke matched checksums/output
+counts. At 1M real BGL lines:
+
+| Mode | Elapsed ms | GC median ms | GC max ms | RSS bytes | Output |
+|---|---:|---:|---:|---:|---:|
+| heap-immix | `8683.558` | `84.166` | `117.946` | `290242560` | `243309` |
+| safezone-improved-32k | `8635.167` | `34.787` | `38.138` | `236945408` | `243309` |
+| rift-trusted-streaming | `8615.627` | `21.841` | `22.533` | `236814336` | `243309` |
+| rift-checked-safezone-page-token | `8722.008` | `34.865` | `35.456` | `236961792` | `243309` |
+
+Decision: park q3 as richer real-input modest/control evidence. It does
+materialize more ordinary objects than q1/q2 and cuts RSS by roughly `53 MB`,
+but heap GC is still less than 1% of elapsed. The row is useful for proving the
+template/session shape works with checked page-token, not for the flagship
+GC-heavy claim.
+
+## RIoTBench / MHEALTH Result
+
+RIoTBench is a good benchmark-family match because it defines IoT parse,
+filter, aggregate/statistical, prediction, and I/O tasks. The source repo was
+cloned into ignored cache at:
+
+`/Users/siyaoliu/rift/cache/benchmark-data/riot-bench/source`
+
+Clone commit:
+
+`c86414f7f926ed5ae0fab756bb3d82fbfb6e5bf7`
+
+The bundled RIoTBench resource inputs are too small for headline evidence:
+`SYS_sample_data_senml.csv` has `1000` lines, `TAXI_sample_data_senml.csv`
+has `999`, and `FIT_sample_data_senml.csv` has `45`. The RIoTBench FIT
+configuration references MHEALTH-style data, so the UCI MHEALTH dataset was
+downloaded and wired as the real sensor input:
+
+`/Users/siyaoliu/rift/cache/benchmark-data/riot-bench/mhealth/MHEALTHDATASET`
+
+It has `1215745` rows across ten subject logs. `RiotBenchRegionMatrix` now
+loads that directory with `RIOTBENCH_INPUT_KIND=mhealth`.
+
+First 1M medians:
+
+| Query | Mode | Median ms | Median GC ms | Max GC ms | Runs with GC | RSS bytes | Outputs |
+|---|---|---:|---:|---:|---:|---:|---:|
+| q1-clean-annotate | heap | 117.977 | 0.000 | 0.000 | 0 | 7585677312 | 1273497 |
+| q1-clean-annotate | safezone-improved | 121.024 | 0.000 | 0.000 | 0 | 11959386112 | 1273497 |
+| q1-clean-annotate | rift-streaming | 119.077 | 0.000 | 0.000 | 0 | 10965843968 | 1273497 |
+| q2-window-stats | heap | 109.589 | 0.000 | 0.000 | 0 | 10995482624 | 273497 |
+| q2-window-stats | safezone-improved | 107.194 | 0.000 | 0.000 | 0 | 10964779008 | 273497 |
+| q2-window-stats | rift-streaming | 110.760 | 0.000 | 0.000 | 0 | 11643322368 | 273497 |
+
+Decision: MHEALTH is a good provenance correction for RIoTBench-style input,
+but it is not GC-heavy under this local preloaded matrix. Keep it as a
+ceiling/control row. A file-backed MHEALTH parser may reduce preloaded RSS,
+but zero timed GC means it should not displace the search for a richer
+object-materializing real stream.
+
 ## Sources
 
 - DSPBench Zenodo/paper record: `https://zenodo.org/records/4671407`
@@ -185,6 +247,10 @@ or a larger provenance-clean machine/outlier trace.
   `https://github.com/mayconbordin/storm-applications`
 - RIoTBench resource:
   `https://www.canr.msu.edu/resources/Riotbench-an-iot-benchmark-for-distributed-stream-processing-systems`
+- RIoTBench source:
+  `https://github.com/dream-lab/riot-bench`
+- UCI MHEALTH dataset:
+  `https://archive.ics.uci.edu/dataset/319/mhealth+dataset`
 - Theodolite benchmark overview:
   `https://www.theodolite.rocks/theodolite-benchmarks/`
 - Theodolite UC2:
@@ -192,7 +258,10 @@ or a larger provenance-clean machine/outlier trace.
 
 ## Next Action
 
-Continue the real-input search beyond DSPBench Log. Prioritize a candidate
-that naturally materializes richer intermediate objects per record than common
-log status counting, while keeping DSPBench Fraud q2 and Log q2 as regression
-rows for page-token overhead.
+Continue the real-input search beyond DSPBench Log, LogHub BGL q3, and
+RIoTBench/MHEALTH. Prioritize Theodolite-style IoT records, a larger
+provenance-clean machine or security trace, or another public NDJSON/log
+workload that naturally materializes many more objects per record. Keep
+DSPBench Fraud q2, DSPBench Log q2, LogHub q3, and RIoTBench/MHEALTH q1/q2 as
+regression rows for page-token overhead and real-input modest/RSS/tail or
+ceiling behavior.
