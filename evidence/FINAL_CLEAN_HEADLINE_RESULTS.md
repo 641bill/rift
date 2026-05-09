@@ -1,11 +1,14 @@
 # Final-Clean Headline Results
 
 Date: 2026-05-09
-Last updated: 2026-05-10 00:10 CEST
+Last updated: 2026-05-10 00:22 CEST
 
 Status: L1 runner support exists for the first representative binaries. One
 focused retained-epoch L1 row has been collected from clean child commit
 `f1aa55484`; the broader report-grade L1 headline sweep is still pending.
+Child `7573d7577` extends external timing/RSS summary support to Dataflow,
+Yak, Common Crawl WET-shaped, and ReML runners; those rows are ready to collect
+next.
 
 ## Definition
 

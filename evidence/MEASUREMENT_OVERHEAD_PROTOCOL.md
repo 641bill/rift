@@ -1,12 +1,14 @@
 # Measurement Overhead Protocol
 
 Date: 2026-05-09
-Last updated: 2026-05-10 00:10 CEST
+Last updated: 2026-05-10 00:22 CEST
 
 Status: active protocol. Initial L1 final-clean support is implemented for the
 first representative benchmark binaries. The first clean focused retained L1
 row is recorded in `evidence/FINAL_CLEAN_HEADLINE_RESULTS.md`; the broader L1
-headline sweep remains to be collected.
+headline sweep remains to be collected. Dataflow, Yak, Common Crawl
+WET-shaped, and ReML runners now also write external real/user/sys/RSS columns
+into their summaries when run under `/usr/bin/time`.
 
 ## Why This Exists
 
@@ -48,7 +50,9 @@ binary skips warmups, heap expected-baseline runs, internal elapsed timing,
 `GC.getStats*`, `RiftAllocator` stat reads/resets, and diagnostic counters. It
 prints one minimal `RESULT ... measurement_level=L1 final_clean=1` line with
 checksum/output metadata. The runner's `/usr/bin/time -l` output supplies the
-elapsed/RSS row.
+elapsed/RSS row. As of child `7573d7577`, the retained, Dataflow, Yak, Common
+Crawl WET-shaped, and ReML runners write that external timing/RSS data into
+their summary TSVs.
 
 Current medians remain valid standard evidence, but should not be described as
 "measurement overhead removed completely" unless they were collected in L1

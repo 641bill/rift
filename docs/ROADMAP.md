@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-10 00:10 CEST
+Last updated: 2026-05-10 00:22 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -61,6 +61,10 @@ focused retained L1 row is now recorded from child `f1aa55484`: 1M retained
 records, 20 iterations per external process, 3 external repeats, with checked
 scoped retained at `0.47 s` median total process time versus heap
 retained/drop-anchor at `0.70 s`.
+Child `7573d7577` then extended external real/user/sys/RSS summary columns to
+the Dataflow, Yak, Common Crawl WET-shaped, and ReML runners. The next
+measurement step is no longer runner plumbing; it is selecting and running the
+representative L1 rows for the final-clean headline table.
 
 ReML/MLKit PLDI-style table checkpoint:
 `evidence/REML_MLKIT_PLDI_TABLE.md` now separates paper-reported Figure 9

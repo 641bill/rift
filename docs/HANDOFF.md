@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-10 00:10 CEST
+Last updated: 2026-05-10 00:22 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -10,7 +10,7 @@ Active implementation branch for this update:
 `feature/rift`
 
 Latest implementation checkpoint:
-`f1aa55484` (`Record final-clean retained external timing`)
+`7573d7577` (`Record final-clean external timing in runners`)
 
 Latest parent evidence checkpoint:
 `b43a16a` (`Add fair evaluation and final-clean protocol`)
@@ -61,6 +61,10 @@ for 20 iterations, checked stream retained is `0.50 s`, and checked scoped
 retained is `0.47 s`, with matching checksum/output. The broader report-grade
 L1 headline sweep is still pending and belongs in
 `evidence/FINAL_CLEAN_HEADLINE_RESULTS.md`.
+Follow-up child commit `7573d7577` extends external real/user/sys/RSS summary
+columns to the Dataflow, Yak, Common Crawl WET-shaped, and ReML runner scripts.
+Tiny L1 smokes were run for each current binary and matched checksums; those
+smokes validate runner plumbing only, not headline performance.
 
 Latest ReML/MLKit PLDI-style table:
 `evidence/REML_MLKIT_PLDI_TABLE.md` is now the dedicated thesis-facing table.
