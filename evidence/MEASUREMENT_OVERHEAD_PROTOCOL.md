@@ -1,7 +1,7 @@
 # Measurement Overhead Protocol
 
 Date: 2026-05-09
-Last updated: 2026-05-10 01:10 CEST
+Last updated: 2026-05-10 01:17 CEST
 
 Status: active protocol. Initial L1 final-clean support is implemented for the
 first representative benchmark binaries. The first clean focused retained L1
@@ -13,7 +13,7 @@ remains to be collected. Dataflow, Yak, Common Crawl WET-shaped, and ReML
 runners write external real/user/sys/RSS columns into their summaries when run
 under `/usr/bin/time`. StreamFlex and Stancu have the same L1 binary/runner
 plumbing and smoke validation from child `c5bbc498f`; their representative L1
-headline rows are still pending.
+headline rows are now recorded in `evidence/FINAL_CLEAN_HEADLINE_RESULTS.md`.
 
 ## Why This Exists
 

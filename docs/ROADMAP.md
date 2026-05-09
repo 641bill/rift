@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-10 01:10 CEST
+Last updated: 2026-05-10 01:17 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -79,7 +79,10 @@ page-token also wins over heap/rooted (`4.51/4.75 s`) but trails the checked
 streaming page-token backend.
 Child `c5bbc498f` adds L1 final-clean support and external timing/RSS summary
 columns for StreamFlex and Stancu. Tiny smokes matched checksums; clean
-representative L1 throughput/latency and transaction rows are still pending.
+representative L1 throughput/latency and transaction rows are now recorded.
+StreamFlex throughput is near-tie/slight checked evidence, StreamFlex latency
+is tail/deadline evidence, and Stancu transactions are a checked scoped direct
+epoch win over heap and improved SafeZone.
 
 ReML/MLKit PLDI-style table checkpoint:
 `evidence/REML_MLKIT_PLDI_TABLE.md` now separates paper-reported Figure 9

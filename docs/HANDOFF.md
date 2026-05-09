@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-10 01:10 CEST
+Last updated: 2026-05-10 01:17 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -94,9 +94,16 @@ Stancu-style matrices. Under `RIFT_FINAL_CLEAN=1`, both binaries now skip
 warmups, heap-expected replay, GC/Rift stat reads, and internal elapsed medians,
 then print minimal `measurement_level=L1 final_clean=1` result lines. Their
 runners now record external real/user/sys time and max RSS. Small smokes
-matched checksums across heap, improved SafeZone, and checked scoped rows; the
-next step is clean representative L1 rows for StreamFlex throughput/latency and
-Stancu transactions.
+matched checksums across heap, improved SafeZone, and checked scoped rows.
+Representative L1 rows are now recorded in
+`evidence/FINAL_CLEAN_HEADLINE_RESULTS.md`: StreamFlex throughput is a
+near-tie/slight checked win (`0.80 s` checked scoped transaction versus
+`0.83 s` heap and `0.80 s` improved SafeZone for 20 x 200k events);
+StreamFlex latency is a tail/deadline row, not an elapsed win (`0.26 s`
+checked with zero misses versus `0.20 s` heap with four deadline misses);
+Stancu transactions are a checked framework win (`0.57 s` checked scoped
+direct epoch versus `0.85 s` heap and `0.71 s` improved SafeZone for
+20 x 200k transactions).
 
 Latest ReML/MLKit PLDI-style table:
 `evidence/REML_MLKIT_PLDI_TABLE.md` is now the dedicated thesis-facing table.
