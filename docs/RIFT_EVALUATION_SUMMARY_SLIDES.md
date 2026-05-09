@@ -1,86 +1,42 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-09 21:15 CEST
+Last updated: 2026-05-09 21:51 CEST
 
 Status: markdown slide deck outline. Use
-`docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report and this file as
-the talk skeleton. Use `docs/BENCHMARK_CATALOG.md` for benchmark definitions
-and evidence-class labels.
+`docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report,
+`docs/BENCHMARK_CATALOG.md` for benchmark definitions, and
+`evidence/EVALUATION_CLASSIFIED_SUMMARY.md` for the classified result table.
 
-Latest checkpoint: operator-owned page-token allocation now uses
-`OpenStreamingRegion`/`allocOpen`, so checked child-bucket allocation avoids
-the generic `allocImpl/checkOpen` branch while public APIs remain defensive.
-Focused 1M checked scoped page-token is `73.632/83.177/82.198 ms` on
-append-only/drain/aggregate; DSPBench Fraud q2 is a modest checked win
-(`797.782 ms` vs heap `806.697 ms`) with RSS cut from `358 MB` to `279 MB`.
-DSPBench Log q2 is another modest real-input checked row (`1733.654 ms` vs
-heap `1750.291 ms`) and cuts heap max GC from `88.210 ms` to `18.584 ms`, but
-RSS is higher. LogHub HDFS v1 q2 is the strongest new real-log row: checked
-scoped page-token `7871.856 ms` vs heap `8227.369 ms`, removing heap's
-`92.659 ms` median GC and lowering RSS; it is still a modest win because heap
-GC is only about 1-2% of elapsed. Trusted Streaming is still faster in Fraud,
-so the next tuning slide should focus on object construction, append/linking,
-cursor traversal, query CPU, and finding a richer real-input stream.
+Recommended talk order:
 
-Direct-epoch extension checkpoint: generated/indexable q2/q3 rows now have a
-same-shape heap direct-epoch aggregate control. The large deltas are mostly
-operator topology: GH Archive-shaped q2 is heap `287.380 ms`, heap-direct
-`54.642 ms`, checked scoped `56.013 ms`; LogHub-shaped q2 is heap
-`526.803 ms`, heap-direct `191.601 ms`, checked scoped `193.938 ms`;
-DSPBench Fraud q2 is heap `400.900 ms`, heap-direct `272.251 ms`, checked
-scoped `267.739 ms`. This should be presented as “direct epoch is the right
-operator topology”; only Fraud q2 currently shows a small placement/backend
-edge over same-shape heap.
+1. Problem and design target.
+2. Comparison classes: natural heap, same-shape heap, summary-only topology,
+   retained-object drop-anchor, best checked topology, unsafe/trusted lower
+   bound.
+3. Direct `RiftRegion.epoch { ... }` as the reusable checked topology for
+   batch/epoch workloads.
+4. Retained-object evidence as the fair memory-management comparison.
+5. Real-input Yak LiveJournal as the strongest checked epoch row.
+6. Page-token stream evidence for page/window append workloads.
+7. Open work: real-input GC-heavy search and gated rank/hash/median/join
+   operators.
 
-Retained-epoch checkpoint: the project now has the missing no-traverse
-retained-object control, rerun from clean commits. Focused 1M retained heap is
-`36.233 ms`, spends `10.109 ms` in timed GC, and uses about `21.3 MB` RSS;
-checked scoped retained epoch is `24.274 ms`, `0 ms` GC, and about `4.9 MB`
-RSS. DSPBench Fraud q2 retained controls show checked scoped retained epoch
-`370.746 ms` versus retained heap `392.743 ms`, removing `35.631 ms` median
-timed GC. Slide-level
-lesson: summary-only direct rows are topology evidence; retained heap versus
-retained checked epoch is the fair memory-management story. GH Archive-shaped
-q2 gives the cleanest retained visual: checked scoped `186.868 ms` and about
-`15 MB` RSS versus retained heap `257.377 ms`, `77.208 ms` GC, and about
-`147 MB` RSS.
+Representative numbers to keep on slides:
 
-Latest real-input addition: Yak `graphreal` now replays real SNAP edge lists as
-epoch-local `EdgeUpdate` objects. Twitter ego proved the input path; the
-larger LiveJournal row is now the representative result. This is a promising
-real-input prior-work-shaped row, but it is not exact Yak/GraphChi evidence.
+| Evidence class | Best current row | Interpretation |
+|---|---|---|
+| Retained-object memory management | Focused 1M retained: checked scoped `24.274 ms`, `0 ms` GC, `4.9 MB` RSS vs retained heap `36.233 ms`, `10.109 ms` GC, `21.3 MB` RSS. | Fair region-reclaim win: both sides retain ordinary objects until epoch close. |
+| Retained generated/preloaded stressor | GH Archive-shaped retained q2: checked scoped `186.868 ms`, `15 MB` RSS vs retained heap `257.377 ms`, `77.208 ms` GC, `147 MB` RSS. | Strong retained memory/RSS win, but not real-input proof. |
+| Real-input checked epoch | SNAP LiveJournal 50M: checked epoch scoped `2008.320 ms`, `0 ms` GC, `2.11 GB` RSS vs heap `2958.659 ms`, `400.484 ms` GC, `3.91 GB` RSS. | Strongest real-input prior-work-shaped row; local graph replay, not exact Yak/GraphChi. |
+| Reusable Dataflow epoch | SELECT/AGGREGATE/JOIN: checked epoch scoped `19.691/34.676/19.762 ms` vs heap `27.775/50.837/30.387 ms`. | Direct epoch covers the full Broom-style operator family. |
+| StreamFlex/Stancu epoch | StreamFlex throughput `157.334 ms` vs heap `216.853 ms`; Stancu `155.863 ms` vs heap `220.951 ms`. | Direct epoch supersedes older TransactionRegion/EpochBuffer rows for shared batch lifetimes. |
+| Generated page/window stressor | Common Crawl-shaped q1/q2: checked scoped page-token `3707.214/3902.795 ms` vs heap `5577.965/5183.074 ms`. | Strong generated stream-object pressure win; RSS caveat; not real-input proof. |
+| Modest real-input page/window | LogHub HDFS q2 checked scoped page-token `7871.856 ms` vs heap `8227.369 ms`; DSPBench Log q2 `1733.654 ms` vs heap `1750.291 ms`. | Real-input wins are modest because parser/query CPU dominates and heap GC is small. |
 
-Latest stronger Yak row: SNAP LiveJournal `graphreal` now gives the best
-real-input prior-work-shaped result and a clearer topology lesson. In the
-latest clean 50M rerun, `gc-heap` is `2958.659 ms`, with `400.484 ms` median
-timed GC and `3.91 GB` RSS. Low-RSS epoch rows are much faster:
-`checked-epoch-scoped` `2008.320 ms`, `checked-epoch-stream` `2064.867 ms`,
-`region-scoped-rooted` `2351.582 ms`, and `region-stream-rootless`
-`2499.975 ms`, all around `2.11 GB` RSS. Page-token checked rows still beat
-heap but are the wrong topology for Yak. The slide-level lesson is:
-Rift should expose checked `epoch`, `window`, and `page` blocks, then lower the
-chosen topology to the fastest safe backend.
-
-Follow-up implementation: `RiftRegion.epoch { ... }` now exists as the direct
-checked linked-epoch block. It is the reusable form of the fast Yak topology;
-the clean 10M LiveJournal rerun confirms the direction (`417.426 ms` scoped
-checked epoch versus heap `599.428 ms`). The 50M clean rerun also confirms it:
-`checked-epoch-scoped` is `2008.320 ms` with `2.11 GB` RSS versus heap
-`2958.659 ms`, `400.484 ms` timed GC, and `3.91 GB` RSS. The same reusable
-epoch topology covers local Yak-shaped `wordcount`, `graphstep`, `topword`,
-and `graphchi`, where checked scoped epoch is fastest among measured rows in
-the earlier clean local-Yak sweep.
-
-Newest reusable-epoch extension: the same `RiftRegion.epoch { ... }` API now
-covers Broom/Dataflow SELECT, AGGREGATE, and JOIN. At 10 epochs x 100k
-documents, checked scoped epoch is `19.691/34.676/19.762 ms` versus heap
-`27.775/50.837/30.387 ms` and region-scoped rooted
-`22.971/39.665/22.619 ms`. Page-token is still a useful SELECT-only control,
-but direct epoch is the general operator-family topology.
-The last Yak epoch gap, grouped sort, now uses region-owned arrays:
-checked stream/scoped epoch `230.000/230.799 ms` versus heap `235.554 ms`.
-This is a modest CPU-bound coverage win, not a flagship GC result.
+Slide-level rule: summary-only/direct-aggregate rows are topology/operator
+lower bounds. Retained heap versus retained checked epoch is the fair
+memory-management story.
 
 ## Slide 1: One-Sentence Thesis
 

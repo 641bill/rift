@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-09 21:35 CEST
+Last updated: 2026-05-09 21:51 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -11,6 +11,12 @@ remain the source of detailed command provenance.
 
 Latest clean final-selection headline sweep:
 `evidence/FINAL_SELECTION_HEADLINE_2026_05_06.md`.
+
+Latest classified evidence summary:
+`evidence/EVALUATION_CLASSIFIED_SUMMARY.md`. This is the first table to use
+when deciding whether a row is topology evidence, retained-object
+memory-management evidence, a best checked topology result, a real-input modest
+win, or a ceiling/control row.
 
 Latest SPECjbb2005-workload port checkpoint:
 `evidence/SPECJBB2005_PORT_MATRIX.md`. This is a clean-room Scala Native
@@ -219,7 +225,8 @@ report both direct GC columns and broader memory-cost signals:
 Diagnostic allocation/timing counters are useful for attribution, but they are
 not headline timing rows because they can perturb performance.
 
-Reporting principle:
+## How To Read The Tables
+
 Rift results must be structured by comparison class before interpretation. A
 natural heap baseline answers the practical end-to-end question; a same-shape
 heap control answers whether a region result is really memory placement rather
@@ -240,6 +247,16 @@ splits, stream periods, transaction annotations, or compiler-inferred regions.
 Rift should therefore report the best safe checked topology for each workload,
 but include same-shape heap controls whenever the topology changes computation.
 Unsafe/rootless modes remain lower bounds, not user-facing claims.
+
+Current claim table:
+
+| Claim type | Current evidence | Claim boundary |
+|---|---|---|
+| Retained-object memory management | Focused retained 1M, GH Archive-shaped retained q2, LogHub retained q2/q3, DSPBench Fraud retained q2. | Compare retained heap/drop-anchor against retained checked regions only. |
+| Reusable checked epoch topology | Yak LiveJournal 50M, Dataflow SELECT/AGGREGATE/JOIN, StreamFlex throughput/latency, Stancu/SPECjbb-style transactions. | Applies when ordinary objects share a batch/epoch lifetime. |
+| Page/window checked stream topology | Generated Common Crawl WET-shaped q1/q2, focused page-token rows, modest real LogHub/DSPBench rows. | Strongest rows are generated stressors; real-input rows are modest. |
+| Topology/operator lower bound | Summary-only/direct-aggregate rows for GH Archive-shaped, LogHub-shaped, and DSPBench q2/q3. | Not a pure memory-management win. |
+| Gated operators | Rank/table/fold/hash-heavy operators. | Require natural heap, same-shape heap, retained control if applicable, and a focused 1M gate before application claims. |
 
 ## 1. Executive Summary
 

@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-09 21:35 CEST
+Last updated: 2026-05-09 21:51 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -30,6 +30,17 @@ bucket anchor in O(1), but the retained heap objects still remain for GC
 trace/reclaim, whereas checked regions bulk close/reset the allocation area.
 This makes retained heap vs retained checked epoch the fair memory-management
 comparison, while summary-only direct rows remain topology/operator evidence.
+
+Latest classified evaluation summary:
+`evidence/EVALUATION_CLASSIFIED_SUMMARY.md` is now the first-stop rollup for
+reporting. It classifies each representative row by benchmark, input type,
+comparison class, heap/control row, best safe checked row, elapsed delta, GC
+delta, RSS delta, and allowed claim. Use it to keep the paper and slides
+unambiguous: summary-only/direct-aggregate rows are topology/operator lower
+bounds; retained heap versus retained checked epoch rows are memory-management
+claims; direct `RiftRegion.epoch` rows are reusable checked topology claims;
+page-token rows are page/window stream claims; rootless/trusted rows remain
+lower-bound controls.
 
 Latest clean retained/direct-epoch rerun:
 After committing child `918c7d4c1` and parent `ab570b1`, the retained-object

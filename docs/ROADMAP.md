@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-09 21:15 CEST
+Last updated: 2026-05-09 21:51 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -39,6 +39,13 @@ Current merge state is tracked in `docs/HANDOFF.md`; the substantive roadmap
 revision began at implementation commit `ddbba577aecd4c0adc741cbf7085ee93548c46b4`.
 Benchmark descriptions and evidence classes are tracked separately in
 `docs/BENCHMARK_CATALOG.md`.
+
+Classified evaluation checkpoint: `evidence/EVALUATION_CLASSIFIED_SUMMARY.md`
+is now the top-level reporting index for representative results. It separates
+natural heap baselines, same-shape heap controls, summary-only topology rows,
+retained-object drop-anchor comparisons, best checked topology rows, and
+unsafe/trusted lower bounds. Future benchmark/operator work should add rows to
+that structure before turning a result into a thesis claim.
 
 Latest staged headline sweep: `evidence/COMPREHENSIVE_SWEEP_2026_05_06.md`.
 It completed prior-work, checked-operator, SafeZone-cost, and stream rows with
