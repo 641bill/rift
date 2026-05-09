@@ -1,11 +1,12 @@
 # Measurement Overhead Protocol
 
 Date: 2026-05-09
-Last updated: 2026-05-09 23:55 CEST
+Last updated: 2026-05-10 00:10 CEST
 
 Status: active protocol. Initial L1 final-clean support is implemented for the
-first representative benchmark binaries; a full L1 clean headline sweep remains
-to be collected.
+first representative benchmark binaries. The first clean focused retained L1
+row is recorded in `evidence/FINAL_CLEAN_HEADLINE_RESULTS.md`; the broader L1
+headline sweep remains to be collected.
 
 ## Why This Exists
 

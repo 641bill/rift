@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-09 23:55 CEST
+Last updated: 2026-05-10 00:10 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -56,7 +56,11 @@ L1 final-clean, L2 standard stats, L3 diagnostics, and L4 external profiles.
 Initial L1 final-clean support now exists for retained epoch, Yak, Dataflow,
 Common Crawl WET-shaped, and ReML Tier 1 binaries. Current report-grade
 benchmark rows are still mostly L2; the final elapsed/RSS headline table should
-be collected into `evidence/FINAL_CLEAN_HEADLINE_RESULTS.md`.
+be collected into `evidence/FINAL_CLEAN_HEADLINE_RESULTS.md`. The first clean
+focused retained L1 row is now recorded from child `f1aa55484`: 1M retained
+records, 20 iterations per external process, 3 external repeats, with checked
+scoped retained at `0.47 s` median total process time versus heap
+retained/drop-anchor at `0.70 s`.
 
 ReML/MLKit PLDI-style table checkpoint:
 `evidence/REML_MLKIT_PLDI_TABLE.md` now separates paper-reported Figure 9

@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-09 23:55 CEST
+Last updated: 2026-05-10 00:10 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -10,10 +10,10 @@ Active implementation branch for this update:
 `feature/rift`
 
 Latest implementation checkpoint:
-`918c7d4c1` (`Add retained epoch reclaim controls`)
+`f1aa55484` (`Record final-clean retained external timing`)
 
 Latest parent evidence checkpoint:
-`ab570b1` (`Record retained epoch reclaim evidence`)
+`b43a16a` (`Add fair evaluation and final-clean protocol`)
 
 Latest comprehensive sweep checkpoint:
 Staged headline runs completed after the TransactionRegion checkpoint. Source
@@ -54,7 +54,12 @@ now implemented for `RetainedEpochReclaimMatrix`, `YakRegionMatrix`,
 Set `RIFT_FINAL_CLEAN=1` or `RIFT_EVAL_MEASUREMENT_LEVEL=L1`; the binary skips
 internal timing/GC/region stat reads and prints only minimal checksum/output
 metadata. A tiny retained-epoch L1 smoke matched heap and checked checksums.
-The report-grade L1 headline sweep is still pending and belongs in
+The retained runner now records external real/user/sys time and max RSS in its
+summary. The first focused 1M retained L1 row was collected from clean child
+`f1aa55484`: heap retained/drop-anchor total process time is `0.70 s` median
+for 20 iterations, checked stream retained is `0.50 s`, and checked scoped
+retained is `0.47 s`, with matching checksum/output. The broader report-grade
+L1 headline sweep is still pending and belongs in
 `evidence/FINAL_CLEAN_HEADLINE_RESULTS.md`.
 
 Latest ReML/MLKit PLDI-style table:
