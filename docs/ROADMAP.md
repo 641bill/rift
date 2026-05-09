@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-10 01:04 CEST
+Last updated: 2026-05-10 01:10 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -54,7 +54,7 @@ memory-management claims must compare retained heap/drop-anchor against
 retained checked regions. `evidence/MEASUREMENT_OVERHEAD_PROTOCOL.md` defines
 L1 final-clean, L2 standard stats, L3 diagnostics, and L4 external profiles.
 Initial L1 final-clean support now exists for retained epoch, Yak, Dataflow,
-Common Crawl WET-shaped, and ReML Tier 1 binaries. Current report-grade
+Common Crawl WET-shaped, ReML Tier 1, StreamFlex, and Stancu binaries. Current report-grade
 benchmark rows are still mostly L2; the final elapsed/RSS headline table should
 be collected into `evidence/FINAL_CLEAN_HEADLINE_RESULTS.md`. The first clean
 focused retained L1 row is now recorded from child `f1aa55484`: 1M retained
@@ -77,6 +77,9 @@ checked page-token stream is fastest (`4.02/4.16 s`) versus heap
 `5.68/5.53 s` and safezone-improved-32k `5.42/5.39 s`; checked scoped
 page-token also wins over heap/rooted (`4.51/4.75 s`) but trails the checked
 streaming page-token backend.
+Child `c5bbc498f` adds L1 final-clean support and external timing/RSS summary
+columns for StreamFlex and Stancu. Tiny smokes matched checksums; clean
+representative L1 throughput/latency and transaction rows are still pending.
 
 ReML/MLKit PLDI-style table checkpoint:
 `evidence/REML_MLKIT_PLDI_TABLE.md` now separates paper-reported Figure 9

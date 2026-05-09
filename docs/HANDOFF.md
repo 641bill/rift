@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-10 01:04 CEST
+Last updated: 2026-05-10 01:10 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -10,10 +10,10 @@ Active implementation branch for this update:
 `feature/rift`
 
 Latest implementation checkpoint:
-`7573d7577` (`Record final-clean external timing in runners`)
+`c5bbc498f` (`Add final-clean StreamFlex and Stancu support`)
 
 Latest parent evidence checkpoint:
-`b43a16a` (`Add fair evaluation and final-clean protocol`)
+`f48feec` (`Record ReML final-clean Tier 1 rows`)
 
 Latest comprehensive sweep checkpoint:
 Staged headline runs completed after the TransactionRegion checkpoint. Source
@@ -50,7 +50,8 @@ checked-region comparisons. `evidence/MEASUREMENT_OVERHEAD_PROTOCOL.md` adds
 measurement levels: L1 final-clean headline timing, L2 standard stats, L3
 diagnostics, and L4 external profiles. Initial L1 final-clean binary support is
 now implemented for `RetainedEpochReclaimMatrix`, `YakRegionMatrix`,
-`DataflowRegionMatrix`, `CommonCrawlWetMatrix`, and `ReMLRegionMatrix`.
+`DataflowRegionMatrix`, `CommonCrawlWetMatrix`, `ReMLRegionMatrix`,
+`StreamFlexRegionMatrix`, and `StancuRegionMatrix`.
 Set `RIFT_FINAL_CLEAN=1` or `RIFT_EVAL_MEASUREMENT_LEVEL=L1`; the binary skips
 internal timing/GC/region stat reads and prints only minimal checksum/output
 metadata. A tiny retained-epoch L1 smoke matched heap and checked checksums.
@@ -87,6 +88,15 @@ checked scoped page-token `4.75 s`. Checksums/output counts matched. This is a
 generated stressor row, not real-input proof; L1 shows the Rift streaming
 page-token backend is fastest for this shape, while the SafeZone-backed checked
 page-token remains a heap/rooted win but not the fastest checked backend.
+
+Child `c5bbc498f` adds the same final-clean plumbing to StreamFlex and
+Stancu-style matrices. Under `RIFT_FINAL_CLEAN=1`, both binaries now skip
+warmups, heap-expected replay, GC/Rift stat reads, and internal elapsed medians,
+then print minimal `measurement_level=L1 final_clean=1` result lines. Their
+runners now record external real/user/sys time and max RSS. Small smokes
+matched checksums across heap, improved SafeZone, and checked scoped rows; the
+next step is clean representative L1 rows for StreamFlex throughput/latency and
+Stancu transactions.
 
 Latest ReML/MLKit PLDI-style table:
 `evidence/REML_MLKIT_PLDI_TABLE.md` is now the dedicated thesis-facing table.

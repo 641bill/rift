@@ -1,7 +1,7 @@
 # Final-Clean Headline Results
 
 Date: 2026-05-09
-Last updated: 2026-05-10 01:04 CEST
+Last updated: 2026-05-10 01:10 CEST
 
 Status: L1 runner support exists for the first representative binaries. One
 focused retained-epoch L1 row has been collected from clean child commit
@@ -12,8 +12,8 @@ collected from child `7573d7577`. ReML-shaped Tier 1 L1 rows have been
 collected from child `7573d7577`; the broader report-grade L1 headline sweep
 is still pending.
 Child `7573d7577` extends external timing/RSS summary support to Dataflow,
-Yak, Common Crawl WET-shaped, and ReML runners; those rows are ready to collect
-next.
+Yak, Common Crawl WET-shaped, and ReML runners. Child `c5bbc498f` adds the
+same support to StreamFlex and Stancu; those rows are ready to collect next.
 
 ## Definition
 
@@ -40,6 +40,8 @@ Set `RIFT_FINAL_CLEAN=1` or `RIFT_EVAL_MEASUREMENT_LEVEL=L1` for:
 - `DataflowRegionMatrix`
 - `CommonCrawlWetMatrix`
 - `ReMLRegionMatrix`
+- `StreamFlexRegionMatrix`
+- `StancuRegionMatrix`
 
 The binaries print `RESULT ... measurement_level=L1 final_clean=1 ...` and
 avoid internal timed-section stats.
@@ -52,6 +54,8 @@ avoid internal timed-section stats.
 | direct epoch | Yak LiveJournal 10M/50M; Dataflow SELECT/AGGREGATE/JOIN; StreamFlex throughput; Stancu/SPECjbb-style | user-facing `RiftRegion.epoch` evidence |
 | page/window token | generated Common Crawl-shaped q1/q2; DSPBench Fraud/Log q2; LogHub HDFS q2 | page/window stream operator evidence |
 | ReML/MLKit ports | `msort`, `msort-r`, `ratio`, plus `fib37`/`tak`/`mandel` controls | non-stream typed-region comparison axis |
+| StreamFlex | throughput and latency rows | prior-work latency/throughput axis |
+| Stancu/SPECjbb-style | transaction rows | transaction-boundary region axis |
 
 ## L1 Headline Rows
 
