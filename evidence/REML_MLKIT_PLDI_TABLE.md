@@ -1,12 +1,12 @@
 # ReML / MLKit PLDI-Style Table
 
 Date: 2026-05-09
-Last updated: 2026-05-09 23:31 CEST
+Last updated: 2026-05-10 01:04 CEST
 
 Status: dedicated PLDI-style table artifact. Paper rows are transcribed from
-Elsman 2023 Figure 9 and are **paper-reported, not rerun locally**. Local rows
-come from the Scala Native `ReMLRegionMatrix` Tier 1 ports and are **local
-Scala Native port evidence**, not exact MLKit/ReML reproduction.
+Elsman 2023 Figure 9 and are **paper-reported, not rerun locally**. Local L1
+rows come from the Scala Native `ReMLRegionMatrix` Tier 1 ports and are
+**local Scala Native port evidence**, not exact MLKit/ReML reproduction.
 
 References:
 
@@ -33,8 +33,42 @@ the same machine. Until then, compare ratios and axes:
 |---|---|---|
 | paper-reported | Figure 9 data transcribed below | literature anchor only |
 | exact artifact rerun | source provenance partial; local `mlkit`/`mlton` timing not run | required for raw wall-clock comparison |
-| Scala Native ports | Tier 1 ports for `fib37`, `tak`, `mandel`, `msort`, `msort-r`, `life`, `fft`, `ratio` | valid local Rift-vs-Scala-Native ratios |
+| Scala Native ports | Tier 1 L1 final-clean rows for `fib37`, `tak`, `mandel`, `msort`, `msort-r`, `life`, `fft`, `ratio` | valid local Rift-vs-Scala-Native ratios |
 | safety probes | ReML-style polymorphic/generic heap-retention probes active | design/safety evidence |
+
+## Local L1 Final-Clean Tier 1 Rows
+
+These rows were collected from child `7573d7577` with
+`RIFT_FINAL_CLEAN=1`, three external `/usr/bin/time -l` processes, and
+20 benchmark iterations per process. Times below are total process time for
+the 20 iterations; the per-iteration value is derived only for readability.
+
+| Program | Local status | Heap total s | Best checked/rooted mode | Best total s | Approx speedup | Heap RSS bytes | Best RSS bytes | L1 interpretation |
+|---|---|---:|---|---:|---:|---:|---:|---|
+| `fib37` | compute/control | `2.40` | `checked-region-stream` | `2.41` | `1.00x` | `3784704` | `3784704` | near-tie; no memory-management claim |
+| `tak` | timing-granularity control | `0.00` | -- | -- | -- | `3784704` | `3784704` | too short under this configuration |
+| `mandel` | timing-granularity control | `0.06` | -- | -- | -- | `3784704` | `3784704` | too short for useful external timing |
+| `msort` | allocation/list workload | `2.46` (`123.0 ms/iter`) | `checked-region-stream` | `2.06` (`103.0 ms/iter`) | `1.19x` | `21250048` | `10289152` | clear local checked speed/RSS win |
+| `msort-r` | allocation/list workload | `2.25` (`112.5 ms/iter`) | `checked-region-stream` | `2.05` (`102.5 ms/iter`) | `1.10x` | `39141376` | `10289152` | local checked speed/RSS win |
+| `life` | compute/control | `0.69` | `checked-region-stream` / `region-scoped-rooted` | `0.68` | `1.01x` | `5177344` | `5177344` | near-tie; no strong memory claim |
+| `fft` | timing-granularity control | `0.02` | -- | -- | -- | `7913472` | `5079040` | too short for useful external timing |
+| `ratio` | allocation/object workload | `0.93` (`46.5 ms/iter`) | `checked-region-scoped` | `0.91` (`45.5 ms/iter`) | `1.02x` | `79888384` | `15892480` | modest elapsed win, strong RSS win |
+
+Command:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+for i in 1 2 3; do
+  RIFT_FINAL_CLEAN=1 \
+  REML_BUILD=0 \
+  REML_BENCHMARK_RUNS=20 \
+  REML_WARMUPS=0 \
+  REML_WORKLOADS="fib37 tak mandel msort msort-r life fft ratio" \
+  REML_MODES="gc-heap region-scoped-rooted checked-region-stream checked-region-scoped" \
+  REML_OUTPUT_DIR=/tmp/rift-l1-reml-tier1-x20-7573d7577-r${i} \
+  zsh sandbox/run_reml_region_matrix.sh
+done
+```
 
 ## Paper-Reported Figure 9 Recreation
 
@@ -71,7 +105,9 @@ is pure region inference/no tracing GC. `MLton` is the optimizing SML baseline.
 ## Paper-Style Combined Snapshot
 
 This is the thesis table shape: paper-reported columns on the left, local
-Scala Native port ratios on the right when a port exists.
+Scala Native port ratios on the right when a port exists. The local columns
+below remain the earlier L2 standard-stats snapshot until they are fully
+rewritten from the L1 rows above; use the L1 table above for headline timing.
 
 | Program | Source/local status | Paper rg s | Paper r s | Paper MLton s | Paper rg RSS MB | Paper rg GC # | Local gc-heap ms | Best local checked mode | Best local checked ms | Local speedup | Local RSS ratio | Local GC change | Evidence class |
 |---|---|---:|---:|---:|---:|---:|---:|---|---:|---:|---:|---|---|
@@ -101,13 +137,14 @@ Scala Native port ratios on the right when a port exists.
 
 ## Interpretation
 
-- `msort`, `msort-r`, and `ratio` are the first local Scala Native ports with
-  meaningful memory behavior.
-- `msort` and `msort-r` give about `1.20x` local checked speedup over local
-  `gc-heap`, lower RSS, and lower timed GC.
-- `ratio` is a modest elapsed win but a strong RSS/GC row.
-- `fib37`, `tak`, `mandel`, and `life` are compute/control rows.
+- The L1 final-clean rows confirm `msort` and `msort-r` as the meaningful local
+  ReML-shaped allocation/list wins.
+- `ratio` is a modest elapsed win but a strong RSS row in L1.
+- `fib37` and `life` are near-tie compute/control rows; `tak`, `fft`, and
+  `mandel` are too short at the current configuration for headline timing.
+- The combined snapshot above still includes older L2 GC/RSS interpretation
+  columns. Use the L1 section for final elapsed/RSS claims, and use L2 only to
+  explain GC behavior.
 - Exact MLKit/ReML artifact reruns remain open; use the public-source
   provenance and runbook in `docs/REML_ARTIFACT_RUNBOOK.md` before making any
   raw cross-language timing claim.
-

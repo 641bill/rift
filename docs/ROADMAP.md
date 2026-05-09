@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-10 00:46 CEST
+Last updated: 2026-05-10 01:04 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -81,8 +81,12 @@ streaming page-token backend.
 ReML/MLKit PLDI-style table checkpoint:
 `evidence/REML_MLKIT_PLDI_TABLE.md` now separates paper-reported Figure 9
 data, exact-artifact rerun status, local Scala Native port rows, and
-ReML-inspired safety probes. Exact MLKit/ReML timing remains open; compare
-ratios and safety burden until local `mlkit`/`mlton` runs are available.
+ReML-inspired safety probes. L1 final-clean Tier 1 rows have been added for
+the local Scala Native ports. The useful L1 rows are `msort` and `msort-r`
+speed/RSS wins and `ratio` as a modest elapsed but strong RSS row; `fib37`,
+`life`, `tak`, `fft`, and `mandel` are controls at the current scale. Exact
+MLKit/ReML timing remains open; compare ratios and safety burden until local
+`mlkit`/`mlton` runs are available.
 
 Operator-gate checkpoint: `evidence/OPERATOR_GATE_STATUS.md` now records the
 next-rank/hash/median/join decision tree. Q8 join is framework/RSS evidence but

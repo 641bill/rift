@@ -1,13 +1,14 @@
 # Final-Clean Headline Results
 
 Date: 2026-05-09
-Last updated: 2026-05-10 00:46 CEST
+Last updated: 2026-05-10 01:04 CEST
 
 Status: L1 runner support exists for the first representative binaries. One
 focused retained-epoch L1 row has been collected from clean child commit
 `f1aa55484`, and Dataflow SELECT/AGGREGATE/JOIN representative L1 rows have
 been collected from child `7573d7577`. The first Yak LiveJournal real-input
 L1 row and generated Common Crawl-shaped q1/q2 L1 rows have also been
+collected from child `7573d7577`. ReML-shaped Tier 1 L1 rows have been
 collected from child `7573d7577`; the broader report-grade L1 headline sweep
 is still pending.
 Child `7573d7577` extends external timing/RSS summary support to Dataflow,
@@ -85,6 +86,15 @@ for those 20 iterations.
 | Common Crawl-shaped q2 1M | generated WET-shaped stressor | scoped page/window stream | safe rooted baseline | `safezone-improved-32k` | 3 processes x 1 iteration | `5.39 s` | `5.35 s` | `5.47 s` | `74334208 bytes` | checksum `1076064953308107199`, output `929230` | L1 clean rooted scoped-region baseline |
 | Common Crawl-shaped q2 1M | generated WET-shaped stressor | checked page-token stream | framework API win | `rift-checked-page-token` | 3 processes x 1 iteration | `4.16 s` | `4.15 s` | `4.20 s` | `63176704 bytes` | checksum `1076064953308107199`, output `929230` | L1 clean checked page-token win over heap and rooted scoped baseline |
 | Common Crawl-shaped q2 1M | generated WET-shaped stressor | checked scoped page-token | framework API win | `rift-checked-safezone-page-token` | 3 processes x 1 iteration | `4.75 s` | `4.75 s` | `4.76 s` | `63324160 bytes` | checksum `1076064953308107199`, output `929230` | L1 clean checked scoped page-token win over heap/rooted, but slower than checked stream page-token |
+| ReML-shaped msort x20 | local Scala Native port | heap list/sort | natural heap baseline | `gc-heap` | 3 processes x 20 iterations | `2.46 s` total (`123.0 ms/iter`) | `2.46 s` | `2.47 s` | `21250048 bytes` | checksum `-6417646918322825706` | L1 clean local port baseline |
+| ReML-shaped msort x20 | local Scala Native port | scoped region list/sort | safe rooted baseline | `region-scoped-rooted` | 3 processes x 20 iterations | `2.31 s` total (`115.5 ms/iter`) | `2.31 s` | `2.32 s` | `10305536 bytes` | checksum `-6417646918322825706` | L1 clean rooted scoped-region baseline |
+| ReML-shaped msort x20 | local Scala Native port | checked region list/sort | framework API win | `checked-region-stream` | 3 processes x 20 iterations | `2.06 s` total (`103.0 ms/iter`) | `2.05 s` | `2.06 s` | `10289152 bytes` | checksum `-6417646918322825706` | L1 clean checked stream win over heap and rooted scoped baseline |
+| ReML-shaped msort-r x20 | local Scala Native port | heap reverse/sort | natural heap baseline | `gc-heap` | 3 processes x 20 iterations | `2.25 s` total (`112.5 ms/iter`) | `2.25 s` | `2.26 s` | `39141376 bytes` | checksum `5175249867721542949` | L1 clean local port baseline |
+| ReML-shaped msort-r x20 | local Scala Native port | scoped region reverse/sort | safe rooted baseline | `region-scoped-rooted` | 3 processes x 20 iterations | `2.20 s` total (`110.0 ms/iter`) | `2.20 s` | `2.21 s` | `14778368 bytes` | checksum `5175249867721542949` | L1 clean rooted scoped-region baseline |
+| ReML-shaped msort-r x20 | local Scala Native port | checked region reverse/sort | framework API win | `checked-region-stream` | 3 processes x 20 iterations | `2.05 s` total (`102.5 ms/iter`) | `2.05 s` | `2.07 s` | `10289152 bytes` | checksum `5175249867721542949` | L1 clean checked stream win over heap and rooted scoped baseline |
+| ReML-shaped ratio x20 | local Scala Native port | heap ratio objects | natural heap baseline | `gc-heap` | 3 processes x 20 iterations | `0.93 s` total (`46.5 ms/iter`) | `0.92 s` | `0.94 s` | `79888384 bytes` | checksum `499038617794598401` | L1 clean local port baseline |
+| ReML-shaped ratio x20 | local Scala Native port | scoped ratio objects | safe rooted baseline | `region-scoped-rooted` | 3 processes x 20 iterations | `0.93 s` total (`46.5 ms/iter`) | `0.92 s` | `0.95 s` | `15925248 bytes` | checksum `499038617794598401` | L1 clean RSS win, elapsed near-tie |
+| ReML-shaped ratio x20 | local Scala Native port | checked scoped ratio objects | framework API/RSS win | `checked-region-scoped` | 3 processes x 20 iterations | `0.91 s` total (`45.5 ms/iter`) | `0.90 s` | `0.93 s` | `15892480 bytes` | checksum `499038617794598401` | L1 clean modest elapsed win and strong RSS win |
 | retained epoch smoke | synthetic focused matrix | retained epoch/drop-anchor | retained-object memory-management | `heap-epoch-retained-no-traverse` | 1 | external runner smoke only | external runner smoke only | external runner smoke only | `3801088 bytes` | checksum `-2003786531644562922`, output `1873` | L1 smoke only, not headline |
 | retained epoch smoke | synthetic focused matrix | retained epoch/drop-anchor | retained-object memory-management | `checked-scoped-epoch-retained-no-traverse` | 1 | external runner smoke only | external runner smoke only | external runner smoke only | `3768320 bytes` | checksum `-2003786531644562922`, output `1873` | L1 smoke only, not headline |
 
@@ -159,6 +169,30 @@ for i in 1 2 3; do
   zsh sandbox/run_common_crawl_wet_matrix.sh
 done
 ```
+
+ReML-shaped Tier 1 x20 command:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+for i in 1 2 3; do
+  RIFT_FINAL_CLEAN=1 \
+  REML_BUILD=0 \
+  REML_BENCHMARK_RUNS=20 \
+  REML_WARMUPS=0 \
+  REML_WORKLOADS="fib37 tak mandel msort msort-r life fft ratio" \
+  REML_MODES="gc-heap region-scoped-rooted checked-region-stream checked-region-scoped" \
+  REML_OUTPUT_DIR=/tmp/rift-l1-reml-tier1-x20-7573d7577-r${i} \
+  zsh sandbox/run_reml_region_matrix.sh
+done
+```
+
+ReML-shaped controls not listed as headline rows:
+
+- `fib37` is a near-tie at this scale: heap `2.40 s`, checked stream `2.41 s`.
+- `life` is a near-tie: heap `0.69 s`, best checked/rooted rows `0.68 s`.
+- `tak`, `fft`, and `mandel` are too short under this configuration for
+  useful external timing claims; keep them as correctness/configuration
+  controls unless scaled up.
 
 Smoke command:
 

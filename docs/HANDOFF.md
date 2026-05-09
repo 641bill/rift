@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-10 00:46 CEST
+Last updated: 2026-05-10 01:04 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -91,8 +91,14 @@ page-token remains a heap/rooted win but not the fastest checked backend.
 Latest ReML/MLKit PLDI-style table:
 `evidence/REML_MLKIT_PLDI_TABLE.md` is now the dedicated thesis-facing table.
 It recreates the PLDI Figure 9 paper-reported columns and adds local Scala
-Native Tier 1 port ratios where available. Exact MLKit/ReML artifact timing is
-still open, so do not make raw cross-language "Rift beats ReML" claims.
+Native Tier 1 port ratios where available. L1 final-clean Tier 1 rows are now
+recorded from child `7573d7577`: `msort` checked stream is `2.06 s` total for
+20 iterations versus heap `2.46 s`; `msort-r` checked stream is `2.05 s`
+versus heap `2.25 s`; `ratio` checked scoped is `0.91 s` versus heap
+`0.93 s` and cuts RSS from about `80 MB` to `16 MB`. `fib37`/`life` are
+near-tie controls, and `tak`/`fft`/`mandel` are too short under the current
+configuration for headline timing. Exact MLKit/ReML artifact timing is still
+open, so do not make raw cross-language "Rift beats ReML" claims.
 
 Latest operator-gate status:
 `evidence/OPERATOR_GATE_STATUS.md` records the current gate state for
