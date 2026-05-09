@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-09 21:15 CEST
+Last updated: 2026-05-09 21:35 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -18,6 +18,18 @@ Latest parent evidence checkpoint:
 Latest comprehensive sweep checkpoint:
 Staged headline runs completed after the TransactionRegion checkpoint. Source
 summary: `evidence/COMPREHENSIVE_SWEEP_2026_05_06.md`.
+
+Latest reporting-principle update:
+`docs/BENCHMARK_CATALOG.md` and `docs/PERFORMANCE_EVALUATION_REPORT.md` now
+make comparison classes explicit. Report rows as natural heap baseline,
+same-shape heap control, summary-only topology, retained-object drop-anchor,
+best checked topology, or unsafe/trusted lower bound before interpreting
+speedups. In prose, use `heap-retained-drop-anchor` for
+`heap-epoch-retained-no-traverse` when clarity matters: heap can drop the
+bucket anchor in O(1), but the retained heap objects still remain for GC
+trace/reclaim, whereas checked regions bulk close/reset the allocation area.
+This makes retained heap vs retained checked epoch the fair memory-management
+comparison, while summary-only direct rows remain topology/operator evidence.
 
 Latest clean retained/direct-epoch rerun:
 After committing child `918c7d4c1` and parent `ab570b1`, the retained-object

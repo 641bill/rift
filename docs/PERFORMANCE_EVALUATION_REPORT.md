@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-09 21:15 CEST
+Last updated: 2026-05-09 21:35 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -218,6 +218,28 @@ report both direct GC columns and broader memory-cost signals:
 
 Diagnostic allocation/timing counters are useful for attribution, but they are
 not headline timing rows because they can perturb performance.
+
+Reporting principle:
+Rift results must be structured by comparison class before interpretation. A
+natural heap baseline answers the practical end-to-end question; a same-shape
+heap control answers whether a region result is really memory placement rather
+than a better topology; a summary-only row is an operator/data-processing lower
+bound; and a retained-object drop-anchor row is the fair memory-management
+comparison. In the retained case, both heap and region allocate ordinary
+records, retain them until the epoch/window boundary, update summaries on
+append, and avoid user-level close traversal. The heap version can also close
+in O(1) by dropping a bucket reference, but those objects remain for the GC to
+trace/reclaim later. The region version closes/resets the allocation area in
+bulk. That retained comparison is the clearest answer to whether Rift improves
+memory management.
+
+This also matches the prior-work discipline. Broom, Yak, StreamFlex, Stancu et
+al., and ReML/MLKit do not enumerate every possible heap rewrite. They choose a
+memory/lifetime model justified by the system: dataflow epochs, data/control
+splits, stream periods, transaction annotations, or compiler-inferred regions.
+Rift should therefore report the best safe checked topology for each workload,
+but include same-shape heap controls whenever the topology changes computation.
+Unsafe/rootless modes remain lower bounds, not user-facing claims.
 
 ## 1. Executive Summary
 

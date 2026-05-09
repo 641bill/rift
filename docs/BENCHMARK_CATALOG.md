@@ -1,7 +1,7 @@
 # Rift Benchmark Catalog
 
 Date: 2026-05-05
-Last updated: 2026-05-09 00:15 CEST
+Last updated: 2026-05-09 21:35 CEST
 
 Status: working benchmark guide. Use this document to understand what each
 benchmark is meant to test before reading the detailed result files in
@@ -61,6 +61,38 @@ lower elapsed time means higher throughput. Latency means time observed by one
 event/request, usually reported as p50/p95/max or deadline misses. A mode can
 win throughput and lose latency, or lose median throughput but improve max-GC
 tails.
+
+## 1.2 Comparison Classes
+
+Every headline table should identify the comparison class before interpreting
+the numbers. Do not mix these rows into a single unqualified "heap vs Rift"
+claim.
+
+| Comparison class | What is compared | What it can prove |
+|---|---|---|
+| Natural heap baseline | Existing heap implementation against the best safe region topology. | Practical end-to-end result for the current program. |
+| Same-shape heap control | Heap implementation using the same operator/topology as the region row. | Whether the win is from region memory placement or from a better algorithm/topology. |
+| Summary-only topology | Records update summaries on append and are not retained until close. | Operator/data-processing lower bound; not a pure memory-management win. |
+| Retained-object drop-anchor | Heap and region both allocate ordinary records, retain them until the epoch/window close, update summaries on append, and do not traverse records at close. | Fair memory-management comparison: heap GC reclaim versus region bulk close/reset. |
+| Best checked topology | The fastest safe checked topology for the workload: usually `epoch`, `window`, or `page`. | User-facing Rift result. |
+| Unsafe/trusted lower bound | Rootless/trusted region modes without the final checked user guarantee. | Optimization potential only, not a safe-system claim. |
+
+Use the phrase `heap-retained-drop-anchor` in prose for
+`heap-epoch-retained-no-traverse` when clarity matters. The heap row also
+performs O(1) user-level close by dropping the bucket reference; the difference
+is that heap objects remain for the GC to trace/reclaim later, while region
+objects are reclaimed by closing/resetting the allocation area. This is why the
+retained comparison isolates memory management better than comparing checked
+regions against a summary-only heap row.
+
+Prior region systems also choose a justified lifetime topology rather than
+enumerating every possible heap rewrite. Broom uses dataflow/operator epochs,
+Yak separates epoch-local data from durable control objects, StreamFlex uses
+stream/period lifetimes and reports latency/throughput axes, Stancu et al. use
+transaction-region annotations, and ReML/MLKit use compiler-selected region
+modes. Rift should follow the same discipline: state the topology, state which
+objects are region-local, include same-shape heap controls when computation
+changes, and report unsafe/rootless modes only as lower bounds.
 
 ## 2. Core Runtime Baselines
 
