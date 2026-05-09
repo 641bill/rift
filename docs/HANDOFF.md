@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-10 00:31 CEST
+Last updated: 2026-05-10 00:41 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -70,6 +70,14 @@ At 1M x20, checked epoch scoped is `0.38/0.69/0.39 s` median total process time
 versus heap `0.62/1.10/0.55 s` and region-scoped-rooted
 `0.46/0.79/0.46 s`; checksums are `131080080920`, `163835709480`, and
 `193232836790`.
+Yak LiveJournal now also has an L1 real-input total-process row from child
+`7573d7577`. It uses the real SNAP LiveJournal gzipped edge list, 50M replayed
+edges, 10 epochs x 5M edges, and five replay iterations per external process.
+The row includes one input preload plus five replays per process. Median total
+process time is heap `18.79 s`, region-scoped-rooted `16.93 s`, and checked
+epoch scoped `16.12 s`; max RSS is about `2.77 GB` for heap and `612 MB` for
+the rooted/checked region rows. Checksum matched:
+`-6048644965681588176`.
 
 Latest ReML/MLKit PLDI-style table:
 `evidence/REML_MLKIT_PLDI_TABLE.md` is now the dedicated thesis-facing table.

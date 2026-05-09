@@ -1,13 +1,14 @@
 # Final-Clean Headline Results
 
 Date: 2026-05-09
-Last updated: 2026-05-10 00:31 CEST
+Last updated: 2026-05-10 00:41 CEST
 
 Status: L1 runner support exists for the first representative binaries. One
 focused retained-epoch L1 row has been collected from clean child commit
 `f1aa55484`, and Dataflow SELECT/AGGREGATE/JOIN representative L1 rows have
-been collected from child `7573d7577`; the broader report-grade L1 headline
-sweep is still pending.
+been collected from child `7573d7577`. The first Yak LiveJournal real-input
+L1 row has also been collected from child `7573d7577`; the broader
+report-grade L1 headline sweep is still pending.
 Child `7573d7577` extends external timing/RSS summary support to Dataflow,
 Yak, Common Crawl WET-shaped, and ReML runners; those rows are ready to collect
 next.
@@ -72,6 +73,9 @@ for those 20 iterations.
 | Dataflow JOIN 1M x20 | generated methodology | direct epoch / scoped region | framework API win | `gc-heap` | 3 processes x 20 iterations | `0.55 s` total (`27.5 ms/iter`) | `0.55 s` | `0.55 s` | `75071488 bytes` | checksum `193232836790` | L1 clean natural heap baseline |
 | Dataflow JOIN 1M x20 | generated methodology | direct epoch / scoped region | safe rooted baseline | `region-scoped-rooted` | 3 processes x 20 iterations | `0.46 s` total (`23.0 ms/iter`) | `0.46 s` | `0.46 s` | `7389184 bytes` | checksum `193232836790` | L1 clean rooted scoped-region baseline |
 | Dataflow JOIN 1M x20 | generated methodology | `RiftRegion.epoch` checked scoped | framework API win | `checked-epoch-scoped` | 3 processes x 20 iterations | `0.39 s` total (`19.5 ms/iter`) | `0.39 s` | `0.39 s` | `7405568 bytes` | checksum `193232836790` | L1 clean checked epoch win over heap and rooted scoped baseline |
+| Yak LiveJournal 50M x5 | real file-backed SNAP LiveJournal graph replay | heap linked epoch | natural heap baseline | `gc-heap` | 3 processes x 5 iterations | `18.79 s` total | `18.76 s` | `18.89 s` | `2772320256 bytes` | checksum `-6048644965681588176` | L1 clean file-backed total-process heap row; includes one gzipped input preload plus five 50M replays per process |
+| Yak LiveJournal 50M x5 | real file-backed SNAP LiveJournal graph replay | scoped region epoch | safe rooted baseline | `region-scoped-rooted` | 3 processes x 5 iterations | `16.93 s` total | `16.91 s` | `16.94 s` | `611860480 bytes` | checksum `-6048644965681588176` | L1 clean rooted scoped-region row; same input/preload protocol |
+| Yak LiveJournal 50M x5 | real file-backed SNAP LiveJournal graph replay | `RiftRegion.epoch` checked scoped | framework API win | `checked-epoch-scoped` | 3 processes x 5 iterations | `16.12 s` total | `16.03 s` | `16.16 s` | `611893248 bytes` | checksum `-6048644965681588176` | L1 clean real-input checked epoch win; total process row still includes input preload |
 | retained epoch smoke | synthetic focused matrix | retained epoch/drop-anchor | retained-object memory-management | `heap-epoch-retained-no-traverse` | 1 | external runner smoke only | external runner smoke only | external runner smoke only | `3801088 bytes` | checksum `-2003786531644562922`, output `1873` | L1 smoke only, not headline |
 | retained epoch smoke | synthetic focused matrix | retained epoch/drop-anchor | retained-object memory-management | `checked-scoped-epoch-retained-no-traverse` | 1 | external runner smoke only | external runner smoke only | external runner smoke only | `3768320 bytes` | checksum `-2003786531644562922`, output `1873` | L1 smoke only, not headline |
 
@@ -106,6 +110,27 @@ for op in select aggregate join; do
     DATAFLOW_OUTPUT_DIR=/tmp/rift-l1-dataflow-${op}-1m-x20-7573d7577-r${i} \
     zsh sandbox/run_dataflow_region_instrumented_matrix.sh
   done
+done
+```
+
+Yak LiveJournal 50M x5 command:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+for i in 1 2 3; do
+  RIFT_FINAL_CLEAN=1 \
+  YAK_BUILD=0 \
+  YAK_WORKLOAD=graphreal \
+  YAK_GRAPH_INPUT=/Users/siyaoliu/rift/cache/benchmark-data/yak/snap/soc-LiveJournal1.txt.gz \
+  YAK_GRAPH_INPUT_EDGES=50000000 \
+  YAK_GRAPH_INPUT_VERTICES=1000000 \
+  YAK_GRAPH_INPUT_EDGES_PER_EPOCH=5000000 \
+  YAK_EPOCHS=10 \
+  YAK_BENCHMARK_RUNS=5 \
+  YAK_WARMUPS=0 \
+  YAK_MODES="gc-heap region-scoped-rooted checked-epoch-scoped" \
+  YAK_OUTPUT_DIR=/tmp/rift-l1-yak-livejournal-50m-x5-7573d7577-r${i} \
+  zsh sandbox/run_yak_region_instrumented_matrix.sh
 done
 ```
 

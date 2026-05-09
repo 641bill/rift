@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-10 00:31 CEST
+Last updated: 2026-05-10 00:41 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -68,6 +68,10 @@ representative L1 rows for the final-clean headline table. Dataflow
 SELECT/AGGREGATE/JOIN now have representative L1 rows: checked epoch scoped is
 `0.38/0.69/0.39 s` median total process time for 20 1M-document iterations
 versus heap `0.62/1.10/0.55 s`.
+Yak LiveJournal now has the first L1 real-input epoch row: checked epoch
+scoped is `16.12 s` median total process time versus heap `18.79 s`, including
+one gzipped input preload plus five 50M-edge replays per process; RSS drops
+from about `2.77 GB` to about `612 MB`.
 
 ReML/MLKit PLDI-style table checkpoint:
 `evidence/REML_MLKIT_PLDI_TABLE.md` now separates paper-reported Figure 9
