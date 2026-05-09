@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-08 22:16 CEST
+Last updated: 2026-05-09 19:45 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -54,6 +54,35 @@ Broom-style Dataflow SELECT/AGGREGATE/JOIN, StreamFlex throughput/latency, and
 Stancu-style transaction batches. The strongest row is 50M LiveJournal:
 checked epoch scoped is `1030.943 ms` and about `1.53 GB` RSS versus heap
 `1612.834 ms`, `274.756 ms` timed GC, and about `2.76 GB` RSS.
+
+Direct-epoch extension checkpoint: generated/indexable DSPBench q2, GH
+Archive-shaped q2, and LogHub-shaped q2/q3 now have checked direct-epoch modes
+and a `heap-direct-epoch` same-shape aggregate control. These rows allocate
+ordinary records in bucket epochs and retain only primitive bucket summaries
+until the original close point. The same-shape control shows this is primarily
+operator/topology evidence: GH Archive-shaped q2 is heap `287.380 ms`,
+heap-direct `54.642 ms`, checked scoped `56.013 ms`; LogHub-shaped q2 is heap
+`526.803 ms`, heap-direct `191.601 ms`, checked scoped `193.938 ms`; LogHub
+q3 is heap `2225.364 ms`, heap-direct `1779.064 ms`, checked scoped
+`1792.397 ms`; DSPBench Fraud q2 is heap `400.900 ms`, heap-direct
+`272.251 ms`, checked scoped `267.739 ms`. NEXMark Q3/Q8/Q9/Q11 remain
+page-token/join/window candidates, not direct-epoch candidates.
+
+Retained-epoch reclaim checkpoint:
+`evidence/RETAINED_EPOCH_RECLAIM_MATRIX.md` now separates summary-only topology
+from retained-object memory-management evidence. The focused 1M retained
+matrix shows checked scoped retained epoch `23.999 ms` versus retained heap
+`34.405 ms`, with heap spending `9.646 ms` in timed GC and using about
+`21.3 MB` RSS versus about `4.9 MB` for checked scoped. DSPBench Fraud q2 1M
+retained controls show checked scoped retained epoch `364.535 ms` versus
+retained heap `387.943 ms`, removing `35.797 ms` median timed GC. GH
+Archive-shaped q2 retained controls show a larger memory-management win:
+checked scoped `181.345 ms` versus retained heap `244.988 ms`, with RSS about
+`15 MB` versus `147 MB`. LogHub q2 retained shows checked scoped `402.611 ms`
+versus retained heap `464.389 ms`; LogHub q3 retained is mixed but checked
+scoped still improves elapsed over retained heap. Treat retained rows as the
+fair memory-management comparison; `heap-direct-summary-only` remains the
+operator/topology lower bound and must not be used as a pure placement claim.
 
 Latest SPECjbb2005-workload port: `evidence/SPECJBB2005_PORT_MATRIX.md`.
 `SpecJbb2005PortMatrix` is a clean-room Scala Native workload port, not an

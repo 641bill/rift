@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-08 23:44 CEST
+Last updated: 2026-05-09 19:45 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -18,6 +18,52 @@ Parent evidence commit at start of latest sweep:
 Latest comprehensive sweep checkpoint:
 Staged headline runs completed after the TransactionRegion checkpoint. Source
 summary: `evidence/COMPREHENSIVE_SWEEP_2026_05_06.md`.
+
+Latest direct-epoch extension and same-shape control:
+Checked direct-epoch modes were added to DSPBench generated q2, GH
+Archive-shaped q2, and LogHub generated q2/q3 where bucket summaries can be
+represented as primitive metadata after the region epoch closes. NEXMark
+Q3/Q8/Q9/Q11 were reviewed and left on page-token/join/window topology because
+their state affects later events. A `heap-direct-epoch` same-shape aggregate
+control was added on 2026-05-09. 1M generated/indexable rows now separate
+operator topology from memory placement: DSPBench Fraud q2 is heap
+`400.900 ms`, heap-direct `272.251 ms`, checked scoped direct epoch
+`267.739 ms`; DSPBench Log q2 is heap `372.174 ms`, heap-direct
+`227.036 ms`, checked scoped direct epoch `230.374 ms`; GH Archive-shaped q2
+is heap `287.380 ms`, heap-direct `54.642 ms`, checked scoped direct epoch
+`56.013 ms`; LogHub-shaped q2 is heap `526.803 ms`, heap-direct
+`191.601 ms`, checked scoped direct epoch `193.938 ms`; LogHub-shaped q3 is
+heap `2225.364 ms`, heap-direct `1779.064 ms`, checked scoped direct epoch
+`1792.397 ms`. Interpretation: these are strong direct-aggregate
+topology/operator wins. Checked regions are close to same-shape heap, and
+Fraud q2 still gives a small checked-region win over same-shape heap, but the
+large deltas should not be presented as pure placement wins. File-backed
+DSPBench/LogHub and file-backed GH Archive still use page-token modes.
+
+Latest retained-epoch memory-management control:
+`RetainedEpochReclaimMatrix` was added on 2026-05-09 with four modes:
+`heap-direct-summary-only`, `heap-epoch-retained-no-traverse`,
+`checked-epoch-retained-no-traverse`, and
+`checked-scoped-epoch-retained-no-traverse`. The retained modes keep ordinary
+Scala records linked and alive until epoch close, update primitive summaries on
+append, and do not traverse records at close beyond O(1) head/tail anchor
+touches. Focused 1M rows now show a clear memory-management win:
+retained heap `34.405 ms`, `9.646 ms` median timed GC, and `21.3 MB` RSS;
+checked retained stream `25.366 ms`, `0 ms` GC, and `4.8 MB` RSS; checked
+retained scoped `23.999 ms`, `0 ms` GC, and `4.9 MB` RSS. DSPBench Fraud q2
+1M retained controls also separate topology from reclaim: summary-only lower
+bound `279.103 ms`; retained heap `387.943 ms` with `35.797 ms` median timed
+GC; checked retained stream `373.837 ms`; checked retained scoped `364.535 ms`.
+GH Archive-shaped q2 retained controls are stronger: retained heap
+`244.988 ms`, `69.552 ms` GC, and `147 MB` RSS versus checked retained scoped
+`181.345 ms`, `0 ms` GC, and `15 MB` RSS. LogHub generated q2 retained shows
+checked retained scoped `402.611 ms` versus retained heap `464.389 ms`, while
+LogHub q3 is a mixed but still positive checked scoped row (`2101.599 ms`
+versus retained heap `2217.322 ms`).
+Interpretation: summary-only direct epoch remains topology evidence, while
+retained heap vs retained checked epoch is fair Rift memory-management
+evidence. Fraud q2 is a throughput/GC win, not an RSS win, because checked
+retained RSS is slightly higher than retained heap in that row.
 
 Latest page-token fast-path checkpoint:
 On 2026-05-07, `StreamPageTokenAppendWindow` got a batch-close/current-bucket

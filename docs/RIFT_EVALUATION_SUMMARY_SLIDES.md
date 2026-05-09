@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-08 21:07 CEST
+Last updated: 2026-05-09 19:45 CEST
 
 Status: markdown slide deck outline. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report and this file as
@@ -22,6 +22,28 @@ scoped page-token `7871.856 ms` vs heap `8227.369 ms`, removing heap's
 GC is only about 1-2% of elapsed. Trusted Streaming is still faster in Fraud,
 so the next tuning slide should focus on object construction, append/linking,
 cursor traversal, query CPU, and finding a richer real-input stream.
+
+Direct-epoch extension checkpoint: generated/indexable q2/q3 rows now have a
+same-shape heap direct-epoch aggregate control. The large deltas are mostly
+operator topology: GH Archive-shaped q2 is heap `287.380 ms`, heap-direct
+`54.642 ms`, checked scoped `56.013 ms`; LogHub-shaped q2 is heap
+`526.803 ms`, heap-direct `191.601 ms`, checked scoped `193.938 ms`;
+DSPBench Fraud q2 is heap `400.900 ms`, heap-direct `272.251 ms`, checked
+scoped `267.739 ms`. This should be presented as “direct epoch is the right
+operator topology”; only Fraud q2 currently shows a small placement/backend
+edge over same-shape heap.
+
+Retained-epoch checkpoint: the project now has the missing no-traverse
+retained-object control. Focused 1M retained heap is `34.405 ms`, spends
+`9.646 ms` in timed GC, and uses about `21.3 MB` RSS; checked scoped retained
+epoch is `23.999 ms`, `0 ms` GC, and about `4.9 MB` RSS. DSPBench Fraud q2
+retained controls show checked scoped retained epoch `364.535 ms` versus
+retained heap `387.943 ms`, removing `35.797 ms` median timed GC. Slide-level
+lesson: summary-only direct rows are topology evidence; retained heap versus
+retained checked epoch is the fair memory-management story. GH Archive-shaped
+q2 gives the cleanest retained visual: checked scoped `181.345 ms` and about
+`15 MB` RSS versus retained heap `244.988 ms`, `69.552 ms` GC, and about
+`147 MB` RSS.
 
 Latest real-input addition: Yak `graphreal` now replays real SNAP edge lists as
 epoch-local `EdgeUpdate` objects. Twitter ego proved the input path; the

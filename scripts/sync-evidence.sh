@@ -42,6 +42,7 @@ cp -f "$FORK/sandbox/CHECKED_SAFEZONE_BACKEND_MATRIX.md" "$DEST/" 2>/dev/null ||
 cp -f "$FORK/sandbox/CHECKED_OVERHEAD_REMOVAL_MATRIX.md" "$DEST/" 2>/dev/null || true
 cp -f "$FORK/sandbox/CHEAP_OPERATOR_FAMILY_MATRIX.md" "$DEST/" 2>/dev/null || true
 cp -f "$FORK/sandbox/DIRECT_EPOCH_TOPOLOGY_MATRIX.md" "$DEST/" 2>/dev/null || true
+cp -f "$FORK/sandbox/RETAINED_EPOCH_RECLAIM_MATRIX.md" "$DEST/" 2>/dev/null || true
 cp -f "$FORK/sandbox/SPECJBB2005_PORT_MATRIX.md" "$DEST/" 2>/dev/null || true
 cp -f "$FORK/sandbox/REALISTIC_STREAM_GC_MATRIX.md" "$DEST/" 2>/dev/null || true
 cp -f "$FORK/sandbox/REAL_INPUT_BENCHMARK_SEARCH.md" "$DEST/" 2>/dev/null || true

@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-08 22:16 CEST
+Last updated: 2026-05-09 19:45 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -19,6 +19,41 @@ workload port, not an official SPEC result. It runs warehouses 4 through 8 at
 warehouse count; at 8 warehouses it is `108.649 ms` versus heap `129.674 ms`
 with `15.125 ms` timed GC. The transaction-local object proxy is
 `4,163,936` region-freed objects at 8 warehouses.
+
+Latest direct-epoch extension checkpoint:
+`evidence/DIRECT_EPOCH_TOPOLOGY_MATRIX.md` now includes generated/indexable q2
+extensions for DSPBench, GH Archive-shaped, and LogHub-shaped rows. Checked
+direct epoch allocates ordinary records inside a bucket epoch and retains only
+primitive bucket summaries until the original close point. The 2026-05-09
+`heap-direct-epoch` same-shape control shows the large q2/q3 deltas are mostly
+direct-aggregate topology wins: GH Archive-shaped q2 is heap `287.380 ms`,
+heap-direct `54.642 ms`, checked scoped `56.013 ms`; LogHub-shaped q2 is heap
+`526.803 ms`, heap-direct `191.601 ms`, checked scoped `193.938 ms`;
+DSPBench Fraud q2 is heap `400.900 ms`, heap-direct `272.251 ms`, checked
+scoped `267.739 ms`. Interpretation: checked regions are close to same-shape
+heap, and Fraud q2 still has a small checked-region edge, but these rows should
+be reported as topology/operator evidence rather than pure placement wins.
+NEXMark Q3/Q8/Q9/Q11 remain page-token/join/window topology rows because their
+state affects later events.
+
+Latest retained-epoch reclaim checkpoint:
+`evidence/RETAINED_EPOCH_RECLAIM_MATRIX.md` adds retained no-traverse controls
+to separate topology from memory management. In the focused 1M matrix,
+`checked-scoped-epoch-retained-no-traverse` is `23.999 ms` versus retained heap
+`34.405 ms`, while heap spends `9.646 ms` in timed GC and uses about `21.3 MB`
+RSS versus about `4.9 MB` for checked scoped. DSPBench Fraud q2 retained
+controls show checked scoped retained epoch `364.535 ms` versus retained heap
+`387.943 ms`, removing `35.797 ms` median timed GC. GH Archive-shaped q2 is the
+strongest retained generated/preloaded row so far: checked scoped retained
+epoch `181.345 ms` versus retained heap `244.988 ms`, removing `69.552 ms`
+median timed GC and cutting RSS from about `147 MB` to `15 MB`. LogHub q2
+retained also wins (`402.611 ms` versus retained heap `464.389 ms`); LogHub q3
+is a mixed row where checked scoped retained improves elapsed but not RSS. This
+is the fair
+memory-management comparison: ordinary objects survive until the epoch boundary
+in both heap and region modes, and close does not traverse records. The
+summary-only direct rows remain topology/operator lower bounds, not pure Rift
+placement wins.
 
 Latest post-fast-path selected sweep:
 `evidence/POST_FAST_PATH_SELECTED_SWEEP_2026_05_07.md`. This is from the
