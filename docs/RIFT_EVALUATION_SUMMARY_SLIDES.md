@@ -1,12 +1,14 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-09 21:51 CEST
+Last updated: 2026-05-09 22:03 CEST
 
 Status: markdown slide deck outline. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report,
 `docs/BENCHMARK_CATALOG.md` for benchmark definitions, and
 `evidence/EVALUATION_CLASSIFIED_SUMMARY.md` for the classified result table.
+Use `evidence/OPERATOR_GATE_STATUS.md` when discussing why rank/top-k/median
+and join operators remain gated.
 
 Recommended talk order:
 

@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-09 21:51 CEST
+Last updated: 2026-05-09 22:03 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -46,6 +46,12 @@ natural heap baselines, same-shape heap controls, summary-only topology rows,
 retained-object drop-anchor comparisons, best checked topology rows, and
 unsafe/trusted lower bounds. Future benchmark/operator work should add rows to
 that structure before turning a result into a thesis claim.
+
+Operator-gate checkpoint: `evidence/OPERATOR_GATE_STATUS.md` now records the
+next-rank/hash/median/join decision tree. Q8 join is framework/RSS evidence but
+not a speed claim against `heap-join-api`; priority queues and TableRank remain
+API/gated evidence; LogHub top templates are the next concrete top-k/rank
+candidate if a new operator pass starts.
 
 Latest staged headline sweep: `evidence/COMPREHENSIVE_SWEEP_2026_05_06.md`.
 It completed prior-work, checked-operator, SafeZone-cost, and stream rows with

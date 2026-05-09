@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-09 21:51 CEST
+Last updated: 2026-05-09 22:03 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -17,6 +17,11 @@ Latest classified evidence summary:
 when deciding whether a row is topology evidence, retained-object
 memory-management evidence, a best checked topology result, a real-input modest
 win, or a ceiling/control row.
+
+Latest operator-gate status:
+`evidence/OPERATOR_GATE_STATUS.md`. This keeps rank/top-k/median/hash/join work
+out of application claims until each candidate has natural heap, same-shape
+heap, retained controls where needed, and a focused 1M gate.
 
 Latest SPECjbb2005-workload port checkpoint:
 `evidence/SPECJBB2005_PORT_MATRIX.md`. This is a clean-room Scala Native

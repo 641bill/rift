@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-09 21:51 CEST
+Last updated: 2026-05-09 22:03 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -41,6 +41,16 @@ bounds; retained heap versus retained checked epoch rows are memory-management
 claims; direct `RiftRegion.epoch` rows are reusable checked topology claims;
 page-token rows are page/window stream claims; rootless/trusted rows remain
 lower-bound controls.
+
+Latest operator-gate status:
+`evidence/OPERATOR_GATE_STATUS.md` records the current gate state for
+hash/window join, top-k, mutable keyed rank, median/percentile, and
+hash/group-aggregate operators. The immediate decision is conservative:
+NEXMark Q8 has the best join evidence because fair heap and checked join API
+controls already exist, but it remains gated because the packed checked join
+API is lower-RSS yet slower than the specialized heap join API at 1M. LogHub
+top templates are the preferred next top-k/rank candidate if we resume
+operator work, because real HDFS input is already wired.
 
 Latest clean retained/direct-epoch rerun:
 After committing child `918c7d4c1` and parent `ab570b1`, the retained-object

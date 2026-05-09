@@ -1,7 +1,7 @@
 # Evaluation Classified Summary
 
 Date: 2026-05-09
-Last updated: 2026-05-09 21:51 CEST
+Last updated: 2026-05-09 22:03 CEST
 
 Status: thesis-facing classified summary built from committed evidence, with no
 new benchmark runs. Baseline commits: parent `1cc3b2c`, child `13a3df1c7`.
@@ -69,5 +69,6 @@ reference, but the retained heap objects still remain for GC tracing/reclaim.
   control if ordinary records survive until close.
 - A future rank/top-k/median/join claim must first add natural heap,
   same-shape heap, and retained controls before application integration.
+  Current candidate status is tracked in `evidence/OPERATOR_GATE_STATUS.md`.
 - Unsafe/rootless/trusted rows may be reported only as lower bounds or backend
   potential, never as final safe-system evidence.
