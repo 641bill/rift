@@ -1,11 +1,13 @@
 # Final-Clean Headline Results
 
 Date: 2026-05-09
-Last updated: 2026-05-10 00:22 CEST
+Last updated: 2026-05-10 00:24 CEST
 
 Status: L1 runner support exists for the first representative binaries. One
 focused retained-epoch L1 row has been collected from clean child commit
-`f1aa55484`; the broader report-grade L1 headline sweep is still pending.
+`f1aa55484`, and one Dataflow SELECT representative L1 row has been collected
+from child `7573d7577`; the broader report-grade L1 headline sweep is still
+pending.
 Child `7573d7577` extends external timing/RSS summary support to Dataflow,
 Yak, Common Crawl WET-shaped, and ReML runners; those rows are ready to collect
 next.
@@ -61,6 +63,9 @@ for those 20 iterations.
 | retained epoch focused 1M x20 | synthetic focused matrix | retained epoch/drop-anchor | retained-object memory-management | `heap-epoch-retained-no-traverse` | 3 processes x 20 iterations | `0.70 s` total (`35.0 ms/iter`) | `0.70 s` | `0.99 s` | `21233664 bytes` | checksum `-829278451938965381`, output `163644` | L1 clean heap retained/drop-anchor control |
 | retained epoch focused 1M x20 | synthetic focused matrix | retained epoch/drop-anchor | retained-object memory-management | `checked-epoch-retained-no-traverse` | 3 processes x 20 iterations | `0.50 s` total (`25.0 ms/iter`) | `0.50 s` | `0.51 s` | `6144000 bytes` | checksum `-829278451938965381`, output `163644` | L1 clean checked stream retained win over heap retained |
 | retained epoch focused 1M x20 | synthetic focused matrix | retained epoch/drop-anchor | retained-object memory-management | `checked-scoped-epoch-retained-no-traverse` | 3 processes x 20 iterations | `0.47 s` total (`23.5 ms/iter`) | `0.47 s` | `0.48 s` | `6193152 bytes` | checksum `-829278451938965381`, output `163644` | L1 clean checked scoped retained win over heap retained |
+| Dataflow SELECT 1M x20 | generated methodology | direct epoch / scoped region | framework API win | `gc-heap` | 3 processes x 20 iterations | `0.62 s` total (`31.0 ms/iter`) | `0.61 s` | `0.63 s` | `39288832 bytes` | checksum `131080080920` | L1 clean natural heap baseline |
+| Dataflow SELECT 1M x20 | generated methodology | direct epoch / scoped region | safe rooted baseline | `region-scoped-rooted` | 3 processes x 20 iterations | `0.46 s` total (`23.0 ms/iter`) | `0.46 s` | `0.48 s` | `7536640 bytes` | checksum `131080080920` | L1 clean rooted scoped-region baseline |
+| Dataflow SELECT 1M x20 | generated methodology | `RiftRegion.epoch` checked scoped | framework API win | `checked-epoch-scoped` | 3 processes x 20 iterations | `0.38 s` total (`19.0 ms/iter`) | `0.38 s` | `0.39 s` | `7553024 bytes` | checksum `131080080920` | L1 clean checked epoch win over heap and rooted scoped baseline |
 | retained epoch smoke | synthetic focused matrix | retained epoch/drop-anchor | retained-object memory-management | `heap-epoch-retained-no-traverse` | 1 | external runner smoke only | external runner smoke only | external runner smoke only | `3801088 bytes` | checksum `-2003786531644562922`, output `1873` | L1 smoke only, not headline |
 | retained epoch smoke | synthetic focused matrix | retained epoch/drop-anchor | retained-object memory-management | `checked-scoped-epoch-retained-no-traverse` | 1 | external runner smoke only | external runner smoke only | external runner smoke only | `3768320 bytes` | checksum `-2003786531644562922`, output `1873` | L1 smoke only, not headline |
 
@@ -76,6 +81,24 @@ RETAINED_EPOCH_WARMUPS=0 \
 RETAINED_EPOCH_MODES="heap-epoch-retained-no-traverse checked-epoch-retained-no-traverse checked-scoped-epoch-retained-no-traverse" \
 RETAINED_EPOCH_OUTPUT_DIR=/tmp/rift-l1-retained-epoch-1m-x20-clean-f1aa55484 \
 zsh sandbox/run_retained_epoch_reclaim_matrix.sh
+```
+
+Dataflow SELECT 1M x20 command:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+for i in 1 2 3; do
+  RIFT_FINAL_CLEAN=1 \
+  DATAFLOW_BUILD=0 \
+  DATAFLOW_EPOCHS=10 \
+  DATAFLOW_DOCS_PER_EPOCH=100000 \
+  DATAFLOW_BENCHMARK_RUNS=20 \
+  DATAFLOW_WARMUPS=0 \
+  DATAFLOW_OPERATOR=select \
+  DATAFLOW_MODES="gc-heap region-scoped-rooted checked-epoch-scoped" \
+  DATAFLOW_OUTPUT_DIR=/tmp/rift-l1-dataflow-select-1m-x20-7573d7577-r${i} \
+  zsh sandbox/run_dataflow_region_instrumented_matrix.sh
+done
 ```
 
 Smoke command:

@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-10 00:22 CEST
+Last updated: 2026-05-10 00:24 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -64,7 +64,10 @@ L1 headline sweep is still pending and belongs in
 Follow-up child commit `7573d7577` extends external real/user/sys/RSS summary
 columns to the Dataflow, Yak, Common Crawl WET-shaped, and ReML runner scripts.
 Tiny L1 smokes were run for each current binary and matched checksums; those
-smokes validate runner plumbing only, not headline performance.
+smokes validate runner plumbing only, not headline performance. The first
+Dataflow representative L1 row was also collected: SELECT 1M x20 has heap
+`0.62 s` median total process time, region-scoped-rooted `0.46 s`, and checked
+epoch scoped `0.38 s`, all with checksum `131080080920`.
 
 Latest ReML/MLKit PLDI-style table:
 `evidence/REML_MLKIT_PLDI_TABLE.md` is now the dedicated thesis-facing table.

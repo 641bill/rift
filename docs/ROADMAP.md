@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-10 00:22 CEST
+Last updated: 2026-05-10 00:24 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -64,7 +64,9 @@ retained/drop-anchor at `0.70 s`.
 Child `7573d7577` then extended external real/user/sys/RSS summary columns to
 the Dataflow, Yak, Common Crawl WET-shaped, and ReML runners. The next
 measurement step is no longer runner plumbing; it is selecting and running the
-representative L1 rows for the final-clean headline table.
+representative L1 rows for the final-clean headline table. Dataflow SELECT now
+has the first representative L1 row: checked epoch scoped is `0.38 s` median
+for 20 1M-document iterations versus heap `0.62 s`.
 
 ReML/MLKit PLDI-style table checkpoint:
 `evidence/REML_MLKIT_PLDI_TABLE.md` now separates paper-reported Figure 9
