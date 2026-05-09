@@ -1,11 +1,11 @@
 # Measurement Overhead Protocol
 
 Date: 2026-05-09
-Last updated: 2026-05-10 00:24 CEST
+Last updated: 2026-05-10 00:31 CEST
 
 Status: active protocol. Initial L1 final-clean support is implemented for the
 first representative benchmark binaries. The first clean focused retained L1
-row and the first Dataflow SELECT representative L1 row are recorded in
+row and Dataflow SELECT/AGGREGATE/JOIN representative L1 rows are recorded in
 `evidence/FINAL_CLEAN_HEADLINE_RESULTS.md`; the broader L1 headline sweep
 remains to be collected. Dataflow, Yak, Common Crawl WET-shaped, and ReML
 runners now also write external real/user/sys/RSS columns into their summaries

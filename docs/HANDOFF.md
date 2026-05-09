@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-10 00:24 CEST
+Last updated: 2026-05-10 00:31 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -65,9 +65,11 @@ Follow-up child commit `7573d7577` extends external real/user/sys/RSS summary
 columns to the Dataflow, Yak, Common Crawl WET-shaped, and ReML runner scripts.
 Tiny L1 smokes were run for each current binary and matched checksums; those
 smokes validate runner plumbing only, not headline performance. The first
-Dataflow representative L1 row was also collected: SELECT 1M x20 has heap
-`0.62 s` median total process time, region-scoped-rooted `0.46 s`, and checked
-epoch scoped `0.38 s`, all with checksum `131080080920`.
+Dataflow representative L1 rows were also collected for SELECT/AGGREGATE/JOIN.
+At 1M x20, checked epoch scoped is `0.38/0.69/0.39 s` median total process time
+versus heap `0.62/1.10/0.55 s` and region-scoped-rooted
+`0.46/0.79/0.46 s`; checksums are `131080080920`, `163835709480`, and
+`193232836790`.
 
 Latest ReML/MLKit PLDI-style table:
 `evidence/REML_MLKIT_PLDI_TABLE.md` is now the dedicated thesis-facing table.

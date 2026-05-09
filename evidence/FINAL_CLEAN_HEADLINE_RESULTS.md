@@ -1,13 +1,13 @@
 # Final-Clean Headline Results
 
 Date: 2026-05-09
-Last updated: 2026-05-10 00:24 CEST
+Last updated: 2026-05-10 00:31 CEST
 
 Status: L1 runner support exists for the first representative binaries. One
 focused retained-epoch L1 row has been collected from clean child commit
-`f1aa55484`, and one Dataflow SELECT representative L1 row has been collected
-from child `7573d7577`; the broader report-grade L1 headline sweep is still
-pending.
+`f1aa55484`, and Dataflow SELECT/AGGREGATE/JOIN representative L1 rows have
+been collected from child `7573d7577`; the broader report-grade L1 headline
+sweep is still pending.
 Child `7573d7577` extends external timing/RSS summary support to Dataflow,
 Yak, Common Crawl WET-shaped, and ReML runners; those rows are ready to collect
 next.
@@ -66,6 +66,12 @@ for those 20 iterations.
 | Dataflow SELECT 1M x20 | generated methodology | direct epoch / scoped region | framework API win | `gc-heap` | 3 processes x 20 iterations | `0.62 s` total (`31.0 ms/iter`) | `0.61 s` | `0.63 s` | `39288832 bytes` | checksum `131080080920` | L1 clean natural heap baseline |
 | Dataflow SELECT 1M x20 | generated methodology | direct epoch / scoped region | safe rooted baseline | `region-scoped-rooted` | 3 processes x 20 iterations | `0.46 s` total (`23.0 ms/iter`) | `0.46 s` | `0.48 s` | `7536640 bytes` | checksum `131080080920` | L1 clean rooted scoped-region baseline |
 | Dataflow SELECT 1M x20 | generated methodology | `RiftRegion.epoch` checked scoped | framework API win | `checked-epoch-scoped` | 3 processes x 20 iterations | `0.38 s` total (`19.0 ms/iter`) | `0.38 s` | `0.39 s` | `7553024 bytes` | checksum `131080080920` | L1 clean checked epoch win over heap and rooted scoped baseline |
+| Dataflow AGGREGATE 1M x20 | generated methodology | direct epoch / scoped region | framework API win | `gc-heap` | 3 processes x 20 iterations | `1.10 s` total (`55.0 ms/iter`) | `1.10 s` | `1.13 s` | `75890688 bytes` | checksum `163835709480` | L1 clean natural heap baseline |
+| Dataflow AGGREGATE 1M x20 | generated methodology | direct epoch / scoped region | safe rooted baseline | `region-scoped-rooted` | 3 processes x 20 iterations | `0.79 s` total (`39.5 ms/iter`) | `0.79 s` | `0.80 s` | `10829824 bytes` | checksum `163835709480` | L1 clean rooted scoped-region baseline |
+| Dataflow AGGREGATE 1M x20 | generated methodology | `RiftRegion.epoch` checked scoped | framework API win | `checked-epoch-scoped` | 3 processes x 20 iterations | `0.69 s` total (`34.5 ms/iter`) | `0.69 s` | `0.70 s` | `10829824 bytes` | checksum `163835709480` | L1 clean checked epoch win over heap and rooted scoped baseline |
+| Dataflow JOIN 1M x20 | generated methodology | direct epoch / scoped region | framework API win | `gc-heap` | 3 processes x 20 iterations | `0.55 s` total (`27.5 ms/iter`) | `0.55 s` | `0.55 s` | `75071488 bytes` | checksum `193232836790` | L1 clean natural heap baseline |
+| Dataflow JOIN 1M x20 | generated methodology | direct epoch / scoped region | safe rooted baseline | `region-scoped-rooted` | 3 processes x 20 iterations | `0.46 s` total (`23.0 ms/iter`) | `0.46 s` | `0.46 s` | `7389184 bytes` | checksum `193232836790` | L1 clean rooted scoped-region baseline |
+| Dataflow JOIN 1M x20 | generated methodology | `RiftRegion.epoch` checked scoped | framework API win | `checked-epoch-scoped` | 3 processes x 20 iterations | `0.39 s` total (`19.5 ms/iter`) | `0.39 s` | `0.39 s` | `7405568 bytes` | checksum `193232836790` | L1 clean checked epoch win over heap and rooted scoped baseline |
 | retained epoch smoke | synthetic focused matrix | retained epoch/drop-anchor | retained-object memory-management | `heap-epoch-retained-no-traverse` | 1 | external runner smoke only | external runner smoke only | external runner smoke only | `3801088 bytes` | checksum `-2003786531644562922`, output `1873` | L1 smoke only, not headline |
 | retained epoch smoke | synthetic focused matrix | retained epoch/drop-anchor | retained-object memory-management | `checked-scoped-epoch-retained-no-traverse` | 1 | external runner smoke only | external runner smoke only | external runner smoke only | `3768320 bytes` | checksum `-2003786531644562922`, output `1873` | L1 smoke only, not headline |
 
@@ -83,21 +89,23 @@ RETAINED_EPOCH_OUTPUT_DIR=/tmp/rift-l1-retained-epoch-1m-x20-clean-f1aa55484 \
 zsh sandbox/run_retained_epoch_reclaim_matrix.sh
 ```
 
-Dataflow SELECT 1M x20 command:
+Dataflow SELECT/AGGREGATE/JOIN 1M x20 command:
 
 ```sh
 cd /Users/siyaoliu/rift/scala-native-rift
-for i in 1 2 3; do
-  RIFT_FINAL_CLEAN=1 \
-  DATAFLOW_BUILD=0 \
-  DATAFLOW_EPOCHS=10 \
-  DATAFLOW_DOCS_PER_EPOCH=100000 \
-  DATAFLOW_BENCHMARK_RUNS=20 \
-  DATAFLOW_WARMUPS=0 \
-  DATAFLOW_OPERATOR=select \
-  DATAFLOW_MODES="gc-heap region-scoped-rooted checked-epoch-scoped" \
-  DATAFLOW_OUTPUT_DIR=/tmp/rift-l1-dataflow-select-1m-x20-7573d7577-r${i} \
-  zsh sandbox/run_dataflow_region_instrumented_matrix.sh
+for op in select aggregate join; do
+  for i in 1 2 3; do
+    RIFT_FINAL_CLEAN=1 \
+    DATAFLOW_BUILD=0 \
+    DATAFLOW_EPOCHS=10 \
+    DATAFLOW_DOCS_PER_EPOCH=100000 \
+    DATAFLOW_BENCHMARK_RUNS=20 \
+    DATAFLOW_WARMUPS=0 \
+    DATAFLOW_OPERATOR=${op} \
+    DATAFLOW_MODES="gc-heap region-scoped-rooted checked-epoch-scoped" \
+    DATAFLOW_OUTPUT_DIR=/tmp/rift-l1-dataflow-${op}-1m-x20-7573d7577-r${i} \
+    zsh sandbox/run_dataflow_region_instrumented_matrix.sh
+  done
 done
 ```
 
