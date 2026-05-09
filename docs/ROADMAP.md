@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-10 00:41 CEST
+Last updated: 2026-05-10 00:46 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -72,6 +72,11 @@ Yak LiveJournal now has the first L1 real-input epoch row: checked epoch
 scoped is `16.12 s` median total process time versus heap `18.79 s`, including
 one gzipped input preload plus five 50M-edge replays per process; RSS drops
 from about `2.77 GB` to about `612 MB`.
+Generated Common Crawl-shaped q1/q2 now have L1 page-token rows. At 1M pages,
+checked page-token stream is fastest (`4.02/4.16 s`) versus heap
+`5.68/5.53 s` and safezone-improved-32k `5.42/5.39 s`; checked scoped
+page-token also wins over heap/rooted (`4.51/4.75 s`) but trails the checked
+streaming page-token backend.
 
 ReML/MLKit PLDI-style table checkpoint:
 `evidence/REML_MLKIT_PLDI_TABLE.md` now separates paper-reported Figure 9

@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-10 00:41 CEST
+Last updated: 2026-05-10 00:46 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -78,6 +78,15 @@ process time is heap `18.79 s`, region-scoped-rooted `16.93 s`, and checked
 epoch scoped `16.12 s`; max RSS is about `2.77 GB` for heap and `612 MB` for
 the rooted/checked region rows. Checksum matched:
 `-6048644965681588176`.
+Generated Common Crawl-shaped q1/q2 also now have L1 page-token rows from
+child `7573d7577`. At 1M pages, q1 has heap `5.68 s`,
+safezone-improved-32k `5.42 s`, checked page-token stream `4.02 s`, and
+checked scoped page-token `4.51 s`; q2 has heap `5.53 s`,
+safezone-improved-32k `5.39 s`, checked page-token stream `4.16 s`, and
+checked scoped page-token `4.75 s`. Checksums/output counts matched. This is a
+generated stressor row, not real-input proof; L1 shows the Rift streaming
+page-token backend is fastest for this shape, while the SafeZone-backed checked
+page-token remains a heap/rooted win but not the fastest checked backend.
 
 Latest ReML/MLKit PLDI-style table:
 `evidence/REML_MLKIT_PLDI_TABLE.md` is now the dedicated thesis-facing table.

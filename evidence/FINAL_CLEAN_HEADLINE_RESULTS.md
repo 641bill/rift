@@ -1,14 +1,15 @@
 # Final-Clean Headline Results
 
 Date: 2026-05-09
-Last updated: 2026-05-10 00:41 CEST
+Last updated: 2026-05-10 00:46 CEST
 
 Status: L1 runner support exists for the first representative binaries. One
 focused retained-epoch L1 row has been collected from clean child commit
 `f1aa55484`, and Dataflow SELECT/AGGREGATE/JOIN representative L1 rows have
 been collected from child `7573d7577`. The first Yak LiveJournal real-input
-L1 row has also been collected from child `7573d7577`; the broader
-report-grade L1 headline sweep is still pending.
+L1 row and generated Common Crawl-shaped q1/q2 L1 rows have also been
+collected from child `7573d7577`; the broader report-grade L1 headline sweep
+is still pending.
 Child `7573d7577` extends external timing/RSS summary support to Dataflow,
 Yak, Common Crawl WET-shaped, and ReML runners; those rows are ready to collect
 next.
@@ -76,6 +77,14 @@ for those 20 iterations.
 | Yak LiveJournal 50M x5 | real file-backed SNAP LiveJournal graph replay | heap linked epoch | natural heap baseline | `gc-heap` | 3 processes x 5 iterations | `18.79 s` total | `18.76 s` | `18.89 s` | `2772320256 bytes` | checksum `-6048644965681588176` | L1 clean file-backed total-process heap row; includes one gzipped input preload plus five 50M replays per process |
 | Yak LiveJournal 50M x5 | real file-backed SNAP LiveJournal graph replay | scoped region epoch | safe rooted baseline | `region-scoped-rooted` | 3 processes x 5 iterations | `16.93 s` total | `16.91 s` | `16.94 s` | `611860480 bytes` | checksum `-6048644965681588176` | L1 clean rooted scoped-region row; same input/preload protocol |
 | Yak LiveJournal 50M x5 | real file-backed SNAP LiveJournal graph replay | `RiftRegion.epoch` checked scoped | framework API win | `checked-epoch-scoped` | 3 processes x 5 iterations | `16.12 s` total | `16.03 s` | `16.16 s` | `611893248 bytes` | checksum `-6048644965681588176` | L1 clean real-input checked epoch win; total process row still includes input preload |
+| Common Crawl-shaped q1 1M | generated WET-shaped stressor | heap page/token stream | natural heap baseline | `heap-immix` | 3 processes x 1 iteration | `5.68 s` | `5.67 s` | `5.70 s` | `408502272 bytes` | checksum `-3166891223384968696`, output `137000000` | L1 clean generated object-pressure baseline, not real-input proof |
+| Common Crawl-shaped q1 1M | generated WET-shaped stressor | scoped page/token stream | safe rooted baseline | `safezone-improved-32k` | 3 processes x 1 iteration | `5.42 s` | `5.40 s` | `5.45 s` | `74334208 bytes` | checksum `-3166891223384968696`, output `137000000` | L1 clean rooted scoped-region baseline |
+| Common Crawl-shaped q1 1M | generated WET-shaped stressor | checked page-token stream | framework API win | `rift-checked-page-token` | 3 processes x 1 iteration | `4.02 s` | `4.00 s` | `4.10 s` | `63176704 bytes` | checksum `-3166891223384968696`, output `137000000` | L1 clean checked page-token win over heap and rooted scoped baseline |
+| Common Crawl-shaped q1 1M | generated WET-shaped stressor | checked scoped page-token | framework API win | `rift-checked-safezone-page-token` | 3 processes x 1 iteration | `4.51 s` | `4.49 s` | `4.56 s` | `63307776 bytes` | checksum `-3166891223384968696`, output `137000000` | L1 clean checked scoped page-token win over heap/rooted, but slower than checked stream page-token |
+| Common Crawl-shaped q2 1M | generated WET-shaped stressor | heap page/window stream | natural heap baseline | `heap-immix` | 3 processes x 1 iteration | `5.53 s` | `5.52 s` | `5.54 s` | `408502272 bytes` | checksum `1076064953308107199`, output `929230` | L1 clean generated object-pressure baseline, not real-input proof |
+| Common Crawl-shaped q2 1M | generated WET-shaped stressor | scoped page/window stream | safe rooted baseline | `safezone-improved-32k` | 3 processes x 1 iteration | `5.39 s` | `5.35 s` | `5.47 s` | `74334208 bytes` | checksum `1076064953308107199`, output `929230` | L1 clean rooted scoped-region baseline |
+| Common Crawl-shaped q2 1M | generated WET-shaped stressor | checked page-token stream | framework API win | `rift-checked-page-token` | 3 processes x 1 iteration | `4.16 s` | `4.15 s` | `4.20 s` | `63176704 bytes` | checksum `1076064953308107199`, output `929230` | L1 clean checked page-token win over heap and rooted scoped baseline |
+| Common Crawl-shaped q2 1M | generated WET-shaped stressor | checked scoped page-token | framework API win | `rift-checked-safezone-page-token` | 3 processes x 1 iteration | `4.75 s` | `4.75 s` | `4.76 s` | `63324160 bytes` | checksum `1076064953308107199`, output `929230` | L1 clean checked scoped page-token win over heap/rooted, but slower than checked stream page-token |
 | retained epoch smoke | synthetic focused matrix | retained epoch/drop-anchor | retained-object memory-management | `heap-epoch-retained-no-traverse` | 1 | external runner smoke only | external runner smoke only | external runner smoke only | `3801088 bytes` | checksum `-2003786531644562922`, output `1873` | L1 smoke only, not headline |
 | retained epoch smoke | synthetic focused matrix | retained epoch/drop-anchor | retained-object memory-management | `checked-scoped-epoch-retained-no-traverse` | 1 | external runner smoke only | external runner smoke only | external runner smoke only | `3768320 bytes` | checksum `-2003786531644562922`, output `1873` | L1 smoke only, not headline |
 
@@ -131,6 +140,23 @@ for i in 1 2 3; do
   YAK_MODES="gc-heap region-scoped-rooted checked-epoch-scoped" \
   YAK_OUTPUT_DIR=/tmp/rift-l1-yak-livejournal-50m-x5-7573d7577-r${i} \
   zsh sandbox/run_yak_region_instrumented_matrix.sh
+done
+```
+
+Common Crawl-shaped q1/q2 1M command:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+for i in 1 2 3; do
+  RIFT_FINAL_CLEAN=1 \
+  COMMON_CRAWL_WET_BUILD=0 \
+  COMMON_CRAWL_WET_PAGES=1000000 \
+  COMMON_CRAWL_WET_BENCHMARK_RUNS=1 \
+  COMMON_CRAWL_WET_WARMUPS=0 \
+  COMMON_CRAWL_WET_QUERIES="q1-tokenize q2-domain-window" \
+  COMMON_CRAWL_WET_MODES="heap-immix safezone-improved-32k rift-checked-page-token rift-checked-safezone-page-token" \
+  COMMON_CRAWL_WET_OUTPUT_DIR=/tmp/rift-l1-common-crawl-shaped-q1q2-1m-7573d7577-r${i} \
+  zsh sandbox/run_common_crawl_wet_matrix.sh
 done
 ```
 
