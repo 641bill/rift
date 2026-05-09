@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-09 22:03 CEST
+Last updated: 2026-05-09 22:15 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -22,6 +22,14 @@ Latest operator-gate status:
 `evidence/OPERATOR_GATE_STATUS.md`. This keeps rank/top-k/median/hash/join work
 out of application claims until each candidate has natural heap, same-shape
 heap, retained controls where needed, and a focused 1M gate.
+
+Latest top-k candidate:
+`evidence/LOGHUB_TOP_TEMPLATES_MATRIX.md`. This adds a retained-object
+top-template workload over generated LogHub-shaped data and real-preloaded HDFS
+logs. At 1M real HDFS lines, checked scoped retained top templates are
+`81.174 ms` versus retained heap `116.138 ms`, removing `31.161 ms` median
+timed GC. RSS is slightly higher, so this is a real-preloaded throughput/GC
+win, not an RSS win.
 
 Latest SPECjbb2005-workload port checkpoint:
 `evidence/SPECJBB2005_PORT_MATRIX.md`. This is a clean-room Scala Native

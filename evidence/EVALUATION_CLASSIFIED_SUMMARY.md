@@ -1,7 +1,7 @@
 # Evaluation Classified Summary
 
 Date: 2026-05-09
-Last updated: 2026-05-09 22:03 CEST
+Last updated: 2026-05-09 22:15 CEST
 
 Status: thesis-facing classified summary built from committed evidence, with no
 new benchmark runs. Baseline commits: parent `1cc3b2c`, child `13a3df1c7`.
@@ -47,6 +47,8 @@ reference, but the retained heap objects still remain for GC tracing/reclaim.
 | Common Crawl WET-shaped q2 | generated stream/window stressor | best checked topology | heap `5183.074 ms`, GC `1565.074 ms`, RSS `409 MB` | checked scoped page-token `3902.795 ms`, GC `27.027 ms`, RSS `464 MB` | `24.7%` faster | `-1538 ms` | about `+14%` | Strong generated window/object pressure win; not real-input proof and not RSS win. |
 | LogHub HDFS v1 q2 | real file-backed Hadoop log | best checked topology | heap `8227.369 ms`, GC `92.659 ms`, RSS `409 MB` | checked scoped page-token `7871.856 ms`, GC `0 ms`, RSS `395 MB` | `4.3%` faster | `-92.659 ms` | about `-3%` | Modest real-input throughput/RSS/GC win; heap GC is only about 1-2% elapsed. |
 | DSPBench Log q2 | real DSPBench bundled common-log input | best checked topology | heap `1750.291 ms`, GC `44.992 ms`, max GC `88.210 ms`, RSS `308 MB` | checked scoped page-token `1733.654 ms`, GC `18.402 ms`, max GC `18.584 ms`, RSS `322 MB` | `1.0%` faster | median `-26.590 ms`; max `-69.626 ms` | about `+5%` | Modest real-input throughput/GC-tail win; not RSS or flagship GC-heavy evidence. |
+| LogHub top templates 1M | real-preloaded HDFS log | retained-object drop-anchor | `heap-retained-drop-anchor` `116.138 ms`, GC `31.161 ms`, RSS `146 MB` | checked scoped retained top templates `81.174 ms`, GC `0 ms`, RSS `150 MB` | `30.1%` faster | `-31.161 ms` | about `+3%` | Real-preloaded retained top-k throughput/GC win; not an RSS win and not parser/file-backed timing. |
+| LogHub top templates 1M | generated LogHub-shaped stressor | retained-object drop-anchor | `heap-retained-drop-anchor` `424.443 ms`, GC `126.371 ms`, RSS `408 MB` | checked scoped retained top templates `290.610 ms`, GC `0 ms`, RSS `304 MB` | `31.5%` faster | `-126.371 ms` | about `-25%` | Generated retained top-k memory-management and RSS win; supports a reusable top-k API candidate. |
 
 ## Current Claims
 
@@ -58,8 +60,9 @@ reference, but the retained heap objects still remain for GC tracing/reclaim.
   checked topology for page/window append streams.
 - **Generated stressor claim:** Common Crawl WET-shaped q1/q2 demonstrates the
   high-GC stream-object regime where checked page-token wins decisively.
-- **Real-input claim:** Yak LiveJournal is the strongest real-input row; LogHub
-  HDFS and DSPBench Log are modest real-input wins, not flagship GC-heavy cases.
+- **Real-input claim:** Yak LiveJournal is the strongest real-input epoch row;
+  LogHub top templates is now a strong real-preloaded retained top-k row; LogHub
+  HDFS q2 and DSPBench Log q2 remain modest page/window rows.
 - **Non-claim:** summary-only/direct-aggregate rows are topology/operator lower
   bounds. They must not be described as pure memory-management wins.
 

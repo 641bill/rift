@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-09 22:03 CEST
+Last updated: 2026-05-09 22:15 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -52,6 +52,12 @@ next-rank/hash/median/join decision tree. Q8 join is framework/RSS evidence but
 not a speed claim against `heap-join-api`; priority queues and TableRank remain
 API/gated evidence; LogHub top templates are the next concrete top-k/rank
 candidate if a new operator pass starts.
+
+LogHub top-template checkpoint: child commit `2393a69c4` adds the focused
+retained top-k matrix. It passes the retained-object gate on generated and
+real-preloaded HDFS input. The next operator milestone is now a reusable
+checked top-k/template-ranking API shaped around this result, not DEBS ranking
+or generic TableRank.
 
 Latest staged headline sweep: `evidence/COMPREHENSIVE_SWEEP_2026_05_06.md`.
 It completed prior-work, checked-operator, SafeZone-cost, and stream rows with

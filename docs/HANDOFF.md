@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-09 22:03 CEST
+Last updated: 2026-05-09 22:15 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -51,6 +51,19 @@ controls already exist, but it remains gated because the packed checked join
 API is lower-RSS yet slower than the specialized heap join API at 1M. LogHub
 top templates are the preferred next top-k/rank candidate if we resume
 operator work, because real HDFS input is already wired.
+
+Latest LogHub top-template retained matrix:
+Child commit `2393a69c4` adds `LogHubTopTemplatesMatrix` and
+`sandbox/run_loghub_top_templates_matrix.sh`. It is the first concrete top-k
+candidate under the new gate rules. Generated 1M rows show checked scoped
+retained top templates `290.610 ms`, `0 ms` GC, and `304 MB` RSS versus
+retained heap `424.443 ms`, `126.371 ms` GC, and `408 MB` RSS. Real HDFS
+preloaded 1M rows show checked scoped retained top templates `81.174 ms`,
+`0 ms` GC, and `150 MB` RSS versus retained heap `116.138 ms`, `31.161 ms` GC,
+and `146 MB` RSS. Interpretation: this advances LogHub top templates from
+"candidate" to "promising retained top-k operator shape." The next
+implementation should lift this shape into a reusable checked top-k/template
+ranking API while preserving the same `heap-retained-drop-anchor` controls.
 
 Latest clean retained/direct-epoch rerun:
 After committing child `918c7d4c1` and parent `ab570b1`, the retained-object

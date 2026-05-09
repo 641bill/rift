@@ -1,7 +1,7 @@
 # Rift Benchmark Catalog
 
 Date: 2026-05-05
-Last updated: 2026-05-09 21:35 CEST
+Last updated: 2026-05-09 22:15 CEST
 
 Status: working benchmark guide. Use this document to understand what each
 benchmark is meant to test before reading the detailed result files in
@@ -170,7 +170,7 @@ operators and gates.
 | Common Crawl WET-shaped | Generated WET-like pages/lines/tokens | Strongest GC-heavy stream stressor: heap spends about `1.55-1.59 s` in timed GC at 1M generated pages; trusted and page-token checked rows win. This is not real Common Crawl input proof. |
 | Real Common Crawl WET/WAT | Public preloaded WET/WAT shards | Current shards have median timed GC of zero. Page-token rows work and win modestly on WAT, but these are ceiling/control rows. |
 | GH Archive | Real hourly NDJSON GitHub event files | Strongest current real-input modest-win candidate, but not GC-heavy proof. Uncapped preloaded heap wins median by growing to about `1.7 GiB`; under a 1G heap cap, checked SafeZone-backed q1 wins. Legacy string-parser file-backed q1/q2 rows give RSS/fixed-memory wins but are parser/string dominated. The byte-slice file-backed parser reuses line buffers and extracts JSON fields from raw UTF-8 bytes; at two hourly files / 200k events it makes q1/q2 modest region throughput/RSS/tail wins and removes timed GC from region rows, but heap GC is only about `1.5-1.6%` of elapsed. Generated/preloaded q2 direct epoch is a strong topology result (`52.316 ms` checked scoped direct epoch vs heap `272.432 ms`) but needs a heap same-shape control. |
-| LogHub / LogPAI BGL and HDFS v1 | Real file-backed system logs | Real log matrix with q1 tokens, q2 window counts, and q3 template/session mining. BGL q1/q2 and full-file q2 are modest throughput/RSS/tail controls. HDFS v1 adds an 11.2M-line Hadoop log; its 1M q2 row is the strongest checked log row so far: checked scoped page-token `7871.856 ms` vs heap `8227.369 ms`, removing heap's `92.659 ms` median GC and lowering RSS. Still not the missing huge-GC flagship because heap GC is only about 1-2% of elapsed. Generated q2/q3 direct epoch is promising topology evidence (`189.615 ms` vs heap `513.692 ms` on q2; `1792.087 ms` vs heap `2140.477 ms` on q3), but file-backed rows remain page-token until an indexable real-input path exists. |
+| LogHub / LogPAI BGL and HDFS v1 | Real file-backed and real-preloaded system logs | Real log matrix with q1 tokens, q2 window counts, q3 template/session mining, and a focused top-template retained matrix. HDFS v1 adds an 11.2M-line Hadoop log; its 1M q2 row is a modest checked page-token row: checked scoped page-token `7871.856 ms` vs heap `8227.369 ms`, removing heap's `92.659 ms` median GC and lowering RSS. The new top-template row is stronger under the preloaded-input protocol: checked scoped retained top templates `81.174 ms` vs retained heap `116.138 ms`, removing `31.161 ms` median GC. Generated q2/q3 direct epoch remains topology evidence, while generated top templates now provide retained top-k evidence. |
 | DSPBench Spike/Fraud/Log Processing | Public DSPS benchmark source and bundled real sample files | `DSPBENCH_REGION_MATRIX.md` now includes local single-process Spike, Fraud, and Log rows. Spike is modest/control only. Fraud q2 and Log q2 are the useful real-input regression rows. After open allocation, Fraud q2 checked scoped page-token is `797.782 ms` vs heap `806.697 ms` and RSS about `279 MB` vs heap `358 MB`; trusted Streaming remains fastest at `778.975 ms`. Log q2 checked scoped page-token is fastest in its real-input 1M matrix (`1733.654 ms` vs heap `1750.291 ms`) and cuts max GC from `88.210 ms` to `18.584 ms`, but region RSS is higher. Generated/indexable q2 direct-epoch rows are much stronger (`260.432 ms` checked scoped direct epoch vs heap `403.098 ms` on Fraud q2; `220.040 ms` vs heap `360.853 ms` on Log q2), but they are topology/operator evidence until heap same-shape controls are added. |
 | Wikimedia | Real/generated TSV/clickstream-style rows | Mostly heap or improved SafeZone wins with low median GC; parked as ceiling/regression control. |
 | Linear Road | Official/generated position-report methodology | Useful latency/window methodology, but current rows are not GC-heavy enough for a Rift case study. |
@@ -203,7 +203,7 @@ record-oriented and can be processed as an event/page/window stream:
 | Candidate | Input form | First query shape |
 |---|---|---|
 | GH Archive | hourly real GitHub events, JSON/NDJSON | file-backed byte-slice parse/project fields, repo/window counts, heap-capped tails, parser/string-scratch controls |
-| LogHub / LogPAI system logs | real HDFS/BGL/Spark/Thunderbird/etc. log lines | BGL is wired and measured; parse log records, tokenize fields/templates, window/session/block counts |
+| LogHub / LogPAI system logs | real HDFS/BGL/Spark/Thunderbird/etc. log lines | HDFS/BGL are wired; parse log records, tokenize fields/templates, window/session/block counts, and top-template retained top-k controls |
 | Larger/multiple Common Crawl WET/WAT shards | public WET/WAT archive records | page/token/link object materialization and domain/window counts |
 | Theodolite plus real industrial energy data | Theodolite UC2/UC4 methodology plus a real public power-meter trace | downsampling or hierarchical aggregation over real active-power measurements |
 | GDELT events | public event files | parse/project event fields and windowed country/topic counts |
@@ -225,7 +225,7 @@ The nearest candidates are:
    or larger provenance-clean inputs.
 2. Theodolite-style IoT input paired with real industrial-energy data, or larger machine/security traces. RIoTBench/MHEALTH is now wired but parked as zero-GC ceiling evidence; Theodolite source is cloned but its official load generator is simulated input.
 3. More LogHub / LogPAI variants only if they materialize richer per-line
-   objects than the current BGL line/token/window path.
+   objects than the current HDFS retained top-template path.
 4. Larger or multiple real Common Crawl WET/WAT shards.
 5. GH Archive with heap-budgeted/file-backed/tail-latency runs as a modest-win
    control, not GC-heavy proof.
