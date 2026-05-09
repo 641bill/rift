@@ -1,10 +1,13 @@
 # Rift Evaluation Summary Tables
 
 Date: 2026-05-01
-Last updated: 2026-05-08 22:16 CEST
+Last updated: 2026-05-09 23:31 CEST
 
 Status: seeded summary pack for the comprehensive evaluation. Rows below are
-current checked-in evidence unless marked pending rerun.
+current checked-in evidence unless marked pending rerun. They are L2
+standard-stats rows unless explicitly marked otherwise. Use
+`evidence/FINAL_CLEAN_HEADLINE_RESULTS.md` for future L1 final-clean headline
+elapsed/RSS rows.
 
 ## Clean Direct Epoch Topology Sweep: 2026-05-08
 

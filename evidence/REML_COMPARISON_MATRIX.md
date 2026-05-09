@@ -1,6 +1,6 @@
 # ReML / MLKit Lineage Comparison Matrix
 
-Last updated: 2026-05-08 22:16 CEST
+Last updated: 2026-05-09 23:31 CEST
 
 Status: new Phase 6c evidence track. This file separates three evidence
 classes:
@@ -10,6 +10,10 @@ classes:
   provenance;
 - **Scala Native ReML-shaped ports**, newly scaffolded in
 `sandbox/src/main/scala-next/ReMLRegionMatrix.scala`.
+
+The dedicated thesis-facing PLDI-style table is now
+`evidence/REML_MLKIT_PLDI_TABLE.md`. Keep this file as the fuller provenance,
+local-port, and safety-probe evidence pack.
 
 Default local ReML-shaped runs now include only `gc-heap`,
 `region-scoped-rooted`, `checked-region-stream`, and

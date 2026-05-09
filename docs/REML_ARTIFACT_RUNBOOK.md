@@ -1,6 +1,6 @@
 # ReML / MLKit Exact Artifact Runbook
 
-Last updated: 2026-05-06 23:45 CEST
+Last updated: 2026-05-09 23:31 CEST
 
 Status: setup/runbook for exact ReML/MLKit reproduction. No exact local timing
 rows have been collected yet.
@@ -11,6 +11,8 @@ Run the MLKit/ReML benchmark programs locally in the paper-style modes and
 compare against Rift only after source, flags, tools, and inputs are pinned.
 
 This is separate from `ReMLRegionMatrix`, which is a Scala Native port matrix.
+The paper-reported and local-port comparison table is
+`evidence/REML_MLKIT_PLDI_TABLE.md`.
 
 ## Current Provenance
 

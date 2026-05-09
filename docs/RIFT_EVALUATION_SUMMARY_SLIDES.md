@@ -1,14 +1,16 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-09 22:33 CEST
+Last updated: 2026-05-09 23:55 CEST
 
 Status: markdown slide deck outline. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report,
 `docs/BENCHMARK_CATALOG.md` for benchmark definitions, and
 `evidence/EVALUATION_CLASSIFIED_SUMMARY.md` for the classified result table.
-Use `evidence/OPERATOR_GATE_STATUS.md` when discussing why rank/top-k/median
-and join operators remain gated.
+Use `docs/FAIR_EVALUATION_PROTOCOL.md` for the evaluation contract,
+`evidence/MEASUREMENT_OVERHEAD_PROTOCOL.md` for measurement levels, and
+`evidence/OPERATOR_GATE_STATUS.md` when discussing why rank/top-k/median and
+join operators remain gated.
 
 Recommended talk order:
 
@@ -16,12 +18,16 @@ Recommended talk order:
 2. Comparison classes: natural heap, same-shape heap, summary-only topology,
    retained-object drop-anchor, best checked topology, unsafe/trusted lower
    bound.
-3. Direct `RiftRegion.epoch { ... }` as the reusable checked topology for
+3. Measurement levels: L1 final-clean headline versus L2 stats, L3
+   diagnostics, and L4 external profiles.
+4. Direct `RiftRegion.epoch { ... }` as the reusable checked topology for
    batch/epoch workloads.
-4. Retained-object evidence as the fair memory-management comparison.
-5. Real-input Yak LiveJournal as the strongest checked epoch row.
-6. Page-token stream evidence for page/window append workloads.
-7. Open work: real-input GC-heavy search and gated rank/hash/median/join
+5. Retained-object evidence as the fair memory-management comparison.
+6. Real-input Yak LiveJournal as the strongest checked epoch row.
+7. Page-token stream evidence for page/window append workloads.
+8. ReML/MLKit PLDI-style comparison as a non-stream typed-region axis.
+9. Open work: L1 final-clean sweep, real-input GC-heavy search, and gated
+   rank/hash/median/join
    operators.
 
 Representative numbers to keep on slides:
@@ -60,7 +66,20 @@ tables, and blanket GC root registration.
 The goal is the same logical program for heap and Rift; only allocation
 placement and lifetime policy should differ.
 
-## Slide 3: Canonical Memory Modes
+## Slide 3: Evaluation And Measurement Contract
+
+| Topic | Rule |
+|---|---|
+| headline system evidence | must use reusable checked framework APIs, not benchmark-local manual arrays |
+| memory-management claim | must compare retained heap/drop-anchor against retained checked regions |
+| topology lower bound | summary-only/direct-aggregate rows are useful, but not pure GC/reclaim wins |
+| final timing | L1 final-clean uses external `/usr/bin/time -l` only |
+| interpretation | L2 stats provide GC/RSS/region counters; L3/L4 diagnostics and profiles explain bottlenecks |
+
+Profiler elapsed from `samply`, `sample`, or `perf` is diagnostic, not a
+headline median.
+
+## Slide 4: Canonical Memory Modes
 
 | Name | Meaning |
 |---|---|
@@ -77,14 +96,14 @@ Raw labels remain aliases in scripts and source result packs.
 Default final-selection runs now show safe/rooted and checked candidates.
 Rootless/current SafeZone controls require an explicit control flag.
 
-## Slide 4: Runtime Lesson
+## Slide 5: Runtime Lesson
 
 Old SafeZone was not just "regions are slow." Its root bookkeeping was the
 cliff. Improved roots and page-size configuration make SafeZone a strong
 baseline, and rootless SafeZone shows a lower bound for what allocator/pool
 mechanics can do when roots are unnecessary.
 
-## Slide 5: Static Safety Should Remove Runtime Work
+## Slide 6: Static Safety Should Remove Runtime Work
 
 | Static property | Runtime work we want absent |
 |---|---|

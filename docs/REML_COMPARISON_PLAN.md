@@ -1,6 +1,6 @@
 # ReML / MLKit Comparison Plan
 
-Last updated: 2026-05-08 22:16 CEST
+Last updated: 2026-05-09 23:31 CEST
 
 ## Goal
 
@@ -10,6 +10,10 @@ higher-order, polymorphic, non-stream benchmark programs.
 
 Reference: Martin Elsman, "Garbage-Collection Safety for Region-Based
 Type-Polymorphic Programs", PLDI 2023.
+
+The thesis-facing table artifact is now
+`evidence/REML_MLKIT_PLDI_TABLE.md`; this plan remains the implementation and
+artifact-reproduction tracker.
 
 ## Evidence Classes
 

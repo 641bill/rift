@@ -1,11 +1,21 @@
 # Rift All-Phase Results Rollup
 
 Date: 2026-05-01
-Last updated: 2026-05-08 22:16 CEST
+Last updated: 2026-05-09 23:55 CEST
 
 This file gathers the current numeric and validation evidence across all
 roadmap phases. It is a rollup, not the primary raw log. Prefer the source files
 listed below for command provenance and detailed interpretation.
+
+Latest evaluation-contract update: `docs/FAIR_EVALUATION_PROTOCOL.md` now
+defines the comparison classes and headline rules. `evidence/MEASUREMENT_OVERHEAD_PROTOCOL.md`
+defines L1 final-clean, L2 standard stats, L3 diagnostics, and L4 external
+profiles; current numeric rows in this rollup are L2 unless explicitly marked
+otherwise. Initial L1 final-clean support now exists for the first
+representative binaries; `evidence/FINAL_CLEAN_HEADLINE_RESULTS.md` is the
+scaffold for the future instrumentation-free headline elapsed/RSS table.
+ReML/MLKit PLDI-style paper and local-port rows are now separated into
+`evidence/REML_MLKIT_PLDI_TABLE.md`.
 
 Latest SPECjbb2005-workload port update: `SpecJbb2005PortMatrix` now provides
 a clean-room Scala Native port for the Stancu/SPECjbb2005 transaction-lifetime

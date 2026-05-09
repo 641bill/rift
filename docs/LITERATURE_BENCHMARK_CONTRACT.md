@@ -1,7 +1,7 @@
 # Rift Literature Benchmark Contract
 
 Date: 2026-04-25
-Last updated: 2026-05-08 21:20 CEST
+Last updated: 2026-05-09 23:31 CEST
 
 Status: extracted from local PDFs under `docs/literature/`. The PDFs are local
 research references and are not committed as project source unless explicitly
@@ -23,6 +23,11 @@ The standard for new benchmarks is:
   interim safety workarounds.
 - Results must separate runtime-only effects, topology/layout effects, and
   application/operator evidence.
+
+The general comparison-class and measurement-level rules now live in
+`docs/FAIR_EVALUATION_PROTOCOL.md`. Use this file for prior-system-specific
+axes, and use the fair protocol for deciding whether a row is headline
+framework evidence, a same-shape control, or a diagnostic/lower-bound row.
 
 ## Prior-Work Benchmark Targets
 

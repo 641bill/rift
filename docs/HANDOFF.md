@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-09 22:33 CEST
+Last updated: 2026-05-09 23:55 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -41,6 +41,27 @@ bounds; retained heap versus retained checked epoch rows are memory-management
 claims; direct `RiftRegion.epoch` rows are reusable checked topology claims;
 page-token rows are page/window stream claims; rootless/trusted rows remain
 lower-bound controls.
+
+Latest fair-evaluation and measurement protocol:
+`docs/FAIR_EVALUATION_PROTOCOL.md` now defines the formal comparison contract:
+headline rows must use reusable checked framework APIs or be labeled controls,
+and memory-management claims require retained heap/drop-anchor versus retained
+checked-region comparisons. `evidence/MEASUREMENT_OVERHEAD_PROTOCOL.md` adds
+measurement levels: L1 final-clean headline timing, L2 standard stats, L3
+diagnostics, and L4 external profiles. Initial L1 final-clean binary support is
+now implemented for `RetainedEpochReclaimMatrix`, `YakRegionMatrix`,
+`DataflowRegionMatrix`, `CommonCrawlWetMatrix`, and `ReMLRegionMatrix`.
+Set `RIFT_FINAL_CLEAN=1` or `RIFT_EVAL_MEASUREMENT_LEVEL=L1`; the binary skips
+internal timing/GC/region stat reads and prints only minimal checksum/output
+metadata. A tiny retained-epoch L1 smoke matched heap and checked checksums.
+The report-grade L1 headline sweep is still pending and belongs in
+`evidence/FINAL_CLEAN_HEADLINE_RESULTS.md`.
+
+Latest ReML/MLKit PLDI-style table:
+`evidence/REML_MLKIT_PLDI_TABLE.md` is now the dedicated thesis-facing table.
+It recreates the PLDI Figure 9 paper-reported columns and adds local Scala
+Native Tier 1 port ratios where available. Exact MLKit/ReML artifact timing is
+still open, so do not make raw cross-language "Rift beats ReML" claims.
 
 Latest operator-gate status:
 `evidence/OPERATOR_GATE_STATUS.md` records the current gate state for

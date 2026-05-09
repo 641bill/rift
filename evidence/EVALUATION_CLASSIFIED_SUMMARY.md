@@ -1,7 +1,7 @@
 # Evaluation Classified Summary
 
 Date: 2026-05-09
-Last updated: 2026-05-09 22:33 CEST
+Last updated: 2026-05-09 23:55 CEST
 
 Status: thesis-facing classified summary built from committed evidence.
 Baseline commits for clean rows: parent `1cc3b2c`, child `13a3df1c7`.
@@ -11,6 +11,13 @@ Reusable top-k API rows come from child commit `9abac4833`.
 
 Every row has an explicit comparison class. Do not read all rows as a single
 "heap vs Rift" claim.
+
+Measurement level is separate from comparison class. Unless explicitly marked
+otherwise, the rows in this file are L2 standard-stats rows: they report GC,
+RSS, and region counters and are valid for interpretation, but they are not the
+future L1 final-clean headline table. Initial L1 binary support exists for the
+first representative matrices; report-grade L1 rows belong in
+`evidence/FINAL_CLEAN_HEADLINE_RESULTS.md` once collected.
 
 | Comparison class | Meaning |
 |---|---|

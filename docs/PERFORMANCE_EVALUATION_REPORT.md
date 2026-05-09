@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-09 22:33 CEST
+Last updated: 2026-05-09 23:55 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -17,6 +17,20 @@ Latest classified evidence summary:
 when deciding whether a row is topology evidence, retained-object
 memory-management evidence, a best checked topology result, a real-input modest
 win, or a ceiling/control row.
+
+Latest fair-evaluation contract:
+`docs/FAIR_EVALUATION_PROTOCOL.md`. This is now the reviewer-facing rulebook:
+headline rows must use reusable checked framework APIs or be clearly labeled as
+controls; memory-management claims require retained-object heap controls; and
+manual summary/count-array rows remain topology/operator lower bounds.
+
+Latest measurement-overhead protocol:
+`evidence/MEASUREMENT_OVERHEAD_PROTOCOL.md` and
+`evidence/FINAL_CLEAN_HEADLINE_RESULTS.md`. Initial L1 final-clean support now
+exists for retained epoch, Yak, Dataflow, Common Crawl WET-shaped, and ReML
+Tier 1 binaries. Existing report-grade benchmark result files remain mostly L2
+standard-stats evidence; the final paper headline elapsed/RSS table still
+needs a report-grade L1 sweep.
 
 Latest operator-gate status:
 `evidence/OPERATOR_GATE_STATUS.md`. This keeps rank/top-k/median/hash/join work
@@ -35,6 +49,12 @@ retained heap `463.578 ms`, and real HDFS preloaded checked scoped top-k is
 `95.267 ms` versus retained heap `123.024 ms`. The API is still slower than
 the benchmark-local checked count-array path, so it is a passed reusable API
 with an overhead caveat rather than the final top-k lower bound.
+
+Latest ReML/MLKit PLDI-style table:
+`evidence/REML_MLKIT_PLDI_TABLE.md`. It recreates the paper table shape as
+paper-reported evidence, then places local Scala Native Tier 1 port ratios next
+to it. Exact MLKit/ReML artifact reruns are still open; do not claim raw
+cross-language wall-clock wins until those local runs exist.
 
 Latest SPECjbb2005-workload port checkpoint:
 `evidence/SPECJBB2005_PORT_MATRIX.md`. This is a clean-room Scala Native
@@ -275,6 +295,16 @@ Current claim table:
 | Page/window checked stream topology | Generated Common Crawl WET-shaped q1/q2, focused page-token rows, modest real LogHub/DSPBench rows. | Strongest rows are generated stressors; real-input rows are modest. |
 | Topology/operator lower bound | Summary-only/direct-aggregate rows for GH Archive-shaped, LogHub-shaped, and DSPBench q2/q3. | Not a pure memory-management win. |
 | Gated operators | Rank/table/fold/hash-heavy operators. | Require natural heap, same-shape heap, retained control if applicable, and a focused 1M gate before application claims. |
+
+Measurement levels are separate from comparison classes. Current evidence rows
+are mostly **L2 standard stats**: they are valid for interpreting GC, RSS, and
+region behavior, but they still read counters around the timed section. Final
+paper headline elapsed/RSS should come from **L1 final-clean** runs: optimized
+non-profiled binaries, no diagnostics or in-timed-section GC/region counter
+reads, and external `/usr/bin/time -l` only. **L3 diagnostics** and **L4
+external profiles** (`samply`, macOS `sample`, Linux `perf`) explain CPU
+composition and visible GC pauses, but their elapsed time is not headline
+timing.
 
 ## 1. Executive Summary
 
@@ -653,8 +683,8 @@ where available.
 
 ### ReML / MLKit Lineage
 
-Source: `evidence/REML_COMPARISON_MATRIX.md` and
-`docs/REML_COMPARISON_PLAN.md`.
+Source: `evidence/REML_MLKIT_PLDI_TABLE.md`,
+`evidence/REML_COMPARISON_MATRIX.md`, and `docs/REML_COMPARISON_PLAN.md`.
 
 This is a new comparison track, not a stream benchmark. It matters because the
 MLKit/ReML lineage stresses region polymorphism, higher-order programs, and

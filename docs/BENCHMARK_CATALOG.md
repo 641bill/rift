@@ -1,7 +1,7 @@
 # Rift Benchmark Catalog
 
 Date: 2026-05-05
-Last updated: 2026-05-09 22:33 CEST
+Last updated: 2026-05-09 23:31 CEST
 
 Status: working benchmark guide. Use this document to understand what each
 benchmark is meant to test before reading the detailed result files in
@@ -25,6 +25,12 @@ should not be collapsed into a single "Rift is faster/slower" statement.
 
 Headline claims should use the canonical memory-mode names from
 `docs/MEMORY_MODE_TAXONOMY.md`.
+
+Headline claims should also follow `docs/FAIR_EVALUATION_PROTOCOL.md`.
+Current result files are mostly L2 standard-stat rows; use
+`evidence/MEASUREMENT_OVERHEAD_PROTOCOL.md` and
+`evidence/FINAL_CLEAN_HEADLINE_RESULTS.md` when preparing final-clean headline
+timing.
 
 Default final-selection runs now exclude current SafeZone and rootless/unsafe
 lower-bound rows. Use `RIFT_EVAL_INCLUDE_CONTROLS=1`,
@@ -120,7 +126,10 @@ so it is layout evidence, not a pure allocator comparison.
 These rows are intentionally labeled as methodology reproductions unless the
 original benchmark artifact, input, and configuration are actually used.
 
-The ReML track has four evidence classes:
+The ReML PLDI-style table is now split out into
+`evidence/REML_MLKIT_PLDI_TABLE.md`; `evidence/REML_COMPARISON_MATRIX.md`
+keeps the broader source/provenance and local-port details. The ReML track has
+four evidence classes:
 
 | Class | Meaning |
 |---|---|

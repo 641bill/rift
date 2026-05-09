@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-09 22:33 CEST
+Last updated: 2026-05-09 23:55 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -46,6 +46,23 @@ natural heap baselines, same-shape heap controls, summary-only topology rows,
 retained-object drop-anchor comparisons, best checked topology rows, and
 unsafe/trusted lower bounds. Future benchmark/operator work should add rows to
 that structure before turning a result into a thesis claim.
+
+Fair-evaluation and measurement checkpoint:
+`docs/FAIR_EVALUATION_PROTOCOL.md` now defines the reviewer-facing comparison
+contract. Headline rows must use framework APIs or be labeled controls, and
+memory-management claims must compare retained heap/drop-anchor against
+retained checked regions. `evidence/MEASUREMENT_OVERHEAD_PROTOCOL.md` defines
+L1 final-clean, L2 standard stats, L3 diagnostics, and L4 external profiles.
+Initial L1 final-clean support now exists for retained epoch, Yak, Dataflow,
+Common Crawl WET-shaped, and ReML Tier 1 binaries. Current report-grade
+benchmark rows are still mostly L2; the final elapsed/RSS headline table should
+be collected into `evidence/FINAL_CLEAN_HEADLINE_RESULTS.md`.
+
+ReML/MLKit PLDI-style table checkpoint:
+`evidence/REML_MLKIT_PLDI_TABLE.md` now separates paper-reported Figure 9
+data, exact-artifact rerun status, local Scala Native port rows, and
+ReML-inspired safety probes. Exact MLKit/ReML timing remains open; compare
+ratios and safety burden until local `mlkit`/`mlton` runs are available.
 
 Operator-gate checkpoint: `evidence/OPERATOR_GATE_STATUS.md` now records the
 next-rank/hash/median/join decision tree. Q8 join is framework/RSS evidence but

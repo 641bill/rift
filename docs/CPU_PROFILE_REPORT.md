@@ -1,6 +1,6 @@
 # Rift CPU Profiling Report
 
-Last updated: 2026-05-08 09:26 CEST
+Last updated: 2026-05-09 23:31 CEST
 
 Status: profiling runbook plus first sampled profile row and the first
 profile-driven implementation follow-up. The sampled GH Archive row identified
@@ -15,6 +15,11 @@ Reference: Scala Native official profiling guide:
 Use profiling to explain remaining CPU cost after region allocation/reclaim has
 already removed GC pressure. Profiling rows are diagnostic evidence, not
 headline benchmark timing.
+
+This report follows `evidence/MEASUREMENT_OVERHEAD_PROTOCOL.md`: `samply`,
+macOS `sample`, and Linux `perf` are L4 external profiles. They can show CPU
+composition and visible GC pause/collection frames, but their elapsed time is
+not a headline timing result.
 
 The current questions are:
 
