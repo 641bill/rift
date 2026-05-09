@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-09 22:15 CEST
+Last updated: 2026-05-09 22:33 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -61,9 +61,22 @@ retained heap `424.443 ms`, `126.371 ms` GC, and `408 MB` RSS. Real HDFS
 preloaded 1M rows show checked scoped retained top templates `81.174 ms`,
 `0 ms` GC, and `150 MB` RSS versus retained heap `116.138 ms`, `31.161 ms` GC,
 and `146 MB` RSS. Interpretation: this advances LogHub top templates from
-"candidate" to "promising retained top-k operator shape." The next
-implementation should lift this shape into a reusable checked top-k/template
-ranking API while preserving the same `heap-retained-drop-anchor` controls.
+"candidate" to "promising retained top-k operator shape."
+
+Latest reusable top-k API checkpoint:
+Child commit `9abac4833` adds `RiftRegion.EpochTopKByKey`, lifting the LogHub
+retained top-template shape into a reusable checked epoch operator. It keeps
+parent-owned primitive counts and top-k scratch arrays while ordinary
+token/template records live in `RiftRegion.epoch`, so close/reclaim still does
+not traverse retained records. Generated 1M top-k API rows show checked scoped
+`341.905 ms`, `0 ms` GC, and `305 MB` RSS versus retained heap `463.578 ms`,
+`138.050 ms` GC, and `408 MB` RSS. Real HDFS preloaded 1M rows show checked
+scoped top-k `95.267 ms`, `0 ms` GC, and `150 MB` RSS versus retained heap
+`123.024 ms`, `33.966 ms` GC, and `146 MB` RSS. Interpretation: the reusable
+API passes the retained top-k gate, but it trails the benchmark-local manual
+count-array path (`300.984 ms` generated, `83.697 ms` real HDFS). The next
+top-k work should profile or inline the update/getter path before application
+integration.
 
 Latest clean retained/direct-epoch rerun:
 After committing child `918c7d4c1` and parent `ab570b1`, the retained-object

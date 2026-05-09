@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-09 22:15 CEST
+Last updated: 2026-05-09 22:33 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -50,14 +50,18 @@ that structure before turning a result into a thesis claim.
 Operator-gate checkpoint: `evidence/OPERATOR_GATE_STATUS.md` now records the
 next-rank/hash/median/join decision tree. Q8 join is framework/RSS evidence but
 not a speed claim against `heap-join-api`; priority queues and TableRank remain
-API/gated evidence; LogHub top templates are the next concrete top-k/rank
-candidate if a new operator pass starts.
+API/gated evidence; LogHub top templates are now the first retained top-k shape
+with a reusable checked API gate.
 
 LogHub top-template checkpoint: child commit `2393a69c4` adds the focused
 retained top-k matrix. It passes the retained-object gate on generated and
-real-preloaded HDFS input. The next operator milestone is now a reusable
-checked top-k/template-ranking API shaped around this result, not DEBS ranking
-or generic TableRank.
+real-preloaded HDFS input. Child commit `9abac4833` adds the follow-up
+`EpochTopKByKey` API, which also passes: generated 1M checked scoped top-k is
+`341.905 ms` versus retained heap `463.578 ms`, and real HDFS preloaded
+checked scoped top-k is `95.267 ms` versus retained heap `123.024 ms`. The API
+still trails the benchmark-local manual count-array path, so the next top-k
+milestone is profiling/inlining the operator update/getter path, not DEBS
+ranking or generic TableRank.
 
 Latest staged headline sweep: `evidence/COMPREHENSIVE_SWEEP_2026_05_06.md`.
 It completed prior-work, checked-operator, SafeZone-cost, and stream rows with

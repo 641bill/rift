@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-09 22:15 CEST
+Last updated: 2026-05-09 22:33 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -29,7 +29,12 @@ top-template workload over generated LogHub-shaped data and real-preloaded HDFS
 logs. At 1M real HDFS lines, checked scoped retained top templates are
 `81.174 ms` versus retained heap `116.138 ms`, removing `31.161 ms` median
 timed GC. RSS is slightly higher, so this is a real-preloaded throughput/GC
-win, not an RSS win.
+win, not an RSS win. The follow-up reusable `EpochTopKByKey` API also passes
+the retained gate: generated 1M checked scoped top-k is `341.905 ms` versus
+retained heap `463.578 ms`, and real HDFS preloaded checked scoped top-k is
+`95.267 ms` versus retained heap `123.024 ms`. The API is still slower than
+the benchmark-local checked count-array path, so it is a passed reusable API
+with an overhead caveat rather than the final top-k lower bound.
 
 Latest SPECjbb2005-workload port checkpoint:
 `evidence/SPECJBB2005_PORT_MATRIX.md`. This is a clean-room Scala Native

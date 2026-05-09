@@ -1,10 +1,11 @@
 # Evaluation Classified Summary
 
 Date: 2026-05-09
-Last updated: 2026-05-09 22:15 CEST
+Last updated: 2026-05-09 22:33 CEST
 
-Status: thesis-facing classified summary built from committed evidence, with no
-new benchmark runs. Baseline commits: parent `1cc3b2c`, child `13a3df1c7`.
+Status: thesis-facing classified summary built from committed evidence.
+Baseline commits for clean rows: parent `1cc3b2c`, child `13a3df1c7`.
+Reusable top-k API rows come from child commit `9abac4833`.
 
 ## How To Read This Table
 
@@ -49,6 +50,8 @@ reference, but the retained heap objects still remain for GC tracing/reclaim.
 | DSPBench Log q2 | real DSPBench bundled common-log input | best checked topology | heap `1750.291 ms`, GC `44.992 ms`, max GC `88.210 ms`, RSS `308 MB` | checked scoped page-token `1733.654 ms`, GC `18.402 ms`, max GC `18.584 ms`, RSS `322 MB` | `1.0%` faster | median `-26.590 ms`; max `-69.626 ms` | about `+5%` | Modest real-input throughput/GC-tail win; not RSS or flagship GC-heavy evidence. |
 | LogHub top templates 1M | real-preloaded HDFS log | retained-object drop-anchor | `heap-retained-drop-anchor` `116.138 ms`, GC `31.161 ms`, RSS `146 MB` | checked scoped retained top templates `81.174 ms`, GC `0 ms`, RSS `150 MB` | `30.1%` faster | `-31.161 ms` | about `+3%` | Real-preloaded retained top-k throughput/GC win; not an RSS win and not parser/file-backed timing. |
 | LogHub top templates 1M | generated LogHub-shaped stressor | retained-object drop-anchor | `heap-retained-drop-anchor` `424.443 ms`, GC `126.371 ms`, RSS `408 MB` | checked scoped retained top templates `290.610 ms`, GC `0 ms`, RSS `304 MB` | `31.5%` faster | `-126.371 ms` | about `-25%` | Generated retained top-k memory-management and RSS win; supports a reusable top-k API candidate. |
+| LogHub reusable EpochTopKByKey 1M | real-preloaded HDFS log | retained-object drop-anchor / reusable operator gate | `heap-retained-drop-anchor` `123.024 ms`, GC `33.966 ms`, RSS `146 MB` | `checked-scoped-epoch-topk-retained-no-traverse` `95.267 ms`, GC `0 ms`, RSS `150 MB` | `22.6%` faster | `-33.966 ms` | about `+3%` | Reusable checked top-k API passes real-preloaded throughput/GC gate; benchmark-local checked path is still faster (`83.697 ms`). |
+| LogHub reusable EpochTopKByKey 1M | generated LogHub-shaped stressor | retained-object drop-anchor / reusable operator gate | `heap-retained-drop-anchor` `463.578 ms`, GC `138.050 ms`, RSS `408 MB` | `checked-scoped-epoch-topk-retained-no-traverse` `341.905 ms`, GC `0 ms`, RSS `305 MB` | `26.3%` faster | `-138.050 ms` | about `-25%` | Reusable checked top-k API passes generated retained gate, with measurable abstraction overhead versus the benchmark-local path (`300.984 ms`). |
 
 ## Current Claims
 
@@ -61,8 +64,9 @@ reference, but the retained heap objects still remain for GC tracing/reclaim.
 - **Generated stressor claim:** Common Crawl WET-shaped q1/q2 demonstrates the
   high-GC stream-object regime where checked page-token wins decisively.
 - **Real-input claim:** Yak LiveJournal is the strongest real-input epoch row;
-  LogHub top templates is now a strong real-preloaded retained top-k row; LogHub
-  HDFS q2 and DSPBench Log q2 remain modest page/window rows.
+  LogHub top templates is now a strong real-preloaded retained top-k row, and
+  `EpochTopKByKey` is the first reusable top-k API to pass the retained gate;
+  LogHub HDFS q2 and DSPBench Log q2 remain modest page/window rows.
 - **Non-claim:** summary-only/direct-aggregate rows are topology/operator lower
   bounds. They must not be described as pure memory-management wins.
 

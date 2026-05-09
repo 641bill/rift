@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-09 22:15 CEST
+Last updated: 2026-05-09 22:33 CEST
 
 Status: markdown slide deck outline. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report,
@@ -35,7 +35,7 @@ Representative numbers to keep on slides:
 | StreamFlex/Stancu epoch | StreamFlex throughput `157.334 ms` vs heap `216.853 ms`; Stancu `155.863 ms` vs heap `220.951 ms`. | Direct epoch supersedes older TransactionRegion/EpochBuffer rows for shared batch lifetimes. |
 | Generated page/window stressor | Common Crawl-shaped q1/q2: checked scoped page-token `3707.214/3902.795 ms` vs heap `5577.965/5183.074 ms`. | Strong generated stream-object pressure win; RSS caveat; not real-input proof. |
 | Modest real-input page/window | LogHub HDFS q2 checked scoped page-token `7871.856 ms` vs heap `8227.369 ms`; DSPBench Log q2 `1733.654 ms` vs heap `1750.291 ms`. | Real-input wins are modest because parser/query CPU dominates and heap GC is small. |
-| Real-preloaded retained top-k | LogHub top templates: checked scoped retained `81.174 ms`, `0 ms` GC vs retained heap `116.138 ms`, `31.161 ms` GC. | Promising top-k/rank operator shape; RSS is slightly higher and parser/file I/O is excluded. |
+| Real-preloaded retained top-k | LogHub top templates: checked scoped retained `81.174 ms`, `0 ms` GC vs retained heap `116.138 ms`, `31.161 ms` GC. Reusable `EpochTopKByKey` checked scoped is `95.267 ms` vs retained heap `123.024 ms`. | First retained top-k API gate passes; RSS is slightly higher and parser/file I/O is excluded. API overhead remains versus the benchmark-local path. |
 
 Slide-level rule: summary-only/direct-aggregate rows are topology/operator
 lower bounds. Retained heap versus retained checked epoch is the fair
