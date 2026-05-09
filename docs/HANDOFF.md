@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-09 19:45 CEST
+Last updated: 2026-05-09 21:15 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -9,15 +9,42 @@ Active worktree for this update:
 Active implementation branch for this update:
 `feature/rift`
 
-Implementation commit at start of latest sweep:
-`34f4fb57c` (`Let prior-work runners skip current SafeZone`)
+Latest implementation checkpoint:
+`918c7d4c1` (`Add retained epoch reclaim controls`)
 
-Parent evidence commit at start of latest sweep:
-`10da348` (`Skip current SafeZone in staged evaluation sweep`)
+Latest parent evidence checkpoint:
+`ab570b1` (`Record retained epoch reclaim evidence`)
 
 Latest comprehensive sweep checkpoint:
 Staged headline runs completed after the TransactionRegion checkpoint. Source
 summary: `evidence/COMPREHENSIVE_SWEEP_2026_05_06.md`.
+
+Latest clean retained/direct-epoch rerun:
+After committing child `918c7d4c1` and parent `ab570b1`, the retained-object
+and representative direct-epoch rows were rerun from clean commits. The clean
+retained focused 1M row is now: retained heap `36.233 ms`, `10.109 ms` median
+timed GC, and `21.3 MB` RSS; checked retained stream `27.703 ms`, `0 ms` GC,
+and `4.8 MB` RSS; checked retained scoped `24.274 ms`, `0 ms` GC, and `4.9 MB`
+RSS. This is the clean report-ready memory-management comparison: heap and
+checked regions both retain ordinary Scala objects until the epoch boundary,
+and neither traverses records at close. Clean application retained rows also
+support the claim: GH Archive-shaped q2 checked retained scoped is
+`186.868 ms` vs retained heap `257.377 ms` and cuts RSS from about `147 MB` to
+`15 MB`; LogHub q2 checked retained scoped is `402.821 ms` vs retained heap
+`469.079 ms`; DSPBench Fraud q2 checked retained scoped is `370.746 ms` vs
+retained heap `392.743 ms`, removing `35.631 ms` median timed GC but with
+slightly higher RSS.
+
+The clean representative direct-epoch rerun confirms the topology story:
+SNAP LiveJournal `graphreal` at 50M replayed edges has heap `2958.659 ms`,
+`400.484 ms` timed GC, and `3.91 GB` RSS; checked epoch scoped is
+`2008.320 ms`, `0 ms` GC, and `2.11 GB` RSS; checked epoch stream is
+`2064.867 ms`, `0 ms` GC, and `2.11 GB` RSS. Dataflow
+SELECT/AGGREGATE/JOIN are `19.691/34.676/19.762 ms` for checked epoch scoped
+versus heap `27.775/50.837/30.387 ms`. StreamFlex throughput is `157.334 ms`
+for checked scoped direct epoch versus heap `216.853 ms`; Stancu-style
+transactions are `155.863 ms` for checked scoped direct epoch versus heap
+`220.951 ms`. These rows are now the clean source for the report and slides.
 
 Latest direct-epoch extension and same-shape control:
 Checked direct-epoch modes were added to DSPBench generated q2, GH
@@ -48,18 +75,18 @@ Latest retained-epoch memory-management control:
 Scala records linked and alive until epoch close, update primitive summaries on
 append, and do not traverse records at close beyond O(1) head/tail anchor
 touches. Focused 1M rows now show a clear memory-management win:
-retained heap `34.405 ms`, `9.646 ms` median timed GC, and `21.3 MB` RSS;
-checked retained stream `25.366 ms`, `0 ms` GC, and `4.8 MB` RSS; checked
-retained scoped `23.999 ms`, `0 ms` GC, and `4.9 MB` RSS. DSPBench Fraud q2
+retained heap `36.233 ms`, `10.109 ms` median timed GC, and `21.3 MB` RSS;
+checked retained stream `27.703 ms`, `0 ms` GC, and `4.8 MB` RSS; checked
+retained scoped `24.274 ms`, `0 ms` GC, and `4.9 MB` RSS. DSPBench Fraud q2
 1M retained controls also separate topology from reclaim: summary-only lower
-bound `279.103 ms`; retained heap `387.943 ms` with `35.797 ms` median timed
-GC; checked retained stream `373.837 ms`; checked retained scoped `364.535 ms`.
+bound `286.318 ms`; retained heap `392.743 ms` with `35.631 ms` median timed
+GC; checked retained stream `383.628 ms`; checked retained scoped `370.746 ms`.
 GH Archive-shaped q2 retained controls are stronger: retained heap
-`244.988 ms`, `69.552 ms` GC, and `147 MB` RSS versus checked retained scoped
-`181.345 ms`, `0 ms` GC, and `15 MB` RSS. LogHub generated q2 retained shows
-checked retained scoped `402.611 ms` versus retained heap `464.389 ms`, while
-LogHub q3 is a mixed but still positive checked scoped row (`2101.599 ms`
-versus retained heap `2217.322 ms`).
+`257.377 ms`, `77.208 ms` GC, and `147 MB` RSS versus checked retained scoped
+`186.868 ms`, `0 ms` GC, and `15 MB` RSS. LogHub generated q2 retained shows
+checked retained scoped `402.821 ms` versus retained heap `469.079 ms`, while
+LogHub q3 is a mixed but still positive checked scoped row (`2106.541 ms`
+versus retained heap `2244.266 ms`).
 Interpretation: summary-only direct epoch remains topology evidence, while
 retained heap vs retained checked epoch is fair Rift memory-management
 evidence. Fraud q2 is a throughput/GC win, not an RSS win, because checked
@@ -200,14 +227,13 @@ is `130.716 ms`, `region-scoped-rooted` `139.264 ms`,
 is about `328.6 MB`. The first 50M follow-up made the timing less short-run
 dominated and showed checked page-token also beats heap. A second 10M/50M
 topology follow-up then split checked whole-run, checked epoch, and checked
-page-token. At 50M, `gc-heap` is `1618.105 ms`, median GC `273.410 ms`, RSS
-`2761261056`; low-RSS epoch rows are `checked-epoch-scoped` `1069.241 ms`,
-`checked-epoch-stream` `1113.261 ms`, `region-scoped-rooted` `1256.538 ms`,
-and `region-stream-rootless` `1345.479 ms`, all around `1.53 GB` RSS.
-`checked-whole-run-scoped` is fastest at `1048.751 ms` but reaches
-`2977742848` RSS because it does not reclaim until the end. Page-token checked
-rows still beat heap but are slower for Yak: `checked-page-token-scoped`
-`1403.878 ms`, `checked-page-token-stream` `1457.811 ms`. This replaces
+page-token. In the latest clean 50M rerun, `gc-heap` is `2958.659 ms`, median
+GC `400.484 ms`, RSS `3913564160`; low-RSS epoch rows are
+`checked-epoch-scoped` `2008.320 ms`, `checked-epoch-stream` `2064.867 ms`,
+`region-scoped-rooted` `2351.582 ms`, and `region-stream-rootless`
+`2499.975 ms`, all around `2.11 GB` RSS. Page-token checked rows still beat
+heap but are slower for Yak: `checked-page-token-scoped` `2586.919 ms`,
+`checked-page-token-stream` `2746.897 ms`. This replaces
 Twitter ego as the best real-input Yak-style row and clarifies the design:
 checked regions need explicit user-visible topology (`epoch`, `window`,
 `page`), not one universal checked operator. It remains local graph replay
@@ -216,14 +242,10 @@ rather than exact Yak/GraphChi artifact evidence.
 Reusable Yak epoch follow-up:
 `EpochBuffer` is now wired into `graphreal` through `checked-epoch-buffer-scoped`
 and `checked-epoch-buffer-stream`. The reusable API is correct and still beats
-heap on LiveJournal: at 50M real edges, `checked-epoch-buffer-scoped` is
-`1343.071 ms` with zero timed GC and about `1.53 GB` RSS, versus `gc-heap`
-`1514.313 ms`, `279.226 ms` GC, and `2.76 GB` RSS in the same rerun. It
-trails the benchmark-local linked epoch path (`checked-epoch-scoped`
-`1022.643 ms`, `checked-epoch-stream` `1218.898 ms`). Interpretation:
-the reusable checked epoch API shape is right, but the implementation should
-get a lower-overhead linked-epoch lowering instead of relying on the current
-generic `EpochBuffer` append/cursor machinery.
+heap in an earlier LiveJournal follow-up, but it trailed the direct linked
+epoch path. Interpretation: the reusable checked epoch API shape is right, but
+the implementation should lower to the direct linked-epoch path rather than
+the generic `EpochBuffer` append/cursor machinery.
 `RiftRegion.epoch { ... }` is now implemented as the reusable checked linked
 epoch block. It provides an `OpenStreamingRegion` so epoch-local objects can
 use `allocOpen`; on the Rift streaming backend it resets at the epoch boundary,
@@ -234,13 +256,12 @@ after this API/test update: `sandbox3_next/compile` passed,
 passed `55/55`, and a 2-epoch SNAP Twitter `graphreal` smoke matched checksums
 across heap, checked epoch, and reusable `EpochBuffer` modes. A 10M
 LiveJournal API-backed rerun then confirmed the reusable linked-epoch direction:
-`checked-epoch-scoped` `212.691 ms`, `checked-epoch-stream` `229.532 ms`,
-`checked-epoch-buffer-scoped` `285.605 ms`, and `gc-heap` `317.779 ms`, with
-region rows around `328.5 MB` RSS versus heap `605.5 MB`. An apples-to-apples
-50M API-backed rerun with the same 10 x 5M epoch topology also passed:
-`checked-epoch-scoped` is `1055.958 ms`, `checked-epoch-stream` is
-`1101.001 ms`, and `gc-heap` is `1604.811 ms` with `288.801 ms` timed GC;
-region RSS is about `1.53 GB` versus heap `2.76 GB`.
+`checked-epoch-scoped` `417.426 ms`, `checked-epoch-stream` `425.983 ms`, and
+`gc-heap` `599.428 ms`, with region rows around `459 MB` RSS versus heap
+`606 MB`. A clean 50M rerun also passed: `checked-epoch-scoped` is
+`2008.320 ms`, `checked-epoch-stream` is `2064.867 ms`, and `gc-heap` is
+`2958.659 ms` with `400.484 ms` timed GC; region RSS is about `2.11 GB` versus
+heap `3.91 GB`.
 The same reusable `RiftRegion.epoch` topology now covers local Yak-shaped
 `wordcount`, `graphstep`, `sort`, `topword`, and `graphchi`; at 10M logical
 objects, `checked-epoch-scoped` is fastest among measured heap/rooted/streaming
@@ -253,11 +274,11 @@ The same direct `RiftRegion.epoch { ... }` topology is now wired into
 A 2-epoch x 1000-doc smoke matched heap checksums for SELECT, AGGREGATE, and
 JOIN. The 1M 3-run matrix at 10 epochs x 100k documents then showed direct
 checked scoped epoch as the fastest full-operator row:
-`19.318/36.016/20.082 ms` for SELECT/AGGREGATE/JOIN versus heap
-`26.996/52.754/31.281 ms` and improved SafeZone
-`23.339/44.737/24.136 ms`; heap timed GC was
-`6.355/13.209/9.672 ms`. The SELECT-only checked scoped page-token row is
-slightly faster at `19.010 ms`, but it does not cover AGGREGATE/JOIN. The old
+`19.691/34.676/19.762 ms` for SELECT/AGGREGATE/JOIN versus heap
+`27.775/50.837/30.387 ms` and region-scoped rooted
+`22.971/39.665/22.619 ms`; heap timed GC was
+`6.828/11.564/9.331 ms`. The SELECT-only checked scoped page-token row remains
+a useful control, but it does not cover AGGREGATE/JOIN. The old
 generic `checked-epoch-fold` aggregate remains speed-gated at `93.491 ms`.
 This confirms the next implementation sequence: apply direct epoch topology to
 other epoch-shaped workloads before designing new operator families.
@@ -340,16 +361,16 @@ Validation for the SPECjbb/ReML update:
   passed `57/57`.
 
 Clean direct-epoch sweep:
-After checkpointing parent commit `b462db8` and child commit `c71e56ae0`, a
-clean direct-epoch sweep was run and recorded in
+After checkpointing child commit `918c7d4c1` and parent commit `ab570b1`, a
+clean representative direct-epoch sweep was run and recorded in
 `evidence/DIRECT_EPOCH_TOPOLOGY_MATRIX.md`. Main rows: 50M LiveJournal checked
-epoch scoped `1030.943 ms`, `0.000 ms` GC, about `1.53 GB` RSS versus heap
-`1612.834 ms`, `274.756 ms` GC, about `2.76 GB` RSS; Dataflow
-SELECT/AGGREGATE/JOIN checked epoch scoped `18.483/33.896/19.581 ms` versus
-heap `26.686/49.611/29.622 ms`; StreamFlex 1M scoped checked direct epoch
-`159.767 ms` versus heap `215.097 ms`; Stancu 1M scoped checked direct epoch
-`155.992 ms` versus heap `222.415 ms`. This is now the canonical clean
-direct-epoch evidence pack.
+epoch scoped `2008.320 ms`, `0.000 ms` GC, about `2.11 GB` RSS versus heap
+`2958.659 ms`, `400.484 ms` GC, about `3.91 GB` RSS; Dataflow
+SELECT/AGGREGATE/JOIN checked epoch scoped `19.691/34.676/19.762 ms` versus
+heap `27.775/50.837/30.387 ms`; StreamFlex 1M scoped checked direct epoch
+`157.334 ms` versus heap `216.853 ms`; Stancu 1M scoped checked direct epoch
+`155.863 ms` versus heap `220.951 ms`. This is now the canonical clean
+representative direct-epoch evidence pack.
 
 Important interpretation note: timed GC is collection time only, not total
 memory-management cost. In HDFS q2, checked scoped page-token is about
