@@ -198,193 +198,210 @@ def render_markdown(markdown: str) -> tuple[str, list[tuple[int, str, str]]]:
 
 
 NAV = [
-    ("summary", "Summary"),
+    ("executive-summary", "Summary"),
+    ("motivation", "Motivation"),
+    ("background", "Background"),
+    ("question", "Question"),
+    ("approach", "Approach"),
     ("design", "Design"),
-    ("protocol", "Protocol"),
-    ("evidence", "Evidence"),
-    ("real-input", "Real Input"),
-    ("operators", "Operators"),
-    ("open-work", "Open Work"),
-    ("appendix", "Appendix"),
+    ("evaluation", "Evaluation"),
+    ("results", "Results"),
+    ("limitations", "Limitations"),
+    ("takeaway", "Takeaway"),
+    ("appendix", "Sources"),
 ]
+
+
+THESIS = (
+    "This project asks whether a Scala Native system can use statically checked "
+    "regions to reclaim stream-processing objects in bulk, avoiding garbage "
+    "collection work without giving up memory safety."
+)
 
 
 SUMMARY_CARDS = [
     {
-        "label": "Real-input epoch workload",
-        "value": "16.12s vs 18.79s",
-        "detail": "Yak LiveJournal 50M L1: checked epoch scoped vs gc-heap, with RSS about 612 MB vs 2.77 GB.",
-        "claim": "Real-input throughput and RSS win",
-        "tone": "win",
-    },
-    {
-        "label": "Retained-object reclaim",
-        "value": "0.47s vs 0.70s",
-        "detail": "Focused retained epoch 1M x20 L1: checked scoped retained/drop-anchor vs heap retained/drop-anchor.",
-        "claim": "Memory-management evidence",
-        "tone": "win",
-    },
-    {
-        "label": "Generated stream pressure",
-        "value": "4.02s vs 5.68s",
-        "detail": "Common Crawl WET-shaped q1 page-token L1: checked stream page-token vs heap.",
-        "claim": "Generated stressor, not real-input proof",
+        "label": "Problem",
+        "value": "GC overhead in structured streams",
+        "detail": "Many dataflow programs allocate short-lived or epoch-local records whose lifetimes are visible at the operator boundary.",
+        "claim": "Systems + PL motivation",
         "tone": "method",
     },
     {
-        "label": "Reusable top-k API",
-        "value": "4.88s vs 5.52s",
-        "detail": "LogHub HDFS top templates 1M x20 L1: checked top-k scoped API vs retained heap.",
-        "claim": "Real-input modest throughput and RSS win",
+        "label": "Prototype",
+        "value": "Checked stream regions",
+        "detail": "Rift adds checked epoch and page/window APIs on top of Scala Native runtime allocation backends.",
+        "claim": "Static safety plus region allocation",
+        "tone": "method",
+    },
+    {
+        "label": "Best real-input result",
+        "value": "16.12s vs 18.79s",
+        "detail": "Yak LiveJournal graph replay: checked epoch scoped beats the garbage-collected heap and cuts resident memory.",
+        "claim": "Real-input throughput + RSS win",
         "tone": "win",
     },
+    {
+        "label": "Most controlled reclaim test",
+        "value": "0.47s vs 0.70s",
+        "detail": "Both heap and regions retain ordinary objects until close; checked regions bulk-close them faster.",
+        "claim": "Memory-management evidence",
+        "tone": "win",
+    },
+]
+
+
+CONTEXT_BOXES = [
+    (
+        "Garbage collection (GC)",
+        "A runtime service that finds unreachable heap objects and reclaims them. GC is convenient, but tracing and pauses can cost time and memory on allocation-heavy workloads.",
+    ),
+    (
+        "Region",
+        "A memory area whose objects are reclaimed together. If all objects in a stream epoch or window die together, the runtime can close the region in bulk.",
+    ),
+    (
+        "Static checking",
+        "Compile-time capture and separation rules reject references that would outlive their region, such as storing an epoch object into a long-lived heap object.",
+    ),
+    (
+        "RSS",
+        "Resident set size: the operating-system memory footprint of the process. Lower RSS can matter even when elapsed time is tied.",
+    ),
+]
+
+
+APPROACH_STEPS = [
+    ("Expose lifetimes", "Programmers use checked APIs such as epoch and page/window regions to state where stream objects should die."),
+    ("Check safety", "Compiler/runtime tests reject escaping region references, stale tokens, and unsafe mixed heap-region references."),
+    ("Lower to fast backends", "The prototype lowers checked APIs to Rift streaming regions or SafeZone-family scoped allocation backends."),
+    ("Compare fairly", "Benchmarks include natural heap baselines, same-shape heap controls, and retained-object controls before making memory-management claims."),
 ]
 
 
 DESIGN_CARDS = [
     {
-        "title": "Epoch regions",
+        "title": "Epoch API",
         "api": "RiftRegion.epoch { ... }",
-        "body": "Batch, transaction, graph-step, and Yak-style workloads allocate ordinary objects inside an epoch and bulk-close them at the boundary.",
+        "body": "For graph steps, dataflow batches, and transactions. Objects allocated inside the epoch are consumed before the epoch closes.",
     },
     {
-        "title": "Page/window token regions",
-        "api": "page/window token operators",
-        "body": "Page, event-bucket, and window-owned records are appended through operator-owned paths that cache the active child region and close buckets in bulk.",
+        "title": "Page/window API",
+        "api": "checked page/window token",
+        "body": "For streams where a page, record group, or time bucket owns many short-lived records that can be closed together.",
     },
     {
-        "title": "Retained-object controls",
-        "api": "retained/drop-anchor",
-        "body": "Heap and regions both retain ordinary records until close. Heap drops the anchor and later relies on GC; regions close the allocation area.",
+        "title": "Retained-object control",
+        "api": "heap retained/drop-anchor vs checked retained",
+        "body": "Both sides materialize and retain ordinary objects until the boundary. This isolates GC reclaim from algorithmic shortcut wins.",
     },
     {
-        "title": "Checked scoped backend",
-        "api": "checked-region-scoped",
-        "body": "Checked Rift APIs over the rooted SafeZone-family scoped backend. This is the main safe backend candidate when scoped allocation wins.",
+        "title": "Backend selection",
+        "api": "checked-region-scoped or checked-region-stream",
+        "body": "The user-facing API is checked; the runtime backend can be selected by evidence. Unsafe rootless modes are lower-bound controls only.",
     },
 ]
 
 
-CLASS_CARDS = [
-    ("Natural heap baseline", "Original gc-heap program. This is the user-visible GC baseline."),
-    ("Same-shape heap control", "Heap uses the same retained, epoch, page, or window topology as the region row."),
-    ("Retained-object memory-management", "Both sides retain ordinary objects until close; region wins by bulk reclaim rather than tracing."),
-    ("Framework API win", "Uses reusable APIs such as RiftRegion.epoch, page-token, or EpochTopKByKey."),
-    ("Summary-only topology", "Updates summaries on append and does not retain records. Useful lower bound, not a GC/reclaim claim."),
-    ("Unsafe/trusted lower bound", "Rootless or trusted modes show backend potential only, never final safety claims."),
+EVALUATION_ROWS = [
+    [
+        "Main baseline",
+        "Scala Native Immix garbage-collected heap (`gc-heap`).",
+        "Shows whether regions beat the normal memory manager a Scala Native user would get.",
+    ],
+    [
+        "Safe region baseline",
+        "Rooted SafeZone-family scoped allocation (`region-scoped-rooted`).",
+        "Separates the checked API contribution from the underlying region allocator.",
+    ],
+    [
+        "Checked candidates",
+        "Checked epoch, checked page/window token, checked scoped backend, checked top-k API.",
+        "These are the rows that can support user-facing system claims.",
+    ],
+    [
+        "Measurement levels",
+        "L1 final-clean timing/RSS; L2 standard GC/region stats; L3 diagnostics; L4 sampled profiles.",
+        "Prevents instrumentation overhead from becoming the headline result.",
+    ],
 ]
 
 
-MODE_ROWS = [
-    ("gc-heap", "Scala Native Immix heap", "Natural baseline"),
-    ("region-scoped-rooted", "SafeZone-family rooted scoped allocation", "Safe rooted baseline"),
-    ("region-scoped-rootless", "SafeZone allocator with root tracking disabled", "Unsafe lower bound"),
-    ("region-stream-rootless", "Rift streaming/reset backend without checked guarantee", "Trusted lower bound"),
-    ("checked-region-stream", "Checked Rift API over Rift streaming backend", "Safe checked candidate"),
-    ("checked-region-scoped", "Checked Rift API over rooted scoped backend", "Safe checked candidate"),
-    ("checked-page-token", "Operator-owned checked page/window fast path", "Safe checked API"),
-    ("checked-epoch-scoped", "Direct checked epoch topology over scoped backend", "Safe checked API"),
-    ("checked-epoch-topk-scoped", "Reusable top-k API over checked epoch/scoped topology", "Safe checked API candidate"),
-]
-
-
-EVIDENCE_ROWS = [
-    {
-        "claim": "Real-input checked epoch win",
-        "benchmark": "Yak LiveJournal graph replay, real SNAP input, 50M replayed edges",
-        "checked": "checked-epoch-scoped: 16.12s L1, RSS about 612 MB",
-        "control": "gc-heap: 18.79s L1, RSS about 2.77 GB",
-        "interpretation": "Reusable epoch API beats heap on throughput and memory footprint; this is the strongest real-input epoch row.",
-        "class": "Framework API win",
-    },
-    {
-        "claim": "Retained-object reclaim win",
-        "benchmark": "Focused RetainedEpochReclaimMatrix, 1M records x20",
-        "checked": "checked scoped retained/drop-anchor: 0.47s L1",
-        "control": "heap retained/drop-anchor: 0.70s L1",
-        "interpretation": "Both retain ordinary objects until close; region bulk close avoids heap GC reclaim work.",
-        "class": "Retained-object memory-management",
-    },
-    {
-        "claim": "Dataflow family checked win",
-        "benchmark": "Dataflow SELECT / AGGREGATE / JOIN, 1M x20",
-        "checked": "checked epoch scoped: 0.38 / 0.69 / 0.39s",
-        "control": "gc-heap: 0.62 / 1.10 / 0.55s",
-        "interpretation": "Reusable epoch topology wins across prior-work-shaped dataflow rows.",
-        "class": "Framework API win",
-    },
-    {
-        "claim": "StreamFlex throughput and latency",
-        "benchmark": "StreamFlex-style throughput and latency rows",
-        "checked": "checked scoped direct epoch: 0.58s throughput; 0.17s latency row with zero misses",
-        "control": "heap: 0.79s throughput; 0.18s latency row with four misses",
-        "interpretation": "Epoch API improves throughput and reduces deadline/tail events on this methodology row.",
-        "class": "Framework API win",
-    },
-    {
-        "claim": "Transaction-style checked win",
-        "benchmark": "Stancu-style transactions and SPECjbb2005-workload port",
-        "checked": "Stancu: 0.57s checked scoped epoch; SPECjbb port: 2.21s",
-        "control": "Heap: 0.85s Stancu; 2.64s SPECjbb port",
-        "interpretation": "Transaction/epoch boundaries are a good reusable checked topology. SPECjbb row is a clean-room port, not official SPECjbb.",
-        "class": "Framework API win",
-    },
-    {
-        "claim": "Generated stream object-pressure win",
-        "benchmark": "Generated Common Crawl WET-shaped q1/q2, 1M pages",
-        "checked": "checked stream page-token: 4.02s q1, 4.16s q2 L1",
-        "control": "gc-heap: 5.68s q1, 5.53s q2 L1",
-        "interpretation": "Shows page/window API strength under generated object pressure; not a real-input proof.",
-        "class": "Framework API win",
-    },
-    {
-        "claim": "Real-input top-k modest win",
-        "benchmark": "LogHub HDFS top templates, real HDFS input, 1M x20",
-        "checked": "checked epoch top-k scoped: 4.88s, RSS about 28 MB",
-        "control": "retained heap: 5.52s, RSS about 205 MB",
-        "interpretation": "Reusable top-k API is close to manual retained lower bound and improves memory footprint sharply.",
-        "class": "Framework API win",
-    },
-    {
-        "claim": "Real-input RSS win",
-        "benchmark": "LogHub HDFS q2 page/window, real HDFS input",
-        "checked": "checked scoped page-token: 25.56s, RSS about 79 MB",
-        "control": "gc-heap: 25.60s, RSS about 409 MB",
-        "interpretation": "Elapsed is effectively tied, but the checked row materially lowers RSS.",
-        "class": "RSS win / real-input control",
-    },
-    {
-        "claim": "Generated retained controls",
-        "benchmark": "GH Archive-shaped, DSPBench, and LogHub generated retained rows",
-        "checked": "checked retained/drop-anchor rows",
-        "control": "heap retained/drop-anchor and summary-only controls",
-        "interpretation": "Useful for separating topology wins from memory-management wins. Summary-only rows are not headline memory claims.",
-        "class": "Retained-object or topology control",
-    },
+RESULT_ROWS = [
+    [
+        "Real graph replay",
+        "Yak LiveJournal, real SNAP graph input, 50M replayed edges.",
+        "Checked epoch scoped: `16.12s`, RSS about `612 MB`.",
+        "GC heap: `18.79s`, RSS about `2.77 GB`.",
+        "The strongest real-input result: epoch regions improve both time and memory footprint.",
+    ],
+    [
+        "Controlled retained-object reclaim",
+        "Focused retained-epoch matrix, 1M ordinary records x20.",
+        "Checked scoped retained/drop-anchor: `0.47s`.",
+        "Heap retained/drop-anchor: `0.70s`.",
+        "This is the cleanest memory-management comparison because both sides retain objects until close.",
+    ],
+    [
+        "Prior-work-shaped dataflow",
+        "SELECT / AGGREGATE / JOIN, 1M documents x20.",
+        "Checked epoch scoped: `0.38 / 0.69 / 0.39s`.",
+        "GC heap: `0.62 / 1.10 / 0.55s`.",
+        "The epoch API generalizes beyond one benchmark to dataflow-style operators.",
+    ],
+    [
+        "Generated object-pressure stream",
+        "Common Crawl WET-shaped generated q1/q2, 1M pages.",
+        "Checked page-token stream: `4.02 / 4.16s`.",
+        "GC heap: `5.68 / 5.53s`.",
+        "Shows the intended high-allocation stream regime, but it is generated, not a real-data proof.",
+    ],
+    [
+        "Real log top-k",
+        "LogHub HDFS top templates, real HDFS logs, 1M x20.",
+        "Checked top-k scoped API: `4.88s`, RSS about `28 MB`.",
+        "Retained heap: `5.52s`, RSS about `205 MB`.",
+        "A reusable top-k API can keep most of the retained-region benefit on real logs.",
+    ],
 ]
 
 
 REAL_INPUT_ROWS = [
-    ("Yak LiveJournal", "Real SNAP graph input", "Strong checked epoch throughput and RSS win", "Use as flagship real-input epoch row."),
-    ("LogHub HDFS top templates", "Real LogHub HDFS log lines", "Modest throughput win and large RSS reduction", "Reusable EpochTopKByKey row."),
-    ("LogHub HDFS q2", "Real LogHub HDFS log lines", "Elapsed tie, strong RSS reduction", "Real-input page/window control."),
-    ("GH Archive", "Real NDJSON event data", "Mostly modest RSS/tail evidence", "Parser/string CPU often dominates."),
-    ("Real WET/WAT", "Real Common Crawl shards", "Not materially GC-heavy in current queries", "Ceiling/control, not flagship proof."),
-    ("Wikimedia / Linear Road", "Real TSV / official methodology input", "Heap is often fast and GC-light", "Regression or ceiling controls."),
+    ["Yak LiveJournal", "Real SNAP graph input", "Strong checked epoch time and RSS win", "Flagship real-input row."],
+    ["LogHub HDFS top templates", "Real LogHub HDFS logs", "Modest time win and large RSS reduction", "Promising reusable top-k API row."],
+    ["LogHub HDFS q2", "Real LogHub HDFS logs", "Elapsed tie, strong RSS reduction", "Useful page/window control."],
+    ["GH Archive", "Real NDJSON events", "Small time/RSS wins; parser CPU dominates", "Useful but not GC-heavy enough yet."],
+    ["Common Crawl WET/WAT", "Real archive shards", "Current real rows are GC-light", "Ceiling/control, not a flagship result."],
+]
+
+
+LIMITATIONS = [
+    "The best GC-heavy page/window stream result is still generated, so it demonstrates a workload regime rather than a real-data case study.",
+    "Some real inputs are dominated by parsing, hashing, or query CPU, so removing GC does not automatically produce large elapsed-time wins.",
+    "Unsafe/rootless region modes are useful lower bounds but are not user-facing safety claims.",
+    "Rank, median, hash-join, and table-heavy operators still need focused API gates before they can support application claims.",
+    "The ReML/MLKit comparison table is still being assembled; cross-language raw wall-clock comparisons will be treated as contextual, not definitive.",
 ]
 
 
 OPEN_WORK_ROWS = [
-    ("Measurement-clean sweep", "Finish L1 final-clean rows for all representative API wins and keep L2 stats for interpretation."),
-    ("ReML/MLKit table", "Fill paper-reported rows, exact-rerun provenance, and Scala Native port rows in the PLDI-style table."),
-    ("Real-input search", "Continue with larger LiveJournal/SNAP, richer LogHub template/session mining, Theodolite traces, and DSPBench kernels."),
-    ("Operator gates", "Do not headline rank/hash/median/join until each has natural heap, same-shape heap, retained controls, and a focused API gate."),
-    ("Backend selection", "Keep only safe user-facing components that win; unsafe/rootless rows remain internal lower bounds."),
+    ["Finalize L1 rows", "Finish final-clean headline runs for the selected representative API wins."],
+    ["Find a stronger real stream input", "Continue with larger LiveJournal/SNAP, richer LogHub sessions/templates, Theodolite traces, and DSPBench kernels."],
+    ["Complete ReML/MLKit table", "Separate paper-reported, exact artifact rerun, and Scala Native port evidence."],
+    ["Gate complex operators", "Only headline rank/hash/median/join after natural heap, same-shape heap, retained controls, and focused 1M API gates."],
 ]
 
 
 def tag(text: str, tone: str = "neutral") -> str:
     return f'<span class="tag tag-{attr(tone)}">{esc(text)}</span>'
+
+
+def figure_block(caption: str, body: str, so_what: str) -> str:
+    return f'''<figure class="figure-block">
+  <figcaption>{esc(caption)}</figcaption>
+  {body}
+  <p class="so-what"><strong>So what?</strong> {esc(so_what)}</p>
+</figure>'''
 
 
 def render_summary_cards() -> str:
@@ -399,7 +416,46 @@ def render_summary_cards() -> str:
 </article>'''
         )
     parts.append("</div>")
-    return "\n".join(parts)
+    return figure_block(
+        "Figure 1. Executive summary cards. Read these as the whole talk in four claims.",
+        "\n".join(parts),
+        "The project has a clear systems question, a checked-region prototype, and two kinds of current wins: real-input epoch wins and controlled memory-management wins.",
+    )
+
+
+def render_context_boxes() -> str:
+    parts = ['<div class="context-grid">']
+    for title, body in CONTEXT_BOXES:
+        parts.append(
+            f'''<article class="context-box">
+  <h3>{esc(title)}</h3>
+  <p>{esc(body)}</p>
+</article>'''
+        )
+    parts.append("</div>")
+    return figure_block(
+        "Figure 2. Minimal background vocabulary.",
+        "\n".join(parts),
+        "The rest of the report only needs these concepts: GC, regions, static safety checks, and RSS.",
+    )
+
+
+def render_approach_steps() -> str:
+    parts = ['<div class="flow-grid">']
+    for index, (title, body) in enumerate(APPROACH_STEPS, start=1):
+        parts.append(
+            f'''<article class="flow-card">
+  <div class="flow-number">{index}</div>
+  <h3>{esc(title)}</h3>
+  <p>{esc(body)}</p>
+</article>'''
+        )
+    parts.append("</div>")
+    return figure_block(
+        "Figure 3. What was built and tested.",
+        "\n".join(parts),
+        "The contribution is not a benchmark rewrite; it is a checked API plus backend lowering and a fair comparison protocol.",
+    )
 
 
 def render_design_cards() -> str:
@@ -413,20 +469,11 @@ def render_design_cards() -> str:
 </article>'''
         )
     parts.append("</div>")
-    return "\n".join(parts)
-
-
-def render_class_cards() -> str:
-    parts = ['<div class="class-grid">']
-    for title, body in CLASS_CARDS:
-        parts.append(
-            f'''<article class="class-card">
-  <h3>{esc(title)}</h3>
-  <p>{esc(body)}</p>
-</article>'''
-        )
-    parts.append("</div>")
-    return "\n".join(parts)
+    return figure_block(
+        "Figure 4. User-facing region topologies and controls.",
+        "\n".join(parts),
+        "Different workloads need different lifetimes. The API should expose epoch, page/window, and retained-object shapes instead of forcing one region topology everywhere.",
+    )
 
 
 def render_table(headers: list[str], rows: list[list[str]], caption: str | None = None) -> str:
@@ -446,40 +493,69 @@ def render_table(headers: list[str], rows: list[list[str]], caption: str | None 
     return "\n".join(parts)
 
 
-def render_mode_table() -> str:
-    rows = [[f"<code>{esc(name)}</code>", esc(meaning), esc(status)] for name, meaning, status in MODE_ROWS]
-    return render_table(["Reporting name", "Meaning", "Role"], rows)
+def render_table_block(
+    headers: list[str],
+    rows: list[list[str]],
+    caption: str,
+    so_what: str,
+) -> str:
+    body = render_table(headers, rows)
+    return figure_block(caption, body, so_what)
 
 
-def render_evidence_cards() -> str:
-    parts = ['<div class="evidence-list">']
-    for item in EVIDENCE_ROWS:
-        parts.append(
-            f'''<article class="evidence-card">
-  <header>
-    <div>{tag(item["class"], "method")}</div>
-    <h3>{esc(item["claim"])}</h3>
-  </header>
-  <dl>
-    <div><dt>Benchmark</dt><dd>{esc(item["benchmark"])}</dd></div>
-    <div><dt>Best checked row</dt><dd>{esc(item["checked"])}</dd></div>
-    <div><dt>Control</dt><dd>{esc(item["control"])}</dd></div>
-    <div><dt>Interpretation</dt><dd>{esc(item["interpretation"])}</dd></div>
-  </dl>
-</article>'''
-        )
-    parts.append("</div>")
-    return "\n".join(parts)
+def render_evaluation_table() -> str:
+    rows = [[esc(a), inline_markdown(b), esc(c)] for a, b, c in EVALUATION_ROWS]
+    return render_table_block(
+        ["Evaluation component", "What was measured", "Why it matters"],
+        rows,
+        "Table 1. Evaluation setup and baselines.",
+        "The report separates user-facing checked rows from allocator lower bounds and separates clean headline timing from diagnostic counters.",
+    )
+
+
+def render_results_table() -> str:
+    rows = [
+        [esc(a), esc(b), inline_markdown(c), inline_markdown(d), esc(e)]
+        for a, b, c, d, e in RESULT_ROWS
+    ]
+    return render_table_block(
+        ["Result", "Workload", "Best checked row", "Baseline/control", "Interpretation"],
+        rows,
+        "Table 2. Five results to remember.",
+        "The current story is strongest for epochal graph/dataflow/transaction shapes and controlled retained-object reclaim; generated stream pressure is promising but not yet real-input proof.",
+    )
 
 
 def render_real_input_table() -> str:
     rows = [[esc(a), esc(b), esc(c), esc(d)] for a, b, c, d in REAL_INPUT_ROWS]
-    return render_table(["Benchmark", "Input", "Current result", "Report status"], rows)
+    return render_table_block(
+        ["Benchmark", "Input", "Current result", "Report status"],
+        rows,
+        "Table 3. Real-input evidence status.",
+        "Real datasets are not automatically GC-heavy. The strongest real row is LiveJournal; several others are useful RSS or ceiling controls.",
+    )
 
 
 def render_open_work() -> str:
     rows = [[esc(a), esc(b)] for a, b in OPEN_WORK_ROWS]
-    return render_table(["Track", "Next action"], rows)
+    return render_table_block(
+        ["Open track", "Next action"],
+        rows,
+        "Table 4. Work remaining before a final paper-style evaluation.",
+        "The next work is about finalizing evidence quality and extending real inputs, not adding benchmark-specific shortcuts.",
+    )
+
+
+def render_limitations() -> str:
+    parts = ['<ul class="limitations-list">']
+    for item in LIMITATIONS:
+        parts.append(f"<li>{esc(item)}</li>")
+    parts.append("</ul>")
+    return figure_block(
+        "Figure 5. What these results do not prove yet.",
+        "\n".join(parts),
+        "The prototype has encouraging evidence, but the final claim should stay narrower than 'regions always beat GC'.",
+    )
 
 
 def render_nav() -> str:
@@ -489,7 +565,6 @@ def render_nav() -> str:
 
 
 def build_html(source: Path, markdown: str, title: str) -> str:
-    appendix_body, _appendix_toc = render_markdown(markdown)
     generated = dt.datetime.now().astimezone().strftime("%Y-%m-%d %H:%M %Z")
 
     return f"""<!doctype html>
@@ -512,130 +587,183 @@ def build_html(source: Path, markdown: str, title: str) -> str:
     <section class="hero">
       <div class="hero-copy">
         <div class="eyebrow">Scala Native checked stream regions</div>
-        <h1>Rift performance evaluation report</h1>
+        <h1>Can checked regions make stream processing cheaper than garbage collection?</h1>
+        <div class="thesis-strip">
+          <span>One-sentence thesis</span>
+          <p>{esc(THESIS)}</p>
+        </div>
         <p class="hero-lede">
-          A presentation-ready summary of where checked region APIs beat
-          Scala Native Immix, where SafeZone-family backends help, and where
-          results are topology controls rather than memory-management claims.
+          A self-contained 10-minute research presentation for systems and
+          programming-languages readers with no prior project context.
         </p>
         <div class="hero-actions">
-          <a class="button" href="#evidence">View representative data</a>
+          <a class="button" href="#results">View main results</a>
           <a class="button button-secondary" href="PERFORMANCE_EVALUATION_REPORT.md">Open source Markdown</a>
         </div>
       </div>
       <aside class="hero-panel" aria-label="Report metadata">
         <div class="panel-row"><span>Generated</span><strong>{esc(generated)}</strong></div>
         <div class="panel-row"><span>Source</span><strong>{esc(source)}</strong></div>
-        <div class="panel-row"><span>Headline rule</span><strong>L1 clean timing for elapsed/RSS</strong></div>
-        <div class="panel-row"><span>Interpretation rule</span><strong>L2-L4 for GC, region stats, profiles</strong></div>
+        <div class="panel-row"><span>Audience</span><strong>External systems / PL reader</strong></div>
+        <div class="panel-row"><span>Headline rule</span><strong>Clean total time and RSS first</strong></div>
       </aside>
     </section>
 
-    <section id="summary" class="section">
+    <section id="executive-summary" class="section">
       <div class="section-kicker">Executive summary</div>
-      <h2>What the current evidence says</h2>
+      <h2>The result in one slide</h2>
       <p>
-        Rift should be reported as a checked stream-region programming model,
-        not as a collection of benchmark-local rewrites. The strongest rows use
-        reusable epoch, page/window, retained-object, and top-k APIs with clear
-        comparison classes.
+        The prototype shows that checked region APIs can beat the garbage-
+        collected heap when a workload has explicit epoch, transaction, page,
+        or window lifetimes. The strongest evidence is not "regions always
+        win"; it is that the right checked topology can remove GC reclaim work
+        and reduce resident memory without resorting to unsafe manual memory
+        management.
       </p>
       {render_summary_cards()}
     </section>
 
-    <section id="design" class="section">
-      <div class="section-kicker">System shape</div>
-      <h2>Reusable checked APIs, not one-off benchmark tricks</h2>
-      <p>
-        The public story is now organized around safe framework APIs. Static
-        capture and separation checking is what permits the backend to remove
-        runtime escape tables, promotion barriers, close-time scans, and
-        per-record defensive checks inside operator-owned fast paths.
-      </p>
-      {render_design_cards()}
-      <div class="callout">
-        <strong>Important boundary:</strong> summary-only count-array rows are
-        useful lower bounds, but they are not memory-management wins. A memory
-        management claim compares retained heap/drop-anchor against retained
-        checked regions.
+    <section id="motivation" class="section split-section">
+      <div>
+        <div class="section-kicker">Motivation</div>
+        <h2>Many streaming systems allocate data whose lifetime is already structured</h2>
+        <p>
+          Garbage collection is a strong default for general-purpose programs,
+          but data processing often has explicit lifetime boundaries: an epoch
+          ends, a window closes, or a transaction commits. In those cases, a
+          runtime may be able to reclaim many ordinary objects together rather
+          than tracing them one by one.
+        </p>
+      </div>
+      <div class="context-box emphasis-box">
+        <h3>Why this matters</h3>
+        <p>
+          This is a systems and programming-languages question: can we expose
+          lifetimes in the programming model, check them statically, and lower
+          them to faster memory management without making users write unsafe
+          manual allocation code?
+        </p>
       </div>
     </section>
 
-    <section id="protocol" class="section">
-      <div class="section-kicker">Evaluation contract</div>
-      <h2>Every row needs a comparison class and measurement level</h2>
-      <p>
-        This report separates final clean timing from diagnostic evidence. L1
-        rows use external process timing and RSS only. L2 rows explain GC and
-        region behavior. L3/L4 diagnostics and profiles are never headline
-        elapsed numbers.
-      </p>
-      {render_class_cards()}
-      <h3>Canonical reporting names</h3>
-      {render_mode_table()}
+    <section id="background" class="section">
+      <div class="section-kicker">Background</div>
+      <h2>Only four concepts are needed</h2>
+      {render_context_boxes()}
     </section>
 
-    <section id="evidence" class="section">
-      <div class="section-kicker">Representative evidence</div>
-      <h2>Wins, controls, and what each one proves</h2>
+    <section id="question" class="section">
+      <div class="section-kicker">Research question</div>
+      <h2>Can checked regions win on the workloads they are designed for?</h2>
+      <div class="research-question">
+        <p>
+          <strong>Question.</strong> When stream/dataflow objects have visible
+          epoch, page, transaction, or window lifetimes, can a checked region
+          API outperform Scala Native's Immix garbage-collected heap, while
+          preserving safety and using fair same-shape controls?
+        </p>
+      </div>
       <p>
-        The table cards below intentionally mix throughput, RSS, retained-object
-        memory-management, and generated-stressor evidence, but each row states
-        the allowed claim. This avoids presenting topology lower bounds as GC
-        wins.
+        The report therefore distinguishes memory-management wins from
+        algorithmic or topology wins. If a result depends on summarizing data
+        early or avoiding object retention entirely, it is useful but it is not
+        reported as a GC-reclaim win.
       </p>
-      {render_evidence_cards()}
+    </section>
+
+    <section id="approach" class="section">
+      <div class="section-kicker">Approach</div>
+      <h2>Build a checked API, then compare it against fair heap baselines</h2>
+      <p>
+        Rift is a Scala Native prototype. It adds checked region-shaped APIs
+        and benchmark modes that lower those APIs to runtime allocation
+        backends. The important methodological choice is that headline rows use
+        reusable framework APIs, not benchmark-local manual arrays or one-off
+        count loops.
+      </p>
+      {render_approach_steps()}
+    </section>
+
+    <section id="design" class="section">
+      <div class="section-kicker">Key design idea</div>
+      <h2>Use static safety to remove runtime memory bookkeeping</h2>
+      <p>
+        The novel part is not just "allocate in a region." The useful part is a
+        checked API that proves which references cannot escape. Under those
+        invariants, the runtime can avoid escape tables, promotion barriers,
+        heap-to-region tracking tables, close-time object scans, and hot-path
+        stale-token checks inside operator-owned paths.
+      </p>
+      {render_design_cards()}
+    </section>
+
+    <section id="evaluation" class="section">
+      <div class="section-kicker">Evaluation setup</div>
+      <h2>Measure clean process time first, then explain it with diagnostics</h2>
+      <p>
+        Headline elapsed time and resident set size (RSS) come from final-clean
+        runs with no profiling, tracing, attribution, or internal diagnostic
+        timers in the timed section. Garbage collection and region counters are
+        reported separately as interpretation evidence.
+      </p>
+      {render_evaluation_table()}
+    </section>
+
+    <section id="results" class="section">
+      <div class="section-kicker">Main results</div>
+      <h2>The important numbers fit on one table</h2>
+      <p>
+        The strongest current story has five representative rows: one real
+        graph workload, one controlled retained-object reclaim test, two
+        prior-work-shaped methodology groups, one generated high-allocation
+        stream stressor, and one real log top-k workload.
+      </p>
+      {render_results_table()}
     </section>
 
     <section id="real-input" class="section">
-      <div class="section-kicker">Real inputs</div>
-      <h2>Real datasets are useful, but not all are GC-heavy</h2>
+      <div class="section-kicker">Real-data status</div>
+      <h2>Real inputs help, but many are not GC-heavy enough</h2>
       <p>
-        The best real-input case so far is Yak LiveJournal with a direct checked
-        epoch topology. Other real inputs often spend more time in parsing,
-        string handling, or query CPU than GC; those rows remain important RSS,
-        tail, or ceiling controls.
+        A recurring finding is that public real inputs often spend most time in
+        parsing, hashing, or query logic. Those rows are still useful: they can
+        show memory-footprint wins, tail behavior, or ceiling cases where GC is
+        not the dominant cost.
       </p>
       {render_real_input_table()}
     </section>
 
-    <section id="operators" class="section split-section">
-      <div>
-        <div class="section-kicker">Component selection</div>
-        <h2>Keep winning safe components public</h2>
-        <p>
-          Final user-facing components should be selected by evidence: checked
-          epoch for epochal workloads, page/window token for page-owned streams,
-          and checked top-k only after focused and application rows pass.
-          Unsafe/rootless rows remain internal lower bounds.
-        </p>
-      </div>
-      <div class="status-stack">
-        <div class="status-card status-good"><strong>Keep</strong><span>checked epoch, checked page/window token, checked scoped backend candidates</span></div>
-        <div class="status-card status-watch"><strong>Gate</strong><span>EpochTopKByKey, rank/hash/median/join, richer real-input workloads</span></div>
-        <div class="status-card status-bad"><strong>Demote</strong><span>benchmark-local manual arrays, summary-only rows, unsafe/rootless rows for public claims</span></div>
-      </div>
+    <section id="limitations" class="section">
+      <div class="section-kicker">Limitations</div>
+      <h2>What this does not prove yet</h2>
+      {render_limitations()}
     </section>
 
-    <section id="open-work" class="section">
-      <div class="section-kicker">Next steps</div>
-      <h2>What remains before a thesis-grade final package</h2>
+    <section id="takeaway" class="section">
+      <div class="section-kicker">Takeaway</div>
+      <h2>Checked regions are promising when lifetimes are part of the program structure</h2>
+      <div class="takeaway-panel">
+        <p>
+          The current evidence supports a precise claim: for stream/dataflow
+          workloads with explicit epoch, page/window, or transaction lifetimes,
+          a checked region API can remove GC reclaim work and reduce memory
+          footprint while preserving safety. The remaining research work is to
+          finish the clean evaluation, find more real GC-heavy inputs, and gate
+          more complex operators without relying on benchmark-specific tricks.
+        </p>
+      </div>
       {render_open_work()}
     </section>
 
     <section id="appendix" class="section appendix">
-      <div class="section-kicker">Detailed appendix</div>
-      <h2>Full Markdown report snapshot</h2>
+      <div class="section-kicker">Sources and provenance</div>
+      <h2>Where the detailed evidence lives</h2>
       <p>
-        The presentation sections above are curated. The detailed Markdown
-        report is included below for a self-contained shareable artifact.
+        This HTML file is intentionally a 10-minute presentation report, not a
+        dump of every benchmark table. The source Markdown and evidence files
+        remain the archival record for full commands, row classifications, and
+        run provenance.
       </p>
-      <details>
-        <summary>Open full rendered Markdown appendix</summary>
-        <div class="appendix-body">
-          {appendix_body}
-        </div>
-      </details>
       <div class="source-links">
         <a href="PERFORMANCE_EVALUATION_REPORT.md">Markdown report</a>
         <a href="../evidence/EVALUATION_CLASSIFIED_SUMMARY.md">Classified summary</a>
@@ -773,10 +901,34 @@ p {
   margin: 0;
   color: var(--muted);
 }
+figure {
+  margin: 0;
+}
 .hero-lede {
   max-width: 780px;
   margin-top: 20px;
   font-size: clamp(1.04rem, 2vw, 1.28rem);
+}
+.thesis-strip {
+  max-width: 840px;
+  margin-top: 20px;
+  padding: 16px 18px;
+  border: 1px solid #c4d5f4;
+  border-radius: 18px;
+  background: var(--blue-soft);
+}
+.thesis-strip span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--blue);
+  font-size: 0.76rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.thesis-strip p {
+  color: #26364f;
+  font-size: 1.04rem;
 }
 .hero-actions {
   display: flex;
@@ -832,6 +984,23 @@ p {
   margin-top: 14px;
   font-size: 1.03rem;
 }
+.figure-block {
+  margin-top: 24px;
+}
+.figure-block > figcaption {
+  margin-bottom: 12px;
+  color: #334155;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+.so-what {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #f8fafc;
+  color: #334155;
+}
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -881,16 +1050,67 @@ p {
   margin-top: 24px;
 }
 .class-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.context-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
 .feature-card, .class-card {
   padding: 18px;
   border: 1px solid var(--line);
   border-radius: 18px;
   background: var(--paper-soft);
 }
-.feature-card h3, .class-card h3 { margin-bottom: 10px; }
+.context-box {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--paper-soft);
+}
+.emphasis-box {
+  background: linear-gradient(180deg, var(--blue-soft), white);
+}
+.feature-card h3, .class-card h3, .context-box h3 { margin-bottom: 10px; }
 .api-chip {
   margin: 10px 0 12px;
   overflow-wrap: anywhere;
+}
+.research-question {
+  margin-top: 22px;
+  padding: 20px;
+  border: 1px solid #c4d5f4;
+  border-radius: 18px;
+  background: var(--blue-soft);
+}
+.research-question p {
+  color: #24334d;
+  font-size: 1.08rem;
+}
+.flow-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+.flow-card {
+  position: relative;
+  padding: 46px 18px 18px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--paper-soft);
+}
+.flow-number {
+  position: absolute;
+  top: 14px;
+  left: 18px;
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--accent-dark);
+  color: white;
+  font-size: 0.82rem;
+  font-weight: 800;
 }
 .callout {
   margin-top: 22px;
@@ -987,6 +1207,28 @@ dd {
 .status-good { background: var(--green-soft); }
 .status-watch { background: var(--amber-soft); }
 .status-bad { background: var(--red-soft); }
+.limitations-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-left: 1.2rem;
+  color: var(--muted);
+}
+.limitations-list li {
+  padding-left: 4px;
+}
+.takeaway-panel {
+  margin-top: 20px;
+  padding: clamp(20px, 3vw, 30px);
+  border: 1px solid #b8dec6;
+  border-radius: 20px;
+  background: linear-gradient(180deg, var(--green-soft), white);
+}
+.takeaway-panel p {
+  max-width: 980px;
+  color: #1d4430;
+  font-size: 1.12rem;
+}
 .appendix details {
   margin-top: 18px;
   border: 1px solid var(--line);
@@ -1047,6 +1289,8 @@ pre code {
   .summary-grid,
   .feature-grid,
   .class-grid,
+  .context-grid,
+  .flow-grid,
   .evidence-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1059,6 +1303,8 @@ pre code {
   .summary-grid,
   .feature-grid,
   .class-grid,
+  .context-grid,
+  .flow-grid,
   .evidence-list {
     grid-template-columns: 1fr;
   }
