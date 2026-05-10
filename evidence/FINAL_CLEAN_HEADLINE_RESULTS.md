@@ -1,7 +1,7 @@
 # Final-Clean Headline Results
 
 Date: 2026-05-09
-Last updated: 2026-05-10 17:15 CEST
+Last updated: 2026-05-10 17:37 CEST
 
 Status: L1 runner support exists for the first representative binaries. One
 focused retained-epoch L1 row has been collected from clean child commit
@@ -25,8 +25,9 @@ Child `95f4f4d71` adds L1 support to `DSPBenchRegionMatrix`, and the Fraud/Log
 q2 page/window rows are recorded below.
 Child `dffe178a0` adds L1 support to `NexmarkRegionMatrix`, and the
 Beam-default-style q3/q8/q9/q11 rows are recorded below.
-Child `54bf38c45` adds L1 support to `GithubArchiveRegionMatrix`, and the
-two-hour real file-backed byte-slice q1/q2 rows are recorded below.
+Child `54bf38c45` adds L1 support to `GithubArchiveRegionMatrix`. The
+two-hour real file-backed byte-slice q1/q2 rows and generated/preloaded
+retained q2 rows are recorded below.
 
 ## Definition
 
@@ -91,6 +92,10 @@ for those 20 iterations.
 | retained epoch focused 1M x20 | synthetic focused matrix | retained epoch/drop-anchor | retained-object memory-management | `heap-epoch-retained-no-traverse` | 3 processes x 20 iterations | `0.70 s` total (`35.0 ms/iter`) | `0.70 s` | `0.99 s` | `21233664 bytes` | checksum `-829278451938965381`, output `163644` | L1 clean heap retained/drop-anchor control |
 | retained epoch focused 1M x20 | synthetic focused matrix | retained epoch/drop-anchor | retained-object memory-management | `checked-epoch-retained-no-traverse` | 3 processes x 20 iterations | `0.50 s` total (`25.0 ms/iter`) | `0.50 s` | `0.51 s` | `6144000 bytes` | checksum `-829278451938965381`, output `163644` | L1 clean checked stream retained win over heap retained |
 | retained epoch focused 1M x20 | synthetic focused matrix | retained epoch/drop-anchor | retained-object memory-management | `checked-scoped-epoch-retained-no-traverse` | 3 processes x 20 iterations | `0.47 s` total (`23.5 ms/iter`) | `0.47 s` | `0.48 s` | `6193152 bytes` | checksum `-829278451938965381`, output `163644` | L1 clean checked scoped retained win over heap retained |
+| GH Archive-shaped q2 retained 1M x20 | generated/preloaded stressor | summary-only direct aggregate | summary-only topology | `heap-direct-summary-only` | 3 processes x 20 iterations | `1.28 s` total (`64.0 ms/iter`) | `1.27 s` | `1.31 s` | `6832128 bytes` | checksum `7294087528134281006`, output `163487` | L1 clean topology lower bound, not memory-management evidence |
+| GH Archive-shaped q2 retained 1M x20 | generated/preloaded stressor | retained epoch/drop-anchor | retained-object memory-management | `heap-epoch-retained-no-traverse` | 3 processes x 20 iterations | `4.62 s` total (`231.0 ms/iter`) | `4.58 s` | `4.73 s` | `147341312 bytes` | checksum `7294087528134281006`, output `163487` | L1 clean heap retained/drop-anchor control |
+| GH Archive-shaped q2 retained 1M x20 | generated/preloaded stressor | retained epoch/drop-anchor | retained-object memory-management | `checked-epoch-retained-no-traverse` | 3 processes x 20 iterations | `3.65 s` total (`182.5 ms/iter`) | `3.58 s` | `3.73 s` | `15990784 bytes` | checksum `7294087528134281006`, output `163487` | L1 clean checked stream retained win over heap retained |
+| GH Archive-shaped q2 retained 1M x20 | generated/preloaded stressor | retained epoch/drop-anchor | retained-object memory-management | `checked-scoped-epoch-retained-no-traverse` | 3 processes x 20 iterations | `3.44 s` total (`172.0 ms/iter`) | `3.43 s` | `3.47 s` | `16056320 bytes` | checksum `7294087528134281006`, output `163487` | L1 clean checked scoped retained win over heap retained: about 25.5% faster and 89% lower RSS |
 | Dataflow SELECT 1M x20 | generated methodology | direct epoch / scoped region | framework API win | `gc-heap` | 3 processes x 20 iterations | `0.62 s` total (`31.0 ms/iter`) | `0.61 s` | `0.63 s` | `39288832 bytes` | checksum `131080080920` | L1 clean natural heap baseline |
 | Dataflow SELECT 1M x20 | generated methodology | direct epoch / scoped region | safe rooted baseline | `region-scoped-rooted` | 3 processes x 20 iterations | `0.46 s` total (`23.0 ms/iter`) | `0.46 s` | `0.48 s` | `7536640 bytes` | checksum `131080080920` | L1 clean rooted scoped-region baseline |
 | Dataflow SELECT 1M x20 | generated methodology | `RiftRegion.epoch` checked scoped | framework API win | `checked-epoch-scoped` | 3 processes x 20 iterations | `0.38 s` total (`19.0 ms/iter`) | `0.38 s` | `0.39 s` | `7553024 bytes` | checksum `131080080920` | L1 clean checked epoch win over heap and rooted scoped baseline |
@@ -368,6 +373,25 @@ for i in 1 2 3; do
   GITHUB_ARCHIVE_QUERIES="q1-fields q2-repo-window" \
   GITHUB_ARCHIVE_MODES="heap-immix safezone-improved-32k rift-trusted-streaming rift-checked-safezone-page-token" \
   GITHUB_ARCHIVE_OUTPUT_DIR=/tmp/rift-l1-gharchive-byte-200k-x3-54bf38c45-r${i} \
+  zsh sandbox/run_github_archive_region_matrix.sh
+done
+```
+
+GH Archive generated/preloaded retained q2 command:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+for i in 1 2 3; do
+  RIFT_FINAL_CLEAN=1 \
+  GITHUB_ARCHIVE_BUILD=0 \
+  GITHUB_ARCHIVE_EVENTS=1000000 \
+  GITHUB_ARCHIVE_EVENTS_PER_BUCKET=25000 \
+  GITHUB_ARCHIVE_BENCHMARK_RUNS=20 \
+  GITHUB_ARCHIVE_WARMUPS=0 \
+  GITHUB_ARCHIVE_INPUT_MODE=preloaded \
+  GITHUB_ARCHIVE_QUERIES="q2-repo-window" \
+  GITHUB_ARCHIVE_MODES="heap-direct-summary-only heap-epoch-retained-no-traverse checked-epoch-retained-no-traverse checked-scoped-epoch-retained-no-traverse" \
+  GITHUB_ARCHIVE_OUTPUT_DIR=/tmp/rift-l1-gharchive-retained-q2-1m-x20-36bbfa9cd-r${i} \
   zsh sandbox/run_github_archive_region_matrix.sh
 done
 ```

@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-10 17:15 CEST
+Last updated: 2026-05-10 17:37 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -132,6 +132,12 @@ versus `2244.266 ms`) but not RSS. This is the fair memory-management
 comparison: ordinary objects survive until the epoch boundary in both heap and
 region modes, and close does not traverse records. The summary-only direct rows
 remain topology/operator lower bounds, not pure Rift placement wins.
+
+The GH Archive-shaped q2 retained row now also has L1 final-clean external
+timing/RSS: over 20 x 1M generated/preloaded q2 iterations, retained heap is
+`4.62 s` and `147 MB` RSS, checked stream retained is `3.65 s` and `16 MB`,
+and checked scoped retained is `3.44 s` and `16 MB`. The summary-only lower
+bound is `1.28 s` and remains topology evidence only.
 
 Latest post-fast-path selected sweep:
 `evidence/POST_FAST_PATH_SELECTED_SWEEP_2026_05_07.md`. This is from the

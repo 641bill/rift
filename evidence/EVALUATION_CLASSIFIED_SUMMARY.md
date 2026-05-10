@@ -1,7 +1,7 @@
 # Evaluation Classified Summary
 
 Date: 2026-05-09
-Last updated: 2026-05-10 17:15 CEST
+Last updated: 2026-05-10 17:37 CEST
 
 Status: thesis-facing classified summary built from committed evidence.
 Baseline commits for clean rows: parent `1cc3b2c`, child `13a3df1c7`.
@@ -37,7 +37,7 @@ reference, but the retained heap objects still remain for GC tracing/reclaim.
 | Benchmark / row | Input type | Comparison class | Heap/control row | Best safe checked row | Elapsed delta | GC delta | RSS delta | Allowed claim |
 |---|---|---|---|---|---:|---:|---:|---|
 | Focused retained epoch 1M | synthetic focused matrix | retained-object drop-anchor | `heap-retained-drop-anchor` `36.233 ms`, GC `10.109 ms`, RSS `21.3 MB` | `checked-scoped-epoch-retained-no-traverse` `24.274 ms`, GC `0 ms`, RSS `4.9 MB` | `33.0%` faster | `-10.109 ms` | `-77%` | Clean retained-object memory-management win. |
-| GH Archive-shaped retained q2 | generated/preloaded stressor | retained-object drop-anchor | retained heap `257.377 ms`, GC `77.208 ms`, RSS `147 MB` | checked scoped retained `186.868 ms`, GC `0 ms`, RSS `15 MB` | `27.4%` faster | `-77.208 ms` | about `-90%` | Strong retained memory-management and RSS win; generated/preloaded, not real-input proof. |
+| GH Archive-shaped retained q2 | generated/preloaded stressor | retained-object drop-anchor / L1 final-clean | L1 retained heap `4.62 s`, RSS `147 MB`; L2 retained heap `257.377 ms`, GC `77.208 ms` | L1 checked scoped retained `3.44 s`, RSS `16 MB`; L2 checked scoped retained `186.868 ms`, GC `0 ms` | L1 `25.5%` faster; L2 `27.4%` faster | L2 `-77.208 ms` | L1 about `-89%` | Strong retained memory-management and RSS win; generated/preloaded, not real-input proof. Summary-only L1 lower bound is `1.28 s`. |
 | LogHub-shaped retained q2 | generated/indexable log stream | retained-object drop-anchor | retained heap `469.079 ms`, GC `64.060 ms`, RSS `813 MB` | checked scoped retained `402.821 ms`, GC `0 ms`, RSS `694 MB` | `14.1%` faster | `-64.060 ms` | about `-15%` | Retained throughput/GC win with lower RSS. |
 | LogHub-shaped retained q3 | generated/indexable template/session stream | retained-object drop-anchor | retained heap `2244.266 ms`, GC `143.539 ms`, RSS `2291 MB` | checked scoped retained `2106.541 ms`, GC `0 ms`, RSS `2312 MB` | `6.1%` faster | `-143.539 ms` | about `+1%` | Mixed retained win: elapsed/GC improves, RSS does not. |
 | DSPBench Fraud retained q2 | generated/indexable DSPBench-shaped stream | retained-object drop-anchor | retained heap `392.743 ms`, GC `35.631 ms`, RSS `576 MB` | checked scoped retained `370.746 ms`, GC `0 ms`, RSS `583 MB` | `5.6%` faster | `-35.631 ms` | about `+1%` | Modest retained throughput/GC win; not an RSS win. |

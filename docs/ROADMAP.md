@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-10 17:15 CEST
+Last updated: 2026-05-10 17:37 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -120,6 +120,12 @@ page-token elapsed/RSS wins: q1 checked scoped page-token `12.89 s`, about
 page-token `12.87 s`, about `102 MB` RSS versus heap `13.18 s`, about
 `244 MB`. L2 rows show heap GC is only about `1.5-1.6%` of elapsed, so this is
 a useful real-input modest/RSS row rather than a flagship GC-heavy case.
+The same L1 support now also covers generated/preloaded retained q2:
+`heap-epoch-retained-no-traverse` is `4.62 s` and about `147 MB` RSS for 20 x
+1M q2 iterations, while `checked-scoped-epoch-retained-no-traverse` is
+`3.44 s` and about `16 MB`. This is retained-object memory-management
+evidence; the `heap-direct-summary-only` lower bound is `1.28 s` and remains
+topology evidence only.
 
 ReML/MLKit PLDI-style table checkpoint:
 `evidence/REML_MLKIT_PLDI_TABLE.md` now separates paper-reported Figure 9

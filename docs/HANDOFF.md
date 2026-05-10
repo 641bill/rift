@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-10 17:15 CEST
+Last updated: 2026-05-10 17:37 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -147,6 +147,14 @@ and about `102 MB` RSS versus heap `13.18 s` and about `244 MB`. L2 rows
 remain the GC interpretation source and show heap GC around `1.5-1.6%` of
 elapsed, so GH Archive remains a useful real-input modest/RSS row rather than
 the missing flagship GC-heavy real-input case.
+Follow-up L1 retained q2 rows were also collected from the clean child state.
+For generated/preloaded GH Archive-shaped q2, each external process ran 20
+1M-event iterations. Retained heap is `4.62 s` and about `147 MB` RSS; checked
+stream retained is `3.65 s` and about `16 MB`; checked scoped retained is
+`3.44 s` and about `16 MB`. The summary-only lower bound is `1.28 s` and
+remains topology evidence only. This strengthens the retained-object
+memory-management claim in L1 without turning GH Archive file-backed into a
+GC-heavy real-input flagship.
 
 Latest ReML/MLKit PLDI-style table:
 `evidence/REML_MLKIT_PLDI_TABLE.md` is now the dedicated thesis-facing table.
