@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-10 09:59 CEST
+Last updated: 2026-05-10 15:09 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -10,7 +10,7 @@ Active implementation branch for this update:
 `feature/rift`
 
 Latest implementation checkpoint:
-`3598efe29` (`Add final-clean LogHub top-k support`)
+`fe8f0d853` (`Add final-clean LogHub region support`)
 
 Latest parent evidence checkpoint:
 current parent commit (`Record SPECjbb final-clean rows`)
@@ -51,8 +51,9 @@ measurement levels: L1 final-clean headline timing, L2 standard stats, L3
 diagnostics, and L4 external profiles. Initial L1 final-clean binary support is
 now implemented for `RetainedEpochReclaimMatrix`, `YakRegionMatrix`,
 `DataflowRegionMatrix`, `CommonCrawlWetMatrix`, `ReMLRegionMatrix`,
-`StreamFlexRegionMatrix`, `StancuRegionMatrix`, and
-`SpecJbb2005PortMatrix`, and `LogHubTopTemplatesMatrix`.
+`StreamFlexRegionMatrix`, `StancuRegionMatrix`,
+`SpecJbb2005PortMatrix`, `LogHubTopTemplatesMatrix`, and
+`LogHubRegionMatrix`.
 Set `RIFT_FINAL_CLEAN=1` or `RIFT_EVAL_MEASUREMENT_LEVEL=L1`; the binary skips
 internal timing/GC/region stat reads and prints only minimal checksum/output
 metadata. A tiny retained-epoch L1 smoke matched heap and checked checksums.
@@ -114,6 +115,13 @@ HDFS 1M x20 row is reusable checked top-k scoped `5.05 s` and about `28 MB`
 RSS versus retained heap `5.46 s` and about `205 MB` RSS. The benchmark-local
 checked retained path is still faster at `4.84 s`, so the top-k API remains
 passed but has an overhead target before broader integration.
+Child `fe8f0d853` adds L1 plumbing to `LogHubRegionMatrix`. The HDFS q2
+page/window row was rerun as 1M real HDFS lines x3 q2 iterations per process,
+three external repeats. L1 final-clean timing is an elapsed tie but strong RSS
+win: checked scoped page-token is `25.56 s` and about `79 MB` RSS versus heap
+`25.60 s` and about `409 MB` RSS. The L2 row remains the source for GC
+interpretation: checked scoped page-token is `7871.856 ms` versus heap
+`8227.369 ms`, removing heap's `92.659 ms` median timed GC.
 
 Latest ReML/MLKit PLDI-style table:
 `evidence/REML_MLKIT_PLDI_TABLE.md` is now the dedicated thesis-facing table.

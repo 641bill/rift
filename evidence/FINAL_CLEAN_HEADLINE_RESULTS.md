@@ -1,7 +1,7 @@
 # Final-Clean Headline Results
 
 Date: 2026-05-09
-Last updated: 2026-05-10 09:59 CEST
+Last updated: 2026-05-10 15:09 CEST
 
 Status: L1 runner support exists for the first representative binaries. One
 focused retained-epoch L1 row has been collected from clean child commit
@@ -19,6 +19,8 @@ recorded below. Child `678a6eb41` adds the same L1 support to the
 SPECjbb2005-workload Scala Native port, and an 8-warehouse representative row
 is recorded below. Child `3598efe29` adds L1 support to the LogHub
 top-template matrix, and the real HDFS reusable top-k row is recorded below.
+Child `fe8f0d853` adds L1 support to `LogHubRegionMatrix`, and the real HDFS
+q2 page/window row is recorded below as an elapsed tie / RSS win.
 
 ## Definition
 
@@ -49,6 +51,7 @@ Set `RIFT_FINAL_CLEAN=1` or `RIFT_EVAL_MEASUREMENT_LEVEL=L1` for:
 - `StancuRegionMatrix`
 - `SpecJbb2005PortMatrix`
 - `LogHubTopTemplatesMatrix`
+- `LogHubRegionMatrix`
 
 The binaries print `RESULT ... measurement_level=L1 final_clean=1 ...` and
 avoid internal timed-section stats.
@@ -102,6 +105,9 @@ for those 20 iterations.
 | LogHub top templates HDFS 1M x20 | real HDFS file-backed/preloaded replay | retained epoch/drop-anchor | retained-object memory-management | `heap-retained-drop-anchor` | 3 processes x 20 iterations | `5.46 s` total (`273.0 ms/iter`) | `5.43 s` | `5.47 s` | `205406208 bytes` | checksum `4142347521733569598`, output `1280` | L1 retained heap/drop-anchor control; process includes one HDFS input load plus 20 replays |
 | LogHub top templates HDFS 1M x20 | real HDFS file-backed/preloaded replay | benchmark-local checked retained epoch | retained-object memory-management / lower bound | `checked-scoped-epoch-retained-no-traverse` | 3 processes x 20 iterations | `4.84 s` total (`242.0 ms/iter`) | `4.82 s` | `4.88 s` | `28262400 bytes` | checksum `4142347521733569598`, output `1280` | L1 checked retained lower-bound win over heap retained |
 | LogHub top templates HDFS 1M x20 | real HDFS file-backed/preloaded replay | reusable checked `EpochTopKByKey` | framework API win | `checked-scoped-epoch-topk-retained-no-traverse` | 3 processes x 20 iterations | `5.05 s` total (`252.5 ms/iter`) | `5.05 s` | `5.08 s` | `28114944 bytes` | checksum `4142347521733569598`, output `1280` | L1 reusable checked top-k win over heap retained with much lower RSS; API overhead remains versus benchmark-local checked row |
+| LogHub HDFS q2 1M x3 | real HDFS file-backed stream | page/window token | natural heap baseline | `heap-immix` | 3 processes x 3 iterations | `25.60 s` total (`8533 ms/iter`) | `25.58 s` | `25.75 s` | `408649728 bytes` | checksum `-4515648042024502814`, output `41` | L1 natural heap baseline; process loads 1M HDFS lines and runs q2 three times |
+| LogHub HDFS q2 1M x3 | real HDFS file-backed stream | scoped page/window token | safe rooted baseline | `safezone-improved-32k` | 3 processes x 3 iterations | `25.35 s` total (`8450 ms/iter`) | `25.33 s` | `25.39 s` | `79003648 bytes` | checksum `-4515648042024502814`, output `41` | L1 rooted scoped RSS win with near-tie elapsed |
+| LogHub HDFS q2 1M x3 | real HDFS file-backed stream | checked scoped page-token | framework API / RSS win | `rift-checked-safezone-page-token` | 3 processes x 3 iterations | `25.56 s` total (`8520 ms/iter`) | `25.56 s` | `25.58 s` | `79036416 bytes` | checksum `-4515648042024502814`, output `41` | L1 checked page/window row essentially ties heap elapsed and cuts RSS by about 81%; L2 row remains the GC interpretation source |
 | Yak LiveJournal 50M x5 | real file-backed SNAP LiveJournal graph replay | heap linked epoch | natural heap baseline | `gc-heap` | 3 processes x 5 iterations | `18.79 s` total | `18.76 s` | `18.89 s` | `2772320256 bytes` | checksum `-6048644965681588176` | L1 clean file-backed total-process heap row; includes one gzipped input preload plus five 50M replays per process |
 | Yak LiveJournal 50M x5 | real file-backed SNAP LiveJournal graph replay | scoped region epoch | safe rooted baseline | `region-scoped-rooted` | 3 processes x 5 iterations | `16.93 s` total | `16.91 s` | `16.94 s` | `611860480 bytes` | checksum `-6048644965681588176` | L1 clean rooted scoped-region row; same input/preload protocol |
 | Yak LiveJournal 50M x5 | real file-backed SNAP LiveJournal graph replay | `RiftRegion.epoch` checked scoped | framework API win | `checked-epoch-scoped` | 3 processes x 5 iterations | `16.12 s` total | `16.03 s` | `16.16 s` | `611893248 bytes` | checksum `-6048644965681588176` | L1 clean real-input checked epoch win; total process row still includes input preload |

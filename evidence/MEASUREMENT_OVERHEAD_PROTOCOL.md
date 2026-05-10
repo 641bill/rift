@@ -1,7 +1,7 @@
 # Measurement Overhead Protocol
 
 Date: 2026-05-09
-Last updated: 2026-05-10 09:59 CEST
+Last updated: 2026-05-10 15:09 CEST
 
 Status: active protocol. Initial L1 final-clean support is implemented for the
 first representative benchmark binaries. The first clean focused retained L1
@@ -17,7 +17,9 @@ headline rows are now recorded in `evidence/FINAL_CLEAN_HEADLINE_RESULTS.md`.
 SPECjbb2005-workload port has the same support from child `678a6eb41`; its
 8-warehouse representative row is also recorded there. LogHub top templates
 has the same support from child `3598efe29`; the real HDFS reusable top-k row
-is also recorded there.
+is also recorded there. `LogHubRegionMatrix` has the same support from child
+`fe8f0d853`; the HDFS q2 page/window row is also recorded there as an elapsed
+tie / RSS win.
 
 ## Why This Exists
 
@@ -57,6 +59,7 @@ Initial final-clean binary support now exists for:
 - `StancuRegionMatrix`
 - `SpecJbb2005PortMatrix`
 - `LogHubTopTemplatesMatrix`
+- `LogHubRegionMatrix`
 
 Set `RIFT_FINAL_CLEAN=1` or `RIFT_EVAL_MEASUREMENT_LEVEL=L1`. In that mode the
 binary skips warmups, heap expected-baseline runs, internal elapsed timing,
@@ -67,7 +70,8 @@ elapsed/RSS row. As of child `7573d7577`, the retained, Dataflow, Yak, Common
 Crawl WET-shaped, and ReML runners write that external timing/RSS data into
 their summary TSVs. Child `c5bbc498f` extends that support to StreamFlex and
 Stancu. Child `678a6eb41` extends it to the SPECjbb2005-workload port, and
-child `3598efe29` extends it to LogHub top templates.
+child `3598efe29` extends it to LogHub top templates. Child `fe8f0d853`
+extends it to LogHub region/page-window rows.
 
 Current medians remain valid standard evidence, but should not be described as
 "measurement overhead removed completely" unless they were collected in L1

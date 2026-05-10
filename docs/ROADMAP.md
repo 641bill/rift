@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-10 09:59 CEST
+Last updated: 2026-05-10 15:09 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -54,9 +54,10 @@ memory-management claims must compare retained heap/drop-anchor against
 retained checked regions. `evidence/MEASUREMENT_OVERHEAD_PROTOCOL.md` defines
 L1 final-clean, L2 standard stats, L3 diagnostics, and L4 external profiles.
 Initial L1 final-clean support now exists for retained epoch, Yak, Dataflow,
-Common Crawl WET-shaped, ReML Tier 1, StreamFlex, Stancu, and
-SPECjbb2005-workload binaries. Current report-grade benchmark rows are still
-mostly L2; the final elapsed/RSS headline table should be collected into
+Common Crawl WET-shaped, ReML Tier 1, StreamFlex, Stancu,
+SPECjbb2005-workload, LogHub top-template, and LogHub region binaries. Current
+report-grade benchmark rows are still mostly L2; the final elapsed/RSS
+headline table should be collected into
 `evidence/FINAL_CLEAN_HEADLINE_RESULTS.md`. The first clean
 focused retained L1 row is now recorded from child `f1aa55484`: 1M retained
 records, 20 iterations per external process, 3 external repeats, with checked
@@ -95,6 +96,12 @@ real HDFS 1M x20 row is reusable checked top-k scoped `5.05 s` and about
 `28 MB` RSS versus retained heap `5.46 s` and about `205 MB` RSS. The
 benchmark-local checked retained path remains faster at `4.84 s`, so top-k
 operator work still has an API-overhead target.
+Child `fe8f0d853` adds L1 final-clean support for `LogHubRegionMatrix`. The
+real HDFS q2 page/window row is an L1 elapsed tie plus RSS win: checked scoped
+page-token `25.56 s`, about `79 MB` RSS versus heap `25.60 s`, about `409 MB`
+RSS for 1M lines x3 q2 iterations per process. The L2 standard-stats row still
+provides the GC interpretation: checked scoped page-token `7871.856 ms` versus
+heap `8227.369 ms`, removing heap's `92.659 ms` median timed GC.
 
 ReML/MLKit PLDI-style table checkpoint:
 `evidence/REML_MLKIT_PLDI_TABLE.md` now separates paper-reported Figure 9
