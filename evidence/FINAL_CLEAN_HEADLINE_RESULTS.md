@@ -1,7 +1,7 @@
 # Final-Clean Headline Results
 
 Date: 2026-05-09
-Last updated: 2026-05-10 22:49 CEST
+Last updated: 2026-05-10 23:41 CEST
 
 Status: L1 runner support exists for the first representative binaries. One
 focused retained-epoch L1 row has been collected from clean child commit
@@ -32,6 +32,8 @@ Child `bc9fd5979` records symmetric direct-summary L1 counterpart rows for
 DSPBench and LogHub, so summary-only lower bounds are no longer heap-only.
 Child `59acadda6` reduces `EpochTopKByKey` hot-path overhead; refreshed
 LogHub HDFS top-k L1 rows are recorded below.
+Child `bcbfe80f5` adds Yak topword same-shape heap top-k and reusable
+`EpochTopKByKey` rows; the L1 10M x20 topword rows are recorded below.
 
 ## Definition
 
@@ -81,7 +83,7 @@ avoid internal timed-section stats.
 | ReML/MLKit ports | `msort`, `msort-r`, `ratio`, plus `fib37`/`tak`/`mandel` controls | non-stream typed-region comparison axis |
 | StreamFlex | throughput and latency rows | prior-work latency/throughput axis |
 | Stancu/SPECjbb-style | transaction rows | transaction-boundary region axis |
-| retained top-k API | LogHub HDFS top templates | reusable `EpochTopKByKey` evidence |
+| retained top-k API | LogHub HDFS top templates; Yak topword | reusable `EpochTopKByKey` evidence |
 
 ## L1 Headline Rows
 
@@ -123,6 +125,12 @@ for those 20 iterations.
 | Dataflow JOIN 1M x20 | generated methodology | direct epoch / scoped region | framework API win | `gc-heap` | 3 processes x 20 iterations | `0.55 s` total (`27.5 ms/iter`) | `0.55 s` | `0.55 s` | `75071488 bytes` | checksum `193232836790` | L1 clean natural heap baseline |
 | Dataflow JOIN 1M x20 | generated methodology | direct epoch / scoped region | safe rooted baseline | `region-scoped-rooted` | 3 processes x 20 iterations | `0.46 s` total (`23.0 ms/iter`) | `0.46 s` | `0.46 s` | `7389184 bytes` | checksum `193232836790` | L1 clean rooted scoped-region baseline |
 | Dataflow JOIN 1M x20 | generated methodology | `RiftRegion.epoch` checked scoped | framework API win | `checked-epoch-scoped` | 3 processes x 20 iterations | `0.39 s` total (`19.5 ms/iter`) | `0.39 s` | `0.39 s` | `7405568 bytes` | checksum `193232836790` | L1 clean checked epoch win over heap and rooted scoped baseline |
+| Yak topword 10M x20 | Yak-style generated methodology | retained epoch records + close traversal | natural heap baseline | `gc-heap` | 3 processes x 20 iterations | `6.25 s` total (`312.5 ms/iter`) | `6.08 s` | `6.26 s` | `75317248 bytes` | checksum `3387296563095546471` | L1 clean natural heap topword baseline |
+| Yak topword 10M x20 | Yak-style generated methodology | rooted scoped retained records + close traversal | safe rooted baseline | `region-scoped-rooted` | 3 processes x 20 iterations | `5.09 s` total (`254.5 ms/iter`) | `5.00 s` | `5.13 s` | `16007168 bytes` | checksum `3387296563095546471` | L1 clean rooted scoped win over heap |
+| Yak topword 10M x20 | Yak-style generated methodology | retained records + append-time top-k | same-shape heap control | `heap-topk-retained-no-traverse` | 3 processes x 20 iterations | `5.72 s` total (`286.0 ms/iter`) | `5.64 s` | `5.73 s` | `146833408 bytes` | checksum `3387296563095546471` | L1 same-shape heap top-k retained control; faster than natural heap but higher RSS |
+| Yak topword 10M x20 | Yak-style generated methodology | `RiftRegion.epoch` retained records + close traversal | framework API win | `checked-epoch-scoped` | 3 processes x 20 iterations | `4.61 s` total (`230.5 ms/iter`) | `4.55 s` | `4.61 s` | `16023552 bytes` | checksum `3387296563095546471` | L1 clean best checked Yak topword topology |
+| Yak topword 10M x20 | Yak-style generated methodology | reusable checked `EpochTopKByKey` stream | framework API win / top-k API gate | `checked-epoch-topk-stream` | 3 processes x 20 iterations | `5.12 s` total (`256.0 ms/iter`) | `5.08 s` | `5.13 s` | `15958016 bytes` | checksum `3387296563095546471` | L1 reusable top-k stream row beats heap and same-shape heap top-k, but trails scoped top-k/direct epoch |
+| Yak topword 10M x20 | Yak-style generated methodology | reusable checked `EpochTopKByKey` scoped | framework API win / top-k API gate | `checked-epoch-topk-scoped` | 3 processes x 20 iterations | `4.94 s` total (`247.0 ms/iter`) | `4.91 s` | `4.96 s` | `16023552 bytes` | checksum `3387296563095546471` | L1 reusable checked top-k win over natural heap and same-shape heap top-k; direct checked epoch remains the faster topology |
 | StreamFlex throughput 200k x20 | generated methodology | heap transaction batches | natural heap baseline | `heap` | 3 processes x 20 iterations | `0.79 s` total (`39.5 ms/iter`) | `0.78 s` | `0.80 s` | `7929856 bytes` | checksum `3320210680833752` | L1 clean natural heap baseline |
 | StreamFlex throughput 200k x20 | generated methodology | scoped transaction batches | safe rooted baseline | `improved-safezone` | 3 processes x 20 iterations | `0.77 s` total (`38.5 ms/iter`) | `0.77 s` | `0.77 s` | `5324800 bytes` | checksum `3320210680833752` | L1 clean rooted scoped-region baseline |
 | StreamFlex throughput 200k x20 | generated methodology | checked direct epoch batches | framework API win | `rift-checked-safezone-direct-epoch` | 3 processes x 20 iterations | `0.58 s` total (`29.0 ms/iter`) | `0.58 s` | `0.58 s` | `5308416 bytes` | checksum `3320210680833752` | L1 clean checked direct epoch win over heap and rooted scoped baseline |

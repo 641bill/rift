@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-10 23:26 CEST
+Last updated: 2026-05-10 23:41 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -67,6 +67,10 @@ GC and region-like RSS. The caveat is important: the older checked direct
 epoch close-traversal topology is still faster for this local Yak topword row
 at `234.031 ms`, so `EpochTopKByKey` is a passed reusable top-k API, not the
 universal best topology.
+The L1 final-clean Yak topword x20 row confirms the same direction with
+external timing/RSS: reusable checked top-k scoped is `4.94 s` and about
+`16 MB` RSS versus natural heap `6.25 s` / `75 MB` and same-shape heap top-k
+`5.72 s` / `147 MB`. Direct checked epoch remains faster at `4.61 s`.
 
 Latest ReML/MLKit PLDI-style table:
 `evidence/REML_MLKIT_PLDI_TABLE.md`. It recreates the paper table shape as
@@ -303,6 +307,9 @@ The topword follow-up also adds the reusable `EpochTopKByKey` operator with a
 same-shape heap top-k retained control. This confirms reusable top-k beats heap
 and same-shape heap, while preserving the separate conclusion that direct
 checked epoch remains the best Yak topword topology in the current harness.
+The L1 final-clean row records `4.94 s` for reusable checked scoped top-k
+versus `6.25 s` heap and `5.72 s` same-shape heap top-k over 20 x 10M
+generated records, with matching checksum.
 
 Benchmark guide: `docs/BENCHMARK_CATALOG.md` describes what each benchmark is
 meant to measure and which rows are generated, real-input, focused, or

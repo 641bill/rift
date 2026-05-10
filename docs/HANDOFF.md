@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-10 23:26 CEST
+Last updated: 2026-05-10 23:41 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -10,10 +10,10 @@ Active implementation branch for this update:
 `feature/rift`
 
 Latest implementation checkpoint:
-`bcbfe80f5` (`Add Yak topword reusable top-k modes`)
+`0773d4c17` (`Record Yak topword L1 top-k row`)
 
 Latest parent evidence checkpoint:
-current parent worktree after Yak topword top-k evidence update
+current parent worktree after Yak topword L1 evidence update
 
 Latest comprehensive sweep checkpoint:
 Staged headline runs completed after the TransactionRegion checkpoint. Source
@@ -227,6 +227,14 @@ keeps RSS near other region rows. The caveat is that the older
 `checked-epoch-scoped` retained/close-traversal row is still faster
 (`234.031 ms`) for this local topword workload, so Yak topword is a second
 top-k API confirmation, not a reason to replace the direct epoch topology.
+The L1 final-clean follow-up ran three external processes with 20 x 10M
+generated topword iterations each:
+`/Users/siyaoliu/rift/cache/yak-topword-topk-l1-10m-x20-2026-05-10*/summary.tsv`.
+Median external real times are natural heap `6.25 s`, rooted scoped
+`5.09 s`, same-shape heap top-k retained `5.72 s`, direct checked epoch scoped
+`4.61 s`, reusable checked top-k stream `5.12 s`, and reusable checked top-k
+scoped `4.94 s`; all checksums match. RSS is about `75 MB` for heap,
+`147 MB` for same-shape heap top-k, and `16 MB` for the region rows.
 
 Latest clean retained/direct-epoch rerun:
 After committing child `918c7d4c1` and parent `ab570b1`, the retained-object

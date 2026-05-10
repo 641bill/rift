@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-10 23:26 CEST
+Last updated: 2026-05-10 23:41 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -145,6 +145,10 @@ zero timed GC and RSS near other region rows. Direct checked epoch remains the
 best Yak topword topology at `234.031 ms`, so the top-k API is a passed
 reusable operator row but not the default topology for every topword-shaped
 program.
+The L1 final-clean follow-up confirms this with external process timing:
+checked scoped top-k is `4.94 s` over 20 x 10M generated records versus
+natural heap `6.25 s` and same-shape heap top-k `5.72 s`; direct checked epoch
+is still best at `4.61 s`.
 
 ReML/MLKit PLDI-style table checkpoint:
 `evidence/REML_MLKIT_PLDI_TABLE.md` now separates paper-reported Figure 9
