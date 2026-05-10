@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-10 01:25 CEST
+Last updated: 2026-05-10 09:40 CEST
 
 Status: markdown slide deck outline. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report,
@@ -39,6 +39,7 @@ Representative numbers to keep on slides:
 | Real-input checked epoch | SNAP LiveJournal 50M: checked epoch scoped `2008.320 ms`, `0 ms` GC, `2.11 GB` RSS vs heap `2958.659 ms`, `400.484 ms` GC, `3.91 GB` RSS. | Strongest real-input prior-work-shaped row; local graph replay, not exact Yak/GraphChi. |
 | Reusable Dataflow epoch | SELECT/AGGREGATE/JOIN: checked epoch scoped `19.691/34.676/19.762 ms` vs heap `27.775/50.837/30.387 ms`. | Direct epoch covers the full Broom-style operator family. |
 | StreamFlex/Stancu epoch | L1 StreamFlex throughput `0.58 s` vs heap `0.79 s`; L1 Stancu `0.57 s` vs heap `0.85 s`. | Direct epoch supersedes older TransactionRegion/EpochBuffer rows for shared batch lifetimes. |
+| SPECjbb2005-workload port | L1 8 warehouses x20: checked epoch scoped `2.21 s` vs heap `2.64 s` and rooted scoped `2.48 s`; RSS about `8.0 MB` vs heap `12.4 MB`. | Clean-room Scala Native port strengthens the Stancu/SPECjbb transaction-lifetime story; not official SPECjbb2005. |
 | Generated page/window stressor | Common Crawl-shaped q1/q2: checked scoped page-token `3707.214/3902.795 ms` vs heap `5577.965/5183.074 ms`. | Strong generated stream-object pressure win; RSS caveat; not real-input proof. |
 | Modest real-input page/window | LogHub HDFS q2 checked scoped page-token `7871.856 ms` vs heap `8227.369 ms`; DSPBench Log q2 `1733.654 ms` vs heap `1750.291 ms`. | Real-input wins are modest because parser/query CPU dominates and heap GC is small. |
 | Real-preloaded retained top-k | LogHub top templates: checked scoped retained `81.174 ms`, `0 ms` GC vs retained heap `116.138 ms`, `31.161 ms` GC. Reusable `EpochTopKByKey` checked scoped is `95.267 ms` vs retained heap `123.024 ms`. | First retained top-k API gate passes; RSS is slightly higher and parser/file I/O is excluded. API overhead remains versus the benchmark-local path. |

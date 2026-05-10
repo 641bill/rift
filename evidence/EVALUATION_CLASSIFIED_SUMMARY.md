@@ -1,7 +1,7 @@
 # Evaluation Classified Summary
 
 Date: 2026-05-09
-Last updated: 2026-05-10 01:25 CEST
+Last updated: 2026-05-10 09:40 CEST
 
 Status: thesis-facing classified summary built from committed evidence.
 Baseline commits for clean rows: parent `1cc3b2c`, child `13a3df1c7`.
@@ -50,7 +50,7 @@ reference, but the retained heap objects still remain for GC tracing/reclaim.
 | StreamFlex throughput 200k x20 | StreamFlex-style generated methodology | best checked topology / L1 final-clean | heap `0.79 s`, RSS `7.9 MB` | checked scoped direct epoch `0.58 s`, RSS `5.3 MB` | `26.6%` faster | L2 rows show timed GC removal; L1 intentionally omits GC reads | about `-33%` | L1 checked direct-epoch throughput win; direct epoch supersedes TransactionRegion for shared-batch pipeline throughput. |
 | StreamFlex latency 10k x20 | StreamFlex-style generated methodology | best checked topology / L1 final-clean | heap `0.18 s`, p99 `792 ns`, max `327334 ns`, deadline misses `4` | checked scoped direct epoch `0.17 s`, p99 `833 ns`, max `25167 ns`, deadline misses `0` | `5.6%` faster | L2 rows show timed GC/tail context; L1 intentionally omits GC reads | near tie | L1 latency/deadline win: checked direct epoch removes deadline misses and reduces max tail in this local row. |
 | Stancu-style transactions 200k x20 | transaction methodology probe | best checked topology / L1 final-clean | heap `0.85 s`, RSS `7.8 MB` | checked scoped direct epoch `0.57 s`, RSS `7.9 MB` | `32.9%` faster | L2 rows show timed GC removal; L1 intentionally omits GC reads | near tie | L1 checked transaction-boundary win; local methodology probe, not official SPEC. |
-| SPECjbb2005 workload port, 8 warehouses | clean-room transaction workload port | best checked topology | heap `129.674 ms`, GC `15.125 ms`, RSS `8.0 MB` | checked epoch scoped `108.649 ms`, GC `0 ms`, RSS `8.1 MB` | `16.2%` faster | `-15.125 ms` | near tie | Stancu/SPECjbb-shaped local port win; not official SPECjbb2005. |
+| SPECjbb2005 workload port, 8 warehouses x20 | clean-room transaction workload port | best checked topology / L1 final-clean | heap `2.64 s`, RSS `12.4 MB`; L2 heap GC `15.125 ms` per inner 8w run | checked epoch scoped `2.21 s`, RSS `8.0 MB`; L2 checked GC `0 ms` | `16.3%` faster | L2 removes heap timed GC on transaction-local objects | about `-35%` | L1 checked transaction/epoch win; clean-room Stancu/SPECjbb-shaped port, not official SPECjbb2005. |
 | Common Crawl WET-shaped q1 | generated stream stressor | best checked topology | heap `5577.965 ms`, GC `1741.640 ms`, RSS `409 MB` | checked scoped page-token `3707.214 ms`, GC `30.693 ms`, RSS `464 MB` | `33.5%` faster | `-1711 ms` | about `+14%` | Strong generated stream-object pressure win; not real-input proof and not RSS win. |
 | Common Crawl WET-shaped q2 | generated stream/window stressor | best checked topology | heap `5183.074 ms`, GC `1565.074 ms`, RSS `409 MB` | checked scoped page-token `3902.795 ms`, GC `27.027 ms`, RSS `464 MB` | `24.7%` faster | `-1538 ms` | about `+14%` | Strong generated window/object pressure win; not real-input proof and not RSS win. |
 | LogHub HDFS v1 q2 | real file-backed Hadoop log | best checked topology | heap `8227.369 ms`, GC `92.659 ms`, RSS `409 MB` | checked scoped page-token `7871.856 ms`, GC `0 ms`, RSS `395 MB` | `4.3%` faster | `-92.659 ms` | about `-3%` | Modest real-input throughput/RSS/GC win; heap GC is only about 1-2% elapsed. |

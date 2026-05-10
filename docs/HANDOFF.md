@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-10 01:25 CEST
+Last updated: 2026-05-10 09:40 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -10,10 +10,10 @@ Active implementation branch for this update:
 `feature/rift`
 
 Latest implementation checkpoint:
-`c5bbc498f` (`Add final-clean StreamFlex and Stancu support`)
+`e46ab5fb7` (`Record SPECjbb final-clean evidence`)
 
 Latest parent evidence checkpoint:
-`f48feec` (`Record ReML final-clean Tier 1 rows`)
+current parent commit (`Record SPECjbb final-clean rows`)
 
 Latest comprehensive sweep checkpoint:
 Staged headline runs completed after the TransactionRegion checkpoint. Source
@@ -51,7 +51,8 @@ measurement levels: L1 final-clean headline timing, L2 standard stats, L3
 diagnostics, and L4 external profiles. Initial L1 final-clean binary support is
 now implemented for `RetainedEpochReclaimMatrix`, `YakRegionMatrix`,
 `DataflowRegionMatrix`, `CommonCrawlWetMatrix`, `ReMLRegionMatrix`,
-`StreamFlexRegionMatrix`, and `StancuRegionMatrix`.
+`StreamFlexRegionMatrix`, `StancuRegionMatrix`, and
+`SpecJbb2005PortMatrix`.
 Set `RIFT_FINAL_CLEAN=1` or `RIFT_EVAL_MEASUREMENT_LEVEL=L1`; the binary skips
 internal timing/GC/region stat reads and prints only minimal checksum/output
 metadata. A tiny retained-epoch L1 smoke matched heap and checked checksums.
@@ -103,6 +104,11 @@ StreamFlex direct-epoch latency is also favorable (`0.17 s` checked with zero
 misses versus `0.18 s` heap with four deadline misses); Stancu transactions are
 a checked framework win (`0.57 s` checked scoped direct epoch versus `0.85 s`
 heap and `0.71 s` improved SafeZone for 20 x 200k transactions).
+Child `678a6eb41` adds the same L1 plumbing to `SpecJbb2005PortMatrix`.
+The 8-warehouse representative row is checked epoch scoped `2.21 s` versus
+heap `2.64 s` and rooted scoped region `2.48 s` for 20 inner iterations, with
+RSS about `8.0 MB` versus heap `12.4 MB`. This is a clean-room
+SPECjbb2005-workload port, not official SPECjbb2005.
 
 Latest ReML/MLKit PLDI-style table:
 `evidence/REML_MLKIT_PLDI_TABLE.md` is now the dedicated thesis-facing table.
@@ -470,7 +476,11 @@ The official SPECjbb2005 artifact is a JVM benchmark, so it cannot be an
 official Scala Native/Rift run. The new `SpecJbb2005PortMatrix` is therefore a
 documented clean-room Scala Native workload port, not an official SPEC result.
 It covers warehouses 4 through 8 with 100,000 transactions per warehouse and
-64 transactions per epoch. Checksums match across all modes. At 8 warehouses,
+64 transactions per epoch. Checksums match across all modes. L1 final-clean
+8-warehouse rows from child `678a6eb41` show checked epoch scoped `2.21 s`
+versus heap `2.64 s` and rooted scoped region `2.48 s` for 20 inner
+iterations, with RSS about `8.0 MB` versus heap `12.4 MB`. The L2 scale row
+for 8 warehouses remains the GC interpretation source:
 `checked-epoch-scoped` is `108.649 ms`, `checked-epoch-stream` is
 `114.651 ms`, and heap is `129.674 ms` with `15.125 ms` timed GC. The port
 records Stancu-style axes including region-freed object/byte proxy, max live
@@ -494,7 +504,7 @@ Validation for the SPECjbb/ReML update:
 - `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"`:
   passed `123/123`;
 - `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionCheckedTest"`:
-  passed `57/57`.
+  passed `59/59`.
 
 Clean direct-epoch sweep:
 After checkpointing child commit `918c7d4c1` and parent commit `ab570b1`, a

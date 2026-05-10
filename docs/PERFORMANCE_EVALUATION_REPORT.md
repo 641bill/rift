@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-10 01:25 CEST
+Last updated: 2026-05-10 09:40 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -28,10 +28,11 @@ Latest measurement-overhead protocol:
 `evidence/MEASUREMENT_OVERHEAD_PROTOCOL.md` and
 `evidence/FINAL_CLEAN_HEADLINE_RESULTS.md`. Initial L1 final-clean support now
 exists for retained epoch, Yak, Dataflow, Common Crawl WET-shaped, ReML
-Tier 1, StreamFlex, and Stancu binaries. The L1 table now includes retained,
-Dataflow, Yak LiveJournal, generated Common Crawl-shaped q1/q2, ReML Tier 1,
-StreamFlex direct epoch, and Stancu transaction rows. Remaining benchmark
-result files are still mostly L2 standard-stats evidence.
+Tier 1, StreamFlex, Stancu, and SPECjbb2005-workload binaries. The L1 table
+now includes retained, Dataflow, Yak LiveJournal, generated Common
+Crawl-shaped q1/q2, ReML Tier 1, StreamFlex direct epoch, Stancu transaction,
+and SPECjbb2005-workload port rows. Remaining benchmark result files are still
+mostly L2 standard-stats evidence.
 
 Latest operator-gate status:
 `evidence/OPERATOR_GATE_STATUS.md`. This keeps rank/top-k/median/hash/join work
@@ -59,11 +60,14 @@ cross-language wall-clock wins until those local runs exist.
 
 Latest SPECjbb2005-workload port checkpoint:
 `evidence/SPECJBB2005_PORT_MATRIX.md`. This is a clean-room Scala Native
-workload port, not an official SPEC result. It runs warehouses 4 through 8 at
-100,000 transactions per warehouse. `checked-epoch-scoped` is fastest at every
-warehouse count; at 8 warehouses it is `108.649 ms` versus heap `129.674 ms`
-with `15.125 ms` timed GC. The transaction-local object proxy is
-`4,163,936` region-freed objects at 8 warehouses.
+workload port, not an official SPEC result. It now has an L1 final-clean
+8-warehouse representative row from child `678a6eb41`: checked epoch scoped is
+`2.21 s` total for 20 inner iterations versus heap `2.64 s` and rooted scoped
+regions `2.48 s`, with RSS about `8.0 MB` versus heap `12.4 MB`. The L2 scale
+rows still provide GC interpretation: at 8 warehouses, checked epoch scoped is
+`108.649 ms` versus heap `129.674 ms` with `15.125 ms` timed GC. The
+transaction-local object proxy is `4,163,936` region-freed objects at 8
+warehouses.
 
 Latest direct-epoch extension checkpoint:
 `evidence/DIRECT_EPOCH_TOPOLOGY_MATRIX.md` now includes generated/indexable q2
@@ -648,7 +652,7 @@ continuation also excludes `current-default`.
 | Dataflow JOIN | direct `checked-epoch-scoped` `19.762 ms` | `30.387 ms` / `9.331 ms` GC | direct epoch beats heap and improved SafeZone in the clean direct-epoch sweep |
 | StreamFlex throughput | scoped direct checked epoch `157.334 ms`; trusted Streaming `186.029 ms` | `216.853 ms` / `46.036 ms` GC | direct epoch is now the right checked shape for the StreamFlex batch pipeline; `TransactionRegion` is superseded on this row |
 | Stancu transaction boundary | scoped direct checked epoch `155.863 ms`; direct checked epoch `165.116 ms` | `220.951 ms` / `22.819 ms` GC | direct epoch is now the checked Stancu-shaped win; durable accounting arrays stay heap control metadata |
-| SPECjbb2005-workload port | 8 warehouses: checked epoch scoped `108.649 ms`; checked epoch stream `114.651 ms` | `129.674 ms` / `15.125 ms` GC | clean-room Scala Native port, not official SPEC; reproduces Stancu-style transaction-local lifetime axes |
+| SPECjbb2005-workload port | L1 8 warehouses x20: checked epoch scoped `2.21 s`; L2 checked epoch scoped `108.649 ms` | L1 heap `2.64 s`; L2 heap `129.674 ms` / `15.125 ms` GC | clean-room Scala Native port, not official SPEC; reproduces Stancu-style transaction-local lifetime axes |
 | Object allocation lowering | checked SafeZone-backed `14.903 ms`, checked Rift `16.039 ms` | `21.885 ms` | focused allocation path is not the main bottleneck now |
 | Checked append/window | checked scoped EpochBuffer `26.461 ms`, checked scoped page-token `26.883 ms` | heap Immix `36.944 ms` / `10.900 ms` GC | cheap checked append operators beat heap |
 | Page-token fast path | checked scoped page-token `27.549 ms`; checked Rift page-token `29.319 ms` | heap `36.920 ms` / `10.995 ms` GC | batch-close/current-bucket fast path keeps linked page-token ahead of chunk-token |
@@ -682,7 +686,7 @@ still lacks a public real-input GC-heavy stream case study.
 | Broom Dataflow JOIN | `29.122 ms` | improved `22.784 ms`; rootless `22.359 ms` | checked `24.935 ms` | Checked beats heap; SafeZone-family wins. |
 | Yak topword | `70.370 ms` | improved `59.286 ms`; rootless `58.686 ms` | Streaming `68.959 ms` | SafeZone-family substrate is strongest. |
 | Stancu transaction boundary | `225.798 ms` | improved `186.122 ms` | scoped direct checked epoch `160.198 ms`; direct checked epoch `174.137 ms` | Direct checked epoch turns the local Stancu-shaped row into a checked win. |
-| SPECjbb2005-workload port, 8 warehouses | `129.674 ms` | rooted scoped `122.022 ms` | scoped direct checked epoch `108.649 ms`; stream direct checked epoch `114.651 ms` | New clean-room port extends the Stancu transaction-lifetime story; not official SPEC output. |
+| SPECjbb2005-workload port, 8 warehouses | L1 `2.64 s`; L2 `129.674 ms` | L1 rooted scoped `2.48 s`; L2 rooted scoped `122.022 ms` | L1 scoped direct checked epoch `2.21 s`; L2 scoped direct checked epoch `108.649 ms`; stream direct checked epoch `114.651 ms` | New clean-room port extends the Stancu transaction-lifetime story; not official SPEC output. |
 
 These are local methodology reproductions unless original artifacts are used.
 They compare shapes, not exact published systems.

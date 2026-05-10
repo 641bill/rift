@@ -1,7 +1,7 @@
 # Measurement Overhead Protocol
 
 Date: 2026-05-09
-Last updated: 2026-05-10 01:25 CEST
+Last updated: 2026-05-10 09:40 CEST
 
 Status: active protocol. Initial L1 final-clean support is implemented for the
 first representative benchmark binaries. The first clean focused retained L1
@@ -14,6 +14,8 @@ runners write external real/user/sys/RSS columns into their summaries when run
 under `/usr/bin/time`. StreamFlex and Stancu have the same L1 binary/runner
 plumbing and smoke validation from child `c5bbc498f`; their representative L1
 headline rows are now recorded in `evidence/FINAL_CLEAN_HEADLINE_RESULTS.md`.
+SPECjbb2005-workload port has the same support from child `678a6eb41`; its
+8-warehouse representative row is also recorded there.
 
 ## Why This Exists
 
@@ -51,6 +53,7 @@ Initial final-clean binary support now exists for:
 - `ReMLRegionMatrix`
 - `StreamFlexRegionMatrix`
 - `StancuRegionMatrix`
+- `SpecJbb2005PortMatrix`
 
 Set `RIFT_FINAL_CLEAN=1` or `RIFT_EVAL_MEASUREMENT_LEVEL=L1`. In that mode the
 binary skips warmups, heap expected-baseline runs, internal elapsed timing,
@@ -60,7 +63,7 @@ checksum/output metadata. The runner's `/usr/bin/time -l` output supplies the
 elapsed/RSS row. As of child `7573d7577`, the retained, Dataflow, Yak, Common
 Crawl WET-shaped, and ReML runners write that external timing/RSS data into
 their summary TSVs. Child `c5bbc498f` extends that support to StreamFlex and
-Stancu.
+Stancu. Child `678a6eb41` extends it to the SPECjbb2005-workload port.
 
 Current medians remain valid standard evidence, but should not be described as
 "measurement overhead removed completely" unless they were collected in L1
@@ -103,6 +106,6 @@ The first final-clean sweep should cover representative rows only:
 | Area | Rows |
 |---|---|
 | retained epoch | focused retained 1M, GH Archive-shaped q2, LogHub q2/q3, DSPBench Fraud q2 |
-| direct epoch | Yak LiveJournal 10M/50M if feasible, Dataflow SELECT/AGGREGATE/JOIN, StreamFlex throughput, Stancu/SPECjbb-style |
+| direct epoch | Yak LiveJournal 10M/50M if feasible, Dataflow SELECT/AGGREGATE/JOIN, StreamFlex throughput, Stancu/SPECjbb-style, SPECjbb2005-workload port |
 | page/window token | generated Common Crawl-shaped q1/q2, DSPBench Fraud/Log q2, LogHub HDFS q2 |
 | ReML/MLKit ports | Tier 1 `msort`, `msort-r`, `ratio`, plus compute controls |

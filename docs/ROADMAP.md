@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-10 01:25 CEST
+Last updated: 2026-05-10 09:40 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -54,9 +54,10 @@ memory-management claims must compare retained heap/drop-anchor against
 retained checked regions. `evidence/MEASUREMENT_OVERHEAD_PROTOCOL.md` defines
 L1 final-clean, L2 standard stats, L3 diagnostics, and L4 external profiles.
 Initial L1 final-clean support now exists for retained epoch, Yak, Dataflow,
-Common Crawl WET-shaped, ReML Tier 1, StreamFlex, and Stancu binaries. Current report-grade
-benchmark rows are still mostly L2; the final elapsed/RSS headline table should
-be collected into `evidence/FINAL_CLEAN_HEADLINE_RESULTS.md`. The first clean
+Common Crawl WET-shaped, ReML Tier 1, StreamFlex, Stancu, and
+SPECjbb2005-workload binaries. Current report-grade benchmark rows are still
+mostly L2; the final elapsed/RSS headline table should be collected into
+`evidence/FINAL_CLEAN_HEADLINE_RESULTS.md`. The first clean
 focused retained L1 row is now recorded from child `f1aa55484`: 1M retained
 records, 20 iterations per external process, 3 external repeats, with checked
 scoped retained at `0.47 s` median total process time versus heap
@@ -85,6 +86,10 @@ checked scoped direct epoch `0.58 s` versus heap `0.79 s`, and latency is
 checked `0.17 s` with zero misses versus heap `0.18 s` with four misses.
 Stancu transactions are checked scoped direct epoch `0.57 s` versus heap
 `0.85 s` and improved SafeZone `0.71 s`.
+Child `678a6eb41` adds L1 final-clean support for the SPECjbb2005-workload
+port. The 8-warehouse representative row is checked epoch scoped `2.21 s`
+versus heap `2.64 s` and rooted scoped region `2.48 s`, with RSS about
+`8.0 MB` versus heap `12.4 MB`.
 
 ReML/MLKit PLDI-style table checkpoint:
 `evidence/REML_MLKIT_PLDI_TABLE.md` now separates paper-reported Figure 9
@@ -161,10 +166,12 @@ not be used as a pure placement claim.
 Latest SPECjbb2005-workload port: `evidence/SPECJBB2005_PORT_MATRIX.md`.
 `SpecJbb2005PortMatrix` is a clean-room Scala Native workload port, not an
 official SPECjbb2005 result. It covers warehouses 4 through 8 with 100,000
-transactions per warehouse. `checked-epoch-scoped` is fastest across the range;
-at 8 warehouses it is `108.649 ms` versus heap `129.674 ms` with `15.125 ms`
-timed GC. This strengthens the Stancu/SPECjbb methodology track while keeping
-exact-artifact claims out of scope.
+transactions per warehouse. L1 final-clean 8-warehouse rows show checked epoch
+scoped `2.21 s` versus heap `2.64 s` and rooted scoped region `2.48 s` for 20
+inner iterations. L2 scale rows still give the GC interpretation: at 8
+warehouses, checked epoch scoped is `108.649 ms` versus heap `129.674 ms` with
+`15.125 ms` timed GC. This strengthens the Stancu/SPECjbb methodology track
+while keeping exact-artifact claims out of scope.
 
 Latest page-token cost checkpoint: `evidence/CHECKED_PAGE_TOKEN_COST_MATRIX.md`.
 The focused cost split shows checked scoped page-token is competitive on

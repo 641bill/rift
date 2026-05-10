@@ -1,7 +1,7 @@
 # Final-Clean Headline Results
 
 Date: 2026-05-09
-Last updated: 2026-05-10 01:25 CEST
+Last updated: 2026-05-10 09:40 CEST
 
 Status: L1 runner support exists for the first representative binaries. One
 focused retained-epoch L1 row has been collected from clean child commit
@@ -15,7 +15,9 @@ Child `7573d7577` extends external timing/RSS summary support to Dataflow,
 Yak, Common Crawl WET-shaped, and ReML runners. Child `c5bbc498f` adds the
 same support to StreamFlex and Stancu. StreamFlex direct-epoch
 throughput/latency and Stancu transaction representative L1 rows are now
-recorded below.
+recorded below. Child `678a6eb41` adds the same L1 support to the
+SPECjbb2005-workload Scala Native port, and an 8-warehouse representative row
+is recorded below.
 
 ## Definition
 
@@ -44,6 +46,7 @@ Set `RIFT_FINAL_CLEAN=1` or `RIFT_EVAL_MEASUREMENT_LEVEL=L1` for:
 - `ReMLRegionMatrix`
 - `StreamFlexRegionMatrix`
 - `StancuRegionMatrix`
+- `SpecJbb2005PortMatrix`
 
 The binaries print `RESULT ... measurement_level=L1 final_clean=1 ...` and
 avoid internal timed-section stats.
@@ -90,6 +93,9 @@ for those 20 iterations.
 | Stancu transactions 200k x20 | generated transaction methodology | heap transaction batches | natural heap baseline | `heap` | 3 processes x 20 iterations | `0.85 s` total (`42.5 ms/iter`) | `0.85 s` | `0.85 s` | `7847936 bytes` | checksum `-1953196317317355226` | L1 clean natural heap baseline |
 | Stancu transactions 200k x20 | generated transaction methodology | scoped transaction batches | safe rooted baseline | `improved-safezone` | 3 processes x 20 iterations | `0.71 s` total (`35.5 ms/iter`) | `0.71 s` | `0.71 s` | `7897088 bytes` | checksum `-1953196317317355226` | L1 clean rooted scoped transaction win |
 | Stancu transactions 200k x20 | generated transaction methodology | checked direct epoch transactions | framework API win | `rift-checked-safezone-direct-epoch` | 3 processes x 20 iterations | `0.57 s` total (`28.5 ms/iter`) | `0.57 s` | `0.57 s` | `7880704 bytes` | checksum `-1953196317317355226` | L1 clean checked transaction/epoch win over heap and rooted scoped baseline |
+| SPECjbb2005-workload port 8 warehouses x20 | clean-room transaction workload port | heap transaction batches | natural heap baseline | `gc-heap` | 3 processes x 20 iterations | `2.64 s` total (`132.0 ms/iter`) | `2.63 s` | `2.66 s` | `12369920 bytes` | checksum `-9186304385429183494` | L1 clean natural heap baseline; not official SPECjbb2005 |
+| SPECjbb2005-workload port 8 warehouses x20 | clean-room transaction workload port | scoped transaction batches | safe rooted baseline | `region-scoped-rooted` | 3 processes x 20 iterations | `2.48 s` total (`124.0 ms/iter`) | `2.46 s` | `2.48 s` | `7962624 bytes` | checksum `-9186304385429183494` | L1 clean rooted scoped transaction win over heap |
+| SPECjbb2005-workload port 8 warehouses x20 | clean-room transaction workload port | checked direct epoch transactions | framework API win | `checked-epoch-scoped` | 3 processes x 20 iterations | `2.21 s` total (`110.5 ms/iter`) | `2.21 s` | `2.22 s` | `7995392 bytes` | checksum `-9186304385429183494` | L1 clean checked transaction/epoch win over heap and rooted scoped baseline |
 | Yak LiveJournal 50M x5 | real file-backed SNAP LiveJournal graph replay | heap linked epoch | natural heap baseline | `gc-heap` | 3 processes x 5 iterations | `18.79 s` total | `18.76 s` | `18.89 s` | `2772320256 bytes` | checksum `-6048644965681588176` | L1 clean file-backed total-process heap row; includes one gzipped input preload plus five 50M replays per process |
 | Yak LiveJournal 50M x5 | real file-backed SNAP LiveJournal graph replay | scoped region epoch | safe rooted baseline | `region-scoped-rooted` | 3 processes x 5 iterations | `16.93 s` total | `16.91 s` | `16.94 s` | `611860480 bytes` | checksum `-6048644965681588176` | L1 clean rooted scoped-region row; same input/preload protocol |
 | Yak LiveJournal 50M x5 | real file-backed SNAP LiveJournal graph replay | `RiftRegion.epoch` checked scoped | framework API win | `checked-epoch-scoped` | 3 processes x 5 iterations | `16.12 s` total | `16.03 s` | `16.16 s` | `611893248 bytes` | checksum `-6048644965681588176` | L1 clean real-input checked epoch win; total process row still includes input preload |
@@ -256,6 +262,23 @@ for i in 1 2 3; do
   STANCU_MODES="heap improved-safezone rift-checked-safezone-direct-epoch" \
   STANCU_OUTPUT_DIR=/tmp/rift-l1-stancu-200k-x20-c5bbc498f-r${i} \
   zsh sandbox/run_stancu_region_instrumented_matrix.sh
+done
+```
+
+SPECjbb2005-workload port command:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+for i in 1 2 3; do
+  RIFT_FINAL_CLEAN=1 \
+  SPECJBB_BUILD=0 \
+  SPECJBB_WAREHOUSES=8 \
+  SPECJBB_ITERATIONS_PER_WAREHOUSE=100000 \
+  SPECJBB_BENCHMARK_RUNS=20 \
+  SPECJBB_WARMUPS=0 \
+  SPECJBB_MODES="gc-heap region-scoped-rooted checked-epoch-scoped" \
+  SPECJBB_OUTPUT_DIR=/tmp/rift-l1-specjbb-8w-x20-678a6eb41-r${i} \
+  zsh sandbox/run_specjbb2005_port_matrix.sh
 done
 ```
 
