@@ -1,7 +1,7 @@
 # Rift Benchmark Catalog
 
 Date: 2026-05-05
-Last updated: 2026-05-10 15:40 CEST
+Last updated: 2026-05-10 16:05 CEST
 
 Status: working benchmark guide. Use this document to understand what each
 benchmark is meant to test before reading the detailed result files in
@@ -175,7 +175,7 @@ operators and gates.
 | Benchmark | Input type | Current status |
 |---|---|---|
 | DEBS 2015 | Real taxi CSV samples/full-month controls | Correctness and region-placement evidence exists, but elapsed wins are modest and much CPU is query/output work. Downstream validation, not the current tuning target. |
-| NEXMark | Official Beam-default generated profile in local Scala Native harness | Useful recognized stream methodology. Some wins on Q3/Q8-style rows, but not a decisive real-data case study. |
+| NEXMark | Official Beam-default generated profile in local Scala Native harness | Useful recognized stream methodology. L1 final-clean rows now show checked Rift wins on selected q3/q8/q9/q11 rows: q3 `5.86 s` vs heap `6.18 s`, q8 `9.21 s` vs heap `9.54 s`, q9 `15.03 s` vs heap `16.27 s`, and q11 `4.36 s` vs heap `4.47 s` for 1M events x20 iterations. RSS also drops sharply versus heap. This remains generated methodology evidence, not real-input proof or exact Beam runner evidence. |
 | Common Crawl WET-shaped | Generated WET-like pages/lines/tokens | Strongest GC-heavy stream stressor: heap spends about `1.55-1.59 s` in timed GC at 1M generated pages; trusted and page-token checked rows win. This is not real Common Crawl input proof. |
 | Real Common Crawl WET/WAT | Public preloaded WET/WAT shards | Current shards have median timed GC of zero. Page-token rows work and win modestly on WAT, but these are ceiling/control rows. |
 | GH Archive | Real hourly NDJSON GitHub event files | Strongest current real-input modest-win candidate, but not GC-heavy proof. Uncapped preloaded heap wins median by growing to about `1.7 GiB`; under a 1G heap cap, checked SafeZone-backed q1 wins. Legacy string-parser file-backed q1/q2 rows give RSS/fixed-memory wins but are parser/string dominated. The byte-slice file-backed parser reuses line buffers and extracts JSON fields from raw UTF-8 bytes; at two hourly files / 200k events it makes q1/q2 modest region throughput/RSS/tail wins and removes timed GC from region rows, but heap GC is only about `1.5-1.6%` of elapsed. Generated/preloaded q2 direct epoch is a strong topology result (`52.316 ms` checked scoped direct epoch vs heap `272.432 ms`) but needs a heap same-shape control. |

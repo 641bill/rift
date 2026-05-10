@@ -1,7 +1,7 @@
 # Final-Clean Headline Results
 
 Date: 2026-05-09
-Last updated: 2026-05-10 15:40 CEST
+Last updated: 2026-05-10 16:05 CEST
 
 Status: L1 runner support exists for the first representative binaries. One
 focused retained-epoch L1 row has been collected from clean child commit
@@ -23,6 +23,8 @@ Child `fe8f0d853` adds L1 support to `LogHubRegionMatrix`, and the real HDFS
 q2 page/window row is recorded below as an elapsed tie / RSS win.
 Child `95f4f4d71` adds L1 support to `DSPBenchRegionMatrix`, and the Fraud/Log
 q2 page/window rows are recorded below.
+Child `dffe178a0` adds L1 support to `NexmarkRegionMatrix`, and the
+Beam-default-style q3/q8/q9/q11 rows are recorded below.
 
 ## Definition
 
@@ -55,6 +57,7 @@ Set `RIFT_FINAL_CLEAN=1` or `RIFT_EVAL_MEASUREMENT_LEVEL=L1` for:
 - `LogHubTopTemplatesMatrix`
 - `LogHubRegionMatrix`
 - `DSPBenchRegionMatrix`
+- `NexmarkRegionMatrix`
 
 The binaries print `RESULT ... measurement_level=L1 final_clean=1 ...` and
 avoid internal timed-section stats.
@@ -66,6 +69,7 @@ avoid internal timed-section stats.
 | retained-object reclaim | focused retained 1M; GH Archive-shaped q2; LogHub q2/q3; DSPBench Fraud q2 | isolates heap GC reclaim versus region bulk close/reset |
 | direct epoch | Yak LiveJournal 10M/50M; Dataflow SELECT/AGGREGATE/JOIN; StreamFlex throughput; Stancu/SPECjbb-style | user-facing `RiftRegion.epoch` evidence |
 | page/window token | generated Common Crawl-shaped q1/q2; DSPBench Fraud/Log q2; LogHub HDFS q2 | page/window stream operator evidence |
+| generated stream methodology | NEXMark q3/q8/q9/q11 | recognized generated Beam-default-style stream controls |
 | ReML/MLKit ports | `msort`, `msort-r`, `ratio`, plus `fib37`/`tak`/`mandel` controls | non-stream typed-region comparison axis |
 | StreamFlex | throughput and latency rows | prior-work latency/throughput axis |
 | Stancu/SPECjbb-style | transaction rows | transaction-boundary region axis |
@@ -119,6 +123,18 @@ for those 20 iterations.
 | DSPBench Log q2 1M x5 | real DSPBench common-log replay | scoped page/window token | safe rooted baseline | `safezone-improved-32k` | 3 processes x 5 iterations | `8.91 s` total (`1782 ms/iter`) | `8.74 s` | `8.97 s` | `47939584 bytes` | checksum `-4720769113503374536`, output `179` | L1 rooted scoped RSS win with near-tie elapsed |
 | DSPBench Log q2 1M x5 | real DSPBench common-log replay | trusted streaming page/window token | unsafe/trusted lower bound | `rift-trusted-streaming` | 3 processes x 5 iterations | `8.51 s` total (`1702 ms/iter`) | `8.39 s` | `8.73 s` | `47792128 bytes` | checksum `-4720769113503374536`, output `179` | L1 trusted lower-bound elapsed/RSS win |
 | DSPBench Log q2 1M x5 | real DSPBench common-log replay | checked scoped page-token | framework API / RSS win | `rift-checked-safezone-page-token` | 3 processes x 5 iterations | `8.79 s` total (`1758 ms/iter`) | `8.66 s` | `8.97 s` | `47611904 bytes` | checksum `-4720769113503374536`, output `179` | L1 checked page/window row is about 1% faster than heap and cuts RSS by about 85%; L2 remains the GC-tail interpretation source |
+| NEXMark q3 1M x20 | Beam-default generated methodology | heap stream/window records | natural heap baseline | `heap-immix` | 3 processes x 20 iterations | `6.18 s` total (`309 ms/iter`) | `6.15 s` | `6.24 s` | `75153408 bytes` | checksum `-1870509861264400004`, output `98266` | L1 generated-methodology heap baseline |
+| NEXMark q3 1M x20 | Beam-default generated methodology | rooted scoped stream/window records | safe rooted baseline | `safezone-improved` | 3 processes x 20 iterations | `6.38 s` total (`319 ms/iter`) | `6.37 s` | `6.47 s` | `9814016 bytes` | checksum `-1870509861264400004`, output `98266` | L1 rooted scoped RSS win but elapsed loss |
+| NEXMark q3 1M x20 | Beam-default generated methodology | checked stream/window records | framework API win | `rift-checked` | 3 processes x 20 iterations | `5.86 s` total (`293 ms/iter`) | `5.85 s` | `5.93 s` | `9551872 bytes` | checksum `-1870509861264400004`, output `98266` | L1 checked generated-methodology win over heap and rooted scoped baseline |
+| NEXMark q8 1M x20 | Beam-default generated methodology | heap stream/window join | natural heap baseline | `heap-immix` | 3 processes x 20 iterations | `9.54 s` total (`477 ms/iter`) | `9.52 s` | `9.58 s` | `75153408 bytes` | checksum `-2856281405942686288`, output `199000` | L1 generated-methodology heap baseline |
+| NEXMark q8 1M x20 | Beam-default generated methodology | rooted scoped stream/window join | safe rooted baseline | `safezone-improved` | 3 processes x 20 iterations | `10.13 s` total (`507 ms/iter`) | `9.98 s` | `10.19 s` | `10403840 bytes` | checksum `-2856281405942686288`, output `199000` | L1 rooted scoped RSS win but elapsed loss |
+| NEXMark q8 1M x20 | Beam-default generated methodology | checked stream/window join | framework API win | `rift-checked` | 3 processes x 20 iterations | `9.21 s` total (`461 ms/iter`) | `9.07 s` | `9.22 s` | `10223616 bytes` | checksum `-2856281405942686288`, output `199000` | L1 checked modest elapsed/RSS win |
+| NEXMark q9 1M x20 | Beam-default generated methodology | heap winning-bid stream | natural heap baseline | `heap-immix` | 3 processes x 20 iterations | `16.27 s` total (`814 ms/iter`) | `16.25 s` | `16.35 s` | `146718720 bytes` | checksum `-367213413844887517`, output `922` | L1 generated-methodology heap baseline |
+| NEXMark q9 1M x20 | Beam-default generated methodology | rooted scoped winning-bid stream | safe rooted baseline | `safezone-improved` | 3 processes x 20 iterations | `18.10 s` total (`905 ms/iter`) | `18.08 s` | `18.16 s` | `13893632 bytes` | checksum `-367213413844887517`, output `922` | L1 rooted scoped RSS win but elapsed loss |
+| NEXMark q9 1M x20 | Beam-default generated methodology | checked winning-bid stream | framework API win | `rift-checked` | 3 processes x 20 iterations | `15.03 s` total (`752 ms/iter`) | `14.94 s` | `15.28 s` | `13156352 bytes` | checksum `-367213413844887517`, output `922` | L1 strongest selected NEXMark checked win |
+| NEXMark q11 1M x20 | Beam-default generated methodology | heap session stream | natural heap baseline | `heap-immix` | 3 processes x 20 iterations | `4.47 s` total (`224 ms/iter`) | `4.41 s` | `4.51 s` | `75153408 bytes` | checksum `-6797588007755916917`, output `250197` | L1 generated-methodology heap baseline |
+| NEXMark q11 1M x20 | Beam-default generated methodology | rooted scoped session stream | safe rooted baseline | `safezone-improved` | 3 processes x 20 iterations | `5.11 s` total (`256 ms/iter`) | `4.94 s` | `5.13 s` | `15253504 bytes` | checksum `-6797588007755916917`, output `250197` | L1 rooted scoped RSS win but elapsed loss |
+| NEXMark q11 1M x20 | Beam-default generated methodology | checked session stream | framework API win | `rift-checked` | 3 processes x 20 iterations | `4.36 s` total (`218 ms/iter`) | `4.27 s` | `4.36 s` | `14172160 bytes` | checksum `-6797588007755916917`, output `250197` | L1 checked modest elapsed/RSS win |
 | Yak LiveJournal 50M x5 | real file-backed SNAP LiveJournal graph replay | heap linked epoch | natural heap baseline | `gc-heap` | 3 processes x 5 iterations | `18.79 s` total | `18.76 s` | `18.89 s` | `2772320256 bytes` | checksum `-6048644965681588176` | L1 clean file-backed total-process heap row; includes one gzipped input preload plus five 50M replays per process |
 | Yak LiveJournal 50M x5 | real file-backed SNAP LiveJournal graph replay | scoped region epoch | safe rooted baseline | `region-scoped-rooted` | 3 processes x 5 iterations | `16.93 s` total | `16.91 s` | `16.94 s` | `611860480 bytes` | checksum `-6048644965681588176` | L1 clean rooted scoped-region row; same input/preload protocol |
 | Yak LiveJournal 50M x5 | real file-backed SNAP LiveJournal graph replay | `RiftRegion.epoch` checked scoped | framework API win | `checked-epoch-scoped` | 3 processes x 5 iterations | `16.12 s` total | `16.03 s` | `16.16 s` | `611893248 bytes` | checksum `-6048644965681588176` | L1 clean real-input checked epoch win; total process row still includes input preload |

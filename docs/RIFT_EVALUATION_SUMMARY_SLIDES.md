@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-10 15:40 CEST
+Last updated: 2026-05-10 16:05 CEST
 
 Status: markdown slide deck outline. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report,
@@ -243,12 +243,14 @@ not bucket opening.
 
 | Query | heap | improved SafeZone | best checked | Interpretation |
 |---|---:|---:|---:|---|
-| NEXMark Q3 | `305.799 ms` | `300.271 ms` | `285.356 ms` | best selected methodology row, modest win. |
-| NEXMark Q8 | `466.964 ms` | `452.158 ms` | `443.020 ms` | checked wins modestly. |
-| NEXMark Q9 | `798.672 ms` | `744.343 ms` | `724.479 ms` | strong Beam-default checked row. |
-| NEXMark Q11 | `215.910 ms` | `227.575 ms` | `209.918 ms` | checked wins elapsed and cuts GC. |
+| NEXMark Q3 L1 x20 | `6.18 s` | `6.38 s` | `5.86 s` | checked generated-methodology win. |
+| NEXMark Q8 L1 x20 | `9.54 s` | `10.13 s` | `9.21 s` | checked modest elapsed/RSS win. |
+| NEXMark Q9 L1 x20 | `16.27 s` | `18.10 s` | `15.03 s` | strongest selected NEXMark L1 row. |
+| NEXMark Q11 L1 x20 | `4.47 s` | `5.11 s` | `4.36 s` | checked modest elapsed/RSS win. |
 
-NEXMark uses generated Beam-default methodology, not the Beam runner.
+NEXMark uses generated Beam-default methodology, not the Beam runner. These
+are L1 final-clean total-process rows; L2 rows remain the source for GC
+interpretation.
 
 ## Slide 10: Cheap Checked Operators
 

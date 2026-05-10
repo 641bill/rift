@@ -1,7 +1,7 @@
 # Evaluation Classified Summary
 
 Date: 2026-05-09
-Last updated: 2026-05-10 15:40 CEST
+Last updated: 2026-05-10 16:05 CEST
 
 Status: thesis-facing classified summary built from committed evidence.
 Baseline commits for clean rows: parent `1cc3b2c`, child `13a3df1c7`.
@@ -53,6 +53,7 @@ reference, but the retained heap objects still remain for GC tracing/reclaim.
 | SPECjbb2005 workload port, 8 warehouses x20 | clean-room transaction workload port | best checked topology / L1 final-clean | heap `2.64 s`, RSS `12.4 MB`; L2 heap GC `15.125 ms` per inner 8w run | checked epoch scoped `2.21 s`, RSS `8.0 MB`; L2 checked GC `0 ms` | `16.3%` faster | L2 removes heap timed GC on transaction-local objects | about `-35%` | L1 checked transaction/epoch win; clean-room Stancu/SPECjbb-shaped port, not official SPECjbb2005. |
 | Common Crawl WET-shaped q1 | generated stream stressor | best checked topology | heap `5577.965 ms`, GC `1741.640 ms`, RSS `409 MB` | checked scoped page-token `3707.214 ms`, GC `30.693 ms`, RSS `464 MB` | `33.5%` faster | `-1711 ms` | about `+14%` | Strong generated stream-object pressure win; not real-input proof and not RSS win. |
 | Common Crawl WET-shaped q2 | generated stream/window stressor | best checked topology | heap `5183.074 ms`, GC `1565.074 ms`, RSS `409 MB` | checked scoped page-token `3902.795 ms`, GC `27.027 ms`, RSS `464 MB` | `24.7%` faster | `-1538 ms` | about `+14%` | Strong generated window/object pressure win; not real-input proof and not RSS win. |
+| NEXMark q3/q8/q9/q11 | Beam-default generated methodology | best checked topology / L1 final-clean | heap L1 `6.18/9.54/16.27/4.47 s`, RSS `75/75/147/75 MB` | checked L1 `5.86/9.21/15.03/4.36 s`, RSS `9.6/10.2/13.2/14.2 MB` | `2.5-7.6%` faster | L2 rows remain the GC source; L1 intentionally omits GC reads | large RSS drop vs heap | L1 checked generated-methodology wins across selected NEXMark rows; not real-input proof or exact Beam runner evidence. |
 | LogHub HDFS v1 q2 | real file-backed Hadoop log | best checked topology / L1 final-clean | L2 heap `8227.369 ms`, GC `92.659 ms`, RSS `409 MB`; L1 heap `25.60 s`, RSS `409 MB` for 3 q2 iterations | L2 checked scoped page-token `7871.856 ms`, GC `0 ms`, RSS `395 MB`; L1 checked scoped page-token `25.56 s`, RSS `79 MB` | L1 elapsed tie; L2 `4.3%` faster | L2 `-92.659 ms` | L1 about `-81%` | L1 real-input RSS win with elapsed tie; L2 standard stats remain a modest throughput/GC win. Heap GC is only about 1-2% elapsed, so this is not flagship GC-heavy proof. |
 | DSPBench Fraud q2 | real DSPBench credit-card replay | best checked topology / L1 final-clean | L1 heap `4.39 s`, RSS `358 MB`; L2 heap `801.790 ms`, GC `69.686 ms` | L1 checked scoped page-token `4.44 s`, RSS `59.5 MB`; L2 checked scoped `822.846 ms`, GC `15.554 ms` | L1 `1.1%` slower | L2 median `-54.132 ms` | L1 about `-83%` | Real-input checked RSS win but not elapsed win; trusted Streaming lower bound is fastest (`4.18 s`). |
 | DSPBench Log q2 | real DSPBench bundled common-log input | best checked topology / L1 final-clean | L1 heap `8.89 s`, RSS `308 MB`; L2 heap `1750.291 ms`, GC `44.992 ms`, max GC `88.210 ms` | L1 checked scoped page-token `8.79 s`, RSS `47.6 MB`; L2 checked scoped `1733.654 ms`, GC `18.402 ms`, max GC `18.584 ms` | L1 `1.1%` faster | L2 median `-26.590 ms`; max `-69.626 ms` | L1 about `-85%` | Modest real-input elapsed/RSS/GC-tail win; still not flagship GC-heavy evidence. |
@@ -71,6 +72,8 @@ reference, but the retained heap objects still remain for GC tracing/reclaim.
   checked topology for page/window append streams.
 - **Generated stressor claim:** Common Crawl WET-shaped q1/q2 demonstrates the
   high-GC stream-object regime where checked page-token wins decisively.
+- **Generated methodology claim:** NEXMark Beam-default-style q3/q8/q9/q11 now
+  have L1 checked framework wins, but remain generated local-harness evidence.
 - **Real-input claim:** Yak LiveJournal is the strongest real-input epoch row;
   LogHub top templates is now a strong real-preloaded retained top-k row, and
   `EpochTopKByKey` is the first reusable top-k API to pass the retained gate;

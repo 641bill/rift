@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-10 15:40 CEST
+Last updated: 2026-05-10 16:05 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -10,7 +10,7 @@ Active implementation branch for this update:
 `feature/rift`
 
 Latest implementation checkpoint:
-`95f4f4d71` (`Add final-clean DSPBench support`)
+`dffe178a0` (`Add final-clean NEXMark support`)
 
 Latest parent evidence checkpoint:
 current parent commit (`Record SPECjbb final-clean rows`)
@@ -54,6 +54,7 @@ now implemented for `RetainedEpochReclaimMatrix`, `YakRegionMatrix`,
 `StreamFlexRegionMatrix`, `StancuRegionMatrix`,
 `SpecJbb2005PortMatrix`, `LogHubTopTemplatesMatrix`, and
 `LogHubRegionMatrix`, and `DSPBenchRegionMatrix`.
+Child `dffe178a0` also adds L1 plumbing to `NexmarkRegionMatrix`.
 Set `RIFT_FINAL_CLEAN=1` or `RIFT_EVAL_MEASUREMENT_LEVEL=L1`; the binary skips
 internal timing/GC/region stat reads and prints only minimal checksum/output
 metadata. A tiny retained-epoch L1 smoke matched heap and checked checksums.
@@ -130,6 +131,13 @@ win: checked scoped page-token is `4.44 s` and about `59.5 MB` RSS versus heap
 winner at `4.18 s`. Log q2 is a modest checked elapsed/RSS win: checked scoped
 page-token is `8.79 s` and about `47.6 MB` RSS versus heap `8.89 s` and about
 `308 MB`; trusted Streaming is still fastest at `8.51 s`.
+Child `dffe178a0` adds L1 plumbing to `NexmarkRegionMatrix`. Beam-default-style
+q3/q8/q9/q11 were rerun as 1M generated events x20 iterations per process,
+three external repeats. Checked Rift wins all four selected generated
+methodology rows: q3/q8/q9/q11 are `5.86/9.21/15.03/4.36 s` versus heap
+`6.18/9.54/16.27/4.47 s` and improved SafeZone `6.38/10.13/18.10/5.11 s`.
+RSS is also much lower than heap. This is generated local-harness evidence,
+not real-input proof or exact Beam runner evidence.
 
 Latest ReML/MLKit PLDI-style table:
 `evidence/REML_MLKIT_PLDI_TABLE.md` is now the dedicated thesis-facing table.

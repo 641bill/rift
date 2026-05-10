@@ -1,7 +1,7 @@
 # Measurement Overhead Protocol
 
 Date: 2026-05-09
-Last updated: 2026-05-10 15:40 CEST
+Last updated: 2026-05-10 16:05 CEST
 
 Status: active protocol. Initial L1 final-clean support is implemented for the
 first representative benchmark binaries. The first clean focused retained L1
@@ -21,6 +21,8 @@ is also recorded there. `LogHubRegionMatrix` has the same support from child
 `fe8f0d853`; the HDFS q2 page/window row is also recorded there as an elapsed
 tie / RSS win. `DSPBenchRegionMatrix` has the same support from child
 `95f4f4d71`; the Fraud/Log q2 page-window rows are also recorded there.
+`NexmarkRegionMatrix` has the same support from child `dffe178a0`; the
+Beam-default-style q3/q8/q9/q11 rows are also recorded there.
 
 ## Why This Exists
 
@@ -62,6 +64,7 @@ Initial final-clean binary support now exists for:
 - `LogHubTopTemplatesMatrix`
 - `LogHubRegionMatrix`
 - `DSPBenchRegionMatrix`
+- `NexmarkRegionMatrix`
 
 Set `RIFT_FINAL_CLEAN=1` or `RIFT_EVAL_MEASUREMENT_LEVEL=L1`. In that mode the
 binary skips warmups, heap expected-baseline runs, internal elapsed timing,
@@ -74,7 +77,8 @@ their summary TSVs. Child `c5bbc498f` extends that support to StreamFlex and
 Stancu. Child `678a6eb41` extends it to the SPECjbb2005-workload port, and
 child `3598efe29` extends it to LogHub top templates. Child `fe8f0d853`
 extends it to LogHub region/page-window rows. Child `95f4f4d71` extends it to
-DSPBench region/page-window rows.
+DSPBench region/page-window rows. Child `dffe178a0` extends it to NEXMark
+generated methodology rows.
 
 Current medians remain valid standard evidence, but should not be described as
 "measurement overhead removed completely" unless they were collected in L1

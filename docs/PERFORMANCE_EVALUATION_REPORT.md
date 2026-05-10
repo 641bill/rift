@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-10 15:40 CEST
+Last updated: 2026-05-10 16:05 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -28,11 +28,12 @@ Latest measurement-overhead protocol:
 `evidence/MEASUREMENT_OVERHEAD_PROTOCOL.md` and
 `evidence/FINAL_CLEAN_HEADLINE_RESULTS.md`. Initial L1 final-clean support now
 exists for retained epoch, Yak, Dataflow, Common Crawl WET-shaped, ReML
-Tier 1, StreamFlex, Stancu, and SPECjbb2005-workload binaries. The L1 table
+Tier 1, StreamFlex, Stancu, SPECjbb2005-workload, LogHub, DSPBench, and
+NEXMark binaries. The L1 table
 now includes retained, Dataflow, Yak LiveJournal, generated Common
 Crawl-shaped q1/q2, ReML Tier 1, StreamFlex direct epoch, Stancu transaction,
 SPECjbb2005-workload port, LogHub top-template, and LogHub HDFS q2 page/window
-rows, plus DSPBench Fraud/Log q2 page/window rows. Remaining benchmark result
+rows, plus DSPBench Fraud/Log q2 and NEXMark q3/q8/q9/q11 rows. Remaining benchmark result
 files are still mostly L2 standard-stats evidence.
 
 Latest operator-gate status:
@@ -381,9 +382,10 @@ Latest post-fast-path selected interpretation:
   win: checked `38.198 ms`, improved SafeZone `40.596 ms`, heap `52.071 ms`.
 - Dataflow JOIN is positive only against heap in this selected pass:
   checked `24.183 ms`, improved SafeZone `23.459 ms`, heap `31.760 ms`.
-- NEXMark Beam-default selected rows remain broadly positive:
-  q3 checked `285.356 ms`, q8 `443.020 ms`, q9 `724.479 ms`, and q11
-  `209.918 ms`, all faster than heap and improved SafeZone in the same run.
+- NEXMark Beam-default selected rows now have L1 final-clean confirmation:
+  q3/q8/q9/q11 checked `5.86/9.21/15.03/4.36 s` for 20 x 1M events versus
+  heap `6.18/9.54/16.27/4.47 s` and improved SafeZone
+  `6.38/10.13/18.10/5.11 s`.
 - Generated Common Crawl-shaped q1/q2 now show the strongest checked
   stream-object result: q1 checked scoped page-token `3643.680 ms` versus heap
   `5392.344 ms`; q2 checked scoped page-token `3790.138 ms` versus heap
@@ -415,9 +417,10 @@ Latest clean final-selection headline interpretation:
   `0.17 s` versus heap `0.18 s`, with heap deadline misses `4` and checked
   misses `0`. `TransactionRegion` remains a useful multi-list API, but it is
   no longer the best StreamFlex headline row.
-- NEXMark Beam-default is broadly favorable but modest: checked wins q0/q1/q2/
-  q3/q4/q5/q8/q9/q11, with q3 `287.541 ms` versus heap `317.003 ms` and
-  improved SafeZone `304.246 ms`.
+- NEXMark Beam-default is broadly favorable but modest. The L1 selected rows
+  now show checked q3/q8/q9/q11 at `5.86/9.21/15.03/4.36 s` versus heap
+  `6.18/9.54/16.27/4.47 s`; q9 is the strongest selected row at about `7.6%`
+  faster than heap and lower RSS.
 - GH Archive-shaped q1/q2 now favor checked page-token on uncapped generated
   rows: q1 `262.139 ms` versus heap `293.716 ms`; q2 `261.762 ms` versus heap
   `279.743 ms`, with much lower RSS.
@@ -671,7 +674,7 @@ continuation also excludes `current-default`.
 | Checked append/window | checked scoped EpochBuffer `26.461 ms`, checked scoped page-token `26.883 ms` | heap Immix `36.944 ms` / `10.900 ms` GC | cheap checked append operators beat heap |
 | Page-token fast path | checked scoped page-token `27.549 ms`; checked Rift page-token `29.319 ms` | heap `36.920 ms` / `10.995 ms` GC | batch-close/current-bucket fast path keeps linked page-token ahead of chunk-token |
 | StreamWindowRank | checked `344.918 ms` | `227.736 ms` | rank/index maintenance remains negative |
-| NEXMark Beam-default | checked Rift fastest on q0/q1/q2/q3/q4/q5/q8/q9/q11 | varies by query | broad generated methodology win, mostly modest |
+| NEXMark Beam-default | L1 checked q3/q8/q9/q11 `5.86/9.21/15.03/4.36 s` | L1 heap `6.18/9.54/16.27/4.47 s`; improved SafeZone `6.38/10.13/18.10/5.11 s` | broad generated methodology win, mostly modest; not exact Beam runner evidence |
 | Common Crawl-shaped q1 | checked SafeZone page-token `3696.284 ms`; checked Rift page-token `3905.285 ms` | `5350.531 ms` / `1517.640 ms` GC | strongest checked generated stream win |
 | Common Crawl-shaped q2 | checked SafeZone page-token `3732.171 ms`; checked Rift page-token `3972.493 ms` | `5183.656 ms` / `1526.751 ms` GC | strongest checked generated window win |
 | GH Archive-shaped q1/q2 | trusted Rift/page-token rows around `233-251 ms` | heap uncapped `268-287 ms`, heap caps still complete | generated GH-shaped rows favor regions; not real-input proof |
@@ -790,8 +793,10 @@ operator problems with separate gates.
 
 | Workload | Input | Heap | Best SafeZone-family | Best Rift / checked | Interpretation |
 |---|---|---:|---:|---:|---|
-| NEXMark Q3 | Beam-default generated | `316.626 ms` | rootless `296.480 ms`, improved `297.962 ms` | checked `292.371 ms` | Best checked generated methodology row; below 10% gate over improved SafeZone. |
-| NEXMark Q8 | Beam-default generated | `467.213 ms` | rootless `460.822 ms`, improved `462.599 ms` | checked `450.904 ms` | Checked wins modestly; promising but not decisive. |
+| NEXMark Q3 | Beam-default generated | L1 `6.18 s`, RSS `75 MB` | improved `6.38 s`, RSS `9.8 MB` | checked `5.86 s`, RSS `9.6 MB` | L1 checked generated methodology win; below 10% gate. |
+| NEXMark Q8 | Beam-default generated | L1 `9.54 s`, RSS `75 MB` | improved `10.13 s`, RSS `10 MB` | checked `9.21 s`, RSS `10 MB` | L1 checked modest elapsed/RSS win. |
+| NEXMark Q9 | Beam-default generated | L1 `16.27 s`, RSS `147 MB` | improved `18.10 s`, RSS `14 MB` | checked `15.03 s`, RSS `13 MB` | Strongest selected NEXMark L1 row. |
+| NEXMark Q11 | Beam-default generated | L1 `4.47 s`, RSS `75 MB` | improved `5.11 s`, RSS `15 MB` | checked `4.36 s`, RSS `14 MB` | L1 checked modest elapsed/RSS win. |
 | Common Crawl WET-shaped q1 | generated stressor | `5412.618 ms`, GC `1570.724 ms` | improved-32k `4637.981 ms`, rootless `4620.056 ms` | checked page-token `3956.366 ms`; SafeZone-backed page-token `3728.286 ms`; HPZone `4367.265 ms` | First checked generated application-gate pass; generated stressor, not real input. |
 | Common Crawl WET-shaped q2 | generated stressor | `5252.803 ms`, GC `1572.021 ms` | improved-32k `4580.687 ms`, rootless `4423.332 ms` | checked page-token `4039.855 ms`; SafeZone-backed page-token `3816.247 ms`; Streaming `4212.494 ms` | First checked generated application-gate pass; generated stressor, not real input. |
 | Checked SafeZone-backed q1 | generated stressor | current checked `4744.872 ms` | improved-32k `4570.772 ms` | checked SafeZone-backed `4512.743 ms` | Backend improves checked by ~4.9%, misses application gate. |
@@ -851,7 +856,7 @@ operator problems with separate gates.
 | LogHub BGL full-file q2 | `rift-trusted-streaming`, `rift-checked-safezone-page-token`, and `safezone-improved-32k` | Line/token records are allocated with window/bucket lifetimes; checked scoped page-token uses the safe operator-owned path. | Real BGL system log, full `4747963` lines / `66868883` line+token records. | Heap spends `595.599 ms` in GC, but that is still under 2% of total elapsed. | Line/token records in regions; file input, severity/component classification, and aggregate counters remain heap/primitive. | Real-input modest throughput/RSS/tail control, not flagship GC-heavy proof. |
 | DSPBench Fraud q2 | `rift-checked-safezone-page-token`; `rift-trusted-streaming` as lower bound | Transaction, prediction, state-token, and alert records are allocated in page/window buckets. | Real DSPBench `credit-card.dat`, `185000` rows replayed to 1M events. | Heap spends `69.686 ms` median GC in L2, but L1 checked elapsed is slightly slower than heap. | Transaction/prediction/alert records in regions; predictor state on heap/primitive arrays. | Real-input checked RSS win and trusted lower-bound elapsed win; not checked throughput headline. |
 | DSPBench Log q2 | `rift-checked-safezone-page-token` | Common-log records, status/update records, and window contributions are allocated in checked page-token buckets. | Real DSPBench `http-server.log`, `55000` common-log lines replayed to 1M events. | Heap spends `44.992 ms` median GC and has an `88.210 ms` max-GC tail in L2, about `2.6%` of elapsed. L1 checked is `8.79 s` vs heap `8.89 s`. | Log/status/window contribution records in regions; status counters and input replay state on heap/primitive arrays. | Real-input modest throughput/RSS/GC-tail control; not a flagship case. |
-| NEXMark Q3/Q8 | `rift-checked-rift` | Checked region APIs on generated Beam-default methodology streams. | Generated NEXMark profile. | Moderate object/window pressure; margins are modest. | Event/window records in regions where checked operator exists; durable tables/counters on heap. | Generated methodology win/near-win. |
+| NEXMark Q3/Q8/Q9/Q11 | `rift-checked-rift` | Checked region APIs on generated Beam-default methodology streams. | Generated NEXMark profile. | Moderate object/window pressure; L1 margins are `2.5-7.6%` faster than heap, with much lower RSS. | Event/window records in regions where checked operator exists; durable tables/counters on heap. | Generated methodology win; not real-input proof or exact Beam runner evidence. |
 | Broom-style Dataflow | `rift-checked-rift`, with SafeZone-family often fastest | Checked local epoch objects; SafeZone-family rows measure allocator substrate. | Local SELECT/AGGREGATE/JOIN methodology reproduction. | Documents/outputs are epoch-local. | Per-epoch document/output objects in regions; control state on heap. | Prior-work-shaped method evidence, not exact artifact reproduction. |
 | Real WET/WAT current shards | `rift-checked-safezone-improved-32k` page-token | Checked page/link-object path works over real preloaded data. | Real Common Crawl WET/WAT shards. | Current shards report zero timed heap GC, so this is not yet GC-heavy. | Page/link/token records in regions; input/control on heap. | Real-input ceiling/control with modest region wins only. |
 | Object-allocation scale-up | `rift-checked-rift`, `rift-checked-safezone-improved-32k` | Region-backed retained object array without stream/query operators. | Focused 10M-object matrix. | Heap spends `105.807 ms` median timed GC and reaches about `971 MB` RSS. | Ordinary small Scala objects in regions; one retained array/traversal in every mode. | Allocation/reclaim win; generic checked container overhead isolated as a separate problem. |

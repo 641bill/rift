@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-10 15:40 CEST
+Last updated: 2026-05-10 16:05 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -56,7 +56,7 @@ L1 final-clean, L2 standard stats, L3 diagnostics, and L4 external profiles.
 Initial L1 final-clean support now exists for retained epoch, Yak, Dataflow,
 Common Crawl WET-shaped, ReML Tier 1, StreamFlex, Stancu,
 SPECjbb2005-workload, LogHub top-template, LogHub region, and DSPBench region
-binaries. Current report-grade benchmark rows are still mostly L2; the final elapsed/RSS
+binaries, and NEXMark. Current report-grade benchmark rows are still mostly L2; the final elapsed/RSS
 headline table should be collected into
 `evidence/FINAL_CLEAN_HEADLINE_RESULTS.md`. The first clean
 focused retained L1 row is now recorded from child `f1aa55484`: 1M retained
@@ -109,6 +109,10 @@ scoped page-token is `4.44 s`, about `59.5 MB` RSS versus heap `4.39 s`, about
 `4.18 s`. Log q2 is a modest checked elapsed/RSS win: checked scoped page-token
 is `8.79 s`, about `47.6 MB` RSS versus heap `8.89 s`, about `308 MB` RSS,
 while trusted Streaming is again the lower-bound at `8.51 s`.
+Child `dffe178a0` adds L1 final-clean support for `NexmarkRegionMatrix`.
+Beam-default-style q3/q8/q9/q11 are checked generated-methodology wins in L1:
+checked `5.86/9.21/15.03/4.36 s` versus heap `6.18/9.54/16.27/4.47 s` and
+improved SafeZone `6.38/10.13/18.10/5.11 s`, with much lower RSS than heap.
 
 ReML/MLKit PLDI-style table checkpoint:
 `evidence/REML_MLKIT_PLDI_TABLE.md` now separates paper-reported Figure 9
