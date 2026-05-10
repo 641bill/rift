@@ -1,7 +1,7 @@
 # Fair Evaluation Protocol
 
 Date: 2026-05-09
-Last updated: 2026-05-09 23:31 CEST
+Last updated: 2026-05-10 17:47 CEST
 
 Status: active evaluation contract for report, slides, and future benchmark
 runs. This document is the reviewer-facing rulebook for deciding what a Rift
@@ -46,6 +46,14 @@ Every headline or summary row must state:
 Memory-management claims require retained heap/drop-anchor versus retained
 checked-region rows. Summary-only rows must be described as topology/operator
 evidence, even if they are much faster than natural heap.
+
+When a table includes a `summary-only` or direct-aggregate lower bound, it must
+include both sides of the same topology whenever implemented: the heap
+same-shape row and the checked/region same-shape row. Do not list
+`heap-direct-summary-only` by itself as the lower bound for a workload if
+`checked-epoch-stream`, `checked-epoch-scoped`, or another checked framework
+counterpart exists. Otherwise the table confuses "heap is fast under this
+topology" with "this topology is fast for both heap and regions."
 
 ## Framework API Policy
 
@@ -127,4 +135,3 @@ A row can become a representative public result only if:
 
 Rows that fail those gates remain useful as ceiling, lower-bound, or
 operator-gate evidence.
-

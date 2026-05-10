@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-10 17:37 CEST
+Last updated: 2026-05-10 17:47 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -256,6 +256,11 @@ topology/operator wins. Checked regions are close to same-shape heap, and
 Fraud q2 still gives a small checked-region win over same-shape heap, but the
 large deltas should not be presented as pure placement wins. File-backed
 DSPBench/LogHub and file-backed GH Archive still use page-token modes.
+The GH Archive direct-summary lower bound is now symmetric in L1: heap
+direct-summary is `1.36 s` for 20 x 1M q2 iterations, checked stream/scoped
+direct-summary are `1.45/1.45 s`, and all three are about `7 MB` RSS. Future
+summary-only tables should include checked/region counterparts whenever they
+exist, not only `heap-direct-summary-only`.
 
 Latest retained-epoch memory-management control:
 `RetainedEpochReclaimMatrix` was added on 2026-05-09 with four modes:

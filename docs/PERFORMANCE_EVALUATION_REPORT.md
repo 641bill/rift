@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-10 17:37 CEST
+Last updated: 2026-05-10 17:47 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -138,6 +138,12 @@ timing/RSS: over 20 x 1M generated/preloaded q2 iterations, retained heap is
 `4.62 s` and `147 MB` RSS, checked stream retained is `3.65 s` and `16 MB`,
 and checked scoped retained is `3.44 s` and `16 MB`. The summary-only lower
 bound is `1.28 s` and remains topology evidence only.
+
+That lower bound is now symmetric: the L1 checked direct-summary counterparts
+are `1.45 s` for checked stream and `1.45 s` for checked scoped, both around
+`7 MB` RSS, versus heap direct-summary `1.36 s`. Direct-summary is therefore a
+fast operator topology for both heap and regions, not a heap-only special case
+and not a reclaim claim.
 
 Latest post-fast-path selected sweep:
 `evidence/POST_FAST_PATH_SELECTED_SWEEP_2026_05_07.md`. This is from the

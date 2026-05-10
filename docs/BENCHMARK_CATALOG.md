@@ -1,7 +1,7 @@
 # Rift Benchmark Catalog
 
 Date: 2026-05-05
-Last updated: 2026-05-10 17:37 CEST
+Last updated: 2026-05-10 17:47 CEST
 
 Status: working benchmark guide. Use this document to understand what each
 benchmark is meant to test before reading the detailed result files in
@@ -90,6 +90,11 @@ is that heap objects remain for the GC to trace/reclaim later, while region
 objects are reclaimed by closing/resetting the allocation area. This is why the
 retained comparison isolates memory management better than comparing checked
 regions against a summary-only heap row.
+
+Summary-only topology tables must be symmetric. If a result reports
+`heap-direct-summary-only`, it should also report the checked/region
+direct-summary counterpart when that framework topology exists. The point is to
+show that the topology is fast, not to imply the lower bound is heap-only.
 
 Prior region systems also choose a justified lifetime topology rather than
 enumerating every possible heap rewrite. Broom uses dataflow/operator epochs,

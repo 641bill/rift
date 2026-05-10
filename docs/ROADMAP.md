@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-10 17:37 CEST
+Last updated: 2026-05-10 17:47 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -126,6 +126,10 @@ The same L1 support now also covers generated/preloaded retained q2:
 `3.44 s` and about `16 MB`. This is retained-object memory-management
 evidence; the `heap-direct-summary-only` lower bound is `1.28 s` and remains
 topology evidence only.
+The direct-summary topology lower bound is now symmetric: checked stream and
+checked scoped direct-summary counterparts are both `1.45 s` and about `7 MB`
+RSS versus heap direct-summary `1.36 s`. Future summary-only tables should not
+list heap-only lower bounds when region counterparts exist.
 
 ReML/MLKit PLDI-style table checkpoint:
 `evidence/REML_MLKIT_PLDI_TABLE.md` now separates paper-reported Figure 9
@@ -200,7 +204,8 @@ versus retained heap `469.079 ms`; LogHub q3 retained is mixed but checked
 scoped still improves elapsed over retained heap (`2106.541 ms` versus
 `2244.266 ms`). Treat retained rows as the fair memory-management comparison;
 `heap-direct-summary-only` remains the operator/topology lower bound and must
-not be used as a pure placement claim.
+not be used as a pure placement claim. When it is listed, include the checked
+direct-summary counterpart as well.
 
 Latest SPECjbb2005-workload port: `evidence/SPECJBB2005_PORT_MATRIX.md`.
 `SpecJbb2005PortMatrix` is a clean-room Scala Native workload port, not an

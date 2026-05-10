@@ -1,7 +1,7 @@
 # Evaluation Classified Summary
 
 Date: 2026-05-09
-Last updated: 2026-05-10 17:37 CEST
+Last updated: 2026-05-10 17:47 CEST
 
 Status: thesis-facing classified summary built from committed evidence.
 Baseline commits for clean rows: parent `1cc3b2c`, child `13a3df1c7`.
@@ -42,7 +42,7 @@ reference, but the retained heap objects still remain for GC tracing/reclaim.
 | LogHub-shaped retained q3 | generated/indexable template/session stream | retained-object drop-anchor | retained heap `2244.266 ms`, GC `143.539 ms`, RSS `2291 MB` | checked scoped retained `2106.541 ms`, GC `0 ms`, RSS `2312 MB` | `6.1%` faster | `-143.539 ms` | about `+1%` | Mixed retained win: elapsed/GC improves, RSS does not. |
 | DSPBench Fraud retained q2 | generated/indexable DSPBench-shaped stream | retained-object drop-anchor | retained heap `392.743 ms`, GC `35.631 ms`, RSS `576 MB` | checked scoped retained `370.746 ms`, GC `0 ms`, RSS `583 MB` | `5.6%` faster | `-35.631 ms` | about `+1%` | Modest retained throughput/GC win; not an RSS win. |
 | DSPBench Fraud direct q2 | generated/indexable DSPBench-shaped stream | summary-only topology | natural heap `400.900 ms`; heap direct summary `272.251 ms` | checked scoped direct epoch `267.739 ms` | direct topology gives most of the win | heap direct has `0 ms` GC | n/a | Topology/operator lower bound; checked regions are close to same-shape heap. |
-| GH Archive-shaped direct q2 | generated/preloaded stressor | summary-only topology | natural heap `287.380 ms`; heap direct summary `54.642 ms` | checked scoped direct epoch `56.013 ms` | checked is near same-shape heap | heap direct has `0 ms` GC | n/a | Almost entirely topology/operator evidence, not memory-placement evidence. |
+| GH Archive-shaped direct q2 | generated/preloaded stressor | summary-only topology | natural heap `287.380 ms`; L1 heap direct summary `1.36 s` x20; L2 heap direct `54.642 ms` | L1 checked stream/scoped direct summary `1.45/1.45 s` x20; L2 checked scoped direct `56.013 ms` | checked direct is within about `7%` of heap direct in L1 | heap direct has `0 ms` GC | near-tie small RSS | Symmetric topology/operator evidence for heap and regions, not memory-placement evidence. |
 | LogHub-shaped direct q2 | generated/indexable log stream | summary-only topology | natural heap `526.803 ms`; heap direct summary `191.601 ms` | checked scoped direct epoch `193.938 ms` | checked is near same-shape heap | heap direct has `0 ms` GC | n/a | Direct-aggregate topology evidence. |
 | LogHub-shaped direct q3 | generated/indexable template/session stream | summary-only topology | natural heap `2225.364 ms`; heap direct summary `1779.064 ms` | checked scoped direct epoch `1792.397 ms` | checked is near same-shape heap | heap direct has `0 ms` GC | n/a | Topology evidence; richer query still CPU-heavy. |
 | Yak LiveJournal graphreal 50M | real SNAP LiveJournal edge list replay | best checked topology | heap `2958.659 ms`, GC `400.484 ms`, RSS `3.91 GB` | `checked-epoch-scoped` `2008.320 ms`, GC `0 ms`, RSS `2.11 GB` | `32.1%` faster | `-400.484 ms` | about `-46%` | Strongest real-input prior-work-shaped checked epoch win; local graph replay, not exact Yak/GraphChi artifact. |
