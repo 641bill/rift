@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-10 17:47 CEST
+Last updated: 2026-05-10 18:03 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -10,10 +10,10 @@ Active implementation branch for this update:
 `feature/rift`
 
 Latest implementation checkpoint:
-`54bf38c45` (`Add final-clean GH Archive support`)
+`bc9fd5979` (`Record symmetric direct-summary L1 rows`)
 
 Latest parent evidence checkpoint:
-current parent commit (`Record GH Archive final-clean rows`)
+current parent commit after direct-summary symmetry evidence update
 
 Latest comprehensive sweep checkpoint:
 Staged headline runs completed after the TransactionRegion checkpoint. Source
@@ -33,7 +33,12 @@ comparison, while summary-only direct rows remain topology/operator evidence.
 
 Latest classified evaluation summary:
 `evidence/EVALUATION_CLASSIFIED_SUMMARY.md` is now the first-stop rollup for
-reporting. It classifies each representative row by benchmark, input type,
+representative results. The latest update makes the summary-only lower-bound
+rule symmetric across GH Archive-shaped, DSPBench, and LogHub generated rows:
+when a heap direct-summary row is reported, checked stream/scoped
+direct-summary counterparts are reported too. These rows remain topology
+evidence, not memory-management wins. The classified summary also supports
+reporting by listing each representative row by benchmark, input type,
 comparison class, heap/control row, best safe checked row, elapsed delta, GC
 delta, RSS delta, and allowed claim. Use it to keep the paper and slides
 unambiguous: summary-only/direct-aggregate rows are topology/operator lower

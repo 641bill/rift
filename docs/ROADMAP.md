@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-10 17:47 CEST
+Last updated: 2026-05-10 18:03 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -130,6 +130,12 @@ The direct-summary topology lower bound is now symmetric: checked stream and
 checked scoped direct-summary counterparts are both `1.45 s` and about `7 MB`
 RSS versus heap direct-summary `1.36 s`. Future summary-only tables should not
 list heap-only lower bounds when region counterparts exist.
+Child `bc9fd5979` applies the same symmetry rule to DSPBench and LogHub
+generated/indexable direct-summary rows. DSPBench Fraud/Log q2 checked
+direct-summary rows are within about `1%` of heap direct-summary in L1; LogHub
+q2 is within about `4%`, and q3 is within about `2-3%` while remaining
+query-CPU dominated. These rows stay classified as topology/operator lower
+bounds, not memory-management claims.
 
 ReML/MLKit PLDI-style table checkpoint:
 `evidence/REML_MLKIT_PLDI_TABLE.md` now separates paper-reported Figure 9

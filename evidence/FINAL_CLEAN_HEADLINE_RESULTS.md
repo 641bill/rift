@@ -1,7 +1,7 @@
 # Final-Clean Headline Results
 
 Date: 2026-05-09
-Last updated: 2026-05-10 17:47 CEST
+Last updated: 2026-05-10 18:03 CEST
 
 Status: L1 runner support exists for the first representative binaries. One
 focused retained-epoch L1 row has been collected from clean child commit
@@ -28,6 +28,8 @@ Beam-default-style q3/q8/q9/q11 rows are recorded below.
 Child `54bf38c45` adds L1 support to `GithubArchiveRegionMatrix`. The
 two-hour real file-backed byte-slice q1/q2 rows and generated/preloaded
 retained q2 rows are recorded below.
+Child `bc9fd5979` records symmetric direct-summary L1 counterpart rows for
+DSPBench and LogHub, so summary-only lower bounds are no longer heap-only.
 
 ## Definition
 
@@ -95,6 +97,18 @@ for those 20 iterations.
 | GH Archive-shaped q2 retained 1M x20 | generated/preloaded stressor | summary-only direct aggregate | summary-only topology | `heap-direct-summary-only` | 3 processes x 20 iterations | `1.28 s` total (`64.0 ms/iter`) | `1.27 s` | `1.31 s` | `6832128 bytes` | checksum `7294087528134281006`, output `163487` | L1 clean topology lower bound, not memory-management evidence |
 | GH Archive-shaped q2 direct-summary 1M x20 | generated/preloaded stressor | checked direct summary | summary-only topology / checked counterpart | `checked-epoch-stream` | 3 processes x 20 iterations | `1.45 s` total (`72.5 ms/iter`) | `1.43 s` | `1.46 s` | `6946816 bytes` | checksum `7294087528134281006`, output `163487` | L1 clean checked region counterpart to heap direct-summary; topology lower bound, not memory-management evidence |
 | GH Archive-shaped q2 direct-summary 1M x20 | generated/preloaded stressor | checked scoped direct summary | summary-only topology / checked counterpart | `checked-epoch-scoped` | 3 processes x 20 iterations | `1.45 s` total (`72.5 ms/iter`) | `1.43 s` | `1.46 s` | `6995968 bytes` | checksum `7294087528134281006`, output `163487` | L1 clean checked scoped counterpart to heap direct-summary; topology lower bound, not memory-management evidence |
+| DSPBench Fraud q2 direct-summary 1M x20 | generated/indexable DSPBench-shaped stream | direct summary | summary-only topology | `heap-direct-summary-only` | 3 processes x 20 iterations | `5.62 s` total (`281.0 ms/iter`) | `5.57 s` | `5.71 s` | `39747584 bytes` | checksum `-5765375221524988491`, output `613295` | L1 clean heap direct-summary topology lower bound |
+| DSPBench Fraud q2 direct-summary 1M x20 | generated/indexable DSPBench-shaped stream | checked direct summary | summary-only topology / checked counterpart | `checked-epoch-stream` | 3 processes x 20 iterations | `5.67 s` total (`283.5 ms/iter`) | `5.61 s` | `5.87 s` | `39829504 bytes` | checksum `-5765375221524988491`, output `613295` | L1 clean checked stream counterpart, within about `1%` of heap direct-summary |
+| DSPBench Fraud q2 direct-summary 1M x20 | generated/indexable DSPBench-shaped stream | checked scoped direct summary | summary-only topology / checked counterpart | `checked-epoch-scoped` | 3 processes x 20 iterations | `5.68 s` total (`284.0 ms/iter`) | `5.64 s` | `5.78 s` | `39829504 bytes` | checksum `-5765375221524988491`, output `613295` | L1 clean checked scoped counterpart, within about `1%` of heap direct-summary |
+| DSPBench Log q2 direct-summary 1M x20 | generated/indexable DSPBench-shaped stream | direct summary | summary-only topology | `heap-direct-summary-only` | 3 processes x 20 iterations | `4.55 s` total (`227.5 ms/iter`) | `4.50 s` | `4.63 s` | `48693248 bytes` | checksum `-997356215995052759`, output `200` | L1 clean heap direct-summary topology lower bound |
+| DSPBench Log q2 direct-summary 1M x20 | generated/indexable DSPBench-shaped stream | checked direct summary | summary-only topology / checked counterpart | `checked-epoch-stream` | 3 processes x 20 iterations | `4.56 s` total (`228.0 ms/iter`) | `4.55 s` | `4.64 s` | `39829504 bytes` | checksum `-997356215995052759`, output `200` | L1 clean checked stream counterpart, tied with heap direct-summary |
+| DSPBench Log q2 direct-summary 1M x20 | generated/indexable DSPBench-shaped stream | checked scoped direct summary | summary-only topology / checked counterpart | `checked-epoch-scoped` | 3 processes x 20 iterations | `4.59 s` total (`229.5 ms/iter`) | `4.57 s` | `4.60 s` | `39829504 bytes` | checksum `-997356215995052759`, output `200` | L1 clean checked scoped counterpart, near same-shape heap |
+| LogHub q2 direct-summary 1M x20 | generated/indexable log stream | direct summary | summary-only topology | `heap-direct-summary-only` | 3 processes x 20 iterations | `4.23 s` total (`211.5 ms/iter`) | `4.19 s` | `4.24 s` | `6504448 bytes` | checksum `-7709990302891202320`, output `163487` | L1 clean heap direct-summary topology lower bound |
+| LogHub q2 direct-summary 1M x20 | generated/indexable log stream | checked direct summary | summary-only topology / checked counterpart | `checked-epoch-stream` | 3 processes x 20 iterations | `4.39 s` total (`219.5 ms/iter`) | `4.33 s` | `4.41 s` | `6668288 bytes` | checksum `-7709990302891202320`, output `163487` | L1 clean checked stream counterpart, within about `4%` of heap direct-summary |
+| LogHub q2 direct-summary 1M x20 | generated/indexable log stream | checked scoped direct summary | summary-only topology / checked counterpart | `checked-epoch-scoped` | 3 processes x 20 iterations | `4.38 s` total (`219.0 ms/iter`) | `4.33 s` | `4.38 s` | `6701056 bytes` | checksum `-7709990302891202320`, output `163487` | L1 clean checked scoped counterpart, within about `4%` of heap direct-summary |
+| LogHub q3 direct-summary 1M x20 | generated/indexable template/session stream | direct summary | summary-only topology | `heap-direct-summary-only` | 3 processes x 20 iterations | `37.01 s` total (`1850.5 ms/iter`) | `36.83 s` | `37.16 s` | `8372224 bytes` | checksum `-1899680319541187710`, output `312151` | L1 clean heap direct-summary topology lower bound |
+| LogHub q3 direct-summary 1M x20 | generated/indexable template/session stream | checked direct summary | summary-only topology / checked counterpart | `checked-epoch-stream` | 3 processes x 20 iterations | `37.65 s` total (`1882.5 ms/iter`) | `37.15 s` | `37.71 s` | `8437760 bytes` | checksum `-1899680319541187710`, output `312151` | L1 clean checked stream counterpart; q3 remains query-CPU dominated |
+| LogHub q3 direct-summary 1M x20 | generated/indexable template/session stream | checked scoped direct summary | summary-only topology / checked counterpart | `checked-epoch-scoped` | 3 processes x 20 iterations | `38.00 s` total (`1900.0 ms/iter`) | `37.36 s` | `38.33 s` | `8388608 bytes` | checksum `-1899680319541187710`, output `312151` | L1 clean checked scoped counterpart; q3 remains query-CPU dominated |
 | GH Archive-shaped q2 retained 1M x20 | generated/preloaded stressor | retained epoch/drop-anchor | retained-object memory-management | `heap-epoch-retained-no-traverse` | 3 processes x 20 iterations | `4.62 s` total (`231.0 ms/iter`) | `4.58 s` | `4.73 s` | `147341312 bytes` | checksum `7294087528134281006`, output `163487` | L1 clean heap retained/drop-anchor control |
 | GH Archive-shaped q2 retained 1M x20 | generated/preloaded stressor | retained epoch/drop-anchor | retained-object memory-management | `checked-epoch-retained-no-traverse` | 3 processes x 20 iterations | `3.65 s` total (`182.5 ms/iter`) | `3.58 s` | `3.73 s` | `15990784 bytes` | checksum `7294087528134281006`, output `163487` | L1 clean checked stream retained win over heap retained |
 | GH Archive-shaped q2 retained 1M x20 | generated/preloaded stressor | retained epoch/drop-anchor | retained-object memory-management | `checked-scoped-epoch-retained-no-traverse` | 3 processes x 20 iterations | `3.44 s` total (`172.0 ms/iter`) | `3.43 s` | `3.47 s` | `16056320 bytes` | checksum `7294087528134281006`, output `163487` | L1 clean checked scoped retained win over heap retained: about 25.5% faster and 89% lower RSS |
@@ -414,6 +428,44 @@ for i in 1 2 3; do
   GITHUB_ARCHIVE_MODES="heap-direct-summary-only checked-epoch-stream checked-epoch-scoped" \
   GITHUB_ARCHIVE_OUTPUT_DIR=/tmp/rift-l1-gharchive-direct-summary-q2-1m-x20-b9ac4a647-r${i} \
   zsh sandbox/run_github_archive_region_matrix.sh
+done
+```
+
+DSPBench generated/indexable direct-summary counterpart command:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+for i in 1 2 3; do
+  RIFT_FINAL_CLEAN=1 \
+  DSPBENCH_BUILD=0 \
+  DSPBENCH_EVENTS=1000000 \
+  DSPBENCH_EVENTS_PER_BUCKET=25000 \
+  DSPBENCH_BENCHMARK_RUNS=20 \
+  DSPBENCH_WARMUPS=0 \
+  DSPBENCH_INPUT_MODE=generated \
+  DSPBENCH_QUERIES="fraud-q2-alert-window log-q2-window" \
+  DSPBENCH_MODES="heap-direct-summary-only checked-epoch-stream checked-epoch-scoped" \
+  DSPBENCH_OUTPUT_DIR=/tmp/rift-l1-dspbench-direct-summary-q2-1m-x20-eea5894d5-r${i} \
+  zsh sandbox/run_dspbench_region_matrix.sh
+done
+```
+
+LogHub generated/indexable direct-summary counterpart command:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+for i in 1 2 3; do
+  RIFT_FINAL_CLEAN=1 \
+  LOGHUB_BUILD=0 \
+  LOGHUB_LINES=1000000 \
+  LOGHUB_LINES_PER_BUCKET=25000 \
+  LOGHUB_BENCHMARK_RUNS=20 \
+  LOGHUB_WARMUPS=0 \
+  LOGHUB_INPUT_MODE=generated \
+  LOGHUB_QUERIES="q2-window-counts q3-template-session" \
+  LOGHUB_MODES="heap-direct-summary-only checked-epoch-stream checked-epoch-scoped" \
+  LOGHUB_OUTPUT_DIR=/tmp/rift-l1-loghub-direct-summary-q2q3-1m-x20-eea5894d5-r${i} \
+  zsh sandbox/run_loghub_region_matrix.sh
 done
 ```
 

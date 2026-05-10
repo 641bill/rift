@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-10 17:47 CEST
+Last updated: 2026-05-10 18:03 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -34,7 +34,9 @@ now includes retained, Dataflow, Yak LiveJournal, generated Common
 Crawl-shaped q1/q2, ReML Tier 1, StreamFlex direct epoch, Stancu transaction,
 SPECjbb2005-workload port, LogHub top-template, and LogHub HDFS q2 page/window
 rows, plus DSPBench Fraud/Log q2, NEXMark q3/q8/q9/q11, and GH Archive
-file-backed byte-slice q1/q2 rows. Remaining benchmark result files are still
+file-backed byte-slice q1/q2 rows. It also now includes symmetric
+direct-summary counterpart rows for GH Archive-shaped, DSPBench, and LogHub
+generated/indexable lower bounds. Remaining benchmark result files are still
 mostly L2 standard-stats evidence.
 
 Latest operator-gate status:
@@ -144,6 +146,15 @@ are `1.45 s` for checked stream and `1.45 s` for checked scoped, both around
 `7 MB` RSS, versus heap direct-summary `1.36 s`. Direct-summary is therefore a
 fast operator topology for both heap and regions, not a heap-only special case
 and not a reclaim claim.
+
+The same symmetry audit now covers DSPBench and LogHub generated/indexable
+direct-summary rows. DSPBench Fraud q2 direct-summary is heap `5.62 s` versus
+checked stream/scoped `5.67/5.68 s` over 20 x 1M iterations; DSPBench Log q2
+is heap `4.55 s` versus checked `4.56/4.59 s`. LogHub q2 is heap `4.23 s`
+versus checked `4.39/4.38 s`, and LogHub q3 is heap `37.01 s` versus checked
+`37.65/38.00 s`. These rows are classified as symmetric topology lower bounds,
+not memory-management wins, because they legally compute summaries on append
+and avoid retaining ordinary records until close.
 
 Latest post-fast-path selected sweep:
 `evidence/POST_FAST_PATH_SELECTED_SWEEP_2026_05_07.md`. This is from the
