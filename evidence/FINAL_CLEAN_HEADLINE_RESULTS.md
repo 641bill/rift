@@ -1,7 +1,7 @@
 # Final-Clean Headline Results
 
 Date: 2026-05-09
-Last updated: 2026-05-10 15:09 CEST
+Last updated: 2026-05-10 15:40 CEST
 
 Status: L1 runner support exists for the first representative binaries. One
 focused retained-epoch L1 row has been collected from clean child commit
@@ -21,6 +21,8 @@ is recorded below. Child `3598efe29` adds L1 support to the LogHub
 top-template matrix, and the real HDFS reusable top-k row is recorded below.
 Child `fe8f0d853` adds L1 support to `LogHubRegionMatrix`, and the real HDFS
 q2 page/window row is recorded below as an elapsed tie / RSS win.
+Child `95f4f4d71` adds L1 support to `DSPBenchRegionMatrix`, and the Fraud/Log
+q2 page/window rows are recorded below.
 
 ## Definition
 
@@ -52,6 +54,7 @@ Set `RIFT_FINAL_CLEAN=1` or `RIFT_EVAL_MEASUREMENT_LEVEL=L1` for:
 - `SpecJbb2005PortMatrix`
 - `LogHubTopTemplatesMatrix`
 - `LogHubRegionMatrix`
+- `DSPBenchRegionMatrix`
 
 The binaries print `RESULT ... measurement_level=L1 final_clean=1 ...` and
 avoid internal timed-section stats.
@@ -108,6 +111,14 @@ for those 20 iterations.
 | LogHub HDFS q2 1M x3 | real HDFS file-backed stream | page/window token | natural heap baseline | `heap-immix` | 3 processes x 3 iterations | `25.60 s` total (`8533 ms/iter`) | `25.58 s` | `25.75 s` | `408649728 bytes` | checksum `-4515648042024502814`, output `41` | L1 natural heap baseline; process loads 1M HDFS lines and runs q2 three times |
 | LogHub HDFS q2 1M x3 | real HDFS file-backed stream | scoped page/window token | safe rooted baseline | `safezone-improved-32k` | 3 processes x 3 iterations | `25.35 s` total (`8450 ms/iter`) | `25.33 s` | `25.39 s` | `79003648 bytes` | checksum `-4515648042024502814`, output `41` | L1 rooted scoped RSS win with near-tie elapsed |
 | LogHub HDFS q2 1M x3 | real HDFS file-backed stream | checked scoped page-token | framework API / RSS win | `rift-checked-safezone-page-token` | 3 processes x 3 iterations | `25.56 s` total (`8520 ms/iter`) | `25.56 s` | `25.58 s` | `79036416 bytes` | checksum `-4515648042024502814`, output `41` | L1 checked page/window row essentially ties heap elapsed and cuts RSS by about 81%; L2 row remains the GC interpretation source |
+| DSPBench Fraud q2 1M x5 | real DSPBench credit-card replay | page/window token | natural heap baseline | `heap-immix` | 3 processes x 5 iterations | `4.39 s` total (`878 ms/iter`) | `4.28 s` | `4.39 s` | `358318080 bytes` | checksum `2645894572926148009`, output `594182` | L1 natural heap baseline over public DSPBench sample replay |
+| DSPBench Fraud q2 1M x5 | real DSPBench credit-card replay | scoped page/window token | safe rooted baseline | `safezone-improved-32k` | 3 processes x 5 iterations | `4.47 s` total (`894 ms/iter`) | `4.36 s` | `4.54 s` | `63455232 bytes` | checksum `2645894572926148009`, output `594182` | L1 rooted scoped RSS win but elapsed loss versus heap |
+| DSPBench Fraud q2 1M x5 | real DSPBench credit-card replay | trusted streaming page/window token | unsafe/trusted lower bound | `rift-trusted-streaming` | 3 processes x 5 iterations | `4.18 s` total (`836 ms/iter`) | `4.07 s` | `4.18 s` | `63389696 bytes` | checksum `2645894572926148009`, output `594182` | L1 trusted lower-bound elapsed/RSS win |
+| DSPBench Fraud q2 1M x5 | real DSPBench credit-card replay | checked scoped page-token | framework API / RSS win | `rift-checked-safezone-page-token` | 3 processes x 5 iterations | `4.44 s` total (`888 ms/iter`) | `4.34 s` | `4.46 s` | `59539456 bytes` | checksum `2645894572926148009`, output `594182` | L1 checked page/window row cuts RSS by about 83% but is slightly slower than heap; L2 remains the GC interpretation source |
+| DSPBench Log q2 1M x5 | real DSPBench common-log replay | page/window token | natural heap baseline | `heap-immix` | 3 processes x 5 iterations | `8.89 s` total (`1778 ms/iter`) | `8.66 s` | `8.91 s` | `307593216 bytes` | checksum `-4720769113503374536`, output `179` | L1 natural heap baseline over public DSPBench sample replay |
+| DSPBench Log q2 1M x5 | real DSPBench common-log replay | scoped page/window token | safe rooted baseline | `safezone-improved-32k` | 3 processes x 5 iterations | `8.91 s` total (`1782 ms/iter`) | `8.74 s` | `8.97 s` | `47939584 bytes` | checksum `-4720769113503374536`, output `179` | L1 rooted scoped RSS win with near-tie elapsed |
+| DSPBench Log q2 1M x5 | real DSPBench common-log replay | trusted streaming page/window token | unsafe/trusted lower bound | `rift-trusted-streaming` | 3 processes x 5 iterations | `8.51 s` total (`1702 ms/iter`) | `8.39 s` | `8.73 s` | `47792128 bytes` | checksum `-4720769113503374536`, output `179` | L1 trusted lower-bound elapsed/RSS win |
+| DSPBench Log q2 1M x5 | real DSPBench common-log replay | checked scoped page-token | framework API / RSS win | `rift-checked-safezone-page-token` | 3 processes x 5 iterations | `8.79 s` total (`1758 ms/iter`) | `8.66 s` | `8.97 s` | `47611904 bytes` | checksum `-4720769113503374536`, output `179` | L1 checked page/window row is about 1% faster than heap and cuts RSS by about 85%; L2 remains the GC-tail interpretation source |
 | Yak LiveJournal 50M x5 | real file-backed SNAP LiveJournal graph replay | heap linked epoch | natural heap baseline | `gc-heap` | 3 processes x 5 iterations | `18.79 s` total | `18.76 s` | `18.89 s` | `2772320256 bytes` | checksum `-6048644965681588176` | L1 clean file-backed total-process heap row; includes one gzipped input preload plus five 50M replays per process |
 | Yak LiveJournal 50M x5 | real file-backed SNAP LiveJournal graph replay | scoped region epoch | safe rooted baseline | `region-scoped-rooted` | 3 processes x 5 iterations | `16.93 s` total | `16.91 s` | `16.94 s` | `611860480 bytes` | checksum `-6048644965681588176` | L1 clean rooted scoped-region row; same input/preload protocol |
 | Yak LiveJournal 50M x5 | real file-backed SNAP LiveJournal graph replay | `RiftRegion.epoch` checked scoped | framework API win | `checked-epoch-scoped` | 3 processes x 5 iterations | `16.12 s` total | `16.03 s` | `16.16 s` | `611893248 bytes` | checksum `-6048644965681588176` | L1 clean real-input checked epoch win; total process row still includes input preload |

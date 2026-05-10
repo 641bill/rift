@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-10 15:09 CEST
+Last updated: 2026-05-10 15:40 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -10,7 +10,7 @@ Active implementation branch for this update:
 `feature/rift`
 
 Latest implementation checkpoint:
-`fe8f0d853` (`Add final-clean LogHub region support`)
+`95f4f4d71` (`Add final-clean DSPBench support`)
 
 Latest parent evidence checkpoint:
 current parent commit (`Record SPECjbb final-clean rows`)
@@ -53,7 +53,7 @@ now implemented for `RetainedEpochReclaimMatrix`, `YakRegionMatrix`,
 `DataflowRegionMatrix`, `CommonCrawlWetMatrix`, `ReMLRegionMatrix`,
 `StreamFlexRegionMatrix`, `StancuRegionMatrix`,
 `SpecJbb2005PortMatrix`, `LogHubTopTemplatesMatrix`, and
-`LogHubRegionMatrix`.
+`LogHubRegionMatrix`, and `DSPBenchRegionMatrix`.
 Set `RIFT_FINAL_CLEAN=1` or `RIFT_EVAL_MEASUREMENT_LEVEL=L1`; the binary skips
 internal timing/GC/region stat reads and prints only minimal checksum/output
 metadata. A tiny retained-epoch L1 smoke matched heap and checked checksums.
@@ -122,6 +122,14 @@ win: checked scoped page-token is `25.56 s` and about `79 MB` RSS versus heap
 `25.60 s` and about `409 MB` RSS. The L2 row remains the source for GC
 interpretation: checked scoped page-token is `7871.856 ms` versus heap
 `8227.369 ms`, removing heap's `92.659 ms` median timed GC.
+Child `95f4f4d71` adds L1 plumbing to `DSPBenchRegionMatrix`. Fraud/Log q2
+were rerun as 1M real DSPBench sample replay x5 q2 iterations per process,
+three external repeats. Fraud q2 is a checked RSS win but not a checked elapsed
+win: checked scoped page-token is `4.44 s` and about `59.5 MB` RSS versus heap
+`4.39 s` and about `358 MB`; trusted Streaming is the lower-bound elapsed
+winner at `4.18 s`. Log q2 is a modest checked elapsed/RSS win: checked scoped
+page-token is `8.79 s` and about `47.6 MB` RSS versus heap `8.89 s` and about
+`308 MB`; trusted Streaming is still fastest at `8.51 s`.
 
 Latest ReML/MLKit PLDI-style table:
 `evidence/REML_MLKIT_PLDI_TABLE.md` is now the dedicated thesis-facing table.
