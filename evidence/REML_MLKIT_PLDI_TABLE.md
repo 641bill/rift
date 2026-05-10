@@ -1,7 +1,7 @@
 # ReML / MLKit PLDI-Style Table
 
 Date: 2026-05-09
-Last updated: 2026-05-10 01:04 CEST
+Last updated: 2026-05-11 00:36 CEST
 
 Status: dedicated PLDI-style table artifact. Paper rows are transcribed from
 Elsman 2023 Figure 9 and are **paper-reported, not rerun locally**. Local L1
@@ -32,7 +32,7 @@ the same machine. Until then, compare ratios and axes:
 | Layer | Status | Claim boundary |
 |---|---|---|
 | paper-reported | Figure 9 data transcribed below | literature anchor only |
-| exact artifact rerun | source provenance partial; local `mlkit`/`mlton` timing not run | required for raw wall-clock comparison |
+| exact artifact rerun | source provenance partial; local `mlkit`/`mlton` not installed and Docker daemon unavailable in the latest check | required for raw wall-clock comparison |
 | Scala Native ports | Tier 1 L1 final-clean rows for `fib37`, `tak`, `mandel`, `msort`, `msort-r`, `life`, `fft`, `ratio` | valid local Rift-vs-Scala-Native ratios |
 | safety probes | ReML-style polymorphic/generic heap-retention probes active | design/safety evidence |
 
@@ -105,31 +105,32 @@ is pure region inference/no tracing GC. `MLton` is the optimizing SML baseline.
 ## Paper-Style Combined Snapshot
 
 This is the thesis table shape: paper-reported columns on the left, local
-Scala Native port ratios on the right when a port exists. The local columns
-below remain the earlier L2 standard-stats snapshot until they are fully
-rewritten from the L1 rows above; use the L1 table above for headline timing.
+Scala Native port ratios on the right when a port exists. The local time and
+RSS columns below use L1 final-clean rows. L2 GC numbers remain interpretation
+evidence in `evidence/REML_COMPARISON_MATRIX.md`; they are not headline
+timing.
 
-| Program | Source/local status | Paper rg s | Paper r s | Paper MLton s | Paper rg RSS MB | Paper rg GC # | Local gc-heap ms | Best local checked mode | Best local checked ms | Local speedup | Local RSS ratio | Local GC change | Evidence class |
+| Program | Source/local status | Paper rg s | Paper r s | Paper MLton s | Paper rg RSS MB | Paper rg GC # | Local gc-heap L1 s | Best local checked/rooted mode | Best local L1 s | Local speedup | Local RSS ratio | Local GC interpretation | Evidence class |
 |---|---|---:|---:|---:|---:|---:|---:|---|---:|---:|---:|---|---|
 | DLX | source candidate found; no SN port | 0.14 | 0.12 | 0.40 | 8 | 3 | -- | -- | -- | -- | -- | -- | paper-reported |
 | b-hut | source candidate found; Tier 2 planned | 0.67 | 0.63 | 0.14 | 5 | 471 | -- | -- | -- | -- | -- | -- | paper-reported |
-| fft | Tier 1 SN port | 0.64 | 0.51 | 0.26 | 69 | 10 | 0.823 | `checked-region-scoped` | 0.764 | 1.08x | 0.67x | `0.000 -> 0.000 ms` | SN port |
-| fib37 | Tier 1 SN port; MLKit candidates are fib35 | 0.98 | 0.21 | 0.85 | 3 | 1 | 132.735 | `checked-region-stream` | 126.017 | 1.05x | 1.00x | `0.000 -> 0.000 ms` | SN port |
+| fft | Tier 1 SN port; too short locally | 0.64 | 0.51 | 0.26 | 69 | 10 | 0.02 | -- | -- | -- | -- | L2 reports no timed GC | SN port timing-control |
+| fib37 | Tier 1 SN port; MLKit candidates are fib35 | 0.98 | 0.21 | 0.85 | 3 | 1 | 2.40 | `checked-region-stream` | 2.41 | 1.00x | 1.00x | L2 reports no timed GC | SN port compute/control |
 | kbc | source/config still open | 0.21 | 0.19 | 0.07 | 10 | 10 | -- | -- | -- | -- | -- | -- | paper-reported |
 | lexgen | source/config still open | 0.74 | 0.62 | 0.43 | 15 | 109 | -- | -- | -- | -- | -- | -- | paper-reported |
-| life | Tier 1 SN port | 0.44 | 0.43 | 0.43 | 3 | 58 | 36.684 | `checked-region-scoped` | 35.563 | 1.03x | 1.00x | `0.000 -> 0.000 ms` | SN port |
+| life | Tier 1 SN port | 0.44 | 0.43 | 0.43 | 3 | 58 | 0.69 | `checked-region-stream` / `region-scoped-rooted` | 0.68 | 1.01x | 1.00x | L2 reports no timed GC | SN port compute/control |
 | logic | source candidate found; Tier 2 planned | 0.63 | 0.43 | 0.13 | 4 | 1843 | -- | -- | -- | -- | -- | -- | paper-reported |
-| mandel | Tier 1 SN port; config differs | 0.53 | 0.38 | 0.31 | 3 | 1 | 3.462 | `checked-region-stream` | 3.297 | 1.05x | 1.00x | `0.000 -> 0.000 ms` | SN port |
+| mandel | Tier 1 SN port; config differs and is too short locally | 0.53 | 0.38 | 0.31 | 3 | 1 | 0.06 | -- | -- | -- | -- | L2 reports no timed GC | SN port timing-control |
 | mlyacc | source/config still open | 0.36 | 0.30 | 0.33 | 18 | 29 | -- | -- | -- | -- | -- | -- | paper-reported |
 | mpuz | source candidate found; Tier 2 planned | 0.68 | 0.46 | 0.27 | 3 | 2 | -- | -- | -- | -- | -- | -- | paper-reported |
-| msort-r | Tier 1 SN port | 0.69 | 0.47 | 0.93 | 116 | 16 | 126.163 | `checked-region-stream` | 104.929 | 1.20x | 0.26x | `27.280 -> 6.005 ms` | SN port |
-| msort | Tier 1 SN port | 0.89 | 0.54 | 0.93 | 131 | 26 | 124.983 | `checked-region-stream` | 104.358 | 1.20x | 0.49x | `27.180 -> 6.063 ms` | SN port |
+| msort-r | Tier 1 SN port | 0.69 | 0.47 | 0.93 | 116 | 16 | 2.25 | `checked-region-stream` | 2.05 | 1.10x | 0.26x | L2 heap GC `27.280 ms` to checked `6.005 ms` | SN port L1 |
+| msort | Tier 1 SN port | 0.89 | 0.54 | 0.93 | 131 | 26 | 2.46 | `checked-region-stream` | 2.06 | 1.19x | 0.48x | L2 heap GC `27.180 ms` to checked `6.063 ms` | SN port L1 |
 | nucleic | source candidate found; Tier 2 planned | 0.34 | 0.33 | 0.17 | 5 | 645 | -- | -- | -- | -- | -- | -- | paper-reported |
 | prof | source candidate found; no SN port | 0.49 | 0.38 | 0.42 | 4 | 263 | -- | -- | -- | -- | -- | -- | paper-reported |
-| ratio | Tier 1 SN port | 1.71 | 1.33 | 0.48 | 16 | 14 | 51.302 | `checked-region-scoped` | 48.929 | 1.05x | 0.36x | `3.191 -> 0.000 ms` | SN port |
+| ratio | Tier 1 SN port | 1.71 | 1.33 | 0.48 | 16 | 14 | 0.93 | `checked-region-scoped` | 0.91 | 1.02x | 0.20x | L2 heap GC `3.191 ms` to checked `0 ms` | SN port L1 |
 | ray | source candidate found; Tier 2 planned | 0.69 | 0.64 | 0.25 | 14 | 12 | -- | -- | -- | -- | -- | -- | paper-reported |
 | simple | source candidate found; no SN port | 0.19 | 0.13 | 0.28 | 5 | 4 | -- | -- | -- | -- | -- | -- | paper-reported |
-| tak | Tier 1 SN port; config differs | 2.09 | 0.55 | 2.12 | 3 | 1 | 0.188 | `checked-region-stream` | 0.180 | 1.04x | 1.00x | `0.000 -> 0.000 ms` | SN port |
+| tak | Tier 1 SN port; config differs and is too short locally | 2.09 | 0.55 | 2.12 | 3 | 1 | 0.00 | -- | -- | -- | -- | L2 reports no timed GC | SN port timing-control |
 | tsp | source candidate found; Tier 2 planned | 0.14 | 0.11 | 0.14 | 11 | 7 | -- | -- | -- | -- | -- | -- | paper-reported |
 | vliw | source/config still open | 0.78 | 0.56 | 0.30 | 14 | 15 | -- | -- | -- | -- | -- | -- | paper-reported |
 | zebra | source/config still open | 1.58 | 1.15 | 0.45 | 3 | 1066 | -- | -- | -- | -- | -- | -- | paper-reported |
@@ -142,9 +143,10 @@ rewritten from the L1 rows above; use the L1 table above for headline timing.
 - `ratio` is a modest elapsed win but a strong RSS row in L1.
 - `fib37` and `life` are near-tie compute/control rows; `tak`, `fft`, and
   `mandel` are too short at the current configuration for headline timing.
-- The combined snapshot above still includes older L2 GC/RSS interpretation
-  columns. Use the L1 section for final elapsed/RSS claims, and use L2 only to
-  explain GC behavior.
-- Exact MLKit/ReML artifact reruns remain open; use the public-source
-  provenance and runbook in `docs/REML_ARTIFACT_RUNBOOK.md` before making any
-  raw cross-language timing claim.
+- The combined snapshot now uses L1 final-clean local timing/RSS for the local
+  Scala Native ports. Use L2 only to explain GC behavior.
+- Exact MLKit/ReML artifact reruns remain open. The latest local check found no
+  `mlkit` or `mlton` executable, and Docker was installed but the daemon was not
+  available, so exact timing is provenance/toolchain-blocked for now. Use
+  `docs/REML_ARTIFACT_RUNBOOK.md` before making any raw cross-language timing
+  claim.

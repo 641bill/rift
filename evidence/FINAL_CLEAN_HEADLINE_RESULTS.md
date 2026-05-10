@@ -1,7 +1,7 @@
 # Final-Clean Headline Results
 
 Date: 2026-05-09
-Last updated: 2026-05-10 23:41 CEST
+Last updated: 2026-05-11 00:36 CEST
 
 Status: L1 runner support exists for the first representative binaries. One
 focused retained-epoch L1 row has been collected from clean child commit
@@ -34,6 +34,10 @@ Child `59acadda6` reduces `EpochTopKByKey` hot-path overhead; refreshed
 LogHub HDFS top-k L1 rows are recorded below.
 Child `bcbfe80f5` adds Yak topword same-shape heap top-k and reusable
 `EpochTopKByKey` rows; the L1 10M x20 topword rows are recorded below.
+Child `0773d4c17` is the clean implementation checkpoint for the retained-row
+gap fill in this update: DSPBench Fraud retained q2 and LogHub q2/q3 retained
+now have L1 final-clean rows with valid `/usr/bin/time -l` RSS. The same
+checkpoint also adds a larger real-input LogHub HDFS top-k row at 5M lines x5.
 
 ## Definition
 
@@ -85,6 +89,17 @@ avoid internal timed-section stats.
 | Stancu/SPECjbb-style | transaction rows | transaction-boundary region axis |
 | retained top-k API | LogHub HDFS top templates; Yak topword | reusable `EpochTopKByKey` evidence |
 
+## L1/L2 Completeness Audit
+
+| Representative group | L1 headline status | L2 interpretation status | Action |
+|---|---|---|---|
+| retained-object reclaim | focused, GH Archive-shaped q2, DSPBench Fraud q2, and LogHub q2/q3 now have L1 rows | L2 rows exist in retained matrix docs | complete for current report |
+| direct epoch | Yak LiveJournal, Dataflow, StreamFlex, Stancu, SPECjbb-style rows have L1 rows | L2 rows exist in per-matrix docs/report | complete for current report |
+| page/window token | Common Crawl-shaped, LogHub HDFS q2, DSPBench Fraud/Log q2, GH Archive q1/q2 have L1 rows | L2 rows exist for GC/RSS interpretation | complete for current report |
+| generated methodology | NEXMark q3/q8/q9/q11 have L1 rows | L2 rows remain the GC source | complete for selected rows |
+| ReML/MLKit ports | Tier 1 local ports have L1 rows | L2 rows remain GC/RSS interpretation | Tier 1 table cleanup done separately |
+| real-input top-k | LogHub HDFS 1M x20 and 5M x5 have L1 rows | 5M L2 row added for GC interpretation | continue larger real-input search after report update |
+
 ## L1 Headline Rows
 
 Fill this table only from final-clean runs. Rows below use external
@@ -116,6 +131,15 @@ for those 20 iterations.
 | GH Archive-shaped q2 retained 1M x20 | generated/preloaded stressor | retained epoch/drop-anchor | retained-object memory-management | `heap-epoch-retained-no-traverse` | 3 processes x 20 iterations | `4.62 s` total (`231.0 ms/iter`) | `4.58 s` | `4.73 s` | `147341312 bytes` | checksum `7294087528134281006`, output `163487` | L1 clean heap retained/drop-anchor control |
 | GH Archive-shaped q2 retained 1M x20 | generated/preloaded stressor | retained epoch/drop-anchor | retained-object memory-management | `checked-epoch-retained-no-traverse` | 3 processes x 20 iterations | `3.65 s` total (`182.5 ms/iter`) | `3.58 s` | `3.73 s` | `15990784 bytes` | checksum `7294087528134281006`, output `163487` | L1 clean checked stream retained win over heap retained |
 | GH Archive-shaped q2 retained 1M x20 | generated/preloaded stressor | retained epoch/drop-anchor | retained-object memory-management | `checked-scoped-epoch-retained-no-traverse` | 3 processes x 20 iterations | `3.44 s` total (`172.0 ms/iter`) | `3.43 s` | `3.47 s` | `16056320 bytes` | checksum `7294087528134281006`, output `163487` | L1 clean checked scoped retained win over heap retained: about 25.5% faster and 89% lower RSS |
+| DSPBench Fraud q2 retained 1M x20 | generated/indexable DSPBench-shaped stream | retained epoch/drop-anchor | retained-object memory-management | `heap-epoch-retained-no-traverse` | 3 processes x 20 iterations | `8.40 s` total (`420.0 ms/iter`) | `8.38 s` | `8.46 s` | `206405632 bytes` | checksum `-5765375221524988491`, output `613295` | L1 clean heap retained/drop-anchor control |
+| DSPBench Fraud q2 retained 1M x20 | generated/indexable DSPBench-shaped stream | retained epoch/drop-anchor | retained-object memory-management | `checked-epoch-retained-no-traverse` | 3 processes x 20 iterations | `7.92 s` total (`396.0 ms/iter`) | `7.91 s` | `7.98 s` | `46792704 bytes` | checksum `-5765375221524988491`, output `613295` | L1 clean checked stream retained win over heap retained |
+| DSPBench Fraud q2 retained 1M x20 | generated/indexable DSPBench-shaped stream | retained epoch/drop-anchor | retained-object memory-management | `checked-scoped-epoch-retained-no-traverse` | 3 processes x 20 iterations | `7.90 s` total (`395.0 ms/iter`) | `7.74 s` | `7.97 s` | `46809088 bytes` | checksum `-5765375221524988491`, output `613295` | L1 clean checked scoped retained win over heap retained with much lower RSS |
+| LogHub q2 retained 1M x20 | generated/indexable log stream | retained epoch/drop-anchor | retained-object memory-management | `heap-epoch-retained-no-traverse` | 3 processes x 20 iterations | `10.79 s` total (`539.5 ms/iter`) | `10.76 s` | `11.14 s` | `206340096 bytes` | checksum `-7709990302891202320`, output `163487` | L1 clean heap retained/drop-anchor control |
+| LogHub q2 retained 1M x20 | generated/indexable log stream | retained epoch/drop-anchor | retained-object memory-management | `checked-epoch-retained-no-traverse` | 3 processes x 20 iterations | `8.57 s` total (`428.5 ms/iter`) | `8.36 s` | `8.67 s` | `21807104 bytes` | checksum `-7709990302891202320`, output `163487` | L1 clean checked stream retained win over heap retained |
+| LogHub q2 retained 1M x20 | generated/indexable log stream | retained epoch/drop-anchor | retained-object memory-management | `checked-scoped-epoch-retained-no-traverse` | 3 processes x 20 iterations | `8.12 s` total (`406.0 ms/iter`) | `7.99 s` | `8.25 s` | `21905408 bytes` | checksum `-7709990302891202320`, output `163487` | L1 clean checked scoped retained win over heap retained |
+| LogHub q3 retained 1M x20 | generated/indexable template/session stream | retained epoch/drop-anchor | retained-object memory-management | `heap-epoch-retained-no-traverse` | 3 processes x 20 iterations | `47.55 s` total (`2377.5 ms/iter`) | `47.24 s` | `47.74 s` | `813514752 bytes` | checksum `-1899680319541187710`, output `312151` | L1 clean heap retained/drop-anchor control |
+| LogHub q3 retained 1M x20 | generated/indexable template/session stream | retained epoch/drop-anchor | retained-object memory-management | `checked-epoch-retained-no-traverse` | 3 processes x 20 iterations | `45.76 s` total (`2288.0 ms/iter`) | `45.57 s` | `46.09 s` | `29523968 bytes` | checksum `-1899680319541187710`, output `312151` | L1 clean checked stream retained modest elapsed win and large RSS win |
+| LogHub q3 retained 1M x20 | generated/indexable template/session stream | retained epoch/drop-anchor | retained-object memory-management | `checked-scoped-epoch-retained-no-traverse` | 3 processes x 20 iterations | `60.29 s` total (`3014.5 ms/iter`) | `59.37 s` | `60.80 s` | `29671424 bytes` | checksum `-1899680319541187710`, output `312151` | L1 checked scoped retained is slower but still a large RSS win; use checked stream as the safe retained row for q3 |
 | Dataflow SELECT 1M x20 | generated methodology | direct epoch / scoped region | framework API win | `gc-heap` | 3 processes x 20 iterations | `0.62 s` total (`31.0 ms/iter`) | `0.61 s` | `0.63 s` | `39288832 bytes` | checksum `131080080920` | L1 clean natural heap baseline |
 | Dataflow SELECT 1M x20 | generated methodology | direct epoch / scoped region | safe rooted baseline | `region-scoped-rooted` | 3 processes x 20 iterations | `0.46 s` total (`23.0 ms/iter`) | `0.46 s` | `0.48 s` | `7536640 bytes` | checksum `131080080920` | L1 clean rooted scoped-region baseline |
 | Dataflow SELECT 1M x20 | generated methodology | `RiftRegion.epoch` checked scoped | framework API win | `checked-epoch-scoped` | 3 processes x 20 iterations | `0.38 s` total (`19.0 ms/iter`) | `0.38 s` | `0.39 s` | `7553024 bytes` | checksum `131080080920` | L1 clean checked epoch win over heap and rooted scoped baseline |
@@ -146,6 +170,8 @@ for those 20 iterations.
 | LogHub top templates HDFS 1M x20 | real HDFS file-backed/preloaded replay | retained epoch/drop-anchor | retained-object memory-management | `heap-retained-drop-anchor` | 3 processes x 20 iterations | `5.52 s` total (`276.0 ms/iter`) | `5.50 s` | `5.52 s` | `205406208 bytes` | checksum `4142347521733569598`, output `1280` | L1 retained heap/drop-anchor control; process includes one HDFS input load plus 20 replays |
 | LogHub top templates HDFS 1M x20 | real HDFS file-backed/preloaded replay | benchmark-local checked retained epoch | retained-object memory-management / lower bound | `checked-scoped-epoch-retained-no-traverse` | 3 processes x 20 iterations | `4.80 s` total (`240.0 ms/iter`) | `4.73 s` | `4.81 s` | `28262400 bytes` | checksum `4142347521733569598`, output `1280` | L1 checked retained lower-bound win over heap retained |
 | LogHub top templates HDFS 1M x20 | real HDFS file-backed/preloaded replay | reusable checked `EpochTopKByKey` | framework API win | `checked-scoped-epoch-topk-retained-no-traverse` | 3 processes x 20 iterations | `4.88 s` total (`244.0 ms/iter`) | `4.87 s` | `4.94 s` | `28098560 bytes` | checksum `4142347521733569598`, output `1280` | L1 reusable checked top-k win over heap retained with much lower RSS; API overhead now about `1.7%` versus benchmark-local checked row |
+| LogHub top templates HDFS 5M x5 | real HDFS file-backed/preloaded replay | retained epoch/drop-anchor | retained-object memory-management | `heap-retained-drop-anchor` | 3 processes x 5 iterations | `19.04 s` total (`3808 ms/iter`) | `18.59 s` | `19.06 s` | `503775232 bytes` | checksum `-4760084277314313220`, output `6400` | L1 larger real-input retained heap/drop-anchor control; process includes one HDFS input load plus five 5M-line replays |
+| LogHub top templates HDFS 5M x5 | real HDFS file-backed/preloaded replay | reusable checked `EpochTopKByKey` | framework API win | `checked-scoped-epoch-topk-retained-no-traverse` | 3 processes x 5 iterations | `18.26 s` total (`3652 ms/iter`) | `18.23 s` | `18.27 s` | `92209152 bytes` | checksum `-4760084277314313220`, output `6400` | L1 larger real-input reusable checked top-k win: `4.1%` faster than retained heap and about `82%` lower RSS; matching L2 row is heap `463.633 ms`, GC `62.421 ms` versus checked `402.916 ms`, GC `0 ms` |
 | LogHub HDFS q2 1M x3 | real HDFS file-backed stream | page/window token | natural heap baseline | `heap-immix` | 3 processes x 3 iterations | `25.60 s` total (`8533 ms/iter`) | `25.58 s` | `25.75 s` | `408649728 bytes` | checksum `-4515648042024502814`, output `41` | L1 natural heap baseline; process loads 1M HDFS lines and runs q2 three times |
 | LogHub HDFS q2 1M x3 | real HDFS file-backed stream | scoped page/window token | safe rooted baseline | `safezone-improved-32k` | 3 processes x 3 iterations | `25.35 s` total (`8450 ms/iter`) | `25.33 s` | `25.39 s` | `79003648 bytes` | checksum `-4515648042024502814`, output `41` | L1 rooted scoped RSS win with near-tie elapsed |
 | LogHub HDFS q2 1M x3 | real HDFS file-backed stream | checked scoped page-token | framework API / RSS win | `rift-checked-safezone-page-token` | 3 processes x 3 iterations | `25.56 s` total (`8520 ms/iter`) | `25.56 s` | `25.58 s` | `79036416 bytes` | checksum `-4515648042024502814`, output `41` | L1 checked page/window row essentially ties heap elapsed and cuts RSS by about 81%; L2 row remains the GC interpretation source |
@@ -382,6 +408,41 @@ for i in 1 2 3; do
 done
 ```
 
+LogHub real HDFS top-template larger-scale command:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+for i in 1 2 3; do
+  RIFT_FINAL_CLEAN=1 \
+  LOGHUB_TOP_BUILD=0 \
+  LOGHUB_TOP_INPUT_MODE=file-backed \
+  LOGHUB_TOP_INPUT=/Users/siyaoliu/rift/cache/benchmark-data/loghub/HDFS_1/HDFS.log \
+  LOGHUB_TOP_LINES=5000000 \
+  LOGHUB_TOP_LINES_PER_EPOCH=25000 \
+  LOGHUB_TOP_BENCHMARK_RUNS=5 \
+  LOGHUB_TOP_WARMUPS=0 \
+  LOGHUB_TOP_MODES="heap-retained-drop-anchor checked-scoped-epoch-topk-retained-no-traverse" \
+  LOGHUB_TOP_OUTPUT_DIR=/tmp/rift-l1-loghub-topk-hdfs-5m-x5-0773d4c17-r${i} \
+  zsh sandbox/run_loghub_top_templates_matrix.sh
+done
+```
+
+Matching L2 interpretation command:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+LOGHUB_TOP_BUILD=0 \
+LOGHUB_TOP_INPUT_MODE=file-backed \
+LOGHUB_TOP_INPUT=/Users/siyaoliu/rift/cache/benchmark-data/loghub/HDFS_1/HDFS.log \
+LOGHUB_TOP_LINES=5000000 \
+LOGHUB_TOP_LINES_PER_EPOCH=25000 \
+LOGHUB_TOP_BENCHMARK_RUNS=3 \
+LOGHUB_TOP_WARMUPS=1 \
+LOGHUB_TOP_MODES="heap-retained-drop-anchor checked-scoped-epoch-topk-retained-no-traverse" \
+LOGHUB_TOP_OUTPUT_DIR=/tmp/rift-l2-loghub-topk-hdfs-5m-0773d4c17 \
+zsh sandbox/run_loghub_top_templates_matrix.sh
+```
+
 GH Archive two-hour byte-slice command:
 
 ```sh
@@ -438,6 +499,44 @@ for i in 1 2 3; do
   GITHUB_ARCHIVE_MODES="heap-direct-summary-only checked-epoch-stream checked-epoch-scoped" \
   GITHUB_ARCHIVE_OUTPUT_DIR=/tmp/rift-l1-gharchive-direct-summary-q2-1m-x20-b9ac4a647-r${i} \
   zsh sandbox/run_github_archive_region_matrix.sh
+done
+```
+
+DSPBench generated/indexable retained q2 command:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+for i in 1 2 3; do
+  RIFT_FINAL_CLEAN=1 \
+  DSPBENCH_BUILD=0 \
+  DSPBENCH_EVENTS=1000000 \
+  DSPBENCH_EVENTS_PER_BUCKET=25000 \
+  DSPBENCH_BENCHMARK_RUNS=20 \
+  DSPBENCH_WARMUPS=0 \
+  DSPBENCH_INPUT_MODE=generated \
+  DSPBENCH_QUERIES="fraud-q2-alert-window" \
+  DSPBENCH_MODES="heap-epoch-retained-no-traverse checked-epoch-retained-no-traverse checked-scoped-epoch-retained-no-traverse" \
+  DSPBENCH_OUTPUT_DIR=/tmp/rift-l1-dspbench-retained-fraud-q2-1m-x20-0773d4c17-r${i} \
+  zsh sandbox/run_dspbench_region_matrix.sh
+done
+```
+
+LogHub generated/indexable retained q2/q3 command:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+for i in 1 2 3; do
+  RIFT_FINAL_CLEAN=1 \
+  LOGHUB_BUILD=0 \
+  LOGHUB_LINES=1000000 \
+  LOGHUB_LINES_PER_BUCKET=25000 \
+  LOGHUB_BENCHMARK_RUNS=20 \
+  LOGHUB_WARMUPS=0 \
+  LOGHUB_INPUT_MODE=generated \
+  LOGHUB_QUERIES="q2-window-counts q3-template-session" \
+  LOGHUB_MODES="heap-epoch-retained-no-traverse checked-epoch-retained-no-traverse checked-scoped-epoch-retained-no-traverse" \
+  LOGHUB_OUTPUT_DIR=/tmp/rift-l1-loghub-retained-q2q3-1m-x20-0773d4c17-r${i} \
+  zsh sandbox/run_loghub_region_matrix.sh
 done
 ```
 

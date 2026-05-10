@@ -1,12 +1,13 @@
 # Evaluation Classified Summary
 
 Date: 2026-05-09
-Last updated: 2026-05-10 23:41 CEST
+Last updated: 2026-05-11 00:36 CEST
 
 Status: thesis-facing classified summary built from committed evidence.
 Baseline commits for clean rows: parent `1cc3b2c`, child `13a3df1c7`.
 Reusable top-k API rows include the increment hot-path follow-up after child
-commit `bc9fd5979` and the Yak topword same-shape/L1 follow-up.
+commit `bc9fd5979`, the Yak topword same-shape/L1 follow-up, and the larger
+real HDFS 5M top-template scale-up from child `0773d4c17`.
 
 ## How To Read This Table
 
@@ -39,9 +40,9 @@ reference, but the retained heap objects still remain for GC tracing/reclaim.
 |---|---|---|---|---|---:|---:|---:|---|
 | Focused retained epoch 1M | synthetic focused matrix | retained-object drop-anchor | `heap-retained-drop-anchor` `36.233 ms`, GC `10.109 ms`, RSS `21.3 MB` | `checked-scoped-epoch-retained-no-traverse` `24.274 ms`, GC `0 ms`, RSS `4.9 MB` | `33.0%` faster | `-10.109 ms` | `-77%` | Clean retained-object memory-management win. |
 | GH Archive-shaped retained q2 | generated/preloaded stressor | retained-object drop-anchor / L1 final-clean | L1 retained heap `4.62 s`, RSS `147 MB`; L2 retained heap `257.377 ms`, GC `77.208 ms` | L1 checked scoped retained `3.44 s`, RSS `16 MB`; L2 checked scoped retained `186.868 ms`, GC `0 ms` | L1 `25.5%` faster; L2 `27.4%` faster | L2 `-77.208 ms` | L1 about `-89%` | Strong retained memory-management and RSS win; generated/preloaded, not real-input proof. Summary-only L1 lower bound is `1.28 s`. |
-| LogHub-shaped retained q2 | generated/indexable log stream | retained-object drop-anchor | retained heap `469.079 ms`, GC `64.060 ms`, RSS `813 MB` | checked scoped retained `402.821 ms`, GC `0 ms`, RSS `694 MB` | `14.1%` faster | `-64.060 ms` | about `-15%` | Retained throughput/GC win with lower RSS. |
-| LogHub-shaped retained q3 | generated/indexable template/session stream | retained-object drop-anchor | retained heap `2244.266 ms`, GC `143.539 ms`, RSS `2291 MB` | checked scoped retained `2106.541 ms`, GC `0 ms`, RSS `2312 MB` | `6.1%` faster | `-143.539 ms` | about `+1%` | Mixed retained win: elapsed/GC improves, RSS does not. |
-| DSPBench Fraud retained q2 | generated/indexable DSPBench-shaped stream | retained-object drop-anchor | retained heap `392.743 ms`, GC `35.631 ms`, RSS `576 MB` | checked scoped retained `370.746 ms`, GC `0 ms`, RSS `583 MB` | `5.6%` faster | `-35.631 ms` | about `+1%` | Modest retained throughput/GC win; not an RSS win. |
+| LogHub-shaped retained q2 | generated/indexable log stream | retained-object drop-anchor / L1 final-clean | L1 retained heap `10.79 s`, RSS `206 MB`; L2 retained heap `469.079 ms`, GC `64.060 ms` | L1 checked scoped retained `8.12 s`, RSS `22 MB`; L2 checked scoped retained `402.821 ms`, GC `0 ms` | L1 `24.7%` faster; L2 `14.1%` faster | L2 `-64.060 ms` | L1 about `-89%` | Strong retained throughput/GC/RSS win on generated/indexable log stream. |
+| LogHub-shaped retained q3 | generated/indexable template/session stream | retained-object drop-anchor / L1 final-clean | L1 retained heap `47.55 s`, RSS `814 MB`; L2 retained heap `2244.266 ms`, GC `143.539 ms` | L1 checked stream retained `45.76 s`, RSS `29.5 MB`; checked scoped retained removes timed GC but is slower in L1 (`60.29 s`) | L1 best checked `3.8%` faster | L2 retained checked rows remove heap timed GC | L1 about `-96%` for best checked stream | Mixed retained win: checked stream is a modest elapsed/RSS win; checked scoped is an RSS/GC win but not an elapsed win at L1. |
+| DSPBench Fraud retained q2 | generated/indexable DSPBench-shaped stream | retained-object drop-anchor / L1 final-clean | L1 retained heap `8.40 s`, RSS `206 MB`; L2 retained heap `392.743 ms`, GC `35.631 ms` | L1 checked scoped retained `7.90 s`, RSS `46.8 MB`; L2 checked scoped retained `370.746 ms`, GC `0 ms` | L1 `6.0%` faster; L2 `5.6%` faster | L2 `-35.631 ms` | L1 about `-77%` | Modest retained throughput/GC/RSS win. |
 | DSPBench Fraud direct q2 | generated/indexable DSPBench-shaped stream | summary-only topology | natural heap `400.900 ms`; L1 heap direct summary `5.62 s` x20; L2 heap direct `272.251 ms` | L1 checked stream/scoped direct summary `5.67/5.68 s` x20; L2 checked scoped direct `267.739 ms` | direct topology gives most of the win; checked is within about `1%` of heap direct in L1 | heap direct has `0 ms` GC | L1 near-tie small RSS | Symmetric topology/operator lower bound; checked regions are close to same-shape heap. |
 | DSPBench Log direct q2 | generated/indexable DSPBench-shaped stream | summary-only topology | natural heap `372.174 ms`; L1 heap direct summary `4.55 s` x20; L2 heap direct `227.036 ms` | L1 checked stream/scoped direct summary `4.56/4.59 s` x20; L2 checked scoped direct `230.374 ms` | checked is tied/near same-shape heap | heap direct still reports small non-region GC in L2 | L1 checked RSS lower than heap direct | Symmetric topology/operator lower bound; not memory-placement evidence. |
 | GH Archive-shaped direct q2 | generated/preloaded stressor | summary-only topology | natural heap `287.380 ms`; L1 heap direct summary `1.36 s` x20; L2 heap direct `54.642 ms` | L1 checked stream/scoped direct summary `1.45/1.45 s` x20; L2 checked scoped direct `56.013 ms` | checked direct is within about `7%` of heap direct in L1 | heap direct has `0 ms` GC | near-tie small RSS | Symmetric topology/operator evidence for heap and regions, not memory-placement evidence. |
@@ -64,6 +65,7 @@ reference, but the retained heap objects still remain for GC tracing/reclaim.
 | LogHub top templates HDFS 1M x20 | real HDFS file-backed/preloaded replay | retained-object drop-anchor / L1 final-clean | `heap-retained-drop-anchor` `5.46 s`, RSS `205 MB`; L2 heap GC `31.161 ms` per 1M run | checked scoped retained top templates `4.84 s`, RSS `28 MB`; L2 checked GC `0 ms` | `11.4%` faster | L2 removes heap timed GC | about `-86%` | L1 real-input retained top-k throughput/RSS win; process includes one input load plus 20 replays. |
 | LogHub top templates 1M | generated LogHub-shaped stressor | retained-object drop-anchor | `heap-retained-drop-anchor` `424.443 ms`, GC `126.371 ms`, RSS `408 MB` | checked scoped retained top templates `290.610 ms`, GC `0 ms`, RSS `304 MB` | `31.5%` faster | `-126.371 ms` | about `-25%` | Generated retained top-k memory-management and RSS win; supports a reusable top-k API candidate. |
 | LogHub reusable EpochTopKByKey HDFS 1M x20 | real HDFS file-backed/preloaded replay | retained-object drop-anchor / reusable operator gate / L1 final-clean | `heap-retained-drop-anchor` `5.52 s`, RSS `205 MB`; L2 heap `111.704 ms`, GC `30.542 ms` | L1 `checked-scoped-epoch-topk-retained-no-traverse` `4.88 s`, RSS `28 MB`; L2 checked `82.170 ms`, GC `0 ms` | L1 `11.6%` faster; L2 `26.4%` faster | L2 removes heap timed GC | about `-86%` in L1 | L1 reusable checked top-k API passes real-input retained gate with a strong RSS win; report-facing API overhead versus benchmark-local checked is now about `1.7%`. |
+| LogHub reusable EpochTopKByKey HDFS 5M x5 | real HDFS file-backed/preloaded replay | retained-object drop-anchor / reusable operator gate / L1 final-clean | L1 `heap-retained-drop-anchor` `19.04 s`, RSS `504 MB`; L2 heap `463.633 ms`, GC `62.421 ms` | L1 `checked-scoped-epoch-topk-retained-no-traverse` `18.26 s`, RSS `92 MB`; L2 checked `402.916 ms`, GC `0 ms` | L1 `4.1%` faster; L2 `13.1%` faster | L2 removes heap timed GC | about `-82%` in L1 | Larger real-input retained top-k scale-up: modest L1 throughput win, strong RSS win, and clear L2 GC removal. |
 | LogHub reusable EpochTopKByKey 1M | generated LogHub-shaped stressor | retained-object drop-anchor / reusable operator gate | `heap-retained-drop-anchor` `397.788 ms`, GC `126.601 ms`, RSS `408 MB` | `checked-scoped-epoch-topk-retained-no-traverse` `274.914 ms`, GC `0 ms`, RSS `305 MB` | `30.9%` faster | `-126.601 ms` | about `-25%` | Reusable checked top-k API passes generated retained gate; same-run overhead versus benchmark-local checked is about `5.7%`. |
 
 ## Current Claims
@@ -79,8 +81,9 @@ reference, but the retained heap objects still remain for GC tracing/reclaim.
 - **Generated methodology claim:** NEXMark Beam-default-style q3/q8/q9/q11 now
   have L1 checked framework wins, but remain generated local-harness evidence.
 - **Real-input claim:** Yak LiveJournal is the strongest real-input epoch row;
-  LogHub top templates is now a strong real-preloaded retained top-k row, and
-  `EpochTopKByKey` is the first reusable top-k API to pass the retained gate.
+  LogHub top templates is now a real-preloaded retained top-k row at both
+  1M x20 and 5M x5, and `EpochTopKByKey` is the first reusable top-k API to
+  pass the retained gate.
   Yak topword provides a second generated-methodology top-k confirmation, while
   GH Archive byte-slice q1/q2, LogHub HDFS q2, and DSPBench Log q2 remain
   modest page/window rows.

@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-10 23:41 CEST
+Last updated: 2026-05-11 00:36 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -33,8 +33,9 @@ NEXMark binaries. The L1 table
 now includes retained, Dataflow, Yak LiveJournal, generated Common
 Crawl-shaped q1/q2, ReML Tier 1, StreamFlex direct epoch, Stancu transaction,
 SPECjbb2005-workload port, LogHub top-template, and LogHub HDFS q2 page/window
-rows, plus DSPBench Fraud/Log q2, NEXMark q3/q8/q9/q11, and GH Archive
-file-backed byte-slice q1/q2 rows. It also now includes symmetric
+rows, plus DSPBench Fraud/Log q2, NEXMark q3/q8/q9/q11, GH Archive
+file-backed byte-slice q1/q2 rows, retained DSPBench/LogHub gap-fill rows, and
+a larger LogHub HDFS top-template 5M x5 L1 row. It also now includes symmetric
 direct-summary counterpart rows for GH Archive-shaped, DSPBench, and LogHub
 generated/indexable lower bounds. Remaining benchmark result files are still
 mostly L2 standard-stats evidence.
@@ -49,9 +50,9 @@ Latest top-k candidate:
 top-template workload over generated LogHub-shaped data and real-preloaded HDFS
 logs. At 1M real HDFS lines, checked scoped retained top templates are
 `81.174 ms` versus retained heap `116.138 ms`, removing `31.161 ms` median
-timed GC. RSS is slightly higher, so this is a real-preloaded throughput/GC
-win, not an RSS win. The reusable `EpochTopKByKey` API also passes the retained
-gate. After the increment hot-path follow-up, generated 1M checked scoped top-k
+timed GC. That earlier benchmark-local row was primarily a throughput/GC win.
+The reusable `EpochTopKByKey` API also passes the retained gate. After the
+increment hot-path follow-up, generated 1M checked scoped top-k
 is `274.914 ms` versus retained heap `397.788 ms`, and real HDFS preloaded
 checked scoped top-k is `82.170 ms` versus retained heap `111.704 ms`. The
 same-run API overhead versus the benchmark-local checked path is now about
@@ -59,7 +60,10 @@ same-run API overhead versus the benchmark-local checked path is now about
 confirm the direction with external timing: reusable checked top-k scoped is
 `4.88 s` and about `28 MB` RSS versus retained heap `5.52 s` and about
 `205 MB` RSS; the benchmark-local checked retained path is `4.80 s`, so the
-report-facing API overhead is about `1.7%`. Yak topword now provides a second
+report-facing API overhead is about `1.7%`. The larger real HDFS 5M x5 row
+keeps the reusable API ahead of retained heap (`18.26 s`, `92 MB` versus
+`19.04 s`, `504 MB`), while the matching L2 row removes heap's `62.421 ms`
+timed GC. Yak topword now provides a second
 natural top-k workload for the same reusable API: at 10M generated records,
 `checked-epoch-topk-scoped` is `249.311 ms` versus natural heap `313.724 ms`
 and the same-shape heap top-k retained control `297.740 ms`, with zero timed
@@ -75,8 +79,10 @@ external timing/RSS: reusable checked top-k scoped is `4.94 s` and about
 Latest ReML/MLKit PLDI-style table:
 `evidence/REML_MLKIT_PLDI_TABLE.md`. It recreates the paper table shape as
 paper-reported evidence, then places local Scala Native Tier 1 port ratios next
-to it. Exact MLKit/ReML artifact reruns are still open; do not claim raw
-cross-language wall-clock wins until those local runs exist.
+to it using L1 local timing/RSS where available. Exact MLKit/ReML artifact
+reruns are still open; the latest local check found no `mlkit`/`mlton`, and
+Docker was installed but its daemon was unavailable. Do not claim raw
+cross-language wall-clock wins until exact local runs exist.
 
 Latest SPECjbb2005-workload port checkpoint:
 `evidence/SPECJBB2005_PORT_MATRIX.md`. This is a clean-room Scala Native
@@ -401,9 +407,9 @@ representative components.
 | Runtime substrate | Improved SafeZone/rooted scoped regions remain the safe baseline; rootless/trusted rows are now explicit controls, not default public evidence. |
 | Checked Rift | Checked APIs are fast for simple append/window shapes and direct epoch shapes. Page-token, direct Dataflow epoch, Yak direct epoch, RegionList, GH Archive-shaped q1/q2, and generated Common Crawl-shaped q1/q2 clear useful gates; rank/table containers and the older generic `EpochFold` still add too much CPU overhead. |
 | Safe checked backend | `checked-region-scoped` is the best page-token backend in the clean final-selection sweep. It is fastest on focused page-token append and generated Common Crawl-shaped q1/q2. |
-| Real-input stream evidence | Yak `graphreal` over SNAP LiveJournal is now the strongest real-input prior-work-shaped region win. In the latest clean committed 50M rerun, `gc-heap` is `2958.659 ms` with `400.484 ms` timed GC and `3.91 GB` RSS. Per-epoch region rows remove timed GC and use about `2.11 GB` RSS: `region-scoped-rooted` is `2351.582 ms`, `region-stream-rootless` is `2499.975 ms`, `checked-epoch-scoped` is `2008.320 ms`, and `checked-epoch-stream` is `2064.867 ms`. Page-token checked rows still beat heap (`2586.919/2746.897 ms`) but are the wrong topology for Yak. GH Archive byte-slice file-backed q1/q2, LogHub BGL/HDFS q1/q2/q3, DSPBench Fraud q2, and DSPBench Log q2 remain real-input modest-win candidates. GH Archive now has L1 final-clean confirmation on two hourly files / 200k events: checked scoped page-token q1 is `12.89 s`, `101 MB` RSS vs heap `13.17 s`, `265 MB`; q2 is `12.87 s`, `102 MB` RSS vs heap `13.18 s`, `244 MB`. HDFS v1 q2 now has both L2 and L1 evidence: L2 checked scoped page-token is `7871.856 ms` vs `gc-heap` `8227.369 ms`, removing `gc-heap`'s `92.659 ms` median GC; L1 checked scoped page-token is an elapsed tie (`25.56 s` vs heap `25.60 s`) but cuts max RSS to about `79 MB` from heap's `409 MB`. DSPBench Fraud q2 now also has L1: checked scoped page-token is a large RSS win (`59.5 MB` vs heap `358 MB`) but a slight elapsed loss (`4.44 s` vs heap `4.39 s`), while `region-stream-rootless` is fastest (`4.18 s`). DSPBench Log q2 has an L1 checked page-token modest elapsed/RSS win (`8.79 s`, `47.6 MB` vs heap `8.89 s`, `308 MB`) and the L2 row cuts max GC from `88.210 ms` to `18.584 ms`. RIoTBench/MHEALTH is zero-GC/ceiling evidence. These are useful real-input rows; Yak LiveJournal is the first strong real-input prior-work-shaped row, but it remains local graph replay rather than exact Yak/GraphChi artifact evidence. |
+| Real-input stream evidence | Yak `graphreal` over SNAP LiveJournal is now the strongest real-input prior-work-shaped region win. In the latest clean committed 50M rerun, `gc-heap` is `2958.659 ms` with `400.484 ms` timed GC and `3.91 GB` RSS. Per-epoch region rows remove timed GC and use about `2.11 GB` RSS: `region-scoped-rooted` is `2351.582 ms`, `region-stream-rootless` is `2499.975 ms`, `checked-epoch-scoped` is `2008.320 ms`, and `checked-epoch-stream` is `2064.867 ms`. Page-token checked rows still beat heap (`2586.919/2746.897 ms`) but are the wrong topology for Yak. GH Archive byte-slice file-backed q1/q2, LogHub BGL/HDFS q1/q2/q3, DSPBench Fraud q2, and DSPBench Log q2 remain real-input modest-win candidates. GH Archive now has L1 final-clean confirmation on two hourly files / 200k events: checked scoped page-token q1 is `12.89 s`, `101 MB` RSS vs heap `13.17 s`, `265 MB`; q2 is `12.87 s`, `102 MB` RSS vs heap `13.18 s`, `244 MB`. HDFS v1 q2 now has both L2 and L1 evidence: L2 checked scoped page-token is `7871.856 ms` vs `gc-heap` `8227.369 ms`, removing `gc-heap`'s `92.659 ms` median GC; L1 checked scoped page-token is an elapsed tie (`25.56 s` vs heap `25.60 s`) but cuts max RSS to about `79 MB` from heap's `409 MB`. HDFS top templates is the strongest real LogHub retained-object row: reusable checked `EpochTopKByKey` is `18.26 s`, `92 MB` RSS at 5M x5 versus retained heap `19.04 s`, `504 MB`, and L2 removes `62.421 ms` timed heap GC. DSPBench Fraud q2 now also has L1: checked scoped page-token is a large RSS win (`59.5 MB` vs heap `358 MB`) but a slight elapsed loss (`4.44 s` vs heap `4.39 s`), while `region-stream-rootless` is fastest (`4.18 s`). DSPBench Log q2 has an L1 checked page-token modest elapsed/RSS win (`8.79 s`, `47.6 MB` vs heap `8.89 s`, `308 MB`) and the L2 row cuts max GC from `88.210 ms` to `18.584 ms`. RIoTBench/MHEALTH is zero-GC/ceiling evidence. These are useful real-input rows; Yak LiveJournal is the first strong real-input prior-work-shaped row, but it remains local graph replay rather than exact Yak/GraphChi artifact evidence. |
 | Strongest memory-pressure row | Generated Common Crawl WET-shaped q1/q2 creates heavy stream object churn. After open allocation, heap spends `1.7/1.6 s` timed GC on q1/q2. Checked scoped page-token is fastest in the rerun (`3707.214 ms` q1, `3902.795 ms` q2), followed by checked Rift page-token (`3933.900 ms` q1, `4040.310 ms` q2). |
-| Real-input search direction | The search is tracked in `evidence/REAL_INPUT_BENCHMARK_SEARCH.md`. Yak `graphreal` over SNAP LiveJournal is now the top prior-work-shaped real-input ladder row; next adjacent targets are more LiveJournal scale, SNAP Twitter-2010 if disk/time allow, or StackOverflow text for top-word. DSPBench Spike, Fraud, and Log Processing q0/q1/q2 are implemented; LogHub BGL and HDFS q1/q2/q3 have been tried; RIoTBench/MHEALTH q1/q2 has been tried. Theodolite source is cloned, but its official workload generator is simulated input, so pair UC2/UC4 logic with a real industrial-energy trace before claiming real-input evidence. |
+| Real-input search direction | The search is tracked in `evidence/REAL_INPUT_BENCHMARK_SEARCH.md`. Yak `graphreal` over SNAP LiveJournal is now the top prior-work-shaped real-input ladder row; next adjacent targets are more LiveJournal scale, SNAP Twitter-2010 if disk/time allow, or StackOverflow text for top-word once Posts data is fetched. DSPBench Spike, Fraud, and Log Processing q0/q1/q2 are implemented; LogHub BGL and HDFS q1/q2/q3 plus top templates have been tried; RIoTBench/MHEALTH q1/q2 has been tried. Theodolite source is cloned, but its official workload generator is simulated input, so pair UC2/UC4 logic with a real industrial-energy trace before claiming real-input evidence. |
 | ReML/MLKit lineage | Tier 1 Scala Native ReML-shaped medians now exist. `msort`, `msort-r`, and `ratio` show useful checked-region allocation/RSS/GC behavior; exact ReML artifact rerun remains blocked by missing local `mlkit`/`mlton` and no running Docker daemon. |
 
 The strongest current claim is:
@@ -858,6 +864,7 @@ operator problems with separate gates.
 | LogHub BGL q2 window counts | real file-backed BGL system log | 1M heap `5646.824 ms`, median GC `157.198 ms`, RSS `409 MB`; full-file q2 heap `32161.391 ms`, GC `595.599 ms`, RSS `576 MB` | 1M improved-32k `5509.481 ms`; full-file improved-32k `31459.104 ms`, RSS `490 MB` | 1M Streaming `5605.787 ms`; full-file Streaming `30899.595 ms`; full-file checked scoped page-token `31165.087 ms`, RSS `491 MB` | Full-file q2 is a real-input modest throughput/RSS/tail win for region rows, but heap GC is still under 2% of elapsed, so it is not the missing huge-GC case. |
 | LogHub BGL q3 template/session | real file-backed BGL system log | 1M heap `8683.558 ms`, median GC `84.166 ms`, max GC `117.946 ms`, RSS `290 MB` | improved-32k `8635.167 ms`, RSS `237 MB` | Streaming `8615.627 ms`, RSS `237 MB`; checked scoped page-token `8722.008 ms`, RSS `237 MB` | Richer real log query with template/session objects. Regions cut RSS/tails, but checked scoped loses elapsed and heap GC is under 1% of elapsed. |
 | LogHub HDFS v1 q2 window counts | real file-backed HDFS log | L2 1M heap `8227.369 ms`, median GC `92.659 ms`, RSS `409 MB`; L1 heap `25.60 s`, RSS `409 MB` for 3 q2 iterations | L2 improved-32k `7924.213 ms`, RSS `395 MB`; L1 improved-32k `25.35 s`, RSS `79 MB` | L2 Streaming `7871.713 ms`, RSS `356 MB`; L2 checked scoped page-token `7871.856 ms`, RSS `395 MB`; L1 checked scoped page-token `25.56 s`, RSS `79 MB` | Strongest HDFS page/window row: L1 elapsed tie plus large RSS win; L2 gives modest checked throughput/GC interpretation. Heap GC is still only about 1-2% of elapsed. |
+| LogHub HDFS top templates | real file-backed/preloaded HDFS log | 5M x5 L1 retained heap `19.04 s`, RSS `504 MB`; L2 heap `463.633 ms`, GC `62.421 ms` | not a SafeZone-only row | checked scoped `EpochTopKByKey` 5M x5 L1 `18.26 s`, RSS `92 MB`; L2 checked `402.916 ms`, GC `0 ms` | Strongest real retained top-k row: modest L1 throughput win, large RSS win, and L2 timed-GC removal using a reusable checked API. Heap GC is still modest relative to elapsed, so this is retained-object/RSS evidence, not a huge-GC flagship. |
 | Wikimedia real clickstream | real preloaded TSV | heap `126.800 ms` | improved `149.062 ms` | Streaming `157.449 ms` | Heap wins; ceiling control. |
 | Linear Road official q1 | official input | heap `162.668 ms` | source pack | HPZone `180.277 ms` | Heap wins; ceiling control. |
 

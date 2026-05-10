@@ -1,9 +1,16 @@
 # Rift Roadmap
 
-Last updated: 2026-05-10 23:41 CEST
+Last updated: 2026-05-11 00:36 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
+
+Latest final-clean table update: retained L1 gaps are now filled for DSPBench
+Fraud q2 and LogHub q2/q3, and the reusable LogHub HDFS `EpochTopKByKey` row
+has a 5M x5 scale-up (`18.26 s`, `92 MB` RSS) against retained heap
+(`19.04 s`, `504 MB` RSS). ReML/MLKit PLDI-style local Tier 1 combined rows now
+use L1 timing/RSS rather than stale L2 elapsed; exact MLKit timing remains
+toolchain/provenance-blocked.
 
 Active worktree: `/Users/siyaoliu/rift/scala-native-rift`
 

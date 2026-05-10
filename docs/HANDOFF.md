@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-11 00:14 CEST
+Last updated: 2026-05-11 00:36 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -14,6 +14,17 @@ Latest implementation checkpoint:
 
 Latest parent evidence checkpoint:
 current parent worktree after Yak topword L1 evidence update
+
+Latest final-clean evidence update:
+the retained-row gap-fill now has L1 final-clean rows for DSPBench Fraud q2 and
+LogHub q2/q3, and LogHub HDFS top templates now has a larger reusable
+`EpochTopKByKey` 5M x5 row. The key real-input top-k result is checked scoped
+`EpochTopKByKey` `18.26 s`, about `92 MB` RSS versus retained heap `19.04 s`,
+about `504 MB` RSS; the matching L2 row is checked `402.916 ms`, GC `0 ms`
+versus retained heap `463.633 ms`, GC `62.421 ms`. ReML/MLKit PLDI-style rows
+now use L1 timing/RSS for local Tier 1 ports in the combined table; exact MLKit
+artifact timing remains blocked by missing local `mlkit`/`mlton` and no running
+Docker daemon.
 
 Report HTML companion:
 `docs/PERFORMANCE_EVALUATION_REPORT.md` remains the source of truth for the
