@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-10 09:40 CEST
+Last updated: 2026-05-10 09:59 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -90,6 +90,11 @@ Child `678a6eb41` adds L1 final-clean support for the SPECjbb2005-workload
 port. The 8-warehouse representative row is checked epoch scoped `2.21 s`
 versus heap `2.64 s` and rooted scoped region `2.48 s`, with RSS about
 `8.0 MB` versus heap `12.4 MB`.
+Child `3598efe29` adds L1 final-clean support for LogHub top templates. The
+real HDFS 1M x20 row is reusable checked top-k scoped `5.05 s` and about
+`28 MB` RSS versus retained heap `5.46 s` and about `205 MB` RSS. The
+benchmark-local checked retained path remains faster at `4.84 s`, so top-k
+operator work still has an API-overhead target.
 
 ReML/MLKit PLDI-style table checkpoint:
 `evidence/REML_MLKIT_PLDI_TABLE.md` now separates paper-reported Figure 9
@@ -115,7 +120,10 @@ real-preloaded HDFS input. Child commit `9abac4833` adds the follow-up
 checked scoped top-k is `95.267 ms` versus retained heap `123.024 ms`. The API
 still trails the benchmark-local manual count-array path, so the next top-k
 milestone is profiling/inlining the operator update/getter path, not DEBS
-ranking or generic TableRank.
+ranking or generic TableRank. The L1 real HDFS x20 row from child `3598efe29`
+confirms the same direction with external timing/RSS: reusable checked top-k
+scoped `5.05 s` and about `28 MB` RSS versus retained heap `5.46 s` and about
+`205 MB` RSS.
 
 Latest staged headline sweep: `evidence/COMPREHENSIVE_SWEEP_2026_05_06.md`.
 It completed prior-work, checked-operator, SafeZone-cost, and stream rows with

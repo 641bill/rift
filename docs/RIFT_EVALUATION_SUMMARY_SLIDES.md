@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-10 09:40 CEST
+Last updated: 2026-05-10 09:59 CEST
 
 Status: markdown slide deck outline. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report,
@@ -42,7 +42,7 @@ Representative numbers to keep on slides:
 | SPECjbb2005-workload port | L1 8 warehouses x20: checked epoch scoped `2.21 s` vs heap `2.64 s` and rooted scoped `2.48 s`; RSS about `8.0 MB` vs heap `12.4 MB`. | Clean-room Scala Native port strengthens the Stancu/SPECjbb transaction-lifetime story; not official SPECjbb2005. |
 | Generated page/window stressor | Common Crawl-shaped q1/q2: checked scoped page-token `3707.214/3902.795 ms` vs heap `5577.965/5183.074 ms`. | Strong generated stream-object pressure win; RSS caveat; not real-input proof. |
 | Modest real-input page/window | LogHub HDFS q2 checked scoped page-token `7871.856 ms` vs heap `8227.369 ms`; DSPBench Log q2 `1733.654 ms` vs heap `1750.291 ms`. | Real-input wins are modest because parser/query CPU dominates and heap GC is small. |
-| Real-preloaded retained top-k | LogHub top templates: checked scoped retained `81.174 ms`, `0 ms` GC vs retained heap `116.138 ms`, `31.161 ms` GC. Reusable `EpochTopKByKey` checked scoped is `95.267 ms` vs retained heap `123.024 ms`. | First retained top-k API gate passes; RSS is slightly higher and parser/file I/O is excluded. API overhead remains versus the benchmark-local path. |
+| Real-preloaded retained top-k | L1 LogHub HDFS x20: reusable `EpochTopKByKey` checked scoped `5.05 s`, `28 MB` RSS vs retained heap `5.46 s`, `205 MB` RSS; benchmark-local checked retained is `4.84 s`. | First retained top-k API gate has L1 real-input confirmation and strong RSS win; API overhead remains versus the benchmark-local path. |
 
 Slide-level rule: summary-only/direct-aggregate rows are topology/operator
 lower bounds. Retained heap versus retained checked epoch is the fair

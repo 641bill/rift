@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-10 09:40 CEST
+Last updated: 2026-05-10 09:59 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -10,7 +10,7 @@ Active implementation branch for this update:
 `feature/rift`
 
 Latest implementation checkpoint:
-`e46ab5fb7` (`Record SPECjbb final-clean evidence`)
+`3598efe29` (`Add final-clean LogHub top-k support`)
 
 Latest parent evidence checkpoint:
 current parent commit (`Record SPECjbb final-clean rows`)
@@ -52,7 +52,7 @@ diagnostics, and L4 external profiles. Initial L1 final-clean binary support is
 now implemented for `RetainedEpochReclaimMatrix`, `YakRegionMatrix`,
 `DataflowRegionMatrix`, `CommonCrawlWetMatrix`, `ReMLRegionMatrix`,
 `StreamFlexRegionMatrix`, `StancuRegionMatrix`, and
-`SpecJbb2005PortMatrix`.
+`SpecJbb2005PortMatrix`, and `LogHubTopTemplatesMatrix`.
 Set `RIFT_FINAL_CLEAN=1` or `RIFT_EVAL_MEASUREMENT_LEVEL=L1`; the binary skips
 internal timing/GC/region stat reads and prints only minimal checksum/output
 metadata. A tiny retained-epoch L1 smoke matched heap and checked checksums.
@@ -109,6 +109,11 @@ The 8-warehouse representative row is checked epoch scoped `2.21 s` versus
 heap `2.64 s` and rooted scoped region `2.48 s` for 20 inner iterations, with
 RSS about `8.0 MB` versus heap `12.4 MB`. This is a clean-room
 SPECjbb2005-workload port, not official SPECjbb2005.
+Child `3598efe29` adds L1 plumbing to `LogHubTopTemplatesMatrix`. The real
+HDFS 1M x20 row is reusable checked top-k scoped `5.05 s` and about `28 MB`
+RSS versus retained heap `5.46 s` and about `205 MB` RSS. The benchmark-local
+checked retained path is still faster at `4.84 s`, so the top-k API remains
+passed but has an overhead target before broader integration.
 
 Latest ReML/MLKit PLDI-style table:
 `evidence/REML_MLKIT_PLDI_TABLE.md` is now the dedicated thesis-facing table.
@@ -156,7 +161,9 @@ scoped top-k `95.267 ms`, `0 ms` GC, and `150 MB` RSS versus retained heap
 API passes the retained top-k gate, but it trails the benchmark-local manual
 count-array path (`300.984 ms` generated, `83.697 ms` real HDFS). The next
 top-k work should profile or inline the update/getter path before application
-integration.
+integration. L1 final-clean real HDFS x20 rows now confirm the reusable API
+direction with external timing/RSS: checked top-k scoped `5.05 s` and about
+`28 MB` RSS versus retained heap `5.46 s` and about `205 MB` RSS.
 
 Latest clean retained/direct-epoch rerun:
 After committing child `918c7d4c1` and parent `ab570b1`, the retained-object

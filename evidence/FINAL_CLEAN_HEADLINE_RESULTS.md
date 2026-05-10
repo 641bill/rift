@@ -1,7 +1,7 @@
 # Final-Clean Headline Results
 
 Date: 2026-05-09
-Last updated: 2026-05-10 09:40 CEST
+Last updated: 2026-05-10 09:59 CEST
 
 Status: L1 runner support exists for the first representative binaries. One
 focused retained-epoch L1 row has been collected from clean child commit
@@ -17,7 +17,8 @@ same support to StreamFlex and Stancu. StreamFlex direct-epoch
 throughput/latency and Stancu transaction representative L1 rows are now
 recorded below. Child `678a6eb41` adds the same L1 support to the
 SPECjbb2005-workload Scala Native port, and an 8-warehouse representative row
-is recorded below.
+is recorded below. Child `3598efe29` adds L1 support to the LogHub
+top-template matrix, and the real HDFS reusable top-k row is recorded below.
 
 ## Definition
 
@@ -47,6 +48,7 @@ Set `RIFT_FINAL_CLEAN=1` or `RIFT_EVAL_MEASUREMENT_LEVEL=L1` for:
 - `StreamFlexRegionMatrix`
 - `StancuRegionMatrix`
 - `SpecJbb2005PortMatrix`
+- `LogHubTopTemplatesMatrix`
 
 The binaries print `RESULT ... measurement_level=L1 final_clean=1 ...` and
 avoid internal timed-section stats.
@@ -61,6 +63,7 @@ avoid internal timed-section stats.
 | ReML/MLKit ports | `msort`, `msort-r`, `ratio`, plus `fib37`/`tak`/`mandel` controls | non-stream typed-region comparison axis |
 | StreamFlex | throughput and latency rows | prior-work latency/throughput axis |
 | Stancu/SPECjbb-style | transaction rows | transaction-boundary region axis |
+| retained top-k API | LogHub HDFS top templates | reusable `EpochTopKByKey` evidence |
 
 ## L1 Headline Rows
 
@@ -96,6 +99,9 @@ for those 20 iterations.
 | SPECjbb2005-workload port 8 warehouses x20 | clean-room transaction workload port | heap transaction batches | natural heap baseline | `gc-heap` | 3 processes x 20 iterations | `2.64 s` total (`132.0 ms/iter`) | `2.63 s` | `2.66 s` | `12369920 bytes` | checksum `-9186304385429183494` | L1 clean natural heap baseline; not official SPECjbb2005 |
 | SPECjbb2005-workload port 8 warehouses x20 | clean-room transaction workload port | scoped transaction batches | safe rooted baseline | `region-scoped-rooted` | 3 processes x 20 iterations | `2.48 s` total (`124.0 ms/iter`) | `2.46 s` | `2.48 s` | `7962624 bytes` | checksum `-9186304385429183494` | L1 clean rooted scoped transaction win over heap |
 | SPECjbb2005-workload port 8 warehouses x20 | clean-room transaction workload port | checked direct epoch transactions | framework API win | `checked-epoch-scoped` | 3 processes x 20 iterations | `2.21 s` total (`110.5 ms/iter`) | `2.21 s` | `2.22 s` | `7995392 bytes` | checksum `-9186304385429183494` | L1 clean checked transaction/epoch win over heap and rooted scoped baseline |
+| LogHub top templates HDFS 1M x20 | real HDFS file-backed/preloaded replay | retained epoch/drop-anchor | retained-object memory-management | `heap-retained-drop-anchor` | 3 processes x 20 iterations | `5.46 s` total (`273.0 ms/iter`) | `5.43 s` | `5.47 s` | `205406208 bytes` | checksum `4142347521733569598`, output `1280` | L1 retained heap/drop-anchor control; process includes one HDFS input load plus 20 replays |
+| LogHub top templates HDFS 1M x20 | real HDFS file-backed/preloaded replay | benchmark-local checked retained epoch | retained-object memory-management / lower bound | `checked-scoped-epoch-retained-no-traverse` | 3 processes x 20 iterations | `4.84 s` total (`242.0 ms/iter`) | `4.82 s` | `4.88 s` | `28262400 bytes` | checksum `4142347521733569598`, output `1280` | L1 checked retained lower-bound win over heap retained |
+| LogHub top templates HDFS 1M x20 | real HDFS file-backed/preloaded replay | reusable checked `EpochTopKByKey` | framework API win | `checked-scoped-epoch-topk-retained-no-traverse` | 3 processes x 20 iterations | `5.05 s` total (`252.5 ms/iter`) | `5.05 s` | `5.08 s` | `28114944 bytes` | checksum `4142347521733569598`, output `1280` | L1 reusable checked top-k win over heap retained with much lower RSS; API overhead remains versus benchmark-local checked row |
 | Yak LiveJournal 50M x5 | real file-backed SNAP LiveJournal graph replay | heap linked epoch | natural heap baseline | `gc-heap` | 3 processes x 5 iterations | `18.79 s` total | `18.76 s` | `18.89 s` | `2772320256 bytes` | checksum `-6048644965681588176` | L1 clean file-backed total-process heap row; includes one gzipped input preload plus five 50M replays per process |
 | Yak LiveJournal 50M x5 | real file-backed SNAP LiveJournal graph replay | scoped region epoch | safe rooted baseline | `region-scoped-rooted` | 3 processes x 5 iterations | `16.93 s` total | `16.91 s` | `16.94 s` | `611860480 bytes` | checksum `-6048644965681588176` | L1 clean rooted scoped-region row; same input/preload protocol |
 | Yak LiveJournal 50M x5 | real file-backed SNAP LiveJournal graph replay | `RiftRegion.epoch` checked scoped | framework API win | `checked-epoch-scoped` | 3 processes x 5 iterations | `16.12 s` total | `16.03 s` | `16.16 s` | `611893248 bytes` | checksum `-6048644965681588176` | L1 clean real-input checked epoch win; total process row still includes input preload |
@@ -279,6 +285,25 @@ for i in 1 2 3; do
   SPECJBB_MODES="gc-heap region-scoped-rooted checked-epoch-scoped" \
   SPECJBB_OUTPUT_DIR=/tmp/rift-l1-specjbb-8w-x20-678a6eb41-r${i} \
   zsh sandbox/run_specjbb2005_port_matrix.sh
+done
+```
+
+LogHub real HDFS top-template command:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+for i in 1 2 3; do
+  RIFT_FINAL_CLEAN=1 \
+  LOGHUB_TOP_BUILD=0 \
+  LOGHUB_TOP_INPUT_MODE=file-backed \
+  LOGHUB_TOP_INPUT=/Users/siyaoliu/rift/cache/benchmark-data/loghub/HDFS_1/HDFS.log \
+  LOGHUB_TOP_LINES=1000000 \
+  LOGHUB_TOP_LINES_PER_EPOCH=25000 \
+  LOGHUB_TOP_BENCHMARK_RUNS=20 \
+  LOGHUB_TOP_WARMUPS=0 \
+  LOGHUB_TOP_MODES="heap-retained-drop-anchor checked-scoped-epoch-retained-no-traverse checked-scoped-epoch-topk-retained-no-traverse" \
+  LOGHUB_TOP_OUTPUT_DIR=/tmp/rift-l1-loghub-top-hdfs-1m-x20-3598efe29-r${i} \
+  zsh sandbox/run_loghub_top_templates_matrix.sh
 done
 ```
 

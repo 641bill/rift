@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-10 09:40 CEST
+Last updated: 2026-05-10 09:59 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -50,7 +50,11 @@ the retained gate: generated 1M checked scoped top-k is `341.905 ms` versus
 retained heap `463.578 ms`, and real HDFS preloaded checked scoped top-k is
 `95.267 ms` versus retained heap `123.024 ms`. The API is still slower than
 the benchmark-local checked count-array path, so it is a passed reusable API
-with an overhead caveat rather than the final top-k lower bound.
+with an overhead caveat rather than the final top-k lower bound. L1
+final-clean real HDFS x20 rows now confirm the direction with external timing:
+reusable checked top-k scoped is `5.05 s` and about `28 MB` RSS versus retained
+heap `5.46 s` and about `205 MB` RSS. The benchmark-local checked retained
+path is still faster at `4.84 s`.
 
 Latest ReML/MLKit PLDI-style table:
 `evidence/REML_MLKIT_PLDI_TABLE.md`. It recreates the paper table shape as
