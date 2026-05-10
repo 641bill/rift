@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-10 23:41 CEST
+Last updated: 2026-05-10 23:51 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -14,6 +14,17 @@ Latest implementation checkpoint:
 
 Latest parent evidence checkpoint:
 current parent worktree after Yak topword L1 evidence update
+
+Report HTML companion:
+`docs/PERFORMANCE_EVALUATION_REPORT.md` remains the source of truth for the
+single project report. `scripts/generate-report-html.py` generates the
+human-readable standalone companion `docs/report.html`, with a sticky table of
+contents, styled tables, and inline code formatting. Regenerate it after report
+edits with:
+
+```sh
+python3 scripts/generate-report-html.py
+```
 
 Latest comprehensive sweep checkpoint:
 Staged headline runs completed after the TransactionRegion checkpoint. Source
