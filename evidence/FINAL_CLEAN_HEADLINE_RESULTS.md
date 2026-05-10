@@ -1,7 +1,7 @@
 # Final-Clean Headline Results
 
 Date: 2026-05-09
-Last updated: 2026-05-10 18:03 CEST
+Last updated: 2026-05-10 22:49 CEST
 
 Status: L1 runner support exists for the first representative binaries. One
 focused retained-epoch L1 row has been collected from clean child commit
@@ -30,6 +30,8 @@ two-hour real file-backed byte-slice q1/q2 rows and generated/preloaded
 retained q2 rows are recorded below.
 Child `bc9fd5979` records symmetric direct-summary L1 counterpart rows for
 DSPBench and LogHub, so summary-only lower bounds are no longer heap-only.
+Child `59acadda6` reduces `EpochTopKByKey` hot-path overhead; refreshed
+LogHub HDFS top-k L1 rows are recorded below.
 
 ## Definition
 
@@ -133,9 +135,9 @@ for those 20 iterations.
 | SPECjbb2005-workload port 8 warehouses x20 | clean-room transaction workload port | heap transaction batches | natural heap baseline | `gc-heap` | 3 processes x 20 iterations | `2.64 s` total (`132.0 ms/iter`) | `2.63 s` | `2.66 s` | `12369920 bytes` | checksum `-9186304385429183494` | L1 clean natural heap baseline; not official SPECjbb2005 |
 | SPECjbb2005-workload port 8 warehouses x20 | clean-room transaction workload port | scoped transaction batches | safe rooted baseline | `region-scoped-rooted` | 3 processes x 20 iterations | `2.48 s` total (`124.0 ms/iter`) | `2.46 s` | `2.48 s` | `7962624 bytes` | checksum `-9186304385429183494` | L1 clean rooted scoped transaction win over heap |
 | SPECjbb2005-workload port 8 warehouses x20 | clean-room transaction workload port | checked direct epoch transactions | framework API win | `checked-epoch-scoped` | 3 processes x 20 iterations | `2.21 s` total (`110.5 ms/iter`) | `2.21 s` | `2.22 s` | `7995392 bytes` | checksum `-9186304385429183494` | L1 clean checked transaction/epoch win over heap and rooted scoped baseline |
-| LogHub top templates HDFS 1M x20 | real HDFS file-backed/preloaded replay | retained epoch/drop-anchor | retained-object memory-management | `heap-retained-drop-anchor` | 3 processes x 20 iterations | `5.46 s` total (`273.0 ms/iter`) | `5.43 s` | `5.47 s` | `205406208 bytes` | checksum `4142347521733569598`, output `1280` | L1 retained heap/drop-anchor control; process includes one HDFS input load plus 20 replays |
-| LogHub top templates HDFS 1M x20 | real HDFS file-backed/preloaded replay | benchmark-local checked retained epoch | retained-object memory-management / lower bound | `checked-scoped-epoch-retained-no-traverse` | 3 processes x 20 iterations | `4.84 s` total (`242.0 ms/iter`) | `4.82 s` | `4.88 s` | `28262400 bytes` | checksum `4142347521733569598`, output `1280` | L1 checked retained lower-bound win over heap retained |
-| LogHub top templates HDFS 1M x20 | real HDFS file-backed/preloaded replay | reusable checked `EpochTopKByKey` | framework API win | `checked-scoped-epoch-topk-retained-no-traverse` | 3 processes x 20 iterations | `5.05 s` total (`252.5 ms/iter`) | `5.05 s` | `5.08 s` | `28114944 bytes` | checksum `4142347521733569598`, output `1280` | L1 reusable checked top-k win over heap retained with much lower RSS; API overhead remains versus benchmark-local checked row |
+| LogHub top templates HDFS 1M x20 | real HDFS file-backed/preloaded replay | retained epoch/drop-anchor | retained-object memory-management | `heap-retained-drop-anchor` | 3 processes x 20 iterations | `5.52 s` total (`276.0 ms/iter`) | `5.50 s` | `5.52 s` | `205406208 bytes` | checksum `4142347521733569598`, output `1280` | L1 retained heap/drop-anchor control; process includes one HDFS input load plus 20 replays |
+| LogHub top templates HDFS 1M x20 | real HDFS file-backed/preloaded replay | benchmark-local checked retained epoch | retained-object memory-management / lower bound | `checked-scoped-epoch-retained-no-traverse` | 3 processes x 20 iterations | `4.80 s` total (`240.0 ms/iter`) | `4.73 s` | `4.81 s` | `28262400 bytes` | checksum `4142347521733569598`, output `1280` | L1 checked retained lower-bound win over heap retained |
+| LogHub top templates HDFS 1M x20 | real HDFS file-backed/preloaded replay | reusable checked `EpochTopKByKey` | framework API win | `checked-scoped-epoch-topk-retained-no-traverse` | 3 processes x 20 iterations | `4.88 s` total (`244.0 ms/iter`) | `4.87 s` | `4.94 s` | `28098560 bytes` | checksum `4142347521733569598`, output `1280` | L1 reusable checked top-k win over heap retained with much lower RSS; API overhead now about `1.7%` versus benchmark-local checked row |
 | LogHub HDFS q2 1M x3 | real HDFS file-backed stream | page/window token | natural heap baseline | `heap-immix` | 3 processes x 3 iterations | `25.60 s` total (`8533 ms/iter`) | `25.58 s` | `25.75 s` | `408649728 bytes` | checksum `-4515648042024502814`, output `41` | L1 natural heap baseline; process loads 1M HDFS lines and runs q2 three times |
 | LogHub HDFS q2 1M x3 | real HDFS file-backed stream | scoped page/window token | safe rooted baseline | `safezone-improved-32k` | 3 processes x 3 iterations | `25.35 s` total (`8450 ms/iter`) | `25.33 s` | `25.39 s` | `79003648 bytes` | checksum `-4515648042024502814`, output `41` | L1 rooted scoped RSS win with near-tie elapsed |
 | LogHub HDFS q2 1M x3 | real HDFS file-backed stream | checked scoped page-token | framework API / RSS win | `rift-checked-safezone-page-token` | 3 processes x 3 iterations | `25.56 s` total (`8520 ms/iter`) | `25.56 s` | `25.58 s` | `79036416 bytes` | checksum `-4515648042024502814`, output `41` | L1 checked page/window row essentially ties heap elapsed and cuts RSS by about 81%; L2 row remains the GC interpretation source |
@@ -367,7 +369,7 @@ for i in 1 2 3; do
   LOGHUB_TOP_BENCHMARK_RUNS=20 \
   LOGHUB_TOP_WARMUPS=0 \
   LOGHUB_TOP_MODES="heap-retained-drop-anchor checked-scoped-epoch-retained-no-traverse checked-scoped-epoch-topk-retained-no-traverse" \
-  LOGHUB_TOP_OUTPUT_DIR=/tmp/rift-l1-loghub-top-hdfs-1m-x20-3598efe29-r${i} \
+  LOGHUB_TOP_OUTPUT_DIR=/tmp/rift-l1-loghub-topk-hotpath-hdfs-1m-x20-bc9fd5979-r${i} \
   zsh sandbox/run_loghub_top_templates_matrix.sh
 done
 ```

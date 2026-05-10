@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-10 18:03 CEST
+Last updated: 2026-05-10 22:49 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -10,10 +10,10 @@ Active implementation branch for this update:
 `feature/rift`
 
 Latest implementation checkpoint:
-`bc9fd5979` (`Record symmetric direct-summary L1 rows`)
+`59acadda6` (`Reduce EpochTopKByKey increment overhead`)
 
 Latest parent evidence checkpoint:
-current parent commit after direct-summary symmetry evidence update
+current parent commit after top-k hot-path evidence update
 
 Latest comprehensive sweep checkpoint:
 Staged headline runs completed after the TransactionRegion checkpoint. Source
@@ -116,11 +116,12 @@ The 8-warehouse representative row is checked epoch scoped `2.21 s` versus
 heap `2.64 s` and rooted scoped region `2.48 s` for 20 inner iterations, with
 RSS about `8.0 MB` versus heap `12.4 MB`. This is a clean-room
 SPECjbb2005-workload port, not official SPECjbb2005.
-Child `3598efe29` adds L1 plumbing to `LogHubTopTemplatesMatrix`. The real
-HDFS 1M x20 row is reusable checked top-k scoped `5.05 s` and about `28 MB`
-RSS versus retained heap `5.46 s` and about `205 MB` RSS. The benchmark-local
-checked retained path is still faster at `4.84 s`, so the top-k API remains
-passed but has an overhead target before broader integration.
+Child `3598efe29` adds L1 plumbing to `LogHubTopTemplatesMatrix`. The top-k
+hot-path follow-up at child `59acadda6` reduces reusable API overhead. The
+real HDFS 1M x20 row is reusable checked top-k scoped `4.88 s` and about
+`28 MB` RSS versus retained heap `5.52 s` and about `205 MB` RSS. The
+benchmark-local checked retained path is `4.80 s`, so report-facing API
+overhead is now about `1.7%`.
 Child `fe8f0d853` adds L1 plumbing to `LogHubRegionMatrix`. The HDFS q2
 page/window row was rerun as 1M real HDFS lines x3 q2 iterations per process,
 three external repeats. L1 final-clean timing is an elapsed tie but strong RSS
@@ -199,17 +200,18 @@ Child commit `9abac4833` adds `RiftRegion.EpochTopKByKey`, lifting the LogHub
 retained top-template shape into a reusable checked epoch operator. It keeps
 parent-owned primitive counts and top-k scratch arrays while ordinary
 token/template records live in `RiftRegion.epoch`, so close/reclaim still does
-not traverse retained records. Generated 1M top-k API rows show checked scoped
-`341.905 ms`, `0 ms` GC, and `305 MB` RSS versus retained heap `463.578 ms`,
-`138.050 ms` GC, and `408 MB` RSS. Real HDFS preloaded 1M rows show checked
-scoped top-k `95.267 ms`, `0 ms` GC, and `150 MB` RSS versus retained heap
-`123.024 ms`, `33.966 ms` GC, and `146 MB` RSS. Interpretation: the reusable
-API passes the retained top-k gate, but it trails the benchmark-local manual
-count-array path (`300.984 ms` generated, `83.697 ms` real HDFS). The next
-top-k work should profile or inline the update/getter path before application
-integration. L1 final-clean real HDFS x20 rows now confirm the reusable API
-direction with external timing/RSS: checked top-k scoped `5.05 s` and about
-`28 MB` RSS versus retained heap `5.46 s` and about `205 MB` RSS.
+not traverse retained records. The increment hot-path follow-up removes a
+method hop and duplicate validation from the common update path while keeping
+array-bounds rejection. Generated 1M top-k API rows now show checked scoped
+`274.914 ms`, `0 ms` GC, and `305 MB` RSS versus retained heap `397.788 ms`,
+`126.601 ms` GC, and `408 MB` RSS. Real HDFS preloaded 1M rows show checked
+scoped top-k `82.170 ms`, `0 ms` GC, and `150 MB` RSS versus retained heap
+`111.704 ms`, `30.542 ms` GC, and `146 MB` RSS. L1 final-clean real HDFS x20
+rows now confirm the reusable API direction with external timing/RSS: checked
+top-k scoped `4.88 s` and about `28 MB` RSS versus retained heap `5.52 s` and
+about `205 MB` RSS. Interpretation: the reusable API passes the retained
+top-k gate with materially reduced overhead; remaining overhead is about
+`1.7%` in the L1 real HDFS row.
 
 Latest clean retained/direct-epoch rerun:
 After committing child `918c7d4c1` and parent `ab570b1`, the retained-object

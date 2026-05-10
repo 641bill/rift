@@ -1,11 +1,12 @@
 # Evaluation Classified Summary
 
 Date: 2026-05-09
-Last updated: 2026-05-10 18:03 CEST
+Last updated: 2026-05-10 22:49 CEST
 
 Status: thesis-facing classified summary built from committed evidence.
 Baseline commits for clean rows: parent `1cc3b2c`, child `13a3df1c7`.
-Reusable top-k API rows come from child commit `9abac4833`.
+Reusable top-k API rows include the increment hot-path follow-up after child
+commit `bc9fd5979`.
 
 ## How To Read This Table
 
@@ -61,8 +62,8 @@ reference, but the retained heap objects still remain for GC tracing/reclaim.
 | GH Archive q1/q2 byte-slice | real GH Archive file-backed JSON-lines | best checked topology / L1 final-clean | q1 heap `13.17 s`, RSS `265 MB`; q2 heap `13.18 s`, RSS `244 MB`; L2 heap GC about `58/62 ms` | q1 checked scoped page-token `12.89 s`, RSS `101 MB`; q2 checked scoped page-token `12.87 s`, RSS `102 MB`; L2 checked GC `0 ms` | q1 `2.1%` faster; q2 `2.4%` faster | L2 removes visible but small heap GC | q1 about `-62%`; q2 about `-58%` | L1 modest real-input elapsed/RSS win. Not GC-heavy flagship evidence because L2 heap GC is only about `1.5-1.6%` of elapsed; byte-slice parser scratch removes the old parser allocation cliff. |
 | LogHub top templates HDFS 1M x20 | real HDFS file-backed/preloaded replay | retained-object drop-anchor / L1 final-clean | `heap-retained-drop-anchor` `5.46 s`, RSS `205 MB`; L2 heap GC `31.161 ms` per 1M run | checked scoped retained top templates `4.84 s`, RSS `28 MB`; L2 checked GC `0 ms` | `11.4%` faster | L2 removes heap timed GC | about `-86%` | L1 real-input retained top-k throughput/RSS win; process includes one input load plus 20 replays. |
 | LogHub top templates 1M | generated LogHub-shaped stressor | retained-object drop-anchor | `heap-retained-drop-anchor` `424.443 ms`, GC `126.371 ms`, RSS `408 MB` | checked scoped retained top templates `290.610 ms`, GC `0 ms`, RSS `304 MB` | `31.5%` faster | `-126.371 ms` | about `-25%` | Generated retained top-k memory-management and RSS win; supports a reusable top-k API candidate. |
-| LogHub reusable EpochTopKByKey HDFS 1M x20 | real HDFS file-backed/preloaded replay | retained-object drop-anchor / reusable operator gate / L1 final-clean | `heap-retained-drop-anchor` `5.46 s`, RSS `205 MB`; L2 heap GC `33.966 ms` per 1M top-k gate run | `checked-scoped-epoch-topk-retained-no-traverse` `5.05 s`, RSS `28 MB`; L2 checked GC `0 ms` | `7.5%` faster | L2 removes heap timed GC | about `-86%` | L1 reusable checked top-k API passes real-input retained gate with a strong RSS win; benchmark-local checked path is still faster (`4.84 s`). |
-| LogHub reusable EpochTopKByKey 1M | generated LogHub-shaped stressor | retained-object drop-anchor / reusable operator gate | `heap-retained-drop-anchor` `463.578 ms`, GC `138.050 ms`, RSS `408 MB` | `checked-scoped-epoch-topk-retained-no-traverse` `341.905 ms`, GC `0 ms`, RSS `305 MB` | `26.3%` faster | `-138.050 ms` | about `-25%` | Reusable checked top-k API passes generated retained gate, with measurable abstraction overhead versus the benchmark-local path (`300.984 ms`). |
+| LogHub reusable EpochTopKByKey HDFS 1M x20 | real HDFS file-backed/preloaded replay | retained-object drop-anchor / reusable operator gate / L1 final-clean | `heap-retained-drop-anchor` `5.52 s`, RSS `205 MB`; L2 heap `111.704 ms`, GC `30.542 ms` | L1 `checked-scoped-epoch-topk-retained-no-traverse` `4.88 s`, RSS `28 MB`; L2 checked `82.170 ms`, GC `0 ms` | L1 `11.6%` faster; L2 `26.4%` faster | L2 removes heap timed GC | about `-86%` in L1 | L1 reusable checked top-k API passes real-input retained gate with a strong RSS win; report-facing API overhead versus benchmark-local checked is now about `1.7%`. |
+| LogHub reusable EpochTopKByKey 1M | generated LogHub-shaped stressor | retained-object drop-anchor / reusable operator gate | `heap-retained-drop-anchor` `397.788 ms`, GC `126.601 ms`, RSS `408 MB` | `checked-scoped-epoch-topk-retained-no-traverse` `274.914 ms`, GC `0 ms`, RSS `305 MB` | `30.9%` faster | `-126.601 ms` | about `-25%` | Reusable checked top-k API passes generated retained gate; same-run overhead versus benchmark-local checked is about `5.7%`. |
 
 ## Current Claims
 

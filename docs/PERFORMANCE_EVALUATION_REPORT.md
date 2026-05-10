@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-10 18:03 CEST
+Last updated: 2026-05-10 22:49 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -50,16 +50,16 @@ top-template workload over generated LogHub-shaped data and real-preloaded HDFS
 logs. At 1M real HDFS lines, checked scoped retained top templates are
 `81.174 ms` versus retained heap `116.138 ms`, removing `31.161 ms` median
 timed GC. RSS is slightly higher, so this is a real-preloaded throughput/GC
-win, not an RSS win. The follow-up reusable `EpochTopKByKey` API also passes
-the retained gate: generated 1M checked scoped top-k is `341.905 ms` versus
-retained heap `463.578 ms`, and real HDFS preloaded checked scoped top-k is
-`95.267 ms` versus retained heap `123.024 ms`. The API is still slower than
-the benchmark-local checked count-array path, so it is a passed reusable API
-with an overhead caveat rather than the final top-k lower bound. L1
-final-clean real HDFS x20 rows now confirm the direction with external timing:
-reusable checked top-k scoped is `5.05 s` and about `28 MB` RSS versus retained
-heap `5.46 s` and about `205 MB` RSS. The benchmark-local checked retained
-path is still faster at `4.84 s`.
+win, not an RSS win. The reusable `EpochTopKByKey` API also passes the retained
+gate. After the increment hot-path follow-up, generated 1M checked scoped top-k
+is `274.914 ms` versus retained heap `397.788 ms`, and real HDFS preloaded
+checked scoped top-k is `82.170 ms` versus retained heap `111.704 ms`. The
+same-run API overhead versus the benchmark-local checked path is now about
+`5.7%` generated and `7.0%` real HDFS in L2. L1 final-clean real HDFS x20 rows
+confirm the direction with external timing: reusable checked top-k scoped is
+`4.88 s` and about `28 MB` RSS versus retained heap `5.52 s` and about
+`205 MB` RSS; the benchmark-local checked retained path is `4.80 s`, so the
+report-facing API overhead is about `1.7%`.
 
 Latest ReML/MLKit PLDI-style table:
 `evidence/REML_MLKIT_PLDI_TABLE.md`. It recreates the paper table shape as

@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-10 18:03 CEST
+Last updated: 2026-05-10 22:49 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -92,10 +92,11 @@ port. The 8-warehouse representative row is checked epoch scoped `2.21 s`
 versus heap `2.64 s` and rooted scoped region `2.48 s`, with RSS about
 `8.0 MB` versus heap `12.4 MB`.
 Child `3598efe29` adds L1 final-clean support for LogHub top templates. The
-real HDFS 1M x20 row is reusable checked top-k scoped `5.05 s` and about
-`28 MB` RSS versus retained heap `5.46 s` and about `205 MB` RSS. The
-benchmark-local checked retained path remains faster at `4.84 s`, so top-k
-operator work still has an API-overhead target.
+hot-path follow-up at child `59acadda6` reduces reusable top-k overhead:
+real HDFS 1M x20 is reusable checked top-k scoped `4.88 s` and about `28 MB`
+RSS versus retained heap `5.52 s` and about `205 MB` RSS. The benchmark-local
+checked retained path is `4.80 s`, so report-facing API overhead is now about
+`1.7%`.
 Child `fe8f0d853` adds L1 final-clean support for `LogHubRegionMatrix`. The
 real HDFS q2 page/window row is an L1 elapsed tie plus RSS win: checked scoped
 page-token `25.56 s`, about `79 MB` RSS versus heap `25.60 s`, about `409 MB`
@@ -156,15 +157,15 @@ with a reusable checked API gate.
 LogHub top-template checkpoint: child commit `2393a69c4` adds the focused
 retained top-k matrix. It passes the retained-object gate on generated and
 real-preloaded HDFS input. Child commit `9abac4833` adds the follow-up
-`EpochTopKByKey` API, which also passes: generated 1M checked scoped top-k is
-`341.905 ms` versus retained heap `463.578 ms`, and real HDFS preloaded
-checked scoped top-k is `95.267 ms` versus retained heap `123.024 ms`. The API
-still trails the benchmark-local manual count-array path, so the next top-k
-milestone is profiling/inlining the operator update/getter path, not DEBS
-ranking or generic TableRank. The L1 real HDFS x20 row from child `3598efe29`
-confirms the same direction with external timing/RSS: reusable checked top-k
-scoped `5.05 s` and about `28 MB` RSS versus retained heap `5.46 s` and about
-`205 MB` RSS.
+`EpochTopKByKey` API, which also passes. After the increment hot-path pass,
+generated 1M checked scoped top-k is `274.914 ms` versus retained heap
+`397.788 ms`, and real HDFS preloaded checked scoped top-k is `82.170 ms`
+versus retained heap `111.704 ms`. The L1 real HDFS x20 row confirms the same
+direction with external timing/RSS: reusable checked top-k scoped `4.88 s` and
+about `28 MB` RSS versus retained heap `5.52 s` and about `205 MB` RSS. The
+remaining top-k API overhead is small enough that the next step is integration
+only for natural retained top-k workloads, not DEBS ranking or generic
+TableRank.
 
 Latest staged headline sweep: `evidence/COMPREHENSIVE_SWEEP_2026_05_06.md`.
 It completed prior-work, checked-operator, SafeZone-cost, and stream rows with
