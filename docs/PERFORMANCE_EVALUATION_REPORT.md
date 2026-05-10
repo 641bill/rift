@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-09 23:55 CEST
+Last updated: 2026-05-10 01:25 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -27,10 +27,11 @@ manual summary/count-array rows remain topology/operator lower bounds.
 Latest measurement-overhead protocol:
 `evidence/MEASUREMENT_OVERHEAD_PROTOCOL.md` and
 `evidence/FINAL_CLEAN_HEADLINE_RESULTS.md`. Initial L1 final-clean support now
-exists for retained epoch, Yak, Dataflow, Common Crawl WET-shaped, and ReML
-Tier 1 binaries. Existing report-grade benchmark result files remain mostly L2
-standard-stats evidence; the final paper headline elapsed/RSS table still
-needs a report-grade L1 sweep.
+exists for retained epoch, Yak, Dataflow, Common Crawl WET-shaped, ReML
+Tier 1, StreamFlex, and Stancu binaries. The L1 table now includes retained,
+Dataflow, Yak LiveJournal, generated Common Crawl-shaped q1/q2, ReML Tier 1,
+StreamFlex direct epoch, and Stancu transaction rows. Remaining benchmark
+result files are still mostly L2 standard-stats evidence.
 
 Latest operator-gate status:
 `evidence/OPERATOR_GATE_STATUS.md`. This keeps rank/top-k/median/hash/join work
@@ -91,6 +92,17 @@ epoch scoped versus heap `27.775/50.837/30.387 ms`; StreamFlex throughput is
 `157.334 ms` for checked scoped direct epoch versus heap `216.853 ms`; and
 Stancu-style transactions are `155.863 ms` for checked scoped direct epoch
 versus heap `220.951 ms`.
+
+Latest L1 final-clean direct-epoch follow-up:
+`evidence/FINAL_CLEAN_HEADLINE_RESULTS.md` now records external `/usr/bin/time`
+rows for the same StreamFlex/Stancu story. StreamFlex throughput at 20 x 200k
+events is checked scoped direct epoch `0.58 s` versus heap `0.79 s` and
+improved SafeZone `0.77 s`. StreamFlex latency at 20 x 10k events is checked
+scoped direct epoch `0.17 s` versus heap `0.18 s`, and deadline misses drop
+from heap `4` to checked `0`. Stancu transactions at 20 x 200k transactions
+are checked scoped direct epoch `0.57 s` versus heap `0.85 s` and improved
+SafeZone `0.71 s`. These rows are the clean headline timing/RSS versions of
+the earlier L2 standard-stats interpretation.
 
 Latest retained-epoch reclaim checkpoint:
 `evidence/RETAINED_EPOCH_RECLAIM_MATRIX.md` adds retained no-traverse controls
@@ -379,9 +391,12 @@ Latest clean final-selection headline interpretation:
   reusable fold row remains gated; Dataflow AGGREGATE is a checked/safezone
   near-tie (`41.827 ms` checked, `41.810 ms` improved SafeZone) rather than a
   generic fold win.
-- `TransactionRegion` is the best checked StreamFlex shape so far: scoped
-  checked transaction throughput is `40.512 ms`, faster than heap `42.431 ms`
-  and improved SafeZone `42.236 ms`, but latency median is worse.
+- Direct checked epoch is the best StreamFlex shape so far. In L1 final-clean
+  timing, checked scoped direct epoch throughput is `0.58 s` for 20 x 200k
+  events versus heap `0.79 s` and improved SafeZone `0.77 s`; latency is
+  `0.17 s` versus heap `0.18 s`, with heap deadline misses `4` and checked
+  misses `0`. `TransactionRegion` remains a useful multi-list API, but it is
+  no longer the best StreamFlex headline row.
 - NEXMark Beam-default is broadly favorable but modest: checked wins q0/q1/q2/
   q3/q4/q5/q8/q9/q11, with q3 `287.541 ms` versus heap `317.003 ms` and
   improved SafeZone `304.246 ms`.
@@ -432,7 +447,7 @@ Use these labels when reading "mixed" rows:
 | Outcome | Meaning | Example |
 |---|---|---|
 | Representative win | Clear elapsed win, usually around `>=10%`, with correctness and a reusable workload shape. | Generated Common Crawl-shaped q1/q2 with checked scoped page-token. |
-| Modest throughput win | Correct row is faster, but margin is below the representative gate or the workload is not broad enough. | NEXMark Q8, real WET/WAT page-token controls, StreamFlex throughput. |
+| Modest throughput win | Correct row is faster, but margin is below the representative gate or the workload is not broad enough. | NEXMark Q8, real WET/WAT page-token controls. |
 | RSS win | Region row materially lowers resident memory even if elapsed is tied or slightly worse. | ReML-shaped `msort`/`ratio`, `CheckedWindowFold` style rows. |
 | Fixed-memory / tail win | Uncapped heap is competitive by growing large, but under a heap cap or in max-GC/tail runs regions improve completion or tails. | GH Archive q1 under `1G` heap cap. |
 | Speed-gated operator | Correct API has some GC/RSS benefit, but CPU overhead is too high for public performance claims. | `EpochFold`, `StreamWindowFold`, `TableRank`. |
@@ -443,8 +458,9 @@ finishes per unit time; in batch-style matrices we approximate it with elapsed
 time, where lower elapsed means higher throughput. Latency asks how long an
 individual event/request waits; p50/p95/max latency and deadline misses can
 improve even when average throughput changes only modestly, or worsen even when
-throughput improves. StreamFlex is the current example: scoped
-`TransactionRegion` improves throughput modestly, but latency remains mixed.
+throughput improves. StreamFlex is the current example: the L1 direct-epoch row
+improves throughput and removes heap deadline misses, while earlier
+TransactionRegion rows showed why the chosen framework topology matters.
 
 The project still does not have a final checked application result on a
 real-input GC-heavy stream benchmark.
@@ -528,7 +544,7 @@ Detailed taxonomy: `docs/MEMORY_MODE_TAXONOMY.md`.
 | Checked stream operators | Partial | AppendWindow/cursor works; Join/Fold/Rank/TableRank exist but many fail performance gates. |
 | Checked SafeZone-backed backend | Implemented as benchmark prototype | `RiftRegion.streamingSafeZone(...)`; object allocation/close supported, raw allocation/reset unsupported. |
 | Canonical benchmark labels | Implemented for key matrices | Checked AppendWindow and Common Crawl WET-shaped runners accept new names and old aliases. |
-| Cheap checked operator families | Started | `PageTokenMapFilter`, `RegionList`, `EpochBuffer`, and `TransactionRegion` are now real reusable APIs with passing safety probes. In the latest staged sweep, scoped checked append operators remain fast (`26.461 ms` scoped EpochBuffer, `26.883 ms` scoped page-token vs heap `36.944 ms`). `TransactionRegion` fixes the stacked-EpochBuffer StreamFlex granularity issue enough that scoped checked transaction is the best checked StreamFlex row (`39.019 ms`), but trusted Rift remains faster. `EpochFold` is implemented and correct but failed the Dataflow AGGREGATE speed gate (`92.923 ms`). |
+| Cheap checked operator families | Started | `PageTokenMapFilter`, `RegionList`, `EpochBuffer`, and `TransactionRegion` are now real reusable APIs with passing safety probes. In the latest staged sweep, scoped checked append operators remain fast (`26.461 ms` scoped EpochBuffer, `26.883 ms` scoped page-token vs heap `36.944 ms`). Direct `RiftRegion.epoch` supersedes `TransactionRegion` for the current StreamFlex headline because all stage objects share one batch lifetime; `TransactionRegion` stays as a multi-list API for shapes direct epoch cannot express cleanly. `EpochFold` is implemented and correct but failed the Dataflow AGGREGATE speed gate (`92.923 ms`). |
 | ReML/MLKit comparison track | Started with local medians | `ReMLRegionMatrix` implements Tier 1 Scala Native-shaped ports and `REML_COMPARISON_MATRIX.md` records paper-reported ReML data. The 2026-05-06 Tier 1 run gives local medians for `fib37`, `tak`, `mandel`, `msort`, `msort-r`, `life`, `fft`, and `ratio`; `msort`/`msort-r`/`ratio` are the meaningful allocation/RSS rows. The public MLKit repo has been cloned into ignored cache and contains many Figure 9-style benchmark sources; exact paper-era configuration and local MLKit/MLton toolchain reproduction remain open. |
 | Final component selection | Started | `docs/FINAL_COMPONENT_SELECTION.md` classifies public candidates, internal lower-bound controls, and gated/rejected operators without deleting runtime code. The parent evaluation runner and main sandbox matrices now exclude current/rootless controls by default; set `RIFT_EVAL_INCLUDE_CONTROLS=1` or `RIFT_BENCH_INCLUDE_CONTROLS=1` to reproduce lower-bound/control rows. Dirty-worktree smoke run `2026-05-06-final-selection-smoke` completed broad suites with `include_controls=0`; it validates runner behavior, not headline performance. |
 | Performance report package | In progress | This report now consolidates the main evidence; individual packs remain backing data. |

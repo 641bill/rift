@@ -1,7 +1,7 @@
 # Measurement Overhead Protocol
 
 Date: 2026-05-09
-Last updated: 2026-05-10 01:17 CEST
+Last updated: 2026-05-10 01:25 CEST
 
 Status: active protocol. Initial L1 final-clean support is implemented for the
 first representative benchmark binaries. The first clean focused retained L1

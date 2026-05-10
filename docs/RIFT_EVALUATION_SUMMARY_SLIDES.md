@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-09 23:55 CEST
+Last updated: 2026-05-10 01:25 CEST
 
 Status: markdown slide deck outline. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report,
@@ -26,7 +26,7 @@ Recommended talk order:
 6. Real-input Yak LiveJournal as the strongest checked epoch row.
 7. Page-token stream evidence for page/window append workloads.
 8. ReML/MLKit PLDI-style comparison as a non-stream typed-region axis.
-9. Open work: L1 final-clean sweep, real-input GC-heavy search, and gated
+9. Open work: remaining L1 final-clean gaps, real-input GC-heavy search, and gated
    rank/hash/median/join
    operators.
 
@@ -38,7 +38,7 @@ Representative numbers to keep on slides:
 | Retained generated/preloaded stressor | GH Archive-shaped retained q2: checked scoped `186.868 ms`, `15 MB` RSS vs retained heap `257.377 ms`, `77.208 ms` GC, `147 MB` RSS. | Strong retained memory/RSS win, but not real-input proof. |
 | Real-input checked epoch | SNAP LiveJournal 50M: checked epoch scoped `2008.320 ms`, `0 ms` GC, `2.11 GB` RSS vs heap `2958.659 ms`, `400.484 ms` GC, `3.91 GB` RSS. | Strongest real-input prior-work-shaped row; local graph replay, not exact Yak/GraphChi. |
 | Reusable Dataflow epoch | SELECT/AGGREGATE/JOIN: checked epoch scoped `19.691/34.676/19.762 ms` vs heap `27.775/50.837/30.387 ms`. | Direct epoch covers the full Broom-style operator family. |
-| StreamFlex/Stancu epoch | StreamFlex throughput `157.334 ms` vs heap `216.853 ms`; Stancu `155.863 ms` vs heap `220.951 ms`. | Direct epoch supersedes older TransactionRegion/EpochBuffer rows for shared batch lifetimes. |
+| StreamFlex/Stancu epoch | L1 StreamFlex throughput `0.58 s` vs heap `0.79 s`; L1 Stancu `0.57 s` vs heap `0.85 s`. | Direct epoch supersedes older TransactionRegion/EpochBuffer rows for shared batch lifetimes. |
 | Generated page/window stressor | Common Crawl-shaped q1/q2: checked scoped page-token `3707.214/3902.795 ms` vs heap `5577.965/5183.074 ms`. | Strong generated stream-object pressure win; RSS caveat; not real-input proof. |
 | Modest real-input page/window | LogHub HDFS q2 checked scoped page-token `7871.856 ms` vs heap `8227.369 ms`; DSPBench Log q2 `1733.654 ms` vs heap `1750.291 ms`. | Real-input wins are modest because parser/query CPU dominates and heap GC is small. |
 | Real-preloaded retained top-k | LogHub top templates: checked scoped retained `81.174 ms`, `0 ms` GC vs retained heap `116.138 ms`, `31.161 ms` GC. Reusable `EpochTopKByKey` checked scoped is `95.267 ms` vs retained heap `123.024 ms`. | First retained top-k API gate passes; RSS is slightly higher and parser/file I/O is excluded. API overhead remains versus the benchmark-local path. |
@@ -282,17 +282,18 @@ presented as a generic `EpochFold` win.
 
 The StreamFlex follow-up strengthens that lesson. `TransactionRegion` was a
 partial checked win, but direct checked epoch is better when all temporary
-stage objects share one batch lifetime: at 1M, scoped direct epoch is
-`163.339 ms` versus heap `218.582 ms`, improved SafeZone `208.653 ms`,
-trusted Streaming `182.246 ms`, and scoped checked transaction `205.929 ms`.
-The user-facing topology should be `epoch { ... }` first; specialized
-operators are for shapes direct epoch cannot express cleanly.
+stage objects share one batch lifetime. In L1 final-clean timing, 20 x 200k
+throughput is checked scoped direct epoch `0.58 s` versus heap `0.79 s` and
+improved SafeZone `0.77 s`. The latency row is also favorable: checked scoped
+direct epoch is `0.17 s` versus heap `0.18 s`, and deadline misses drop from
+heap `4` to checked `0`. The user-facing topology should be `epoch { ... }`
+first; specialized operators are for shapes direct epoch cannot express
+cleanly.
 
-Stancu-style transaction batches now show the same pattern. At 1M
-transactions, scoped direct epoch is `160.198 ms` versus heap `225.798 ms`,
-improved SafeZone `186.122 ms`, trusted Streaming `219.668 ms`, and direct
-stream epoch `174.137 ms`. This is the clearest local transaction-boundary
-checked win so far.
+Stancu-style transaction batches now show the same pattern. In L1 final-clean
+timing, 20 x 200k transactions are checked scoped direct epoch `0.57 s` versus
+heap `0.85 s` and improved SafeZone `0.71 s`. This is the clearest local
+transaction-boundary checked win so far.
 
 ## Slide 11: What Counts As A Win
 

@@ -1,7 +1,7 @@
 # Evaluation Classified Summary
 
 Date: 2026-05-09
-Last updated: 2026-05-09 23:55 CEST
+Last updated: 2026-05-10 01:25 CEST
 
 Status: thesis-facing classified summary built from committed evidence.
 Baseline commits for clean rows: parent `1cc3b2c`, child `13a3df1c7`.
@@ -12,12 +12,12 @@ Reusable top-k API rows come from child commit `9abac4833`.
 Every row has an explicit comparison class. Do not read all rows as a single
 "heap vs Rift" claim.
 
-Measurement level is separate from comparison class. Unless explicitly marked
-otherwise, the rows in this file are L2 standard-stats rows: they report GC,
-RSS, and region counters and are valid for interpretation, but they are not the
-future L1 final-clean headline table. Initial L1 binary support exists for the
-first representative matrices; report-grade L1 rows belong in
-`evidence/FINAL_CLEAN_HEADLINE_RESULTS.md` once collected.
+Measurement level is separate from comparison class. Some rows below now cite
+L1 final-clean process timing from
+`evidence/FINAL_CLEAN_HEADLINE_RESULTS.md`; older rows remain L2
+standard-stats rows that report GC, RSS, and region counters for
+interpretation. Use L1 rows for final elapsed/RSS when available, and use L2
+rows to explain GC/region behavior.
 
 | Comparison class | Meaning |
 |---|---|
@@ -47,9 +47,9 @@ reference, but the retained heap objects still remain for GC tracing/reclaim.
 | LogHub-shaped direct q3 | generated/indexable template/session stream | summary-only topology | natural heap `2225.364 ms`; heap direct summary `1779.064 ms` | checked scoped direct epoch `1792.397 ms` | checked is near same-shape heap | heap direct has `0 ms` GC | n/a | Topology evidence; richer query still CPU-heavy. |
 | Yak LiveJournal graphreal 50M | real SNAP LiveJournal edge list replay | best checked topology | heap `2958.659 ms`, GC `400.484 ms`, RSS `3.91 GB` | `checked-epoch-scoped` `2008.320 ms`, GC `0 ms`, RSS `2.11 GB` | `32.1%` faster | `-400.484 ms` | about `-46%` | Strongest real-input prior-work-shaped checked epoch win; local graph replay, not exact Yak/GraphChi artifact. |
 | Dataflow SELECT/AGGREGATE/JOIN | Broom-style generated methodology | best checked topology | heap `27.775/50.837/30.387 ms`, GC `6.828/11.564/9.331 ms`, RSS `76 MB` | checked epoch scoped `19.691/34.676/19.762 ms`, GC `0 ms`, RSS `47 MB` | `29-35%` faster | removes timed heap GC | about `-38%` | Reusable direct epoch win across the full Dataflow operator family. |
-| StreamFlex throughput 1M | StreamFlex-style generated methodology | best checked topology | heap `216.853 ms`, GC `46.036 ms`, RSS `8.0 MB` | checked scoped direct epoch `157.334 ms`, GC `0 ms`, RSS `8.2 MB` | `27.4%` faster | `-46.036 ms` | about `+2%` | Direct epoch supersedes TransactionRegion for shared-batch pipeline throughput. |
-| StreamFlex latency 200k | StreamFlex-style generated methodology | best checked topology | heap `200.924 ms`, GC `20.653 ms`, max `1065125 ns`, deadline misses `21` | checked scoped direct epoch `192.557 ms`, GC `1.570 ms`, max `887875 ns`, deadline misses `1` | `4.2%` faster | `-19.083 ms` | near tie | Latency/tail improvement; trusted Streaming remains the lower-bound max-tail control. |
-| Stancu-style transactions 1M | transaction methodology probe | best checked topology | heap `220.951 ms`, GC `22.819 ms`, RSS `7.9 MB` | checked scoped direct epoch `155.863 ms`, GC `0.381 ms`, RSS `8.0 MB` | `29.5%` faster | `-22.438 ms` | near tie | Checked transaction-boundary win; local methodology probe, not official SPEC. |
+| StreamFlex throughput 200k x20 | StreamFlex-style generated methodology | best checked topology / L1 final-clean | heap `0.79 s`, RSS `7.9 MB` | checked scoped direct epoch `0.58 s`, RSS `5.3 MB` | `26.6%` faster | L2 rows show timed GC removal; L1 intentionally omits GC reads | about `-33%` | L1 checked direct-epoch throughput win; direct epoch supersedes TransactionRegion for shared-batch pipeline throughput. |
+| StreamFlex latency 10k x20 | StreamFlex-style generated methodology | best checked topology / L1 final-clean | heap `0.18 s`, p99 `792 ns`, max `327334 ns`, deadline misses `4` | checked scoped direct epoch `0.17 s`, p99 `833 ns`, max `25167 ns`, deadline misses `0` | `5.6%` faster | L2 rows show timed GC/tail context; L1 intentionally omits GC reads | near tie | L1 latency/deadline win: checked direct epoch removes deadline misses and reduces max tail in this local row. |
+| Stancu-style transactions 200k x20 | transaction methodology probe | best checked topology / L1 final-clean | heap `0.85 s`, RSS `7.8 MB` | checked scoped direct epoch `0.57 s`, RSS `7.9 MB` | `32.9%` faster | L2 rows show timed GC removal; L1 intentionally omits GC reads | near tie | L1 checked transaction-boundary win; local methodology probe, not official SPEC. |
 | SPECjbb2005 workload port, 8 warehouses | clean-room transaction workload port | best checked topology | heap `129.674 ms`, GC `15.125 ms`, RSS `8.0 MB` | checked epoch scoped `108.649 ms`, GC `0 ms`, RSS `8.1 MB` | `16.2%` faster | `-15.125 ms` | near tie | Stancu/SPECjbb-shaped local port win; not official SPECjbb2005. |
 | Common Crawl WET-shaped q1 | generated stream stressor | best checked topology | heap `5577.965 ms`, GC `1741.640 ms`, RSS `409 MB` | checked scoped page-token `3707.214 ms`, GC `30.693 ms`, RSS `464 MB` | `33.5%` faster | `-1711 ms` | about `+14%` | Strong generated stream-object pressure win; not real-input proof and not RSS win. |
 | Common Crawl WET-shaped q2 | generated stream/window stressor | best checked topology | heap `5183.074 ms`, GC `1565.074 ms`, RSS `409 MB` | checked scoped page-token `3902.795 ms`, GC `27.027 ms`, RSS `464 MB` | `24.7%` faster | `-1538 ms` | about `+14%` | Strong generated window/object pressure win; not real-input proof and not RSS win. |

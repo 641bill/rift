@@ -1,7 +1,7 @@
 # Final-Clean Headline Results
 
 Date: 2026-05-09
-Last updated: 2026-05-10 01:17 CEST
+Last updated: 2026-05-10 01:25 CEST
 
 Status: L1 runner support exists for the first representative binaries. One
 focused retained-epoch L1 row has been collected from clean child commit
@@ -13,8 +13,9 @@ collected from child `7573d7577`; the broader report-grade L1 headline sweep
 is still pending.
 Child `7573d7577` extends external timing/RSS summary support to Dataflow,
 Yak, Common Crawl WET-shaped, and ReML runners. Child `c5bbc498f` adds the
-same support to StreamFlex and Stancu. StreamFlex throughput/latency and
-Stancu transaction representative L1 rows are now recorded below.
+same support to StreamFlex and Stancu. StreamFlex direct-epoch
+throughput/latency and Stancu transaction representative L1 rows are now
+recorded below.
 
 ## Definition
 
@@ -80,12 +81,12 @@ for those 20 iterations.
 | Dataflow JOIN 1M x20 | generated methodology | direct epoch / scoped region | framework API win | `gc-heap` | 3 processes x 20 iterations | `0.55 s` total (`27.5 ms/iter`) | `0.55 s` | `0.55 s` | `75071488 bytes` | checksum `193232836790` | L1 clean natural heap baseline |
 | Dataflow JOIN 1M x20 | generated methodology | direct epoch / scoped region | safe rooted baseline | `region-scoped-rooted` | 3 processes x 20 iterations | `0.46 s` total (`23.0 ms/iter`) | `0.46 s` | `0.46 s` | `7389184 bytes` | checksum `193232836790` | L1 clean rooted scoped-region baseline |
 | Dataflow JOIN 1M x20 | generated methodology | `RiftRegion.epoch` checked scoped | framework API win | `checked-epoch-scoped` | 3 processes x 20 iterations | `0.39 s` total (`19.5 ms/iter`) | `0.39 s` | `0.39 s` | `7405568 bytes` | checksum `193232836790` | L1 clean checked epoch win over heap and rooted scoped baseline |
-| StreamFlex throughput 200k x20 | generated methodology | heap transaction batches | natural heap baseline | `heap` | 3 processes x 20 iterations | `0.83 s` total (`41.5 ms/iter`) | `0.82 s` | `0.83 s` | `7929856 bytes` | checksum `3320210680833752` | L1 clean natural heap baseline |
-| StreamFlex throughput 200k x20 | generated methodology | scoped transaction batches | safe rooted baseline | `improved-safezone` | 3 processes x 20 iterations | `0.80 s` total (`40.0 ms/iter`) | `0.79 s` | `0.83 s` | `5324800 bytes` | checksum `3320210680833752` | L1 clean rooted scoped near-tie/slight throughput win |
-| StreamFlex throughput 200k x20 | generated methodology | checked transaction region | framework API near-tie | `rift-checked-safezone-transaction-region` | 3 processes x 20 iterations | `0.80 s` total (`40.0 ms/iter`) | `0.80 s` | `0.81 s` | `8093696 bytes` | checksum `3320210680833752` | L1 clean checked row slightly beats heap and ties rooted; not a headline throughput win |
-| StreamFlex latency 10k x20 | generated methodology | heap per-event latency | natural heap baseline | `heap` | 3 processes x 20 iterations | `0.20 s` total | `0.19 s` | `0.20 s` | `7946240 bytes` | checksum `657450396996205`, p50 `667 ns`, p99 `958 ns`, max `342708 ns`, misses `4` | L1 clean fastest elapsed but has deadline misses |
-| StreamFlex latency 10k x20 | generated methodology | scoped per-event latency | safe rooted baseline / tail win | `improved-safezone` | 3 processes x 20 iterations | `0.22 s` total | `0.22 s` | `0.22 s` | `7995392 bytes` | checksum `657450396996205`, p50 `875 ns`, p99 `1167 ns`, max `15459 ns`, misses `0` | L1 clean slower elapsed but removes deadline misses |
-| StreamFlex latency 10k x20 | generated methodology | checked transaction-region latency | framework API tail win | `rift-checked-safezone-transaction-region` | 3 processes x 20 iterations | `0.26 s` total | `0.26 s` | `0.26 s` | `7995392 bytes` | checksum `657450396996205`, p50 `1083 ns`, p99 `1417 ns`, max `16458 ns`, misses `0` | L1 clean tail/deadline win, not throughput win |
+| StreamFlex throughput 200k x20 | generated methodology | heap transaction batches | natural heap baseline | `heap` | 3 processes x 20 iterations | `0.79 s` total (`39.5 ms/iter`) | `0.78 s` | `0.80 s` | `7929856 bytes` | checksum `3320210680833752` | L1 clean natural heap baseline |
+| StreamFlex throughput 200k x20 | generated methodology | scoped transaction batches | safe rooted baseline | `improved-safezone` | 3 processes x 20 iterations | `0.77 s` total (`38.5 ms/iter`) | `0.77 s` | `0.77 s` | `5324800 bytes` | checksum `3320210680833752` | L1 clean rooted scoped-region baseline |
+| StreamFlex throughput 200k x20 | generated methodology | checked direct epoch batches | framework API win | `rift-checked-safezone-direct-epoch` | 3 processes x 20 iterations | `0.58 s` total (`29.0 ms/iter`) | `0.58 s` | `0.58 s` | `5308416 bytes` | checksum `3320210680833752` | L1 clean checked direct epoch win over heap and rooted scoped baseline |
+| StreamFlex latency 10k x20 | generated methodology | heap per-event latency | natural heap baseline | `heap` | 3 processes x 20 iterations | `0.18 s` total | `0.18 s` | `0.18 s` | `7946240 bytes` | checksum `657450396996205`, p50 `625 ns`, p99 `792 ns`, max `327334 ns`, misses `4` | L1 clean natural heap baseline with deadline misses |
+| StreamFlex latency 10k x20 | generated methodology | scoped per-event latency | safe rooted baseline / tail win | `improved-safezone` | 3 processes x 20 iterations | `0.21 s` total | `0.21 s` | `0.21 s` | `7979008 bytes` | checksum `657450396996205`, p50 `875 ns`, p99 `1083 ns`, max `2459 ns`, misses `0` | L1 clean slower elapsed but removes deadline misses |
+| StreamFlex latency 10k x20 | generated methodology | checked direct epoch latency | framework API win / tail win | `rift-checked-safezone-direct-epoch` | 3 processes x 20 iterations | `0.17 s` total | `0.17 s` | `0.17 s` | `7962624 bytes` | checksum `657450396996205`, p50 `708 ns`, p99 `833 ns`, max `25167 ns`, misses `0` | L1 clean checked direct epoch elapsed and deadline win over heap |
 | Stancu transactions 200k x20 | generated transaction methodology | heap transaction batches | natural heap baseline | `heap` | 3 processes x 20 iterations | `0.85 s` total (`42.5 ms/iter`) | `0.85 s` | `0.85 s` | `7847936 bytes` | checksum `-1953196317317355226` | L1 clean natural heap baseline |
 | Stancu transactions 200k x20 | generated transaction methodology | scoped transaction batches | safe rooted baseline | `improved-safezone` | 3 processes x 20 iterations | `0.71 s` total (`35.5 ms/iter`) | `0.71 s` | `0.71 s` | `7897088 bytes` | checksum `-1953196317317355226` | L1 clean rooted scoped transaction win |
 | Stancu transactions 200k x20 | generated transaction methodology | checked direct epoch transactions | framework API win | `rift-checked-safezone-direct-epoch` | 3 processes x 20 iterations | `0.57 s` total (`28.5 ms/iter`) | `0.57 s` | `0.57 s` | `7880704 bytes` | checksum `-1953196317317355226` | L1 clean checked transaction/epoch win over heap and rooted scoped baseline |
@@ -208,7 +209,7 @@ ReML-shaped controls not listed as headline rows:
   useful external timing claims; keep them as correctness/configuration
   controls unless scaled up.
 
-StreamFlex throughput command:
+StreamFlex direct-epoch throughput command:
 
 ```sh
 cd /Users/siyaoliu/rift/scala-native-rift
@@ -219,13 +220,13 @@ for i in 1 2 3; do
   STREAMFLEX_EVENTS=200000 \
   STREAMFLEX_BENCHMARK_RUNS=20 \
   STREAMFLEX_WARMUPS=0 \
-  STREAMFLEX_MODES="heap improved-safezone rift-checked-safezone-transaction-region" \
-  STREAMFLEX_OUTPUT_DIR=/tmp/rift-l1-streamflex-throughput-200k-x20-c5bbc498f-r${i} \
+  STREAMFLEX_MODES="heap improved-safezone rift-checked-safezone-direct-epoch" \
+  STREAMFLEX_OUTPUT_DIR=/tmp/rift-l1-streamflex-throughput-direct-epoch-200k-x20-c5bbc498f-r${i} \
   zsh sandbox/run_streamflex_region_instrumented_matrix.sh
 done
 ```
 
-StreamFlex latency command:
+StreamFlex direct-epoch latency command:
 
 ```sh
 cd /Users/siyaoliu/rift/scala-native-rift
@@ -236,8 +237,8 @@ for i in 1 2 3; do
   STREAMFLEX_LATENCY_EVENTS=10000 \
   STREAMFLEX_BENCHMARK_RUNS=20 \
   STREAMFLEX_WARMUPS=0 \
-  STREAMFLEX_MODES="heap improved-safezone rift-checked-safezone-transaction-region" \
-  STREAMFLEX_OUTPUT_DIR=/tmp/rift-l1-streamflex-latency-10k-x20-c5bbc498f-r${i} \
+  STREAMFLEX_MODES="heap improved-safezone rift-checked-safezone-direct-epoch" \
+  STREAMFLEX_OUTPUT_DIR=/tmp/rift-l1-streamflex-latency-direct-epoch-10k-x20-c5bbc498f-r${i} \
   zsh sandbox/run_streamflex_region_instrumented_matrix.sh
 done
 ```

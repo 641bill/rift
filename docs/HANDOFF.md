@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-10 01:17 CEST
+Last updated: 2026-05-10 01:25 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -96,14 +96,13 @@ then print minimal `measurement_level=L1 final_clean=1` result lines. Their
 runners now record external real/user/sys time and max RSS. Small smokes
 matched checksums across heap, improved SafeZone, and checked scoped rows.
 Representative L1 rows are now recorded in
-`evidence/FINAL_CLEAN_HEADLINE_RESULTS.md`: StreamFlex throughput is a
-near-tie/slight checked win (`0.80 s` checked scoped transaction versus
-`0.83 s` heap and `0.80 s` improved SafeZone for 20 x 200k events);
-StreamFlex latency is a tail/deadline row, not an elapsed win (`0.26 s`
-checked with zero misses versus `0.20 s` heap with four deadline misses);
-Stancu transactions are a checked framework win (`0.57 s` checked scoped
-direct epoch versus `0.85 s` heap and `0.71 s` improved SafeZone for
-20 x 200k transactions).
+`evidence/FINAL_CLEAN_HEADLINE_RESULTS.md`: StreamFlex direct-epoch throughput
+is a checked framework win (`0.58 s` checked scoped direct epoch versus
+`0.79 s` heap and `0.77 s` improved SafeZone for 20 x 200k events);
+StreamFlex direct-epoch latency is also favorable (`0.17 s` checked with zero
+misses versus `0.18 s` heap with four deadline misses); Stancu transactions are
+a checked framework win (`0.57 s` checked scoped direct epoch versus `0.85 s`
+heap and `0.71 s` improved SafeZone for 20 x 200k transactions).
 
 Latest ReML/MLKit PLDI-style table:
 `evidence/REML_MLKIT_PLDI_TABLE.md` is now the dedicated thesis-facing table.
@@ -178,7 +177,10 @@ SELECT/AGGREGATE/JOIN are `19.691/34.676/19.762 ms` for checked epoch scoped
 versus heap `27.775/50.837/30.387 ms`. StreamFlex throughput is `157.334 ms`
 for checked scoped direct epoch versus heap `216.853 ms`; Stancu-style
 transactions are `155.863 ms` for checked scoped direct epoch versus heap
-`220.951 ms`. These rows are now the clean source for the report and slides.
+`220.951 ms`. These remain L2 standard-stats interpretation rows. For final
+elapsed/RSS, use the L1 rows in `evidence/FINAL_CLEAN_HEADLINE_RESULTS.md`:
+StreamFlex direct epoch `0.58 s` versus heap `0.79 s`, and Stancu direct epoch
+`0.57 s` versus heap `0.85 s`.
 
 Latest direct-epoch extension and same-shape control:
 Checked direct-epoch modes were added to DSPBench generated q2, GH
