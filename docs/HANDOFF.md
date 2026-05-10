@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-10 23:51 CEST
+Last updated: 2026-05-11 00:03 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -18,9 +18,10 @@ current parent worktree after Yak topword L1 evidence update
 Report HTML companion:
 `docs/PERFORMANCE_EVALUATION_REPORT.md` remains the source of truth for the
 single project report. `scripts/generate-report-html.py` generates the
-human-readable standalone companion `docs/report.html`, with a sticky table of
-contents, styled tables, and inline code formatting. Regenerate it after report
-edits with:
+human-readable standalone companion `docs/report.html`. The HTML is now a
+presentation-oriented, self-contained report with a hero summary, KPI cards,
+comparison-class cards, styled evidence tables, responsive layout, source links,
+and a collapsed full Markdown appendix. Regenerate it after report edits with:
 
 ```sh
 python3 scripts/generate-report-html.py
