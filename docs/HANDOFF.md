@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-10 22:49 CEST
+Last updated: 2026-05-10 23:26 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -10,10 +10,10 @@ Active implementation branch for this update:
 `feature/rift`
 
 Latest implementation checkpoint:
-`59acadda6` (`Reduce EpochTopKByKey increment overhead`)
+`bcbfe80f5` (`Add Yak topword reusable top-k modes`)
 
 Latest parent evidence checkpoint:
-current parent commit after top-k hot-path evidence update
+current parent worktree after Yak topword top-k evidence update
 
 Latest comprehensive sweep checkpoint:
 Staged headline runs completed after the TransactionRegion checkpoint. Source
@@ -212,6 +212,21 @@ top-k scoped `4.88 s` and about `28 MB` RSS versus retained heap `5.52 s` and
 about `205 MB` RSS. Interpretation: the reusable API passes the retained
 top-k gate with materially reduced overhead; remaining overhead is about
 `1.7%` in the L1 real HDFS row.
+
+Yak topword reusable top-k follow-up:
+`YakRegionMatrix` now has a same-shape heap retained/no-traverse top-k control
+and `checked-epoch-topk-stream` / `checked-epoch-topk-scoped` rows using
+`RiftRegion.EpochTopKByKey`. The 10M generated topword rerun at
+`/tmp/yak-topword-topk-10m-2026-05-10/summary.tsv` reports natural heap
+`313.724 ms` with `44.654 ms` timed GC, same-shape heap top-k retained
+`297.740 ms` with `71.767 ms` timed GC and `146.9 MB` RSS,
+`checked-epoch-topk-stream` `259.742 ms`, and
+`checked-epoch-topk-scoped` `249.311 ms`, all with matching checksum. The
+scoped reusable top-k row beats natural heap and same-shape heap top-k and
+keeps RSS near other region rows. The caveat is that the older
+`checked-epoch-scoped` retained/close-traversal row is still faster
+(`234.031 ms`) for this local topword workload, so Yak topword is a second
+top-k API confirmation, not a reason to replace the direct epoch topology.
 
 Latest clean retained/direct-epoch rerun:
 After committing child `918c7d4c1` and parent `ab570b1`, the retained-object

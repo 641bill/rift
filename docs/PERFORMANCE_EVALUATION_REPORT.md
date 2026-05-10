@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-10 22:49 CEST
+Last updated: 2026-05-10 23:26 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -59,7 +59,14 @@ same-run API overhead versus the benchmark-local checked path is now about
 confirm the direction with external timing: reusable checked top-k scoped is
 `4.88 s` and about `28 MB` RSS versus retained heap `5.52 s` and about
 `205 MB` RSS; the benchmark-local checked retained path is `4.80 s`, so the
-report-facing API overhead is about `1.7%`.
+report-facing API overhead is about `1.7%`. Yak topword now provides a second
+natural top-k workload for the same reusable API: at 10M generated records,
+`checked-epoch-topk-scoped` is `249.311 ms` versus natural heap `313.724 ms`
+and the same-shape heap top-k retained control `297.740 ms`, with zero timed
+GC and region-like RSS. The caveat is important: the older checked direct
+epoch close-traversal topology is still faster for this local Yak topword row
+at `234.031 ms`, so `EpochTopKByKey` is a passed reusable top-k API, not the
+universal best topology.
 
 Latest ReML/MLKit PLDI-style table:
 `evidence/REML_MLKIT_PLDI_TABLE.md`. It recreates the paper table shape as
@@ -292,6 +299,10 @@ reusable epoch topology now covers local Yak-shaped `wordcount`, `graphstep`,
 among measured heap/rooted/streaming/checked rows for all four and removes the
 heap timed-GC component. `sort` is now covered by a checked region-captured
 array row, but remains CPU-bound/modest rather than a representative GC win.
+The topword follow-up also adds the reusable `EpochTopKByKey` operator with a
+same-shape heap top-k retained control. This confirms reusable top-k beats heap
+and same-shape heap, while preserving the separate conclusion that direct
+checked epoch remains the best Yak topword topology in the current harness.
 
 Benchmark guide: `docs/BENCHMARK_CATALOG.md` describes what each benchmark is
 meant to measure and which rows are generated, real-input, focused, or

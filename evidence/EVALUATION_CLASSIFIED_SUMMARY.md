@@ -1,12 +1,12 @@
 # Evaluation Classified Summary
 
 Date: 2026-05-09
-Last updated: 2026-05-10 22:49 CEST
+Last updated: 2026-05-10 23:26 CEST
 
 Status: thesis-facing classified summary built from committed evidence.
 Baseline commits for clean rows: parent `1cc3b2c`, child `13a3df1c7`.
 Reusable top-k API rows include the increment hot-path follow-up after child
-commit `bc9fd5979`.
+commit `bc9fd5979` and the Yak topword same-shape follow-up.
 
 ## How To Read This Table
 
@@ -48,6 +48,7 @@ reference, but the retained heap objects still remain for GC tracing/reclaim.
 | LogHub-shaped direct q2 | generated/indexable log stream | summary-only topology | natural heap `526.803 ms`; L1 heap direct summary `4.23 s` x20; L2 heap direct `191.601 ms` | L1 checked stream/scoped direct summary `4.39/4.38 s` x20; L2 checked scoped direct `193.938 ms` | checked is within about `4%` of same-shape heap in L1 | heap direct has `0 ms` GC | near-tie small RSS | Symmetric direct-aggregate topology evidence. |
 | LogHub-shaped direct q3 | generated/indexable template/session stream | summary-only topology | natural heap `2225.364 ms`; L1 heap direct summary `37.01 s` x20; L2 heap direct `1779.064 ms` | L1 checked stream/scoped direct summary `37.65/38.00 s` x20; L2 checked scoped direct `1792.397 ms` | checked is within about `2-3%` of same-shape heap in L1 | heap direct has `0 ms` median GC but q3 has occasional GC in L2 | near-tie small RSS | Symmetric topology evidence; richer query remains CPU-heavy. |
 | Yak LiveJournal graphreal 50M | real SNAP LiveJournal edge list replay | best checked topology | heap `2958.659 ms`, GC `400.484 ms`, RSS `3.91 GB` | `checked-epoch-scoped` `2008.320 ms`, GC `0 ms`, RSS `2.11 GB` | `32.1%` faster | `-400.484 ms` | about `-46%` | Strongest real-input prior-work-shaped checked epoch win; local graph replay, not exact Yak/GraphChi artifact. |
+| Yak topword reusable top-k 10M | Yak-style generated methodology | retained-object drop-anchor / reusable operator gate | natural heap `313.724 ms`, GC `44.654 ms`, RSS `75 MB`; same-shape heap top-k retained `297.740 ms`, GC `71.767 ms`, RSS `147 MB` | `checked-epoch-topk-scoped` `249.311 ms`, GC `0 ms`, RSS `83 MB` | `20.5%` faster than natural heap; `16.3%` faster than same-shape heap top-k | removes timed heap GC | RSS near region rows, much lower than same-shape heap top-k | Reusable top-k API passes on a second natural top-k workload, but older `checked-epoch-scoped` close-traversal topology is still faster (`234.031 ms`) for this local topword shape. |
 | Dataflow SELECT/AGGREGATE/JOIN | Broom-style generated methodology | best checked topology | heap `27.775/50.837/30.387 ms`, GC `6.828/11.564/9.331 ms`, RSS `76 MB` | checked epoch scoped `19.691/34.676/19.762 ms`, GC `0 ms`, RSS `47 MB` | `29-35%` faster | removes timed heap GC | about `-38%` | Reusable direct epoch win across the full Dataflow operator family. |
 | StreamFlex throughput 200k x20 | StreamFlex-style generated methodology | best checked topology / L1 final-clean | heap `0.79 s`, RSS `7.9 MB` | checked scoped direct epoch `0.58 s`, RSS `5.3 MB` | `26.6%` faster | L2 rows show timed GC removal; L1 intentionally omits GC reads | about `-33%` | L1 checked direct-epoch throughput win; direct epoch supersedes TransactionRegion for shared-batch pipeline throughput. |
 | StreamFlex latency 10k x20 | StreamFlex-style generated methodology | best checked topology / L1 final-clean | heap `0.18 s`, p99 `792 ns`, max `327334 ns`, deadline misses `4` | checked scoped direct epoch `0.17 s`, p99 `833 ns`, max `25167 ns`, deadline misses `0` | `5.6%` faster | L2 rows show timed GC/tail context; L1 intentionally omits GC reads | near tie | L1 latency/deadline win: checked direct epoch removes deadline misses and reduces max tail in this local row. |
@@ -79,7 +80,8 @@ reference, but the retained heap objects still remain for GC tracing/reclaim.
   have L1 checked framework wins, but remain generated local-harness evidence.
 - **Real-input claim:** Yak LiveJournal is the strongest real-input epoch row;
   LogHub top templates is now a strong real-preloaded retained top-k row, and
-  `EpochTopKByKey` is the first reusable top-k API to pass the retained gate;
+  `EpochTopKByKey` is the first reusable top-k API to pass the retained gate.
+  Yak topword provides a second generated-methodology top-k confirmation, while
   GH Archive byte-slice q1/q2, LogHub HDFS q2, and DSPBench Log q2 remain
   modest page/window rows.
 - **Non-claim:** summary-only/direct-aggregate rows are topology/operator lower

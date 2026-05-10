@@ -1,7 +1,7 @@
 # Rift Benchmark Catalog
 
 Date: 2026-05-05
-Last updated: 2026-05-10 22:49 CEST
+Last updated: 2026-05-10 23:26 CEST
 
 Status: working benchmark guide. Use this document to understand what each
 benchmark is meant to test before reading the detailed result files in
@@ -123,7 +123,7 @@ so it is layout evidence, not a pure allocator comparison.
 |---|---|---|---|
 | Dataflow SELECT/AGGREGATE/JOIN | Broom-style dataflow | Stream operators with short-lived tuples and operator-local lifetimes. | Good prior-work-shaped runtime evidence; SafeZone-family rows are often strong. |
 | StreamFlex matrix | StreamFlex-style memory pressure/latency | Windowed stream pressure and latency-style measurements. | Methodology evidence, not exact artifact reproduction. |
-| Yak matrix | Yak-style epochs and promotion pressure | Topword/filter, GraphChi-like intervals, grouped sort, escape/promotion proxies, and `graphreal` over real SNAP edge lists. The LiveJournal topology follow-up separately measures whole-run checked regions, per-epoch checked regions, and page-token checked regions. | Useful to compare static checked regions against dynamic region/promotion ideas and to choose a region topology. `graphreal` is real-input Yak-shaped evidence, not exact Yak/GraphChi reproduction. |
+| Yak matrix | Yak-style epochs and promotion pressure | Topword/filter, GraphChi-like intervals, grouped sort, escape/promotion proxies, and `graphreal` over real SNAP edge lists. The LiveJournal topology follow-up separately measures whole-run checked regions, per-epoch checked regions, and page-token checked regions. The topword follow-up adds same-shape heap top-k retained controls and reusable `EpochTopKByKey` rows. | Useful to compare static checked regions against dynamic region/promotion ideas and to choose a region topology. `graphreal` is real-input Yak-shaped evidence, not exact Yak/GraphChi reproduction. Topword confirms reusable checked top-k wins over heap controls, while direct epoch remains the fastest topology for that local row. |
 | Stancu matrix | RegionScope/static hybrid analysis | Transaction/region-boundary style workloads. | Safety/methodology anchor; not full SPECjbb reproduction. |
 | SPECjbb2005 workload port | Stancu/SPECjbb2005 methodology | Deterministic single-process Scala Native port of the transaction workload shape, with durable warehouse/customer/stock state on heap arrays and transaction-local request/line/probe/receipt objects in epochs. | Clean-room workload port, not official SPECjbb2005. L2 rows cover warehouses 4..8; an L1 final-clean 8-warehouse representative row is reported in `evidence/SPECJBB2005_PORT_MATRIX.md`. |
 | ReML / MLKit lineage | Elsman 2023 / MLKit typed-region lineage | Paper-reported benchmark table plus local Scala Native-shaped ports for classic SML benchmark programs. | New comparison axis for region polymorphism and GC-safety; not stream evidence and not exact ReML reproduction yet. |

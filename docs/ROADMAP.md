@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-10 22:49 CEST
+Last updated: 2026-05-10 23:26 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -137,6 +137,14 @@ direct-summary rows are within about `1%` of heap direct-summary in L1; LogHub
 q2 is within about `4%`, and q3 is within about `2-3%` while remaining
 query-CPU dominated. These rows stay classified as topology/operator lower
 bounds, not memory-management claims.
+The Yak topword follow-up now applies the same fair-control rule to top-k:
+same-shape heap top-k retained/no-traverse is measured alongside reusable
+checked `EpochTopKByKey` rows. At 10M, checked scoped top-k is `249.311 ms`
+versus natural heap `313.724 ms` and same-shape heap top-k `297.740 ms`, with
+zero timed GC and RSS near other region rows. Direct checked epoch remains the
+best Yak topword topology at `234.031 ms`, so the top-k API is a passed
+reusable operator row but not the default topology for every topword-shaped
+program.
 
 ReML/MLKit PLDI-style table checkpoint:
 `evidence/REML_MLKIT_PLDI_TABLE.md` now separates paper-reported Figure 9
@@ -166,6 +174,9 @@ about `28 MB` RSS versus retained heap `5.52 s` and about `205 MB` RSS. The
 remaining top-k API overhead is small enough that the next step is integration
 only for natural retained top-k workloads, not DEBS ranking or generic
 TableRank.
+Yak topword is now that second natural top-k integration check. It passes
+against natural and same-shape heap controls, while preserving the topology
+caveat above.
 
 Latest staged headline sweep: `evidence/COMPREHENSIVE_SWEEP_2026_05_06.md`.
 It completed prior-work, checked-operator, SafeZone-cost, and stream rows with
