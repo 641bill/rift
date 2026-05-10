@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-10 16:05 CEST
+Last updated: 2026-05-10 17:15 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -10,10 +10,10 @@ Active implementation branch for this update:
 `feature/rift`
 
 Latest implementation checkpoint:
-`dffe178a0` (`Add final-clean NEXMark support`)
+`54bf38c45` (`Add final-clean GH Archive support`)
 
 Latest parent evidence checkpoint:
-current parent commit (`Record SPECjbb final-clean rows`)
+current parent commit (`Record GH Archive final-clean rows`)
 
 Latest comprehensive sweep checkpoint:
 Staged headline runs completed after the TransactionRegion checkpoint. Source
@@ -52,9 +52,9 @@ diagnostics, and L4 external profiles. Initial L1 final-clean binary support is
 now implemented for `RetainedEpochReclaimMatrix`, `YakRegionMatrix`,
 `DataflowRegionMatrix`, `CommonCrawlWetMatrix`, `ReMLRegionMatrix`,
 `StreamFlexRegionMatrix`, `StancuRegionMatrix`,
-`SpecJbb2005PortMatrix`, `LogHubTopTemplatesMatrix`, and
-`LogHubRegionMatrix`, and `DSPBenchRegionMatrix`.
-Child `dffe178a0` also adds L1 plumbing to `NexmarkRegionMatrix`.
+`SpecJbb2005PortMatrix`, `LogHubTopTemplatesMatrix`, `LogHubRegionMatrix`,
+`DSPBenchRegionMatrix`, `NexmarkRegionMatrix`, and
+`GithubArchiveRegionMatrix`.
 Set `RIFT_FINAL_CLEAN=1` or `RIFT_EVAL_MEASUREMENT_LEVEL=L1`; the binary skips
 internal timing/GC/region stat reads and prints only minimal checksum/output
 metadata. A tiny retained-epoch L1 smoke matched heap and checked checksums.
@@ -138,6 +138,15 @@ methodology rows: q3/q8/q9/q11 are `5.86/9.21/15.03/4.36 s` versus heap
 `6.18/9.54/16.27/4.47 s` and improved SafeZone `6.38/10.13/18.10/5.11 s`.
 RSS is also much lower than heap. This is generated local-harness evidence,
 not real-input proof or exact Beam runner evidence.
+Child `54bf38c45` adds L1 plumbing to `GithubArchiveRegionMatrix`. The
+two-hour real file-backed byte-slice q1/q2 rows were rerun as 200k real GH
+Archive events x3 query iterations per process, three external repeats.
+Checked scoped page-token is a modest elapsed/RSS win: q1 is `12.89 s` and
+about `101 MB` RSS versus heap `13.17 s` and about `265 MB`; q2 is `12.87 s`
+and about `102 MB` RSS versus heap `13.18 s` and about `244 MB`. L2 rows
+remain the GC interpretation source and show heap GC around `1.5-1.6%` of
+elapsed, so GH Archive remains a useful real-input modest/RSS row rather than
+the missing flagship GC-heavy real-input case.
 
 Latest ReML/MLKit PLDI-style table:
 `evidence/REML_MLKIT_PLDI_TABLE.md` is now the dedicated thesis-facing table.

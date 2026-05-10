@@ -1,7 +1,7 @@
 # Final-Clean Headline Results
 
 Date: 2026-05-09
-Last updated: 2026-05-10 16:05 CEST
+Last updated: 2026-05-10 17:15 CEST
 
 Status: L1 runner support exists for the first representative binaries. One
 focused retained-epoch L1 row has been collected from clean child commit
@@ -25,6 +25,8 @@ Child `95f4f4d71` adds L1 support to `DSPBenchRegionMatrix`, and the Fraud/Log
 q2 page/window rows are recorded below.
 Child `dffe178a0` adds L1 support to `NexmarkRegionMatrix`, and the
 Beam-default-style q3/q8/q9/q11 rows are recorded below.
+Child `54bf38c45` adds L1 support to `GithubArchiveRegionMatrix`, and the
+two-hour real file-backed byte-slice q1/q2 rows are recorded below.
 
 ## Definition
 
@@ -58,6 +60,7 @@ Set `RIFT_FINAL_CLEAN=1` or `RIFT_EVAL_MEASUREMENT_LEVEL=L1` for:
 - `LogHubRegionMatrix`
 - `DSPBenchRegionMatrix`
 - `NexmarkRegionMatrix`
+- `GithubArchiveRegionMatrix`
 
 The binaries print `RESULT ... measurement_level=L1 final_clean=1 ...` and
 avoid internal timed-section stats.
@@ -123,6 +126,14 @@ for those 20 iterations.
 | DSPBench Log q2 1M x5 | real DSPBench common-log replay | scoped page/window token | safe rooted baseline | `safezone-improved-32k` | 3 processes x 5 iterations | `8.91 s` total (`1782 ms/iter`) | `8.74 s` | `8.97 s` | `47939584 bytes` | checksum `-4720769113503374536`, output `179` | L1 rooted scoped RSS win with near-tie elapsed |
 | DSPBench Log q2 1M x5 | real DSPBench common-log replay | trusted streaming page/window token | unsafe/trusted lower bound | `rift-trusted-streaming` | 3 processes x 5 iterations | `8.51 s` total (`1702 ms/iter`) | `8.39 s` | `8.73 s` | `47792128 bytes` | checksum `-4720769113503374536`, output `179` | L1 trusted lower-bound elapsed/RSS win |
 | DSPBench Log q2 1M x5 | real DSPBench common-log replay | checked scoped page-token | framework API / RSS win | `rift-checked-safezone-page-token` | 3 processes x 5 iterations | `8.79 s` total (`1758 ms/iter`) | `8.66 s` | `8.97 s` | `47611904 bytes` | checksum `-4720769113503374536`, output `179` | L1 checked page/window row is about 1% faster than heap and cuts RSS by about 85%; L2 remains the GC-tail interpretation source |
+| GH Archive q1 fields 200k x3 | real GH Archive file-backed byte-slice JSON-lines | heap page/window fields | natural heap baseline | `heap-immix` | 3 processes x 3 iterations | `13.17 s` total | `12.72 s` | `21.68 s` | `265142272 bytes` | checksum `818187435331427579`, output `2600000` | L1 natural heap baseline; file-backed row includes gzip/JSON byte-slice parsing and three q1 iterations |
+| GH Archive q1 fields 200k x3 | real GH Archive file-backed byte-slice JSON-lines | rooted scoped page/window fields | safe rooted baseline | `safezone-improved-32k` | 3 processes x 3 iterations | `13.10 s` total | `12.91 s` | `41.22 s` | `101466112 bytes` | checksum `818187435331427579`, output `2600000` | L1 rooted scoped row is a near-tie elapsed/RSS win; large max real time shows external file-backed noise |
+| GH Archive q1 fields 200k x3 | real GH Archive file-backed byte-slice JSON-lines | trusted streaming page/window fields | unsafe/trusted lower bound | `rift-trusted-streaming` | 3 processes x 3 iterations | `12.81 s` total | `12.69 s` | `17.28 s` | `101351424 bytes` | checksum `818187435331427579`, output `2600000` | L1 trusted lower-bound modest elapsed/RSS win |
+| GH Archive q1 fields 200k x3 | real GH Archive file-backed byte-slice JSON-lines | checked scoped page-token | framework API / RSS win | `rift-checked-safezone-page-token` | 3 processes x 3 iterations | `12.89 s` total | `12.79 s` | `18.21 s` | `101416960 bytes` | checksum `818187435331427579`, output `2600000` | L1 checked page-token modest elapsed win over heap and about 62% lower RSS; L2 remains the GC interpretation source |
+| GH Archive q2 repo window 200k x3 | real GH Archive file-backed byte-slice JSON-lines | heap page/window repo aggregation | natural heap baseline | `heap-immix` | 3 processes x 3 iterations | `13.18 s` total | `13.12 s` | `18.70 s` | `244039680 bytes` | checksum `3318970041429315053`, output `31794` | L1 natural heap baseline; file-backed row includes gzip/JSON byte-slice parsing and three q2 iterations |
+| GH Archive q2 repo window 200k x3 | real GH Archive file-backed byte-slice JSON-lines | rooted scoped page/window repo aggregation | safe rooted baseline | `safezone-improved-32k` | 3 processes x 3 iterations | `12.90 s` total | `12.78 s` | `16.97 s` | `101892096 bytes` | checksum `3318970041429315053`, output `31794` | L1 rooted scoped modest elapsed/RSS win |
+| GH Archive q2 repo window 200k x3 | real GH Archive file-backed byte-slice JSON-lines | trusted streaming page/window repo aggregation | unsafe/trusted lower bound | `rift-trusted-streaming` | 3 processes x 3 iterations | `12.79 s` total | `12.08 s` | `258.37 s` | `101826560 bytes` | checksum `3318970041429315053`, output `31794` | L1 trusted lower-bound modest elapsed/RSS win; max real time includes one external wall-clock outlier with normal CPU time |
+| GH Archive q2 repo window 200k x3 | real GH Archive file-backed byte-slice JSON-lines | checked scoped page-token | framework API / RSS win | `rift-checked-safezone-page-token` | 3 processes x 3 iterations | `12.87 s` total | `12.53 s` | `14.72 s` | `101859328 bytes` | checksum `3318970041429315053`, output `31794` | L1 checked page-token modest elapsed win over heap and about 58% lower RSS; L2 remains the GC interpretation source |
 | NEXMark q3 1M x20 | Beam-default generated methodology | heap stream/window records | natural heap baseline | `heap-immix` | 3 processes x 20 iterations | `6.18 s` total (`309 ms/iter`) | `6.15 s` | `6.24 s` | `75153408 bytes` | checksum `-1870509861264400004`, output `98266` | L1 generated-methodology heap baseline |
 | NEXMark q3 1M x20 | Beam-default generated methodology | rooted scoped stream/window records | safe rooted baseline | `safezone-improved` | 3 processes x 20 iterations | `6.38 s` total (`319 ms/iter`) | `6.37 s` | `6.47 s` | `9814016 bytes` | checksum `-1870509861264400004`, output `98266` | L1 rooted scoped RSS win but elapsed loss |
 | NEXMark q3 1M x20 | Beam-default generated methodology | checked stream/window records | framework API win | `rift-checked` | 3 processes x 20 iterations | `5.86 s` total (`293 ms/iter`) | `5.85 s` | `5.93 s` | `9551872 bytes` | checksum `-1870509861264400004`, output `98266` | L1 checked generated-methodology win over heap and rooted scoped baseline |
@@ -337,6 +348,27 @@ for i in 1 2 3; do
   LOGHUB_TOP_MODES="heap-retained-drop-anchor checked-scoped-epoch-retained-no-traverse checked-scoped-epoch-topk-retained-no-traverse" \
   LOGHUB_TOP_OUTPUT_DIR=/tmp/rift-l1-loghub-top-hdfs-1m-x20-3598efe29-r${i} \
   zsh sandbox/run_loghub_top_templates_matrix.sh
+done
+```
+
+GH Archive two-hour byte-slice command:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+for i in 1 2 3; do
+  RIFT_FINAL_CLEAN=1 \
+  GITHUB_ARCHIVE_BUILD=0 \
+  GITHUB_ARCHIVE_INPUTS="/Users/siyaoliu/rift/cache/benchmark-data/gharchive/2026-04-01-0.json.gz,/Users/siyaoliu/rift/cache/benchmark-data/gharchive/2026-04-01-1.json.gz" \
+  GITHUB_ARCHIVE_INPUT_MODE=file-backed \
+  GITHUB_ARCHIVE_FILE_PARSER=byte-slice \
+  GITHUB_ARCHIVE_EVENTS=200000 \
+  GITHUB_ARCHIVE_EVENTS_PER_BUCKET=25000 \
+  GITHUB_ARCHIVE_BENCHMARK_RUNS=3 \
+  GITHUB_ARCHIVE_WARMUPS=0 \
+  GITHUB_ARCHIVE_QUERIES="q1-fields q2-repo-window" \
+  GITHUB_ARCHIVE_MODES="heap-immix safezone-improved-32k rift-trusted-streaming rift-checked-safezone-page-token" \
+  GITHUB_ARCHIVE_OUTPUT_DIR=/tmp/rift-l1-gharchive-byte-200k-x3-54bf38c45-r${i} \
+  zsh sandbox/run_github_archive_region_matrix.sh
 done
 ```
 

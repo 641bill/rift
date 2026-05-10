@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-10 16:05 CEST
+Last updated: 2026-05-10 17:15 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -56,7 +56,7 @@ L1 final-clean, L2 standard stats, L3 diagnostics, and L4 external profiles.
 Initial L1 final-clean support now exists for retained epoch, Yak, Dataflow,
 Common Crawl WET-shaped, ReML Tier 1, StreamFlex, Stancu,
 SPECjbb2005-workload, LogHub top-template, LogHub region, and DSPBench region
-binaries, and NEXMark. Current report-grade benchmark rows are still mostly L2; the final elapsed/RSS
+binaries, NEXMark, and GH Archive. Current report-grade benchmark rows are still mostly L2; the final elapsed/RSS
 headline table should be collected into
 `evidence/FINAL_CLEAN_HEADLINE_RESULTS.md`. The first clean
 focused retained L1 row is now recorded from child `f1aa55484`: 1M retained
@@ -113,6 +113,13 @@ Child `dffe178a0` adds L1 final-clean support for `NexmarkRegionMatrix`.
 Beam-default-style q3/q8/q9/q11 are checked generated-methodology wins in L1:
 checked `5.86/9.21/15.03/4.36 s` versus heap `6.18/9.54/16.27/4.47 s` and
 improved SafeZone `6.38/10.13/18.10/5.11 s`, with much lower RSS than heap.
+Child `54bf38c45` adds L1 final-clean support for `GithubArchiveRegionMatrix`.
+The two-hour real file-backed byte-slice q1/q2 rows are modest checked
+page-token elapsed/RSS wins: q1 checked scoped page-token `12.89 s`, about
+`101 MB` RSS versus heap `13.17 s`, about `265 MB`; q2 checked scoped
+page-token `12.87 s`, about `102 MB` RSS versus heap `13.18 s`, about
+`244 MB`. L2 rows show heap GC is only about `1.5-1.6%` of elapsed, so this is
+a useful real-input modest/RSS row rather than a flagship GC-heavy case.
 
 ReML/MLKit PLDI-style table checkpoint:
 `evidence/REML_MLKIT_PLDI_TABLE.md` now separates paper-reported Figure 9

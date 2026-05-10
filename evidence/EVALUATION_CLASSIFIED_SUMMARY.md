@@ -1,7 +1,7 @@
 # Evaluation Classified Summary
 
 Date: 2026-05-09
-Last updated: 2026-05-10 16:05 CEST
+Last updated: 2026-05-10 17:15 CEST
 
 Status: thesis-facing classified summary built from committed evidence.
 Baseline commits for clean rows: parent `1cc3b2c`, child `13a3df1c7`.
@@ -57,6 +57,7 @@ reference, but the retained heap objects still remain for GC tracing/reclaim.
 | LogHub HDFS v1 q2 | real file-backed Hadoop log | best checked topology / L1 final-clean | L2 heap `8227.369 ms`, GC `92.659 ms`, RSS `409 MB`; L1 heap `25.60 s`, RSS `409 MB` for 3 q2 iterations | L2 checked scoped page-token `7871.856 ms`, GC `0 ms`, RSS `395 MB`; L1 checked scoped page-token `25.56 s`, RSS `79 MB` | L1 elapsed tie; L2 `4.3%` faster | L2 `-92.659 ms` | L1 about `-81%` | L1 real-input RSS win with elapsed tie; L2 standard stats remain a modest throughput/GC win. Heap GC is only about 1-2% elapsed, so this is not flagship GC-heavy proof. |
 | DSPBench Fraud q2 | real DSPBench credit-card replay | best checked topology / L1 final-clean | L1 heap `4.39 s`, RSS `358 MB`; L2 heap `801.790 ms`, GC `69.686 ms` | L1 checked scoped page-token `4.44 s`, RSS `59.5 MB`; L2 checked scoped `822.846 ms`, GC `15.554 ms` | L1 `1.1%` slower | L2 median `-54.132 ms` | L1 about `-83%` | Real-input checked RSS win but not elapsed win; trusted Streaming lower bound is fastest (`4.18 s`). |
 | DSPBench Log q2 | real DSPBench bundled common-log input | best checked topology / L1 final-clean | L1 heap `8.89 s`, RSS `308 MB`; L2 heap `1750.291 ms`, GC `44.992 ms`, max GC `88.210 ms` | L1 checked scoped page-token `8.79 s`, RSS `47.6 MB`; L2 checked scoped `1733.654 ms`, GC `18.402 ms`, max GC `18.584 ms` | L1 `1.1%` faster | L2 median `-26.590 ms`; max `-69.626 ms` | L1 about `-85%` | Modest real-input elapsed/RSS/GC-tail win; still not flagship GC-heavy evidence. |
+| GH Archive q1/q2 byte-slice | real GH Archive file-backed JSON-lines | best checked topology / L1 final-clean | q1 heap `13.17 s`, RSS `265 MB`; q2 heap `13.18 s`, RSS `244 MB`; L2 heap GC about `58/62 ms` | q1 checked scoped page-token `12.89 s`, RSS `101 MB`; q2 checked scoped page-token `12.87 s`, RSS `102 MB`; L2 checked GC `0 ms` | q1 `2.1%` faster; q2 `2.4%` faster | L2 removes visible but small heap GC | q1 about `-62%`; q2 about `-58%` | L1 modest real-input elapsed/RSS win. Not GC-heavy flagship evidence because L2 heap GC is only about `1.5-1.6%` of elapsed; byte-slice parser scratch removes the old parser allocation cliff. |
 | LogHub top templates HDFS 1M x20 | real HDFS file-backed/preloaded replay | retained-object drop-anchor / L1 final-clean | `heap-retained-drop-anchor` `5.46 s`, RSS `205 MB`; L2 heap GC `31.161 ms` per 1M run | checked scoped retained top templates `4.84 s`, RSS `28 MB`; L2 checked GC `0 ms` | `11.4%` faster | L2 removes heap timed GC | about `-86%` | L1 real-input retained top-k throughput/RSS win; process includes one input load plus 20 replays. |
 | LogHub top templates 1M | generated LogHub-shaped stressor | retained-object drop-anchor | `heap-retained-drop-anchor` `424.443 ms`, GC `126.371 ms`, RSS `408 MB` | checked scoped retained top templates `290.610 ms`, GC `0 ms`, RSS `304 MB` | `31.5%` faster | `-126.371 ms` | about `-25%` | Generated retained top-k memory-management and RSS win; supports a reusable top-k API candidate. |
 | LogHub reusable EpochTopKByKey HDFS 1M x20 | real HDFS file-backed/preloaded replay | retained-object drop-anchor / reusable operator gate / L1 final-clean | `heap-retained-drop-anchor` `5.46 s`, RSS `205 MB`; L2 heap GC `33.966 ms` per 1M top-k gate run | `checked-scoped-epoch-topk-retained-no-traverse` `5.05 s`, RSS `28 MB`; L2 checked GC `0 ms` | `7.5%` faster | L2 removes heap timed GC | about `-86%` | L1 reusable checked top-k API passes real-input retained gate with a strong RSS win; benchmark-local checked path is still faster (`4.84 s`). |
@@ -77,7 +78,8 @@ reference, but the retained heap objects still remain for GC tracing/reclaim.
 - **Real-input claim:** Yak LiveJournal is the strongest real-input epoch row;
   LogHub top templates is now a strong real-preloaded retained top-k row, and
   `EpochTopKByKey` is the first reusable top-k API to pass the retained gate;
-  LogHub HDFS q2 and DSPBench Log q2 remain modest page/window rows.
+  GH Archive byte-slice q1/q2, LogHub HDFS q2, and DSPBench Log q2 remain
+  modest page/window rows.
 - **Non-claim:** summary-only/direct-aggregate rows are topology/operator lower
   bounds. They must not be described as pure memory-management wins.
 
