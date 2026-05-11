@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-11 13:46 CEST
+Last updated: 2026-05-11 14:08 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -34,6 +34,16 @@ has a table separating what Rift enforces today from design vocabulary inspired
 by prior work, such as active/closed regions and richer reference
 capabilities. Regenerate the HTML with `python3 scripts/generate-report-html.py`
 after report changes.
+
+Latest final-clean audit and ReML same-axes checkpoint:
+`evidence/EVALUATION_CLASSIFIED_SUMMARY.md` now has a presentation
+completeness audit for the report/slides rows. `evidence/FINAL_CLEAN_HEADLINE_RESULTS.md`
+states that L1 elapsed/RSS is the presentation source and L2 rows are
+interpretation-only. `evidence/REML_MLKIT_PLDI_TABLE.md` now includes a
+same-axes thesis interpretation table over the full PLDI Figure 9 program
+list, with local Scala Native status and a short explanation of why local Rift
+is better, worse, neutral, or unavailable on each row. Exact MLKit/ReML reruns
+remain deferred; do not make raw same-machine wall-clock claims.
 
 Latest in-progress real-input checkpoint:
 `YakRegionMatrix` now has `topwordreal`, a real Stack Exchange AskUbuntu

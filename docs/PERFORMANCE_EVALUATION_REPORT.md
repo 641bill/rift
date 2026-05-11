@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-11 13:46 CEST
+Last updated: 2026-05-11 14:08 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -57,6 +57,11 @@ direct-summary counterpart rows for GH Archive-shaped, DSPBench, and LogHub
 generated/indexable lower bounds, plus the first AskUbuntu real text/top-word
 L1 rows in `YakRegionMatrix`. Remaining benchmark result files are still
 mostly L2 standard-stats evidence.
+`evidence/EVALUATION_CLASSIFIED_SUMMARY.md` now also has a presentation
+completeness audit: every representative row used by the report/slides is
+complete for L1 elapsed/RSS, L2 interpretation, input type, topology/API,
+comparison class, and allowed claim, or is explicitly lower-bound/control
+evidence.
 
 Latest operator-gate status:
 `evidence/OPERATOR_GATE_STATUS.md`. This keeps rank/top-k/median/hash/join work
@@ -129,6 +134,10 @@ with a small elapsed loss. Exact MLKit/ReML artifact reruns are still open; the
 latest local check found no `mlkit`/`mlton`, and Docker was installed but its
 daemon was unavailable. Do not claim raw cross-language wall-clock wins until
 exact local runs exist.
+The same file now includes a same-axes thesis interpretation table over the
+full PLDI Figure 9 program list. Each row keeps the paper axes visible and adds
+local Scala Native status plus a short explanation of why Rift is better,
+worse, neutral, or unavailable on that shape.
 
 Latest SPECjbb2005-workload port checkpoint:
 `evidence/SPECJBB2005_PORT_MATRIX.md`. This is a clean-room Scala Native

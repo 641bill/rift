@@ -730,7 +730,7 @@ pre code {
         </div>
       </div>
       <aside class="hero-panel" aria-label="Report metadata">
-        <div class="panel-row"><span>Generated</span><strong>2026-05-11 14:06 CEST</strong></div>
+        <div class="panel-row"><span>Generated</span><strong>2026-05-11 14:12 CEST</strong></div>
         <div class="panel-row"><span>Source</span><strong>docs/PERFORMANCE_EVALUATION_REPORT.md</strong></div>
         <div class="panel-row"><span>Audience</span><strong>External systems / PL reader</strong></div>
         <div class="panel-row"><span>Headline rule</span><strong>Clean total time and RSS first</strong></div>
@@ -1224,6 +1224,16 @@ pre code {
 <td>Measurement levels</td>
 <td>L1 final-clean timing/RSS; L2 standard GC/region stats; L3 diagnostics; L4 sampled profiles.</td>
 <td>Prevents instrumentation overhead from becoming the headline result.</td>
+</tr>
+<tr>
+<td>Presentation audit</td>
+<td>Representative rows are checked for L1 elapsed/RSS, L2 GC/region interpretation, input type, topology/API, comparison class, and allowed claim.</td>
+<td>Prevents stale L2-only, legacy, or lower-bound rows from being mistaken for final evidence.</td>
+</tr>
+<tr>
+<td>ReML same-axes table</td>
+<td>The PLDI Figure 9 program list keeps paper <code>loc</code>/<code>fcns</code>/<code>inst</code>/time/RSS/GC axes and adds local Scala Native ratios where ports exist.</td>
+<td>Explains why Rift is better, worse, neutral, or unavailable without claiming raw cross-language wall-clock wins.</td>
 </tr>
 </tbody></table></div>
   <p class="so-what"><strong>So what?</strong> The report separates user-facing checked rows from allocator lower bounds and separates clean headline timing from diagnostic counters.</p>

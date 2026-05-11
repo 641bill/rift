@@ -1,7 +1,7 @@
 # Final-Clean Headline Results
 
 Date: 2026-05-09
-Last updated: 2026-05-11 12:43 CEST
+Last updated: 2026-05-11 14:08 CEST
 
 Status: L1 runner support exists for the first representative binaries. One
 focused retained-epoch L1 row has been collected from clean child commit
@@ -103,6 +103,11 @@ avoid internal timed-section stats.
 | generated methodology | NEXMark q3/q8/q9/q11 have L1 rows | L2 rows remain the GC source | complete for selected rows |
 | ReML/MLKit ports | Tier 1 and first Tier 2 local ports have L1 rows | L2 rows exist for Tier 1 and first Tier 2 interpretation | exact artifact rerun still blocked |
 | real-input top-k/text | LogHub HDFS 1M x20 and 5M x5 have L1 rows; AskUbuntu `topwordreal` 10M x5 has L1 rows | HDFS 5M and AskUbuntu 10M L2 rows added for GC interpretation | continue larger real-input search after report update |
+
+Presentation status: the current report/slides use only rows marked complete
+in this audit or explicitly labeled lower-bound/control rows in
+`evidence/EVALUATION_CLASSIFIED_SUMMARY.md`. L1 elapsed/RSS is the presentation
+source; L2 rows are interpretation-only for GC/region behavior.
 
 ## L1 Headline Rows
 

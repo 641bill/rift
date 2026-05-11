@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-11 13:30 CEST
+Last updated: 2026-05-11 14:08 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -17,6 +17,15 @@ The same doc now records design vocabulary to borrow cautiously: active/closed
 regions, nested-region state, immutable/static metadata, bridge/root handles,
 and reference-capability-style ownership. These should be added to the public
 API only when they remove measured runtime work or simplify the proof story.
+
+Latest evidence-normalization update:
+`evidence/EVALUATION_CLASSIFIED_SUMMARY.md` now audits every representative
+presentation row for L1, L2, input type, topology/API, comparison class, and
+allowed claim. `evidence/REML_MLKIT_PLDI_TABLE.md` now has a same-axes
+interpretation table over the full PLDI Figure 9 benchmark list. Exact
+MLKit/ReML reruns stay deferred; the immediate ReML deliverable is explaining
+local Scala Native ratios and why Rift wins, loses, or is unavailable on each
+paper row.
 
 Latest final-clean table update: retained L1 gaps are now filled for DSPBench
 Fraud q2 and LogHub q2/q3, and the reusable LogHub HDFS `EpochTopKByKey` row

@@ -377,6 +377,16 @@ EVALUATION_ROWS = [
         "L1 final-clean timing/RSS; L2 standard GC/region stats; L3 diagnostics; L4 sampled profiles.",
         "Prevents instrumentation overhead from becoming the headline result.",
     ],
+    [
+        "Presentation audit",
+        "Representative rows are checked for L1 elapsed/RSS, L2 GC/region interpretation, input type, topology/API, comparison class, and allowed claim.",
+        "Prevents stale L2-only, legacy, or lower-bound rows from being mistaken for final evidence.",
+    ],
+    [
+        "ReML same-axes table",
+        "The PLDI Figure 9 program list keeps paper `loc`/`fcns`/`inst`/time/RSS/GC axes and adds local Scala Native ratios where ports exist.",
+        "Explains why Rift is better, worse, neutral, or unavailable without claiming raw cross-language wall-clock wins.",
+    ],
 ]
 
 

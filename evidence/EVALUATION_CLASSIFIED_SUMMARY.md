@@ -1,7 +1,7 @@
 # Evaluation Classified Summary
 
 Date: 2026-05-09
-Last updated: 2026-05-11 12:43 CEST
+Last updated: 2026-05-11 14:08 CEST
 
 Status: thesis-facing classified summary built from committed evidence.
 Baseline commits for clean rows: parent `1cc3b2c`, child `13a3df1c7`.
@@ -33,6 +33,32 @@ rows to explain GC/region behavior.
 Use `heap-retained-drop-anchor` in prose for
 `heap-epoch-retained-no-traverse`. It closes in O(1) by dropping the bucket
 reference, but the retained heap objects still remain for GC tracing/reclaim.
+
+## Presentation Completeness Audit
+
+This audit covers the rows currently used in the report/slides as
+representative evidence. `Complete` means the row has L1 headline elapsed/RSS,
+L2 GC/region interpretation, input type, topology/API, comparison class, and
+allowed claim. Rows outside this table remain detailed evidence or controls,
+not presentation requirements.
+
+| Presentation group | L1 elapsed/RSS | L2 GC/region interpretation | Metadata/classification | Current action |
+|---|---|---|---|---|
+| Focused retained epoch | complete | complete | retained-object memory-management | keep as cleanest memory-management row |
+| GH Archive-shaped retained q2 | complete | complete | generated/preloaded retained-object row | keep; label generated/preloaded, not real-input proof |
+| LogHub retained q2/q3 | complete | complete | generated/indexable retained rows | keep q2 as strong retained row; mark q3 checked-stream as modest/RSS row |
+| DSPBench Fraud retained q2 | complete | complete | generated/indexable retained row | keep as modest retained win |
+| Yak LiveJournal graphreal | complete | complete | real-input best checked epoch topology | keep as strongest real-input epoch row |
+| Yak AskUbuntu topwordreal | complete | complete | real-input best checked epoch topology | keep as first real text/top-word row |
+| Dataflow SELECT/AGGREGATE/JOIN | complete | complete | Broom-style generated methodology, direct epoch API | keep as prior-work-shaped checked epoch row |
+| StreamFlex throughput/latency | complete | complete | StreamFlex-style generated methodology, latency/deadline axes | keep; report latency tail/deadline misses separately from throughput |
+| Stancu and SPECjbb2005 workload port | complete | complete | transaction/epoch topology | keep; label SPECjbb row as clean-room port, not official SPEC |
+| Common Crawl WET-shaped q1/q2 | complete | complete | generated stream stressor, checked page-token | keep as generated high-object-pressure row only |
+| NEXMark q3/q8/q9/q11 | complete | L2 remains interpretation source | generated Beam-default-style methodology | keep; not exact Beam runner evidence |
+| LogHub HDFS top templates | complete at 1M and 5M | complete | real retained top-k API row | keep as strongest real retained top-k row |
+| LogHub HDFS q2, DSPBench Log q2, GH Archive q1/q2 | complete | complete | real-input page/window modest/RSS rows | keep as real-input modest/control evidence |
+| ReML/MLKit Tier 1 and first Tier 2 ports | complete for local ports | complete for local ports | local Scala Native port evidence | keep same-axes table; no raw ReML-vs-Rift wall-clock claim |
+| Summary-only/direct-aggregate rows | complete for selected symmetric rows | complete where needed | topology lower bound | keep only with heap and checked counterparts; never claim reclaim win |
 
 ## Classified Rows
 

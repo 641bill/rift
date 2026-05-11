@@ -1,7 +1,7 @@
 # ReML / MLKit PLDI-Style Table
 
 Date: 2026-05-09
-Last updated: 2026-05-11 11:55 CEST
+Last updated: 2026-05-11 14:08 CEST
 
 Status: dedicated PLDI-style table artifact. Paper rows are transcribed from
 Elsman 2023 Figure 9 and are **paper-reported, not rerun locally**. Local L1
@@ -212,3 +212,48 @@ timing.
   available, so exact timing is provenance/toolchain-blocked for now. Use
   `docs/REML_ARTIFACT_RUNBOOK.md` before making any raw cross-language timing
   claim.
+
+## Same-Axes Thesis Interpretation Table
+
+This table keeps the PLDI Figure 9 program list and paper axes visible while
+adding local Scala Native evidence only where a port exists. It is the table to
+use in the thesis discussion when explaining why Rift is better, worse, or not
+yet comparable.
+
+Status labels:
+
+- `local-port`: local Scala Native shaped port with L1 and L2 rows.
+- `timing-control`: local port exists but current scale is too short for a
+  headline timing claim.
+- `port-planned`: reasonable next local port candidate.
+- `tool-benchmark-deferred`: large compiler/tool benchmark; defer until source
+  and configuration provenance are clean.
+- `source/provenance-blocked`: paper row retained, local source/config mapping
+  not yet clean enough.
+- `paper-only`: literature row only.
+
+| Program | Paper axes | Paper time/RSS/GC anchor | Local Scala Native row | Local ratio | Local status | Why local Rift is better/worse or unavailable |
+|---|---|---|---|---|---|---|
+| DLX | loc `2841`; fcns `2/149`; inst `0/690`; delta yes | rg `0.14s`, r `0.12s`, MLton `0.40s`; rg RSS `8 MB`; rg GC `3` | -- | -- | source/provenance-blocked | Source candidate/provenance still not clean enough; no local claim. |
+| b-hut | loc `1245`; fcns `2/140`; inst `0/459`; delta no | rg `0.67s`, r `0.63s`, MLton `0.14s`; rg RSS `5 MB`; rg GC `471` | -- | -- | port-planned | Interesting object/graph workload; local port deferred until source shape is mapped. |
+| fft | loc `71`; fcns `0/9`; inst `0/34`; delta no | rg `0.64s`, r `0.51s`, MLton `0.26s`; rg RSS `69 MB`; rg GC `10` | local heap L1 `0.02s`, no useful best row | -- | timing-control | Current Scala Native scale is too short and not allocation-heavy enough; rescale before interpreting. |
+| fib37 | loc `7`; fcns `0/1`; inst `0/0`; delta no | rg `0.98s`, r `0.21s`, MLton `0.85s`; rg RSS `3 MB`; rg GC `1` | heap `2.40s`; checked stream `2.41s`; RSS tied | `1.00x` | local-port | Compute/control workload; regions do not help because there is no meaningful allocation/GC pressure. |
+| kbc | loc `679`; fcns `1/90`; inst `0/249`; delta yes | rg `0.21s`, r `0.19s`, MLton `0.07s`; rg RSS `10 MB`; rg GC `10` | -- | -- | source/provenance-blocked | Keep paper row only until source/config mapping is clean. |
+| lexgen | loc `1322`; fcns `0/108`; inst `0/531`; delta no | rg `0.74s`, r `0.62s`, MLton `0.43s`; rg RSS `15 MB`; rg GC `109` | -- | -- | tool-benchmark-deferred | Tool/compiler-style benchmark; defer until exact input/configuration provenance is clear. |
+| life | loc `202`; fcns `0/35`; inst `0/146`; delta no | rg `0.44s`, r `0.43s`, MLton `0.43s`; rg RSS `3 MB`; rg GC `58` | heap `0.69s`; checked/rooted `0.68s`; RSS tied | `1.01x` | local-port | Near-tie compute/control row; useful as ceiling evidence, not a memory win. |
+| logic | loc `351`; fcns `0/22`; inst `0/806`; delta no | rg `0.63s`, r `0.43s`, MLton `0.13s`; rg RSS `4 MB`; rg GC `1843` | heap `1.27s`; checked stream `1.27s`; RSS `65.6 MB` vs heap `7.9 MB` | `1.00x`; RSS `8.32x` | local-port | Worse RSS because the current local port retains too much in one region; heap GC is small and query/control work dominates. |
+| mandel | loc `62`; fcns `0/5`; inst `0/0`; delta no | rg `0.53s`, r `0.38s`, MLton `0.31s`; rg RSS `3 MB`; rg GC `1` | local heap L1 `0.06s`, no useful best row | -- | timing-control | Current configuration is too short and compute-heavy; no local memory-management claim. |
+| mlyacc | loc `7385`; fcns `10/966`; inst `5/3256`; delta yes | rg `0.36s`, r `0.30s`, MLton `0.33s`; rg RSS `18 MB`; rg GC `29` | -- | -- | tool-benchmark-deferred | Large parser/compiler-style benchmark; defer until source/config provenance is clean. |
+| mpuz | loc `124`; fcns `0/13`; inst `0/44`; delta no | rg `0.68s`, r `0.46s`, MLton `0.27s`; rg RSS `3 MB`; rg GC `2` | -- | -- | port-planned | Small search/allocation candidate; local port not implemented yet. |
+| msort-r | loc `119`; fcns `0/14`; inst `0/27`; delta no | rg `0.69s`, r `0.47s`, MLton `0.93s`; rg RSS `116 MB`; rg GC `16` | heap `2.25s`; checked stream `2.05s`; RSS ratio `0.26x` | `1.10x` | local-port | Rift is better locally because linked allocation/list nodes have epochal lifetime; checked stream cuts RSS and reduces timed GC. |
+| msort | loc `113`; fcns `0/13`; inst `0/22`; delta no | rg `0.89s`, r `0.54s`, MLton `0.93s`; rg RSS `131 MB`; rg GC `26` | heap `2.46s`; checked stream `2.06s`; RSS ratio `0.48x` | `1.19x` | local-port | Best local ReML-shaped win: allocation/list shape fits checked region lifetime and heap pays visible GC/RSS. |
+| nucleic | loc `3215`; fcns `1/40`; inst `475/1273`; delta no | rg `0.34s`, r `0.33s`, MLton `0.17s`; rg RSS `5 MB`; rg GC `645` | -- | -- | port-planned | Potentially interesting object workload, but local source/config mapping is not implemented. |
+| prof | loc `282`; fcns `0/57`; inst `0/99`; delta no | rg `0.49s`, r `0.38s`, MLton `0.42s`; rg RSS `4 MB`; rg GC `263` | -- | -- | paper-only | Keep as paper-reported literature row unless a clean source mapping is found. |
+| ratio | loc `620`; fcns `0/54`; inst `0/848`; delta no | rg `1.71s`, r `1.33s`, MLton `0.48s`; rg RSS `16 MB`; rg GC `14` | heap `0.93s`; checked scoped `0.91s`; RSS ratio `0.20x` | `1.02x` | local-port | Rift is modestly faster and much lower RSS; elapsed win is small because heap GC is small. |
+| ray | loc `529`; fcns `1/48`; inst `0/120`; delta no | rg `0.69s`, r `0.64s`, MLton `0.25s`; rg RSS `14 MB`; rg GC `12` | heap `0.75s`; rooted `0.74s`; RSS tied | `1.01x` | local-port | Near-tie compute/control row; region placement does not change much at current scale. |
+| simple | loc `1053`; fcns `15/327`; inst `0/448`; delta yes | rg `0.19s`, r `0.13s`, MLton `0.28s`; rg RSS `5 MB`; rg GC `4` | -- | -- | paper-only | Keep as paper row; no local port currently planned. |
+| tak | loc `12`; fcns `0/2`; inst `0/0`; delta no | rg `2.09s`, r `0.55s`, MLton `2.12s`; rg RSS `3 MB`; rg GC `1` | local heap L1 `0.00s`, no useful best row | -- | timing-control | Local configuration is too short/mismatched for comparison; rescale before interpreting. |
+| tsp | loc `493`; fcns `0/26`; inst `0/19`; delta no | rg `0.14s`, r `0.11s`, MLton `0.14s`; rg RSS `11 MB`; rg GC `7` | heap `3.40s`; checked scoped `3.48s`; RSS ratio `0.74x` | `0.98x` | local-port | Rift is worse on elapsed but better on RSS; query CPU dominates and GC is tiny. |
+| vliw | loc `3681`; fcns `5/563`; inst `4/2133`; delta yes | rg `0.78s`, r `0.56s`, MLton `0.30s`; rg RSS `14 MB`; rg GC `15` | -- | -- | tool-benchmark-deferred | Large tool/compiler-style workload; defer until source/config provenance is clean. |
+| zebra | loc `313`; fcns `2/50`; inst `0/288`; delta yes | rg `1.58s`, r `1.15s`, MLton `0.45s`; rg RSS `3 MB`; rg GC `1066` | -- | -- | source/provenance-blocked | Paper row has many GC collections; local source/config mapping is not clean yet. |
+| zern | loc `605`; fcns `3/103`; inst `0/34`; delta yes | rg `0.80s`, r `0.52s`, MLton `0.30s`; rg RSS `6 MB`; rg GC `4503` | -- | -- | paper-only | Keep as paper-reported row unless source/config is mapped later. |
