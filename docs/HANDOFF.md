@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-11 11:55 CEST
+Last updated: 2026-05-11 11:56 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -23,6 +23,21 @@ and `tsp` to `ReMLRegionMatrix`. Report-grade L1/L2 rows are now recorded in
 with a large region RSS regression, `ray` is a near-tie control, and `tsp` is
 an RSS/control row with a small elapsed loss. These broaden the ReML/MLKit
 comparison axis but are not new headline wins.
+
+Latest real-input search checkpoint:
+LogHub Spark was downloaded from Zenodo record `8196385` and extracted under
+`/Users/siyaoliu/rift/cache/benchmark-data/loghub/Spark`. The local archive is
+`183474743` bytes; the extracted directory is about `2.7G`, with `3852` `.log`
+files and `33236604` total lines. `LogHubTopTemplatesMatrix` smoke and scale
+rows now validate the real Spark input through the reusable checked
+`EpochTopKByKey` path. At 1M lines x3, retained heap is `3.43 s`,
+`205242368` RSS, L2 `144.298 ms` with `25.418 ms` median GC; checked scoped
+top-k is `3.24 s`, `151633920` RSS, L2 `113.791 ms`, GC `0 ms`. At 5M lines
+x3, checked top-k still wins L2 (`579.440 ms` vs retained heap `703.804 ms`)
+and removes `128.140 ms` median timed GC, but L1 process time is only modestly
+better (`16.63 s` vs `16.93 s`) and RSS is tied/slightly worse
+(`509476864` vs `503988224`). Treat Spark as retained top-k confirmation, not
+as a new flagship GC-heavy real-input row.
 
 Latest final-clean evidence update:
 the retained-row gap-fill now has L1 final-clean rows for DSPBench Fraud q2 and

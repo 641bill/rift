@@ -1,7 +1,7 @@
 # Benchmark Data Sources
 
 Date: 2026-05-01
-Last updated: 2026-05-08 21:20 CEST
+Last updated: 2026-05-11 11:56 CEST
 
 Local data root:
 `/Users/siyaoliu/rift/cache/benchmark-data`
@@ -36,6 +36,8 @@ The ignored per-download manifest is
 | LogHub BGL extracted log | `/Users/siyaoliu/rift/cache/benchmark-data/loghub/BGL/BGL.log` | 743185031 | Extracted real BGL log; first `LogHubRegionMatrix` input with `4747963` lines. |
 | LogHub HDFS v1 archive | `/Users/siyaoliu/rift/cache/benchmark-data/loghub/HDFS_1.tar.gz` | 161924221 | Real LogHub / LogPAI Hadoop distributed file-system log archive from the Zenodo-hosted LogHub v7 dataset. SHA-256: `6ca6c5bc2671c66afecee9369a2fdac606bf33997a2494ac66aa411fe3e95169`. |
 | LogHub HDFS v1 extracted log | `/Users/siyaoliu/rift/cache/benchmark-data/loghub/HDFS_1/HDFS.log` | 1576383671 | Extracted real HDFS log with `11175629` lines; used for the 2026-05-08 `LogHubRegionMatrix` q1/q2/q3 follow-up. |
+| LogHub Spark archive | `/Users/siyaoliu/rift/cache/benchmark-data/loghub/Spark.tar.gz` | 183474743 | Real LogHub / LogPAI Spark log archive from Zenodo record `8196385`; fetched for the 2026-05-11 richer LogHub top-template search. |
+| LogHub Spark extracted logs | `/Users/siyaoliu/rift/cache/benchmark-data/loghub/Spark` | directory | Extracted real Spark logs, `3852` `.log` files, `33236604` total lines, about `2.7G` extracted. First top-template follow-up used the largest container logs. |
 | SNAP Twitter ego graph | `/Users/siyaoliu/rift/cache/benchmark-data/yak/snap/twitter_combined.txt.gz` | 10634845 | Real SNAP Twitter ego-network combined edge list. Used for the first `YakRegionMatrix graphreal` row. SHA-256: `d9f99b0e6a53b9204b8c215f41b3c10fb99a1e1e783858c012b06d0d3d4bd129`. |
 | SNAP LiveJournal graph | `/Users/siyaoliu/rift/cache/benchmark-data/yak/snap/soc-LiveJournal1.txt.gz` | 259619239 | Real SNAP LiveJournal directed social graph, `68993777` edge-list lines. Used for larger `YakRegionMatrix graphreal` rows. SHA-256: `d7bcd5a87b88c896c35fdb9611e804c3f4033c39b58c4c9ea3ba53c680d516d8`. |
 | Theodolite source clone | `/Users/siyaoliu/rift/cache/benchmark-data/theodolite/source` | directory | Ignored local clone of `cau-se/theodolite`; inspected commit `dfa768a25eec3c3f5a57b7d4839a0c255fd6fa7d`. Theodolite provides official UC2/UC4 stream benchmark methodology and load generators, but no static real input file in the repo. |
@@ -63,6 +65,8 @@ Beam source archive passed the official `sha512` check.
   `https://github.com/logpai/loghub/blob/master/docs/datasets.md`
 - LogHub Zenodo v7:
   `https://zenodo.org/records/3227177`
+- LogHub Spark/Windows/Thunderbird Zenodo record:
+  `https://zenodo.org/records/8196385`
 - SNAP Twitter ego graph:
   `https://snap.stanford.edu/data/ego-Twitter.html`
 - SNAP Twitter-2010 graph:
@@ -122,9 +126,10 @@ Those directories are also ignored by git.
   should be labeled as a SPECjbb2005-workload port or
   Stancu/SPECjbb2005 methodology reproduction, not an official SPEC result.
 - LogHub / LogPAI BGL and HDFS v1 have now been downloaded and wired into
-  `LogHubRegionMatrix`. Other LogHub datasets such as Spark, Thunderbird, or
-  Windows remain optional follow-up inputs if their query shape materializes
-  more per-record objects than the current BGL/HDFS line-token-window path.
+  `LogHubRegionMatrix`. Spark has also been downloaded and smoke-tested in
+  `LogHubTopTemplatesMatrix`; Windows and Thunderbird remain optional follow-up
+  inputs if their query shape materializes more per-record objects than the
+  current BGL/HDFS/Spark line-template paths.
 - Theodolite source has now been cloned for methodology inspection. It
   includes UC1-UC4 implementations and load generators; the official
   generator simulates industrial active-power measurements, so local use would

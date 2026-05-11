@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-11 11:55 CEST
+Last updated: 2026-05-11 11:56 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -19,6 +19,16 @@ Tier 2 Scala Native shaped ports, `logic`, `ray`, and `tsp`, to
 near-tie control, and `tsp` is an RSS/control row with a small elapsed loss.
 The next ReML step is exact MLKit artifact/toolchain reproduction or carefully
 selected additional Tier 2 ports with clear paper-source mappings.
+
+Latest real-input search update: LogHub Spark is now local from Zenodo record
+`8196385` and recorded in `evidence/BENCHMARK_DATA_SOURCES.md`. The extracted
+dataset has `3852` `.log` files and `33236604` total lines. First
+`LogHubTopTemplatesMatrix` rows show the reusable checked `EpochTopKByKey`
+path still removes heap GC on retained template objects: at 5M Spark lines x3,
+retained heap has L2 `703.804 ms` with `128.140 ms` median GC, while checked
+scoped top-k has L2 `579.440 ms` and GC `0 ms`. The L1 process row is only a
+modest win (`16.63 s` versus `16.93 s`) and RSS is tied/slightly worse, so this
+is retained top-k confirmation rather than a new flagship real-input claim.
 
 Latest presentation-normalization update: parent checkpoints `5185a3e`
 (`Normalize final-clean evidence tables`) and `5cf9ac3` (`Audit legacy evidence

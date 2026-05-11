@@ -1,6 +1,6 @@
 # ReML / MLKit Exact Artifact Runbook
 
-Last updated: 2026-05-09 23:31 CEST
+Last updated: 2026-05-11 11:56 CEST
 
 Status: setup/runbook for exact ReML/MLKit reproduction. No exact local timing
 rows have been collected yet.
@@ -56,9 +56,10 @@ Latest exact-reproduction check:
 docker info --format '{{.ServerVersion}}'
 ```
 
-Result on 2026-05-06 23:45 CEST: Docker cannot connect to the daemon at
-`/Users/siyaoliu/.docker/run/docker.sock`. No exact MLKit/ReML smoke or timing
-row was run.
+Result on 2026-05-11 11:37 CEST: `mlkit` and `mlton` are still not installed.
+`docker` is present at `/usr/local/bin/docker`, but Docker cannot connect to
+the daemon at `/Users/siyaoliu/.docker/run/docker.sock`. No exact MLKit/ReML
+smoke or timing row was run.
 
 ## Benchmark Sources Found
 

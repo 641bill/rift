@@ -158,8 +158,26 @@ fetch_loghub() {
         mkdir -p "$dir/BGL"
         tar -xzf "$dir/BGL.tar.gz" -C "$dir/BGL"
         ;;
+      Spark)
+        fetch "https://zenodo.org/records/8196385/files/Spark.tar.gz?download=1" \
+          "$dir/Spark.tar.gz"
+        mkdir -p "$dir/Spark"
+        tar -xzf "$dir/Spark.tar.gz" -C "$dir/Spark"
+        ;;
+      Windows)
+        fetch "https://zenodo.org/records/8196385/files/Windows.tar.gz?download=1" \
+          "$dir/Windows.tar.gz"
+        mkdir -p "$dir/Windows"
+        tar -xzf "$dir/Windows.tar.gz" -C "$dir/Windows"
+        ;;
+      Thunderbird)
+        fetch "https://zenodo.org/records/8196385/files/Thunderbird.tar.gz?download=1" \
+          "$dir/Thunderbird.tar.gz"
+        mkdir -p "$dir/Thunderbird"
+        tar -xzf "$dir/Thunderbird.tar.gz" -C "$dir/Thunderbird"
+        ;;
       *)
-        echo "unknown LogHub dataset '$dataset'; expected HDFS, HDFS_1, or BGL" >&2
+        echo "unknown LogHub dataset '$dataset'; expected HDFS, HDFS_1, BGL, Spark, Windows, or Thunderbird" >&2
         exit 1
         ;;
     esac
