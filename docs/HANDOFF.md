@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-11 15:44 CEST
+Last updated: 2026-05-11 20:42 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -10,7 +10,7 @@ Active implementation branch for this update:
 `feature/rift`
 
 Latest child checkpoint:
-`59c181746` (`Record AskUbuntu topwordreal scale-up`)
+`80cf37311` (`Record Spark LogHub q3 control`)
 
 Latest implementation-code checkpoint:
 `55ce32ec6` (`Extend open region safety probes`)
@@ -152,6 +152,16 @@ as a check against the "maybe richer real logs become GC-heavy" hypothesis. At
 `33.945 ms` median GC and higher RSS. Treat this as a negative/control row:
 more object materialization in this parser/query shape did not create the
 missing real-input flagship.
+The same richer q3 check has now been run on a Spark application subset:
+`/Users/siyaoliu/rift/cache/benchmark-data/loghub/Spark/application_1485248649253_0132`.
+The 1M L2 row loads `61` files and matches output `287798` across modes. Heap
+is `7602.328 ms`, median GC `140.934 ms`; checked scoped page-token is
+`7534.013 ms`, median GC `31.147 ms`. L1 RSS from the final-clean run is
+`408354816` for heap versus `56098816` for checked scoped page-token, but the
+L1 elapsed field for two modes was anomalous and should not be promoted. Treat
+Spark q3 as real-input modest/control evidence: RSS and timed-GC improve, but
+heap GC is still under 2% of elapsed and the query is parser/session CPU
+dominated.
 
 Latest final-clean evidence update:
 the retained-row gap-fill now has L1 final-clean rows for DSPBench Fraud q2 and

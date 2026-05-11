@@ -1,7 +1,7 @@
 # Real-Input GC-Heavy Stream Benchmark Search
 
 Date: 2026-05-07
-Last updated: 2026-05-11 15:44 CEST
+Last updated: 2026-05-11 20:42 CEST
 
 Status: active Phase 6 search ledger. This file tracks public real-input
 stream/dataflow candidates before implementation work. It is deliberately a
@@ -338,6 +338,31 @@ materialization alone is not enough; the query must retain enough ordinary
 objects with reclaim-sensitive lifetimes for region bulk close to matter more
 than parser/query CPU.
 
+## LogHub Spark q3 Template/Session Follow-Up
+
+Spark q3 was run after the Spark and Windows top-template rows to check
+whether richer session/template object materialization over Spark logs changes
+the conclusion. The row uses one large Spark application subset:
+
+`/Users/siyaoliu/rift/cache/benchmark-data/loghub/Spark/application_1485248649253_0132/*.log`
+
+The subset has `61` log files and `4242303` lines, enough for a bounded 1M
+row without passing all `3852` Spark files through `LOGHUB_INPUTS`.
+
+| Row | Heap/control | Best region/checked row | Interpretation |
+|---|---:|---:|---|
+| Spark q3 20k smoke | heap `133.410 ms`, GC `0 ms` | checked scoped page-token `136.338 ms`, GC `0 ms` | Smoke only; checksums/output matched. |
+| Spark q3 1M x3 | heap L2 `7602.328 ms`, GC `140.934 ms`, max GC `168.854 ms`; L1 RSS `408354816` | checked scoped page-token L2 `7534.013 ms`, GC `31.147 ms`; L1 RSS `56098816`; safezone/trusted rows are slower in L2 but also low-RSS | Real-input modest/control row. Checked scoped page-token is only `0.9%` faster than heap in the L2 loop and cuts RSS sharply, but heap timed GC is still only about `1.9%` of elapsed. |
+
+L1 final-clean was run to collect RSS/checksum status. Do not promote the L1
+elapsed from that Spark q3 run: two Darwin `/usr/bin/time -l` real-time fields
+were inconsistent with user/sys time and observed process duration. Use L2
+elapsed for this control row and L1 only for RSS/checksum.
+
+Decision: park Spark q3 alongside Windows q3. Richer real log
+session/template parsing is still parser/query dominated; the stronger LogHub
+story remains retained top-k/template rows, especially HDFS 5M.
+
 ## Theodolite Source Triage
 
 The public Theodolite source has been cloned locally:
@@ -426,9 +451,10 @@ Continue beyond the HDFS q2 modest win and HDFS top-template retained win. The
 next best search path is:
 
 1. Continue the retained top-k/session family on larger LogHub streams. Spark
-   and Windows now have 20k/1M/5M top-template follow-ups; the next variants
-   are Thunderbird or a richer Spark/Windows session-template query that
-   materializes more objects than the current top-template path.
+   and Windows now have 20k/1M/5M top-template follow-ups, and Spark/Windows
+   q3 session-template rows are parked as parser/query-dominated controls.
+   The next LogHub variant is Thunderbird if fetched, or a retained
+   session/template API row rather than another page-token parser row.
 2. Add StackOverflow/text top-word only after fetching provenance-clean posts
    data. No StackOverflow/Posts data is currently present under
    `cache/benchmark-data`; `scripts/fetch-benchmark-data.sh` has a gated

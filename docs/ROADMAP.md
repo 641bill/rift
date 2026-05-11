@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-11 15:44 CEST
+Last updated: 2026-05-11 20:42 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -80,6 +80,13 @@ L2 `17405.613 ms`, median GC `147.336 ms`, L1 `88.57 s`, RSS `408715264`;
 checked scoped page-token L2 `17783.560 ms`, median GC `33.945 ms`, L1
 `90.26 s`, RSS `445661184`. Do not tune this q3 shape unless a new reusable
 operator changes the CPU profile.
+The richer Spark q3 template/session row was also run over the
+`application_1485248649253_0132` subset (`61` files, `1M` loaded lines). It
+confirms the same control conclusion: checked scoped page-token is only
+slightly faster in L2 (`7534.013 ms` versus heap `7602.328 ms`) and cuts L1 RSS
+(`56 MB` versus heap `408 MB`), but heap timed GC is still only `140.934 ms`
+or about `1.9%` of elapsed. Park Spark q3 as real-input modest/control
+evidence, not a GC-heavy flagship.
 
 Latest Yak real-text update: child `cd08f23d4` adds Stack Exchange AskUbuntu
 support, and child `59c181746` adds the current 20M scale-up rows. The dataset
