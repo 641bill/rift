@@ -1,7 +1,7 @@
 # Real-Input GC-Heavy Stream Benchmark Search
 
 Date: 2026-05-07
-Last updated: 2026-05-11 11:56 CEST
+Last updated: 2026-05-11 11:59 CEST
 
 Status: active Phase 6 search ledger. This file tracks public real-input
 stream/dataflow candidates before implementation work. It is deliberately a
@@ -51,7 +51,7 @@ modest/control row and move to the next candidate.
 | 5 | DSPBench Machine Outlier | Same DSPBench clone; bundled `machine-usage.csv` is only `1012` lines. | Machine usage anomaly scoring and alert windows. | Observation/profile/score/alert records. | Observation/window bucket; anomaly model on heap. | Source inspected; sample input is tiny. | Defer unless a larger public Alibaba machine-usage trace is pinned. |
 | 6 | DSPBench Bargain Index | Same DSPBench clone; bundled `stocks.csv` has `411` lines. | Parse quotes/trades, compute VWAP, join quotes with trade summaries, emit bargain records. | `Quote`, `Trade`, `VwapRecord`, `TradeSummary`, `BargainCandidate`. | Quote/trade window or day/interval boundary; summary table durable. | Source inspected; sample input is too small for headline real-input rows. | Do not implement first unless a larger public quote/trade stream is found. |
 | 7 | Real RIoTBench-style input | RIoTBench source clone at `cache/benchmark-data/riot-bench/source`, commit `c86414f7f926ed5ae0fab756bb3d82fbfb6e5bf7`; bundled SenML samples are tiny, so UCI MHEALTH (`1215745` rows) is used as the FIT-style real sensor source. | Parse sensor/health records, clean/filter, annotate, sliding-window statistics, anomaly output. | Sensor reading, cleaned reading, annotation, statistic contribution, anomaly records. | Sensor/window/session bucket; device metadata durable. | `RiotBenchRegionMatrix` now accepts `RIOTBENCH_INPUT_KIND=mhealth` and directory input; 20k smoke and 1M q1/q2 medians completed. | Park as provenance-clean real-input ceiling/control. MHEALTH q1/q2 have zero timed heap GC at 1M; q1 is near-tie with heap fastest, q2 gives a small SafeZone win. |
-| 8 | Richer LogHub template/session mining | LogHub BGL and HDFS v1 are local and measured. BGL has `4747963` lines; HDFS v1 has `11175629` lines from Zenodo v7. LogHub Spark is now local from Zenodo record `8196385`, with `3852` `.log` files and `33236604` total lines. | Parse log events, tokenize templates, infer block/session candidates, window template counts, and retained top-template summaries. | `LogEvent`, `TemplateToken`, `TemplateCandidate`, `SessionEvent`, `WindowSummary`, retained top-k/template candidates. | Log-line/template/session/window/epoch bucket; template dictionary and block index durable. | Implemented as `LogHubRegionMatrix` q1/q2/q3 and `LogHubTopTemplatesMatrix`; 20k smoke, 1M medians, HDFS q2 L1, HDFS top templates 1M x20 L1, HDFS top templates 5M x5 L1/L2, and Spark top-template 20k/1M/5M follow-up rows completed. | Keep as real-input modest throughput/RSS/tail evidence and the strongest current real retained top-k row. HDFS q2 remains a checked page/window RSS win with elapsed tie. HDFS top templates is better: reusable checked `EpochTopKByKey` at 5M lines x5 is `18.26 s`, RSS `92 MB`, versus retained heap `19.04 s`, RSS `504 MB`; L2 also removes heap's `62.421 ms` timed GC. Spark top templates confirms the same retained top-k shape can remove more timed GC (`128.140 ms` median at 5M), but L1 is only a modest elapsed win and RSS is tied/slightly worse at 5M. Still not flagship GC-heavy because file loading/query CPU remains a large share of process time. |
+| 8 | Richer LogHub template/session mining | LogHub BGL and HDFS v1 are local and measured. BGL has `4747963` lines; HDFS v1 has `11175629` lines from Zenodo v7. LogHub Spark is now local from Zenodo record `8196385`, with `3852` `.log` files and `33236604` total lines. LogHub Windows is also local from the same Zenodo record, with one `Windows.log` file, `114608388` lines, and `28012696901` bytes. | Parse log events, tokenize templates, infer block/session candidates, window template counts, and retained top-template summaries. | `LogEvent`, `TemplateToken`, `TemplateCandidate`, `SessionEvent`, `WindowSummary`, retained top-k/template candidates. | Log-line/template/session/window/epoch bucket; template dictionary and block index durable. | Implemented as `LogHubRegionMatrix` q1/q2/q3 and `LogHubTopTemplatesMatrix`; 20k smoke, 1M medians, HDFS q2 L1, HDFS top templates 1M x20 L1, HDFS top templates 5M x5 L1/L2, Spark top-template 20k/1M/5M rows, and Windows top-template 20k/1M/5M rows completed. | Keep as real-input modest throughput/RSS/tail evidence and the strongest current real retained top-k row. HDFS q2 remains a checked page/window RSS win with elapsed tie. HDFS top templates is better: reusable checked `EpochTopKByKey` at 5M lines x5 is `18.26 s`, RSS `92 MB`, versus retained heap `19.04 s`, RSS `504 MB`; L2 also removes heap's `62.421 ms` timed GC. Spark and Windows top templates confirm the same retained top-k shape can remove more timed GC (`128.140 ms` Spark and `122.440 ms` Windows median at 5M), but L1 is only a modest elapsed win and RSS is tied/slightly worse at 5M. Still not flagship GC-heavy because file loading/query CPU remains a large share of process time. |
 | 9 | Theodolite UC2 / UC4 local kernel | Theodolite source clone at `cache/benchmark-data/theodolite/source`, commit `dfa768a25eec3c3f5a57b7d4839a0c255fd6fa7d`. The docs describe official generated active-power load generators, not a static real input file. | Local single-process downsampling or hierarchical aggregation without Kafka/Kubernetes. | Measurement records, hierarchy updates, duplicated group contributions, aggregate outputs. | Window/group bucket; hierarchy table durable. | Source cloned and inspected. UC2/UC4 are good methodology shapes, but the bundled input path is generated smart-meter active-power records. | Do not spend the next real-input slot on Theodolite alone unless paired with a separate public real industrial-energy trace. Candidate real sources include SPARK/SPARK-Raw or another open industrial power-meter dataset. |
 | 10 | GDELT / security NDJSON logs | Public event/log streams; exact dataset not selected. | Byte-slice parse/project, enrichment, session/window counts, alert candidates. | Event records, field slices, enrichment records, alert/session/window contributions. | Line/session/window bucket; enrichment dictionary durable. | Not selected or downloaded. | Lower-priority public-log fallback after DSPBench/RIoTBench/LogHub. |
 
@@ -281,6 +281,37 @@ loading and query CPU. The next LogHub search should try a richer
 session/template query over Spark, Windows, or Thunderbird only if it
 materializes more objects than the current top-template path.
 
+## LogHub Windows Top Templates Follow-Up
+
+Windows was added after Spark because it is much larger and has a single
+large real log file:
+
+`/Users/siyaoliu/rift/cache/benchmark-data/loghub/Windows/Windows.log`
+
+Local provenance:
+
+| Item | Value |
+|---|---:|
+| Archive bytes | `1670098945` |
+| Extracted log bytes | `28012696901` |
+| Extracted log lines | `114608388` |
+| Source | LogHub Windows archive from Zenodo record `8196385` |
+
+The same `LogHubTopTemplatesMatrix` path was used. Checksums and output counts
+matched across retained heap and checked scoped top-k rows.
+
+| Row | Heap/control | Best checked row | Interpretation |
+|---|---:|---:|---|
+| Windows 20k smoke | retained heap `1.809 ms`, GC `0 ms`, L1 RSS `8536064` | checked scoped `EpochTopKByKey` `2.042 ms`, GC `0 ms`, L1 RSS `9306112` | Validates file-backed Windows parsing/checksum only; too small for evidence. |
+| Windows 1M x3 L2/L1 | retained heap L2 `147.667 ms`, GC `39.420 ms`, max GC `45.591 ms`; L1 `6.33 s`, RSS `205176832` | checked scoped `EpochTopKByKey` L2 `108.569 ms`, GC `0 ms`; L1 `6.21 s`, RSS `152403968` | Retained top-k row with timed-GC removal and lower RSS, but L1 process elapsed improves only about `1.9%`. |
+| Windows 5M x3 L2/L1 | retained heap L2 `679.123 ms`, GC `122.440 ms`, max GC `133.835 ms`; L1 `32.37 s`, RSS `503889920` | checked scoped `EpochTopKByKey` L2 `548.806 ms`, GC `0 ms`; L1 `31.28 s`, RSS `513048576` | L2 retained-object loop win and timed-GC removal scale, but file reading dominates L1 and RSS is tied/slightly worse. |
+
+Decision: Windows confirms that the reusable checked top-k API removes heap GC
+on retained real log-template objects at larger input scale, but it still does
+not create the missing huge end-to-end real-input win. Use it as evidence that
+the current LogHub top-template shape is memory-management-positive inside the
+work loop while remaining file/parser dominated at process level.
+
 ## Theodolite Source Triage
 
 The public Theodolite source has been cloned locally:
@@ -369,9 +400,9 @@ Continue beyond the HDFS q2 modest win and HDFS top-template retained win. The
 next best search path is:
 
 1. Continue the retained top-k/session family on larger LogHub streams. Spark
-   is now downloaded and has a 20k/1M/5M top-template follow-up; the next
-   variants are Windows, Thunderbird, or a richer Spark session/template query
-   that materializes more objects than the current top-template path.
+   and Windows now have 20k/1M/5M top-template follow-ups; the next variants
+   are Thunderbird or a richer Spark/Windows session-template query that
+   materializes more objects than the current top-template path.
 2. Add StackOverflow/text top-word only after fetching provenance-clean posts
    data. No StackOverflow/Posts data is currently present under
    `cache/benchmark-data`; `scripts/fetch-benchmark-data.sh` has a gated

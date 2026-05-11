@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-11 11:56 CEST
+Last updated: 2026-05-11 11:59 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -38,6 +38,15 @@ and removes `128.140 ms` median timed GC, but L1 process time is only modestly
 better (`16.63 s` vs `16.93 s`) and RSS is tied/slightly worse
 (`509476864` vs `503988224`). Treat Spark as retained top-k confirmation, not
 as a new flagship GC-heavy real-input row.
+LogHub Windows was also downloaded from the same Zenodo record. It is much
+larger: archive `1670098945` bytes, extracted
+`/Users/siyaoliu/rift/cache/benchmark-data/loghub/Windows/Windows.log`
+`28012696901` bytes and `114608388` lines. Top-template smoke plus 1M/5M rows
+matched checksums. At 5M lines x3, retained heap is L1 `32.37 s`, RSS
+`503889920`, L2 `679.123 ms`, median GC `122.440 ms`; checked scoped top-k is
+L1 `31.28 s`, RSS `513048576`, L2 `548.806 ms`, GC `0 ms`. Interpretation:
+same as Spark, a retained top-k loop win and timed-GC removal, but only modest
+end-to-end process gain because file reading dominates.
 
 Latest final-clean evidence update:
 the retained-row gap-fill now has L1 final-clean rows for DSPBench Fraud q2 and

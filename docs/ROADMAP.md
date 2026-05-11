@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-11 11:56 CEST
+Last updated: 2026-05-11 11:59 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -29,6 +29,12 @@ retained heap has L2 `703.804 ms` with `128.140 ms` median GC, while checked
 scoped top-k has L2 `579.440 ms` and GC `0 ms`. The L1 process row is only a
 modest win (`16.63 s` versus `16.93 s`) and RSS is tied/slightly worse, so this
 is retained top-k confirmation rather than a new flagship real-input claim.
+LogHub Windows is now local from the same record as well: one `Windows.log`
+file, `114608388` lines, `28012696901` bytes. Its 5M top-template row confirms
+the same pattern: checked scoped top-k removes heap's `122.440 ms` median timed
+GC and wins the L2 loop (`548.806 ms` versus `679.123 ms`), while L1 process
+time improves modestly (`31.28 s` versus `32.37 s`) and RSS is tied/slightly
+worse.
 
 Latest presentation-normalization update: parent checkpoints `5185a3e`
 (`Normalize final-clean evidence tables`) and `5cf9ac3` (`Audit legacy evidence
