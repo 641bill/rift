@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-11 01:08 CEST
+Last updated: 2026-05-11 11:20 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -11,6 +11,12 @@ has a 5M x5 scale-up (`18.26 s`, `92 MB` RSS) against retained heap
 (`19.04 s`, `504 MB` RSS). ReML/MLKit PLDI-style local Tier 1 combined rows now
 use L1 timing/RSS rather than stale L2 elapsed; exact MLKit timing remains
 toolchain/provenance-blocked.
+
+Latest ReML/MLKit implementation update: child `d1fd16a64` adds the first
+Tier 2 Scala Native shaped ports, `logic`, `ray`, and `tsp`, to
+`ReMLRegionMatrix`. Tiny L1 checksum smokes passed across the main safe
+reporting modes. These rows remain pending for report-grade L1/L2 collection
+before they can be interpreted as local port evidence.
 
 Latest presentation-normalization update: parent checkpoints `5185a3e`
 (`Normalize final-clean evidence tables`) and `5cf9ac3` (`Audit legacy evidence

@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-11 01:08 CEST
+Last updated: 2026-05-11 11:20 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -10,11 +10,18 @@ Active implementation branch for this update:
 `feature/rift`
 
 Latest implementation checkpoint:
-`0773d4c17` (`Record Yak topword L1 top-k row`)
+`d1fd16a64` (`Add ReML Tier 2 shaped ports`)
 
 Latest parent evidence checkpoint:
-`5185a3e` (`Normalize final-clean evidence tables`) followed by
-`5cf9ac3` (`Audit legacy evidence for presentation`)
+`9a05426` (`Record presentation audit checkpoint`)
+
+Latest ReML/MLKit checkpoint:
+child `d1fd16a64` adds Scala Native shaped Tier 2 ports for `logic`, `ray`,
+and `tsp` to `ReMLRegionMatrix`. A tiny L1 checksum smoke passed across
+`gc-heap`, `region-scoped-rooted`, `checked-region-stream`, and
+`checked-region-scoped`; this is implementation/provenance evidence only.
+Report-grade L1 timing and L2 interpretation rows are still pending before
+these can enter the combined PLDI-style table as local port rows.
 
 Latest final-clean evidence update:
 the retained-row gap-fill now has L1 final-clean rows for DSPBench Fraud q2 and
