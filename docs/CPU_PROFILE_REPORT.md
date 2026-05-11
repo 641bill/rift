@@ -1,6 +1,6 @@
 # Rift CPU Profiling Report
 
-Last updated: 2026-05-12 01:41 CEST
+Last updated: 2026-05-12 01:55 CEST
 
 Status: profiling runbook plus first sampled profile row and the first
 profile-driven implementation follow-up. The sampled GH Archive row identified
@@ -29,6 +29,34 @@ The current questions are:
 - whether SafeZone-backed checked rows spend time in root/page claim/reclaim;
 - whether failed operators such as `EpochFold` and TableRank are losing in
   allocation, lookup/probe, callback/cursor, or aggregation logic.
+
+## Profile Sweep Harness
+
+`sandbox/run_l4_profile_sweep.sh` now provides the reusable L4 profiling entry
+point in the child implementation repo. It native-links benchmark main classes,
+runs the selected native binary, and samples it with macOS `/usr/bin/sample`
+or Linux `perf`.
+
+Default:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+zsh sandbox/run_l4_profile_sweep.sh
+```
+
+Representative sweep:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+RIFT_PROFILE_CASES=all \
+RIFT_PROFILE_OUTPUT_DIR=/Users/siyaoliu/rift/cache/profile-sweep-$(date +%Y%m%d-%H%M%S) \
+  zsh sandbox/run_l4_profile_sweep.sh
+```
+
+The current representative cases cover StreamFlex-design, generated Common
+Crawl-shaped q2, DSPBench Fraud q2, LogHub HDFS streaming top-k, and
+StreamIt BeamFormer. Details and smoke results are tracked in
+`evidence/PROFILE_SWEEP_MATRIX.md`.
 
 ## Profiling Rules
 

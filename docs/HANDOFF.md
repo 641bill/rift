@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-12 01:46 CEST
+Last updated: 2026-05-12 01:55 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -45,6 +45,17 @@ The first macOS `/usr/bin/sample` follow-up is now recorded in
 `processCheckedPeriod`, stable-state query work, SafeZone-backed
 allocation/zeroing, and capsule add/drain; heap shows the same query floor plus
 Immix allocation/object-metadata paths. `samply` is not installed locally.
+
+Latest profiling-sweep checkpoint:
+child `55b6c6e0a` adds `sandbox/run_l4_profile_sweep.sh`, a reusable L4 external
+profile harness. It native-links benchmark main classes and samples the native
+binary with macOS `/usr/bin/sample` or Linux `perf`. Default cases profile
+StreamFlex checked/heap; `RIFT_PROFILE_CASES=all` expands to representative
+StreamFlex, Common Crawl-shaped q2, DSPBench Fraud q2, LogHub HDFS streaming
+top-k, and StreamIt BeamFormer checked/heap rows. The smoke run
+`streamflex-design-checked` succeeded and wrote
+`/tmp/rift-profile-sweep-smoke/streamflex-design-checked.sample.txt`. Parent
+evidence is in `evidence/PROFILE_SWEEP_MATRIX.md`.
 
 Latest StreamIt-control follow-up:
 `evidence/STREAMIT_KERNEL_MATRIX.md` now has the clean 3-run L1 control matrix

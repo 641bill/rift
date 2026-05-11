@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-12 01:46 CEST
+Last updated: 2026-05-12 01:55 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -63,6 +63,14 @@ completeness audit: every representative row used by the report/slides is
 complete for L1 elapsed/RSS, L2 interpretation, input type, topology/API,
 comparison class, and allowed claim, or is explicitly lower-bound/control
 evidence.
+Latest L4 profiling update:
+`sandbox/run_l4_profile_sweep.sh` is now the reusable external-profile harness
+for representative benchmark sweeps, with usage recorded in
+`evidence/PROFILE_SWEEP_MATRIX.md`. The current default profiles StreamFlex
+checked/heap; `RIFT_PROFILE_CASES=all` covers StreamFlex, generated Common
+Crawl-shaped q2, DSPBench Fraud q2, LogHub HDFS streaming top-k, and StreamIt
+BeamFormer checked/heap rows. L4 remains interpretation-only; L1/L2 keep their
+existing roles.
 
 Latest operator-gate status:
 `evidence/OPERATOR_GATE_STATUS.md`. This keeps rank/top-k/median/hash/join work
