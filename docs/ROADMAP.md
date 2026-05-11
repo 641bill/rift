@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-12 01:30 CEST
+Last updated: 2026-05-12 01:46 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -109,6 +109,12 @@ the real log file inside each run: retained heap is L1 `8.10 s`, RSS `76 MB`,
 while reusable checked scoped `EpochTopKByKey` is L1 `8.06 s`, RSS `12 MB`;
 the L2 row removes `32.681 ms` median heap GC. Treat this as the first
 streaming-input retained/RSS candidate, not as the missing GC-heavy flagship.
+The 5M scale-up keeps the same classification: retained heap external
+`66.63 s`, L2 `13244.113 ms`, median GC `109.535 ms`; checked scoped top-k
+external `66.95 s`, L2 `13368.555 ms`, GC `0 ms`. Since heap GC is only about
+`0.8%` of the streaming loop, larger HDFS line streaming remains
+parser/query-bound ceiling evidence. RSS is missing from that sandboxed run and
+needs an external rerun before presentation.
 Next conversions should be GH Archive byte-slice q1/q2, Theodolite power
 streaming windows, StackExchange/StackOverflow text, SNAP/Yak edge streams,
 and DSPBench Fraud/Log only if retained pressure remains material.
@@ -143,6 +149,13 @@ linked traversal, capsule transfer overhead, and the missing VM/scheduler
 integration. Next step is to profile this row and then decide whether a
 retained-object BeamFormer/FilterBank variant or closer capsule runtime is
 worthwhile.
+The first `/usr/bin/sample` profiles are now recorded in
+`docs/CPU_PROFILE_REPORT.md` and `evidence/STREAMFLEX_GAP_ANALYSIS.md`.
+Conclusion: the checked scoped row is not dominated by close-time cleanup or
+`checkOpen`; it is split across shared pipeline/query work, SafeZone-backed
+allocation/zeroing, and capsule transfer. Optimize transient object layout,
+allocation zeroing/alignment, linked traversal, or a closer capsule runtime
+before adding another close/open fast path.
 
 Latest Yak real-text update: child `cd08f23d4` adds Stack Exchange AskUbuntu
 support, and child `59c181746` adds the current 20M scale-up rows. The dataset

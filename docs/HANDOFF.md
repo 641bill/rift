@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-12 01:30 CEST
+Last updated: 2026-05-12 01:46 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -40,6 +40,11 @@ linked-object traversal, primitive capsule export, and missing original
 Ovm/StreamFlex scheduler/capsule/runtime integration. Use this note when
 explaining why the result is a local design reproduction, not an exact
 StreamFlex artifact match.
+The first macOS `/usr/bin/sample` follow-up is now recorded in
+`docs/CPU_PROFILE_REPORT.md`: checked scoped is split across
+`processCheckedPeriod`, stable-state query work, SafeZone-backed
+allocation/zeroing, and capsule add/drain; heap shows the same query floor plus
+Immix allocation/object-metadata paths. `samply` is not installed locally.
 
 Latest StreamIt-control follow-up:
 `evidence/STREAMIT_KERNEL_MATRIX.md` now has the clean 3-run L1 control matrix
@@ -221,6 +226,13 @@ heap, retained heap, checked scoped retained, and checked scoped
 `EpochTopKByKey` is L1 `8.06 s`, RSS `12.2 MB`, L2 `2697.653 ms`, GC `0`.
 This is retained-object/RSS streaming evidence; parser/file/query CPU still
 dominates, so it is not yet a flagship GC-heavy stream result.
+The 5M streaming-file scale-up confirms the ceiling/control interpretation:
+retained heap external `66.63 s`, L2 `13244.113 ms`, median GC `109.535 ms`;
+checked scoped top-k external `66.95 s`, L2 `13368.555 ms`, GC `0 ms`.
+Checksums/output match. Heap GC is only about `0.8%` of the streaming loop, so
+larger true line streaming does not automatically create GC pressure. RSS is
+missing for this sandboxed run because `/usr/bin/time -l` hit a `sysctl`
+permission failure; rerun outside the sandbox for presentation-grade L1 RSS.
 
 Latest StreamIt/StreamFlex-axis checkpoint:
 `StreamItKernelMatrix` is now in the child working tree, along with

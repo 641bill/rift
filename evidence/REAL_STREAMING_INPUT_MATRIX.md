@@ -1,7 +1,7 @@
 # Real Streaming Input Matrix
 
 Date: 2026-05-11
-Last updated: 2026-05-11 23:49 CEST
+Last updated: 2026-05-12 01:46 CEST
 
 Status: started. This matrix records only rows that satisfy the
 `real-streaming-input` protocol: no full-input preload, incremental source
@@ -47,6 +47,29 @@ Interpretation:
 - Heap GC is still modest relative to the full streaming parse/query loop, so
   this is streaming-input retained-object/RSS evidence, not a flagship
   GC-heavy stream result yet.
+
+5M scale-up candidate:
+
+Command shape: `LOGHUB_TOP_INPUT_MODE=streaming-file`,
+`LOGHUB_TOP_LINES=5000000`, `LOGHUB_TOP_LINES_PER_EPOCH=100000`,
+`LOGHUB_TOP_BENCHMARK_RUNS=3`, modes `heap-retained-drop-anchor` and
+`checked-scoped-epoch-topk-retained-no-traverse`.
+
+| Mode | External s | L2 median ms | GC ms | Runs with GC | Records | Bytes read | Checksum | Output |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `heap-retained-drop-anchor` | `66.63` | `13244.113` | `109.535` | `3/3` | `5000000` | `700448768` | `-6870681013829878964` | `1600` |
+| `checked-scoped-epoch-topk-retained-no-traverse` | `66.95` | `13368.555` | `0.000` | `0/3` | `5000000` | `700448768` | `-6870681013829878964` | `1600` |
+
+Interpretation: scaling the true streaming HDFS top-template row to 5M lines
+confirms the same pattern more strongly. Checked scoped removes heap's timed
+GC, but heap GC is only about `0.8%` of the per-run L2 median, and external
+process time is a near-tie/slight checked loss because line streaming,
+template hashing, and top-k query work dominate. This is useful streaming
+ceiling/control evidence, not the missing GC-heavy stream flagship.
+
+RSS caveat: this sandboxed run did not collect `/usr/bin/time -l` RSS because
+the platform `time` command hit a sandboxed `sysctl kern.clockrate` failure.
+Rerun L1 outside the sandbox before using the 5M row as a presentation table.
 
 ## Planned Conversions
 

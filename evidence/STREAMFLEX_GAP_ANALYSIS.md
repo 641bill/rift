@@ -1,6 +1,6 @@
 # StreamFlex Gap Analysis
 
-Last updated: 2026-05-12 01:30 CEST
+Last updated: 2026-05-12 01:41 CEST
 
 Status: investigation note. This file explains why the current Rift
 `StreamFlexDesignMatrix` shows a useful checked-region win but does not show
@@ -120,6 +120,35 @@ Other current costs:
 - latency mode uses per-event timing and per-event epochs, which is useful for
   tail evidence but not the same as StreamFlex's complete scheduler model.
 
+## Sampled Profile Follow-Up
+
+Date/time: 2026-05-12 01:40 CEST.
+
+Tool: macOS `/usr/bin/sample`, 5 seconds each, against the linked
+`StreamFlexDesignMatrix` native binary. `samply` was not installed on this
+machine, and sandboxed `sample` could not inspect the process; the profile was
+run with elevated process-inspection permission.
+
+Scale: 20M generated events, throughput workload, `objects_per_event=8`,
+`RIFT_FINAL_CLEAN=1`.
+
+| Mode | Main sampled hot paths | Interpretation |
+|---|---|---|
+| `checked-epoch-scoped` | `processCheckedPeriod`, `StableState.classify`, `StableState.recordEvent`, `_platform_memset`, `MemorySafeZoneBackedStreamingRiftRegion.allocUncheckedImpl`, `MemorySafeZoneBackedRiftRegion.allocUncheckedImpl`, `mix`, `StableState.key`, `AlertCapsule.add` / `drainInto` | Checked scoped is split between shared query/pipeline work and SafeZone-backed allocation/zeroing. `allocImpl`/`checkOpen` is not the visible dominant path here; allocation cost is now mostly zone allocation plus object zeroing. |
+| `gc-heap` | `processHeapPeriod`, `StableState.classify`, `StableState.recordEvent`, `scalanative_GC_alloc_small`, `_platform_memset`, `recordAlert`, `AlertCapsule.add` / `drainInto`, `mix`, `StableState.key` | Heap and checked share the same pipeline/query floor. Heap pays Immix allocation/object-metadata work; checked replaces it with region allocation/zeroing. |
+
+Profile artifacts:
+
+- `/Users/siyaoliu/rift/cache/profile-streamflex-design-2026-05-12/checked-epoch-scoped.sample.txt`
+- `/Users/siyaoliu/rift/cache/profile-streamflex-design-2026-05-12/gc-heap.sample.txt`
+
+Profile conclusion: the next StreamFlex-specific optimization should not be
+another close-time region cleanup. The useful targets are transient object
+layout/count, allocation zeroing/alignment, linked-list traversal/cache
+locality, and a closer capsule runtime. Any chunked or region-array transient
+variant must include the same-shape heap control so it is not reported as a
+pure memory-management win.
+
 ## Why BeamFormer / FilterBank Do Not Close The Gap Yet
 
 The local BeamFormer/FilterBank ports are useful StreamIt/StreamFlex-axis
@@ -134,10 +163,8 @@ until the period boundary.
 
 ## Next Work To Close The Gap
 
-1. **Profile current rows.** Use `samply` when available, or macOS `sample` as
-   the fallback, on `StreamFlexDesignMatrix` throughput and pressure-latency
-   rows. Confirm how much time is object construction, `allocOpen`, linked
-   traversal, stable-state hashing/classification, and GC.
+1. **Profile pressure latency too.** Throughput profiling is now recorded;
+   pressure-latency should be sampled next to inspect the tail/deadline path.
 2. **Implement a closer capsule runtime.** Add an object-capsule variant with
    bounded capsule pools and explicit ownership/export boundaries, plus a
    same-shape heap control.

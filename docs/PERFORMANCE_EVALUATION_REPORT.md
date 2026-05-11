@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-12 01:30 CEST
+Last updated: 2026-05-12 01:46 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -133,6 +133,13 @@ heap/drop-anchor L1 `8.10 s`, RSS `76 MB`; the matching L2 row removes
 `32.681 ms` median timed heap GC. This is real streaming-input retained-object
 and RSS evidence, not yet the missing flagship GC-heavy stream result because
 file parsing/query CPU still dominates.
+The 5M streaming-file scale-up confirms that ceiling: retained heap is external
+`66.63 s`, L2 `13244.113 ms`, median GC `109.535 ms`; checked scoped top-k is
+external `66.95 s`, L2 `13368.555 ms`, GC `0 ms`, with matching
+checksum/output. Heap GC is only about `0.8%` of the streaming loop, so this is
+streaming ceiling/control evidence. The sandboxed 5M run missed RSS because
+`/usr/bin/time -l` hit a `sysctl` permission failure; rerun L1 outside the
+sandbox before using it as a presentation table.
 The richer Windows q3 template/session row is negative/control evidence:
 checked page-token cuts median timed GC (`33.945 ms` versus heap `147.336 ms`)
 but loses elapsed (`17783.560 ms` versus heap `17405.613 ms`) and RSS. This
@@ -625,6 +632,13 @@ Latest clean final-selection headline interpretation:
   allocation lowering, object construction, linked-object traversal, primitive
   capsule export, and the fact that this is not the original Ovm/StreamFlex
   scheduler/capsule runtime.
+- The 2026-05-12 `/usr/bin/sample` profiles confirm this interpretation:
+  checked scoped samples are split across `processCheckedPeriod`, stable-state
+  query work, SafeZone-backed allocation/zeroing, and capsule add/drain, while
+  heap samples show the same query floor plus Immix allocation/object-metadata
+  paths. The next StreamFlex-specific optimization should target transient
+  object layout/count, allocation zeroing/alignment, and linked traversal or a
+  closer capsule runtime, with same-shape heap controls.
 - NEXMark Beam-default is broadly favorable but modest. The L1 selected rows
   now show checked q3/q8/q9/q11 at `5.86/9.21/15.03/4.36 s` versus heap
   `6.18/9.54/16.27/4.47 s`; q9 is the strongest selected row at about `7.6%`
