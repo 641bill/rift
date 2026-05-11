@@ -2,6 +2,7 @@
 
 **Status**: partially filled from the current Scala-next checked Rift API slice.
 This is not a complete Phase 7 report yet.
+**Last updated**: 2026-05-11 14:48 CEST
 **Checked compiler version**: `3.8.4-RC1-bin-20260402-44bbcdf-NIGHTLY`
 via `ENABLE_EXPERIMENTAL_COMPILER=1` in the Scala Native fork.
 
@@ -87,6 +88,11 @@ Scala-next capture checking supports the first Rift safe API slice:
   top-word-style `ObjectBuffer` can store records that refer to heap metadata
   through explicitly rooted handles, and a GraphChi-style subinterval update
   can use rooted durable heap vertex metadata.
+- `RiftRegion.epoch` now exposes `OpenStreamingRegion` only as an
+  allocation-capable internal checked handle. `allocOpen` requires that active
+  handle, while direct user `close()` or `reset()` through the open handle is
+  rejected by the compiler. This is the first active/closed typestate rule
+  behind the no-check allocation lowering.
 - The reset boundary now has an explicit negative probe for a subtle epoch
   escape: a value allocated inside `RiftRegion.reset` cannot be stored into an
   outer streaming-region `ObjectBuffer` and then read after reset.
@@ -300,6 +306,12 @@ Current checked compiler probes:
 | `streamWindowLongIndexedRankLexicographicCompiles` | long-key stream-window rank supports four Q1-style lexicographic priorities | compiles | Covers route-key-style ranking without a dense side table. |
 | `streamWindowLongIndexedRankCannotStoreDirectHeapObject` | long-key stream-window rank stores direct heap object | fails | Confirms the stream-window long-key put path is guarded. |
 | `streamingResetRegionArrayEpochCompiles` | reset epoch processes a region-owned array of ordinary records | compiles | Models sort/dataflow epoch records through the supported checked array shape. |
+| `streamingEpochOpenRegionCompiles` | `RiftRegion.epoch` gives an open allocation handle for `allocOpen` | compiles | Positive active-handle probe for the checked epoch topology. |
+| `streamingEpochOpenRegionCannotBeClosedManually` | user code calls `close()` on an open epoch handle | fails | Covers the first active/closed typestate rule: lifecycle belongs to the owning epoch/operator boundary. |
+| `streamingEpochOpenRegionCannotBeResetManually` | user code calls `reset()` on an open epoch handle | fails | Prevents checked user code from invalidating the allocation-capable handle behind the fast path. |
+| `allocOpenRequiresOpenStreamingRegion` | user passes a generic `StreamingRegion` to `allocOpen` | fails | Keeps the no-check allocation lowering limited to active handles. |
+| `streamingEpochAllowsStaticMetadataWithAllocOpen` | open-allocated object stores static immutable metadata | compiles | Extends the static metadata rule to the open allocation path. |
+| `streamingEpochAllowsHeapRootBridgeWithAllocOpen` | open-allocated object stores heap metadata through `HeapRoot` | compiles | Covers the v1 bridge/root handle on the open allocation path. |
 | `topwordBufferCanStoreRecordsWithRootedMetadata` | top-word-style buffer stores records that carry rooted heap metadata | compiles | Covers durable heap metadata via `HeapRoot` inside a higher-level checked buffer. |
 | `graphChiSubintervalCanUseRootedHeapVertexMetadata` | GraphChi-style subinterval record refers to durable heap vertex metadata through `HeapRoot` | compiles | Covers the safe data/control split for graph updates. |
 | `graphChiSubintervalCannotStoreUnrootedHeapVertex` | GraphChi-style subinterval record stores direct heap vertex metadata | fails | Confirms durable heap metadata still needs `HeapRoot`. |

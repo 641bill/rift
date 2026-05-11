@@ -1,7 +1,7 @@
 # Fair Evaluation Protocol
 
 Date: 2026-05-09
-Last updated: 2026-05-11 13:13 CEST
+Last updated: 2026-05-11 14:48 CEST
 
 Status: active evaluation contract for report, slides, and future benchmark
 runs. This document is the reviewer-facing rulebook for deciding what a Rift
@@ -90,6 +90,7 @@ that the invariant removes.
 | region-to-heap references require static/rooted proof | no blanket page roots where root-free eligibility is proven |
 | outer regions cannot retain inner-region values | no close-time object graph scan |
 | closures cannot hide escaping region captures | no runtime closure-capture tracker |
+| active checked allocation handles cannot be closed/reset by user code | no hot-path open-state check inside the owning epoch/page/window allocation path |
 | operator owns bucket/page tokens | no per-record stale-token or open-state check in the hot path |
 | diagnostics are opt-in | no per-allocation tracing or attribution counters in headline rows |
 
@@ -125,7 +126,11 @@ own axes first, then add Rift's standardized local metrics.
 
 Rift's standardized local metrics are elapsed, GC median/max, runs-with-GC,
 RSS, region op time, opens/closes/resets, allocation/object count, and
-checksum/output.
+checksum/output. For StreamFlex-style and other latency rows, also report
+throughput, p50, p95, max latency, deadline misses, GC max, and runs-with-GC.
+For Stancu/SPECjbb-style and representative checked API rows, also report API
+burden: counts of `epoch`, page/window/token boundaries, `HeapRoot` handles,
+and checked operator boundaries.
 
 ## Benchmark Acceptance
 

@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-11 14:32 CEST
+Last updated: 2026-05-11 14:48 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -456,11 +456,11 @@ Design-lesson backlog:
 
 | Candidate | Why it matters | Runtime work it could remove | Current status |
 |---|---|---|---|
-| Active/closed region typestate | Names which handles may allocate, close, or only observe. | Hot-path `isOpen` checks and stale-token defenses in operator-owned paths. | Design/proof backlog, not public API. |
-| Immutable/static metadata references | Lets region objects point at durable read-only metadata safely. | Blanket page/root registration for root-free eligible checked rows. | Partially reflected in safety rules; backend lowering not claimed yet. |
-| Bridge/root handles | Makes mixed heap-region edges explicit. | Ad hoc heap-region tracking and conservative roots. | Existing `HeapRoot` idea; needs measured backend payoff. |
+| Active/closed region typestate | Names which handles may allocate, close, or only observe. | Hot-path `isOpen` checks and stale-token defenses in operator-owned paths. | First internal slice implemented: `OpenStreamingRegion` can allocate with `allocOpen`, but checked user code cannot call `close()` or `reset()` on it. Public API still unchanged. |
+| Immutable/static metadata references | Lets region objects point at durable read-only metadata safely. | Blanket page/root registration for root-free eligible checked rows. | Positive compiler probes now cover static metadata through `allocOpen`; root-free backend lowering is still not a safety claim. |
+| Bridge/root handles | Makes mixed heap-region edges explicit. | Ad hoc heap-region tracking and conservative roots. | Existing `HeapRoot` is the v1 bridge handle; new probes cover `HeapRoot` on the open allocation path. Needs measured backend payoff before broader API. |
 | StreamFlex-style latency reporting | Captures wins from removing GC tails even when median throughput is close. | Not runtime removal; it changes what evidence we collect. | Keep p95/max/deadline metrics in latency workloads. |
-| Stancu-style annotation/API burden | Measures how much code users must mark with epoch/page/window/root scopes. | Not runtime removal directly; constrains API complexity. | Add burden columns when presenting final components. |
+| Stancu-style annotation/API burden | Measures how much code users must mark with epoch/page/window/root scopes. | Not runtime removal directly; constrains API complexity. | Representative burden counts now live in `evidence/API_BURDEN_SUMMARY.md`; keep extending them with final rows. |
 
 Rule: none of these becomes a user-facing capability until it either removes a
 measured runtime cost or fixes a concrete safety gap.
@@ -718,7 +718,8 @@ Detailed taxonomy: `docs/MEMORY_MODE_TAXONOMY.md`.
 | Rift runtime backends | Implemented | HP and Streaming trusted modes exist and are benchmarked. |
 | SafeZone root modes | Implemented | Current, improved, chunk-root, and rootless benchmark mode are available. |
 | Checked object allocation | Implemented | Scala 3 checked API allocates ordinary Scala objects in regions. |
-| Mixed-reference rules | Partial | Static/immutable heap metadata and explicit `HeapRoot` supported; full root-free SafeZone policy is not proven. |
+| Active/open checked allocation handles | Internal slice implemented | `OpenStreamingRegion` is allocation-capable and lowered to the unchecked allocation path; direct user close/reset is now rejected so lifecycle stays owned by epoch/page/window helpers. |
+| Mixed-reference rules | Partial | Static/immutable heap metadata and explicit `HeapRoot` supported, including through the open allocation path; full root-free SafeZone policy is not proven. |
 | Checked stream operators | Partial | AppendWindow/cursor works; Join/Fold/Rank/TableRank exist but many fail performance gates. |
 | Checked SafeZone-backed backend | Implemented as benchmark prototype | `RiftRegion.streamingSafeZone(...)`; object allocation/close supported, raw allocation/reset unsupported. |
 | Canonical benchmark labels | Implemented for key matrices | Checked AppendWindow and Common Crawl WET-shaped runners accept new names and old aliases. |

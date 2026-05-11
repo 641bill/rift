@@ -2,7 +2,7 @@
 
 Status: active research design for the Scala Native fork.
 
-Last updated: 2026-05-08 17:19 CEST
+Last updated: 2026-05-11 14:48 CEST
 
 Active worktree: `/Users/siyaoliu/rift/scala-native-rift`
 
@@ -346,7 +346,7 @@ Region modes:
 |---|---|---|
 | `HPZone` | Trusted fast region path for benchmarks and hot loops. No static escape guarantee. | Implemented as a runtime kind and exercised by benchmarks. |
 | `Scoped` | Lexically scoped, capture-checked region. | Runtime kind and checked API slice exist; direct function results are conservatively rejected; `HeapRoot` handles provide explicit region-to-GC metadata roots; direct unrooted heap-object constructor arguments are rejected in checked allocation lowering; simple region-local aliases are propagated; static module singletons and immutable module vals are allowed; owner-token `ObjectBuffer` and growable `RegionBuffer` give first checked container primitives. |
-| `Streaming` | Resettable streaming region with capture/use-after-reset constraints. | Runtime kind and checked reset wrapper exist; `HeapRoot` handles are cleared on reset/close; the same checked allocation guard applies inside reset epochs; raw `childStreaming` can open a child streaming region whose handle cannot escape the parent stream; `childWindow` is the preferred stream-window wrapper; `childRegion(parent, window)` is an explicit owner-token accessor for deliberate parent-visible child records; child close ordering remains explicit. |
+| `Streaming` | Resettable streaming region with capture/use-after-reset constraints. | Runtime kind and checked reset wrapper exist; `HeapRoot` handles are cleared on reset/close; the same checked allocation guard applies inside reset epochs; `OpenStreamingRegion` is the internal allocation-capable handle for `allocOpen`, and checked user code can no longer call `close()` or `reset()` through that handle; raw `childStreaming` can open a child streaming region whose handle cannot escape the parent stream; `childWindow` is the preferred stream-window wrapper; `childRegion(parent, window)` is an explicit owner-token accessor for deliberate parent-visible child records; child close ordering remains explicit. |
 
 The important corrected invariant is about GC visibility:
 
@@ -370,6 +370,12 @@ The important corrected invariant is about GC visibility:
   policy.
 - `HPZone` remains a trusted path. It may be used to measure runtime potential,
   but it is not the safety story.
+
+Active/closed typestate is now partly enforced internally. The open checked
+handle is allocation-capable, but lifecycle operations are owned by `epoch`,
+page/window-token, and child-close helpers. Low-level public handles still keep
+runtime defensive checks; the compiler rule is only a basis for removing checks
+inside operator-owned paths where close ordering is statically fixed.
 
 Region-managed values are allowed to be ordinary Scala objects. Rift is not a
 primitive-record-only system. Packed primitive keys in the current DEBS code are

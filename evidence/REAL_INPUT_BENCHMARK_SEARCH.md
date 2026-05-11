@@ -1,7 +1,7 @@
 # Real-Input GC-Heavy Stream Benchmark Search
 
 Date: 2026-05-07
-Last updated: 2026-05-11 12:43 CEST
+Last updated: 2026-05-11 14:48 CEST
 
 Status: active Phase 6 search ledger. This file tracks public real-input
 stream/dataflow candidates before implementation work. It is deliberately a
@@ -28,6 +28,13 @@ rows, DSPBench Fraud/Log, and RIoTBench/MHEALTH are modest throughput/RSS/tail
 wins or near-ties. Parser/query CPU often dominates and heap GC remains under a
 few percent of elapsed at the measured scale, so the next benchmark must force
 more natural object materialization, not just read more bytes.
+
+2026-05-11 local-data preflight: the cache currently has AskUbuntu for
+StackExchange text, HDFS/BGL/Spark/Windows for LogHub, Twitter ego and
+LiveJournal for SNAP/Yak graph replay, and no larger StackOverflow dump yet.
+Therefore the next real-input run should either scale the existing AskUbuntu
+`topwordreal` row or fetch a provenance-clean StackOverflow/StackExchange dump
+before adding new code. Do not substitute generated text for this slot.
 
 ## Search Gates
 

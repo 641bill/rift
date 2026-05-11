@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-11 14:32 CEST
+Last updated: 2026-05-11 14:48 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -10,10 +10,10 @@ Active implementation branch for this update:
 `feature/rift`
 
 Latest implementation checkpoint:
-`cd08f23d4` (`Add real text Yak topword workload`)
+`f708db30a` (`Tighten checked open-region typestate`)
 
 Latest parent evidence checkpoint:
-`9a05426` (`Record presentation audit checkpoint`)
+current parent commit (`Record internal design feature checkpoint`)
 
 Latest prior-work interpretation checkpoint:
 `docs/PRIOR_WORK_MEMORY_MANAGEMENT_INTERPRETATION.md` now records the zoomed-out
@@ -61,6 +61,25 @@ bridge/root handles, StreamFlex-style latency reporting, and Stancu-style
 annotation/API burden as design/proof candidates. They are not public API
 commitments; each needs either measured runtime-overhead removal or a concrete
 safety gap before implementation.
+
+Latest internal design-feature checkpoint:
+`OpenStreamingRegion` is now treated as the internal allocation-capable checked
+handle. The compiler rejects checked user calls to `close()` or `reset()` on an
+open epoch handle, while the Rift implementation may still close the child at
+the owning epoch/page/window boundary. New compiler probes also cover
+`allocOpen` requiring the open handle, static immutable metadata through the
+open allocation path, and `HeapRoot` as the v1 bridge handle on that path. New
+runtime probes cover allocation after a closed child streaming region for both
+Rift streaming and SafeZone-backed streaming. This does not expose a public
+reference-capability API; it just closes the first active/closed typestate gap
+behind the existing fast `allocOpen` lowering.
+
+Latest reporting-protocol checkpoint:
+`evidence/API_BURDEN_SUMMARY.md` records representative API-boundary counts for
+epoch, page/window/token, `HeapRoot`, and checked operator usage. L2 latency
+rows are now required to report throughput, p50, p95, max, deadline misses, GC
+max, and runs-with-GC when the benchmark has a latency story. L1 remains the
+only headline elapsed/RSS source.
 
 Latest in-progress real-input checkpoint:
 `YakRegionMatrix` now has `topwordreal`, a real Stack Exchange AskUbuntu

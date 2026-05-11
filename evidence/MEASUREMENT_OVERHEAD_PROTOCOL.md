@@ -1,7 +1,7 @@
 # Measurement Overhead Protocol
 
 Date: 2026-05-09
-Last updated: 2026-05-10 17:15 CEST
+Last updated: 2026-05-11 14:48 CEST
 
 Status: active protocol. Initial L1 final-clean support is implemented for the
 first representative benchmark binaries. The first clean focused retained L1
@@ -111,6 +111,9 @@ the optimized headline binary, say so in the profile report.
 - L1 final-clean tables report process real/user/sys time, max RSS,
   checksum/output count, input label, mode, and API/topology.
 - L2 tables report GC and region statistics.
+- L2 latency tables also report throughput, p50, p95, max latency, deadline
+  misses, GC max, and runs-with-GC. These are interpretation metrics; L1
+  remains the source for final elapsed/RSS.
 - L3 tables report internal timing buckets and attribution.
 - L4 reports summarize sampled hot frames and visible GC pause/collection
   frames.

@@ -1,7 +1,7 @@
 # Evaluation Classified Summary
 
 Date: 2026-05-09
-Last updated: 2026-05-11 14:08 CEST
+Last updated: 2026-05-11 14:48 CEST
 
 Status: thesis-facing classified summary built from committed evidence.
 Baseline commits for clean rows: parent `1cc3b2c`, child `13a3df1c7`.
@@ -33,6 +33,9 @@ rows to explain GC/region behavior.
 Use `heap-retained-drop-anchor` in prose for
 `heap-epoch-retained-no-traverse`. It closes in O(1) by dropping the bucket
 reference, but the retained heap objects still remain for GC tracing/reclaim.
+Representative API-boundary counts for epoch/page/window/`HeapRoot` usage are
+tracked separately in `evidence/API_BURDEN_SUMMARY.md`; include those counts
+when presenting Stancu/SPECjbb-style or final checked API rows.
 
 ## Presentation Completeness Audit
 

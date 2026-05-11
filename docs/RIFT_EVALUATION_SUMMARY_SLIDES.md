@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-11 14:32 CEST
+Last updated: 2026-05-11 14:48 CEST
 
 Status: markdown slide deck outline. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report,
@@ -454,9 +454,9 @@ unnecessary tracing of temporary data.
 
 | Idea | Use in Rift |
 |---|---|
-| active / closed regions | proof vocabulary for no use-after-close, nested child close order, and possible transfer |
-| immutable/static metadata | safe cross-lifetime references without tracing whole region payloads |
-| bridge/root handles | explicit mixed heap-region links instead of blanket page roots |
+| active / closed regions | first internal slice now rejects direct user close/reset on `OpenStreamingRegion`; future public typestate depends on measured payoff |
+| immutable/static metadata | open-allocation compiler probes accept stable static metadata; root-free backend claims still need proof/evidence |
+| bridge/root handles | existing `HeapRoot` is the v1 bridge handle and is now covered on the open allocation path |
 | control path / data path split | report what stays on heap and what moves to regions |
 | reference capabilities | future way to name mutable, read-only, transferable, and region-scoped refs |
 
@@ -477,4 +477,5 @@ Compare each prior system on the axes it actually reported:
 | ReML/MLKit | real time, RSS, GC count |
 
 Then show Rift's local standardized metrics separately: elapsed, GC time/count,
-RSS, region op time, correctness, and annotation/API burden.
+RSS, region op time, correctness, and annotation/API burden. For latency rows,
+also show throughput, p50, p95, max, deadline misses, GC max, and runs-with-GC.

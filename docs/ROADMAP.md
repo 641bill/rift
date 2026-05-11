@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-11 14:32 CEST
+Last updated: 2026-05-11 14:48 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -39,11 +39,11 @@ Design-lesson backlog:
 
 | Candidate | Runtime work it might remove | Gate before public API |
 |---|---|---|
-| Active/closed region typestate | hot-path `isOpen` and stale-token checks | measured operator-owned path payoff or safety gap |
-| Immutable/static metadata references | blanket root registration for durable read-only metadata | compiler proof plus backend root-removal evidence |
-| Bridge/root handles | conservative heap-region tracking and roots | concrete mixed-reference workload and checks |
-| StreamFlex-style latency reporting | none directly; exposes GC-tail wins | keep as reporting axis for latency workloads |
-| Stancu-style annotation/API burden | none directly; limits API complexity | include in final component selection |
+| Active/closed region typestate | hot-path `isOpen` and stale-token checks | first internal slice implemented for `OpenStreamingRegion`; next gate is measured operator-owned payoff |
+| Immutable/static metadata references | blanket root registration for durable read-only metadata | open-allocation compiler probe added; backend root-removal evidence still required |
+| Bridge/root handles | conservative heap-region tracking and roots | `HeapRoot` is v1 bridge and now covered on the open allocation path; measure before broadening |
+| StreamFlex-style latency reporting | none directly; exposes GC-tail wins | L2 latency rows must include throughput, p50, p95, max, misses, GC max, runs-with-GC |
+| Stancu-style annotation/API burden | none directly; limits API complexity | representative burden counts tracked in `evidence/API_BURDEN_SUMMARY.md` |
 
 Latest final-clean table update: retained L1 gaps are now filled for DSPBench
 Fraud q2 and LogHub q2/q3, and the reusable LogHub HDFS `EpochTopKByKey` row
