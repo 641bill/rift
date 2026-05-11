@@ -12,11 +12,13 @@ has a 5M x5 scale-up (`18.26 s`, `92 MB` RSS) against retained heap
 use L1 timing/RSS rather than stale L2 elapsed; exact MLKit timing remains
 toolchain/provenance-blocked.
 
-Latest presentation-normalization update: parent checkpoint `5185a3e` is the
-current committed evidence baseline, child checkpoint `0773d4c17` remains the
-implementation baseline, and `evidence/EVALUATION_CLASSIFIED_SUMMARY.md` now
-explicitly marks dirty, old-SafeZone, L2-only, benchmark-local, legacy parser,
-and gated DEBS/TableRank/rank rows as replace-with-L1, L2-interpretation-only,
+Latest presentation-normalization update: parent checkpoints `5185a3e`
+(`Normalize final-clean evidence tables`) and `5cf9ac3` (`Audit legacy evidence
+for presentation`) are the committed evidence baseline, child checkpoint
+`0773d4c17` remains the implementation baseline, and
+`evidence/EVALUATION_CLASSIFIED_SUMMARY.md` now explicitly marks dirty,
+old-SafeZone, L2-only, benchmark-local, legacy parser, and gated
+DEBS/TableRank/rank rows as replace-with-L1, L2-interpretation-only,
 lower-bound topology, or archive/control-only evidence.
 
 Active worktree: `/Users/siyaoliu/rift/scala-native-rift`

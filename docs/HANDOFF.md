@@ -13,7 +13,8 @@ Latest implementation checkpoint:
 `0773d4c17` (`Record Yak topword L1 top-k row`)
 
 Latest parent evidence checkpoint:
-`5185a3e` (`Normalize final-clean evidence tables`)
+`5185a3e` (`Normalize final-clean evidence tables`) followed by
+`5cf9ac3` (`Audit legacy evidence for presentation`)
 
 Latest final-clean evidence update:
 the retained-row gap-fill now has L1 final-clean rows for DSPBench Fraud q2 and
