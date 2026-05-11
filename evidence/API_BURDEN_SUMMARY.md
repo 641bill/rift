@@ -1,7 +1,7 @@
 # API Burden Summary
 
 Date: 2026-05-11
-Last updated: 2026-05-11 14:48 CEST
+Last updated: 2026-05-11 15:36 CEST
 
 Status: representative reporting artifact. These counts are code-level burden
 summaries for the presentation rows, not a language-level annotation calculus.
@@ -48,4 +48,7 @@ Page/window token has higher API burden because users must expose the
 bucket/window key, but it is the right shape for page/event streams. `HeapRoot`
 burden is currently low in representative rows because most wins keep durable
 metadata primitive or static; future mixed-reference workloads must count it
-explicitly before claiming root-free eligibility.
+explicitly before claiming root-free eligibility. The open-region probe update
+confirms that `HeapRoot` is accepted through direct epoch and operator-owned
+page/epoch-buffer allocation paths, but root-free-eligible rows must reject
+`HeapRoot` explicitly before making a rootless safety claim.

@@ -1,7 +1,7 @@
 # Final-Clean Headline Results
 
 Date: 2026-05-09
-Last updated: 2026-05-11 14:08 CEST
+Last updated: 2026-05-11 15:44 CEST
 
 Status: L1 runner support exists for the first representative binaries. One
 focused retained-epoch L1 row has been collected from clean child commit
@@ -42,6 +42,9 @@ Child `d1fd16a64` adds ReML/MLKit-shaped Tier 2 ports for `logic`, `ray`, and
 `tsp`; their first report-grade L1/L2 rows are recorded below.
 Child `cd08f23d4` adds Yak `topwordreal` over the real Stack Exchange
 AskUbuntu `Posts.xml` dump; its first 10M-token x5 L1 rows are recorded below.
+Child `59c181746` is the current evidence checkpoint for the 20M
+AskUbuntu scale-up row; the runner support is unchanged, but the L1/L2 rows now
+show the larger local real text replay.
 
 ## Definition
 
@@ -169,6 +172,11 @@ for those 20 iterations.
 | Yak AskUbuntu `topwordreal` 10M x5 | real Stack Exchange AskUbuntu `Posts.xml` text replay | retained records + append-time top-k | same-shape heap control | `heap-topk-retained-no-traverse` | 3 processes x 5 iterations | `4.40 s` total (`880 ms/iter`) | `4.29 s` | `4.41 s` | `427737088 bytes` | checksum `-4151722340504273532` | L1 same-shape heap top-k retained control; slower than natural heap for this real text row |
 | Yak AskUbuntu `topwordreal` 10M x5 | real Stack Exchange AskUbuntu `Posts.xml` text replay | `RiftRegion.epoch` retained records + close traversal | framework API win | `checked-epoch-scoped` | 3 processes x 5 iterations | `3.86 s` total (`772 ms/iter`) | `3.76 s` | `4.01 s` | `94306304 bytes` | checksum `-4151722340504273532` | L1 clean direct checked epoch win over heap; matching L2 removes `23.715 ms` timed heap GC |
 | Yak AskUbuntu `topwordreal` 10M x5 | real Stack Exchange AskUbuntu `Posts.xml` text replay | reusable checked `EpochTopKByKey` scoped | framework API / top-k API gate | `checked-epoch-topk-scoped` | 3 processes x 5 iterations | `4.12 s` total (`824 ms/iter`) | `4.12 s` | `4.31 s` | `93536256 bytes` | checksum `-4151722340504273532` | L1 reusable top-k is a large RSS win and slight elapsed win over heap, but trails direct checked epoch |
+| Yak AskUbuntu `topwordreal` 20M x5 | real Stack Exchange AskUbuntu `Posts.xml` text replay | retained + close traversal | natural heap baseline | `gc-heap` | 1 process x 5 iterations | `7.77 s` total (`1554 ms/iter`) | `7.77 s` | `7.77 s` | `986415104 bytes` | checksum `-6326401111935532007` | L1 scale-up heap baseline; matching L2 median loop `511.485 ms`, GC `33.471 ms` |
+| Yak AskUbuntu `topwordreal` 20M x5 | real Stack Exchange AskUbuntu `Posts.xml` text replay | rooted scoped retained records + close traversal | safe rooted baseline | `region-scoped-rooted` | 1 process x 5 iterations | `7.42 s` total (`1484 ms/iter`) | `7.42 s` | `7.42 s` | `174342144 bytes` | checksum `-6326401111935532007` | L1 rooted scoped win over heap with large RSS cut; matching L2 median loop `465.947 ms`, GC `0 ms` |
+| Yak AskUbuntu `topwordreal` 20M x5 | real Stack Exchange AskUbuntu `Posts.xml` text replay | retained + append-time top-k | same-shape heap control | `heap-topk-retained-no-traverse` | 1 process x 5 iterations | `8.16 s` total (`1632 ms/iter`) | `8.16 s` | `8.16 s` | `985743360 bytes` | checksum `-6326401111935532007` | Same-shape heap top-k retained control; slower than natural heap at this scale |
+| Yak AskUbuntu `topwordreal` 20M x5 | real Stack Exchange AskUbuntu `Posts.xml` text replay | `RiftRegion.epoch` retained records + close traversal | framework API win | `checked-epoch-scoped` | 1 process x 5 iterations | `7.16 s` total (`1432 ms/iter`) | `7.16 s` | `7.16 s` | `174374912 bytes` | checksum `-6326401111935532007` | L1 direct checked epoch scale-up win; matching L2 median loop `432.824 ms`, GC `0 ms` |
+| Yak AskUbuntu `topwordreal` 20M x5 | real Stack Exchange AskUbuntu `Posts.xml` text replay | reusable checked `EpochTopKByKey` scoped | framework API / top-k API gate | `checked-epoch-topk-scoped` | 1 process x 5 iterations | `7.86 s` total (`1572 ms/iter`) | `7.86 s` | `7.86 s` | `173621248 bytes` | checksum `-6326401111935532007` | Reusable top-k still cuts RSS but loses elapsed to natural heap at 20M; keep gated behind direct epoch |
 | StreamFlex throughput 200k x20 | generated methodology | heap transaction batches | natural heap baseline | `heap` | 3 processes x 20 iterations | `0.79 s` total (`39.5 ms/iter`) | `0.78 s` | `0.80 s` | `7929856 bytes` | checksum `3320210680833752` | L1 clean natural heap baseline |
 | StreamFlex throughput 200k x20 | generated methodology | scoped transaction batches | safe rooted baseline | `improved-safezone` | 3 processes x 20 iterations | `0.77 s` total (`38.5 ms/iter`) | `0.77 s` | `0.77 s` | `5324800 bytes` | checksum `3320210680833752` | L1 clean rooted scoped-region baseline |
 | StreamFlex throughput 200k x20 | generated methodology | checked direct epoch batches | framework API win | `rift-checked-safezone-direct-epoch` | 3 processes x 20 iterations | `0.58 s` total (`29.0 ms/iter`) | `0.58 s` | `0.58 s` | `5308416 bytes` | checksum `3320210680833752` | L1 clean checked direct epoch win over heap and rooted scoped baseline |

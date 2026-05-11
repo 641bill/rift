@@ -2,7 +2,7 @@
 
 **Status**: partially filled from the current Scala-next checked Rift API slice.
 This is not a complete Phase 7 report yet.
-**Last updated**: 2026-05-11 14:48 CEST
+**Last updated**: 2026-05-11 15:36 CEST
 **Checked compiler version**: `3.8.4-RC1-bin-20260402-44bbcdf-NIGHTLY`
 via `ENABLE_EXPERIMENTAL_COMPILER=1` in the Scala Native fork.
 
@@ -93,6 +93,13 @@ Scala-next capture checking supports the first Rift safe API slice:
   handle, while direct user `close()` or `reset()` through the open handle is
   rejected by the compiler. This is the first active/closed typestate rule
   behind the no-check allocation lowering.
+- Operator-owned open helpers now have mixed-reference probes as well:
+  page-token append, page-token map/filter, page-token count-by-key, and
+  epoch-buffer `allocOpen` paths accept static immutable metadata and explicit
+  `HeapRoot` bridge handles, while rejecting unrooted dynamic heap metadata.
+  These probes require the event type to express metadata in the stream
+  lifetime; externally inferred metadata root capabilities remain a precision
+  gap for the operator APIs.
 - The reset boundary now has an explicit negative probe for a subtle epoch
   escape: a value allocated inside `RiftRegion.reset` cannot be stored into an
   outer streaming-region `ObjectBuffer` and then read after reset.
@@ -312,6 +319,9 @@ Current checked compiler probes:
 | `allocOpenRequiresOpenStreamingRegion` | user passes a generic `StreamingRegion` to `allocOpen` | fails | Keeps the no-check allocation lowering limited to active handles. |
 | `streamingEpochAllowsStaticMetadataWithAllocOpen` | open-allocated object stores static immutable metadata | compiles | Extends the static metadata rule to the open allocation path. |
 | `streamingEpochAllowsHeapRootBridgeWithAllocOpen` | open-allocated object stores heap metadata through `HeapRoot` | compiles | Covers the v1 bridge/root handle on the open allocation path. |
+| `pageTokenOpenRegionAllowsStaticMetadata` / `pageTokenMapFilterOpenRegionAllowsStaticMetadata` / `pageTokenCountByKeyOpenRegionAllowsStaticMetadata` / `epochBufferOpenRegionAllowsStaticMetadata` | operator-owned open allocation stores static immutable metadata | compiles | Extends static metadata probes to page/window and epoch-buffer fast paths. |
+| `pageTokenOpenRegionAllowsHeapRootBridge` / `pageTokenMapFilterOpenRegionAllowsHeapRootBridge` / `pageTokenCountByKeyOpenRegionAllowsHeapRootBridge` / `epochBufferOpenRegionAllowsHeapRootBridge` | operator-owned open allocation stores heap metadata through `HeapRoot` | compiles | Covers the v1 bridge/root handle on reusable checked operator paths. |
+| `pageTokenOpenRegionRejectsUnrootedDynamicHeapMetadata` / map-filter/count-by-key/epoch-buffer equivalents | operator-owned open allocation stores direct dynamic heap metadata | fails | Confirms root-free-eligible operator paths still reject unrooted dynamic heap references. |
 | `topwordBufferCanStoreRecordsWithRootedMetadata` | top-word-style buffer stores records that carry rooted heap metadata | compiles | Covers durable heap metadata via `HeapRoot` inside a higher-level checked buffer. |
 | `graphChiSubintervalCanUseRootedHeapVertexMetadata` | GraphChi-style subinterval record refers to durable heap vertex metadata through `HeapRoot` | compiles | Covers the safe data/control split for graph updates. |
 | `graphChiSubintervalCannotStoreUnrootedHeapVertex` | GraphChi-style subinterval record stores direct heap vertex metadata | fails | Confirms durable heap metadata still needs `HeapRoot`. |

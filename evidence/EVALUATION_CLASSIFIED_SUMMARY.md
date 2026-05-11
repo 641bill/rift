@@ -1,13 +1,14 @@
 # Evaluation Classified Summary
 
 Date: 2026-05-09
-Last updated: 2026-05-11 14:48 CEST
+Last updated: 2026-05-11 15:44 CEST
 
 Status: thesis-facing classified summary built from committed evidence.
 Baseline commits for clean rows: parent `1cc3b2c`, child `13a3df1c7`.
 Reusable top-k API rows include the increment hot-path follow-up after child
 commit `bc9fd5979`, the Yak topword same-shape/L1 follow-up, and the larger
-real HDFS 5M top-template scale-up from child `0773d4c17`.
+real HDFS 5M top-template scale-up from child `0773d4c17`. The AskUbuntu real
+text row now also has a 20M-token scale-up from child `59c181746`.
 
 ## How To Read This Table
 
@@ -52,7 +53,7 @@ not presentation requirements.
 | LogHub retained q2/q3 | complete | complete | generated/indexable retained rows | keep q2 as strong retained row; mark q3 checked-stream as modest/RSS row |
 | DSPBench Fraud retained q2 | complete | complete | generated/indexable retained row | keep as modest retained win |
 | Yak LiveJournal graphreal | complete | complete | real-input best checked epoch topology | keep as strongest real-input epoch row |
-| Yak AskUbuntu topwordreal | complete | complete | real-input best checked epoch topology | keep as first real text/top-word row |
+| Yak AskUbuntu topwordreal | complete at 10M and 20M | complete | real-input best checked epoch topology | keep as first real text/top-word row; 20M strengthens direct epoch claim |
 | Dataflow SELECT/AGGREGATE/JOIN | complete | complete | Broom-style generated methodology, direct epoch API | keep as prior-work-shaped checked epoch row |
 | StreamFlex throughput/latency | complete | complete | StreamFlex-style generated methodology, latency/deadline axes | keep; report latency tail/deadline misses separately from throughput |
 | Stancu and SPECjbb2005 workload port | complete | complete | transaction/epoch topology | keep; label SPECjbb row as clean-room port, not official SPEC |
@@ -80,6 +81,7 @@ not presentation requirements.
 | Yak LiveJournal graphreal 50M | real SNAP LiveJournal edge list replay | best checked topology | heap `2958.659 ms`, GC `400.484 ms`, RSS `3.91 GB` | `checked-epoch-scoped` `2008.320 ms`, GC `0 ms`, RSS `2.11 GB` | `32.1%` faster | `-400.484 ms` | about `-46%` | Strongest real-input prior-work-shaped checked epoch win; local graph replay, not exact Yak/GraphChi artifact. |
 | Yak topword reusable top-k 10M x20 | Yak-style generated methodology | retained-object drop-anchor / reusable operator gate / L1 final-clean | L1 natural heap `6.25 s`, RSS `75 MB`; same-shape heap top-k retained `5.72 s`, RSS `147 MB`; L2 heap GC `44.654/71.767 ms` | L1 `checked-epoch-topk-scoped` `4.94 s`, RSS `16 MB`; L2 checked `249.311 ms`, GC `0 ms` | L1 `21.0%` faster than natural heap; `13.6%` faster than same-shape heap top-k | L2 removes timed heap GC | L1 about `-79%` vs natural heap and `-89%` vs same-shape heap top-k | Reusable top-k API passes on a second natural top-k workload, but older `checked-epoch-scoped` close-traversal topology is still faster in L1 (`4.61 s`) for this local topword shape. |
 | Yak AskUbuntu `topwordreal` 10M x5 | real Stack Exchange AskUbuntu `Posts.xml` text replay | best checked topology / L1 final-clean | L1 natural heap `4.19 s`, RSS `428 MB`; same-shape heap top-k retained `4.40 s`, RSS `428 MB`; L2 heap `269.491 ms`, GC `23.715 ms` | L1 `checked-epoch-scoped` `3.86 s`, RSS `94 MB`; reusable top-k scoped `4.12 s`, RSS `94 MB`; L2 direct checked `207.490 ms`, GC `0 ms` | L1 direct checked `7.9%` faster than natural heap; reusable top-k `1.7%` faster than natural heap but slower than direct epoch | L2 direct checked removes `23.715 ms` heap GC | L1 about `-78%` vs natural heap | First real text/top-word Yak-style row. Direct checked epoch is the best safe topology; reusable top-k is an RSS/slight elapsed win but remains operator-cost gated. Not exact Yak/Hadoop evidence. |
+| Yak AskUbuntu `topwordreal` 20M x5 | real Stack Exchange AskUbuntu `Posts.xml` text replay | best checked topology / L1 final-clean | L1 natural heap `7.77 s`, RSS `986 MB`; same-shape heap top-k retained `8.16 s`, RSS `986 MB`; L2 heap `511.485 ms`, GC `33.471 ms` | L1 `checked-epoch-scoped` `7.16 s`, RSS `174 MB`; reusable top-k scoped `7.86 s`, RSS `174 MB`; L2 direct checked `432.824 ms`, GC `0 ms` | L1 direct checked `7.9%` faster than natural heap; reusable top-k `1.2%` slower than natural heap | L2 direct checked removes `33.471 ms` heap GC | L1 about `-82%` vs natural heap | 20M scale-up strengthens real text checked epoch/RSS claim. Direct checked epoch remains the reportable safe framework win; reusable top-k stays gated for elapsed on this input. |
 | Dataflow SELECT/AGGREGATE/JOIN | Broom-style generated methodology | best checked topology | heap `27.775/50.837/30.387 ms`, GC `6.828/11.564/9.331 ms`, RSS `76 MB` | checked epoch scoped `19.691/34.676/19.762 ms`, GC `0 ms`, RSS `47 MB` | `29-35%` faster | removes timed heap GC | about `-38%` | Reusable direct epoch win across the full Dataflow operator family. |
 | StreamFlex throughput 200k x20 | StreamFlex-style generated methodology | best checked topology / L1 final-clean | heap `0.79 s`, RSS `7.9 MB` | checked scoped direct epoch `0.58 s`, RSS `5.3 MB` | `26.6%` faster | L2 rows show timed GC removal; L1 intentionally omits GC reads | about `-33%` | L1 checked direct-epoch throughput win; direct epoch supersedes TransactionRegion for shared-batch pipeline throughput. |
 | StreamFlex latency 10k x20 | StreamFlex-style generated methodology | best checked topology / L1 final-clean | heap `0.18 s`, p99 `792 ns`, max `327334 ns`, deadline misses `4` | checked scoped direct epoch `0.17 s`, p99 `833 ns`, max `25167 ns`, deadline misses `0` | `5.6%` faster | L2 rows show timed GC/tail context; L1 intentionally omits GC reads | near tie | L1 latency/deadline win: checked direct epoch removes deadline misses and reduces max tail in this local row. |
@@ -112,7 +114,9 @@ not presentation requirements.
 - **Generated methodology claim:** NEXMark Beam-default-style q3/q8/q9/q11 now
   have L1 checked framework wins, but remain generated local-harness evidence.
 - **Real-input claim:** Yak LiveJournal is the strongest real-input epoch row.
-  AskUbuntu `topwordreal` adds the first real text/top-word checked epoch win.
+  AskUbuntu `topwordreal` adds the first real text/top-word checked epoch win,
+  now with a 20M-token scale-up that keeps the same L1 speedup and increases
+  the RSS reduction.
   LogHub top templates is now a real-preloaded retained top-k row at both
   1M x20 and 5M x5, and `EpochTopKByKey` is the first reusable top-k API to
   pass the retained gate. Yak generated topword provides a second generated

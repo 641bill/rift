@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-11 14:48 CEST
+Last updated: 2026-05-11 15:44 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -39,9 +39,9 @@ Design-lesson backlog:
 
 | Candidate | Runtime work it might remove | Gate before public API |
 |---|---|---|
-| Active/closed region typestate | hot-path `isOpen` and stale-token checks | first internal slice implemented for `OpenStreamingRegion`; next gate is measured operator-owned payoff |
-| Immutable/static metadata references | blanket root registration for durable read-only metadata | open-allocation compiler probe added; backend root-removal evidence still required |
-| Bridge/root handles | conservative heap-region tracking and roots | `HeapRoot` is v1 bridge and now covered on the open allocation path; measure before broadening |
+| Active/closed region typestate | hot-path `isOpen` and stale-token checks | internal probes now cover direct epoch, page-token append/map-filter/count-by-key, epoch buffer, and stale public page-token child regions; next gate is measured operator-owned payoff or a statically linear open-token API |
+| Immutable/static metadata references | blanket root registration for durable read-only metadata | open-allocation compiler probes now cover direct epoch and operator-owned page/epoch-buffer paths; backend root-removal evidence still required |
+| Bridge/root handles | conservative heap-region tracking and roots | `HeapRoot` is v1 bridge and is now covered on direct epoch and operator-owned page/epoch-buffer allocation paths; measure before broadening |
 | StreamFlex-style latency reporting | none directly; exposes GC-tail wins | L2 latency rows must include throughput, p50, p95, max, misses, GC max, runs-with-GC |
 | Stancu-style annotation/API burden | none directly; limits API complexity | representative burden counts tracked in `evidence/API_BURDEN_SUMMARY.md` |
 
@@ -82,15 +82,25 @@ checked scoped page-token L2 `17783.560 ms`, median GC `33.945 ms`, L1
 operator changes the CPU profile.
 
 Latest Yak real-text update: child `cd08f23d4` adds Stack Exchange AskUbuntu
-support. The dataset is now local under
-`cache/benchmark-data/yak/stackexchange`. `YakRegionMatrix topwordreal`
+support, and child `59c181746` adds the current 20M scale-up rows. The dataset
+is now local under `cache/benchmark-data/yak/stackexchange`. `YakRegionMatrix topwordreal`
 tokenizes real `Posts.xml` title/body text into replayed epoch-local
-`WordRecord` objects. At 10M real tokens x5, L1 `checked-epoch-scoped` is
-`3.86 s` and `94 MB` RSS versus heap `4.19 s` and `428 MB`; the matching L2 row
-is `207.490 ms`, GC `0 ms`, versus heap `269.491 ms`, median GC `23.715 ms`.
+`WordRecord` objects. At 20M real tokens x5, L1 `checked-epoch-scoped` is
+`7.16 s` and `174 MB` RSS versus heap `7.77 s` and `986 MB`; the matching L2 row
+is `432.824 ms`, GC `0 ms`, versus heap `511.485 ms`, median GC `33.471 ms`.
 This is the first real text/top-word row in the Yak ladder. It strengthens the
 checked epoch real-input story, while the reusable `EpochTopKByKey` row remains
-a tuning target because it is slower than direct checked epoch on this input.
+a tuning target because it is slower than direct checked epoch and heap elapsed
+on this input.
+
+Latest open-region safety audit: child `55ce32ec6` extends the internal
+typestate and mixed-reference probes to operator-owned checked paths. The new
+audit in `evidence/OPEN_REGION_TYPESTATE_AUDIT.md` classifies
+`RiftRegion.epoch`, page-token open helpers, epoch-buffer open helpers, public
+child regions, and transaction regions by active-handle versus defensive API
+status. It also records the remaining limitation: page-token open handles are
+not statically linear after close, so this slice adds probes and documentation
+but does not remove more public stale/open checks.
 
 Latest presentation-normalization update: parent checkpoints `5185a3e`
 (`Normalize final-clean evidence tables`) and `5cf9ac3` (`Audit legacy evidence

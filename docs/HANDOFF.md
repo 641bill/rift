@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-11 14:48 CEST
+Last updated: 2026-05-11 15:44 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -9,8 +9,11 @@ Active worktree for this update:
 Active implementation branch for this update:
 `feature/rift`
 
-Latest implementation checkpoint:
-`f708db30a` (`Tighten checked open-region typestate`)
+Latest child checkpoint:
+`59c181746` (`Record AskUbuntu topwordreal scale-up`)
+
+Latest implementation-code checkpoint:
+`55ce32ec6` (`Extend open region safety probes`)
 
 Latest parent evidence checkpoint:
 current parent commit (`Record internal design feature checkpoint`)
@@ -74,6 +77,19 @@ Rift streaming and SafeZone-backed streaming. This does not expose a public
 reference-capability API; it just closes the first active/closed typestate gap
 behind the existing fast `allocOpen` lowering.
 
+Latest open-region safety-probe checkpoint:
+child `55ce32ec6` extends this slice to the operator-owned paths. Compiler
+probes now cover static metadata, `HeapRoot` bridge handles, and unrooted
+dynamic heap metadata rejection through page-token append, page-token
+map/filter, page-token count-by-key, and epoch-buffer `allocOpen` helpers.
+Runtime probes now verify that public page-token child regions reject
+allocation after `closeAllPageTokenAppendBucketsWithCursor` for both Rift and
+SafeZone-backed checked regions. The audit is recorded in
+`evidence/OPEN_REGION_TYPESTATE_AUDIT.md`. Important caveat: no new hot-path
+checks were removed in this checkpoint, because page-token/epoch-buffer open
+handles are not yet statically linear after bucket close; public APIs remain
+defensive.
+
 Latest reporting-protocol checkpoint:
 `evidence/API_BURDEN_SUMMARY.md` records representative API-boundary counts for
 epoch, page/window/token, `HeapRoot`, and checked operator usage. L2 latency
@@ -86,14 +102,15 @@ Latest in-progress real-input checkpoint:
 text/top-word replay over the public `askubuntu.com.7z` data dump. The local
 extracted input is
 `/Users/siyaoliu/rift/cache/benchmark-data/yak/stackexchange/askubuntu-Posts.xml`
-(`1,400,891,844` bytes, `945,113` lines). At 10M real tokens, the L1
-final-clean row is: `gc-heap` `4.19 s`, RSS `427720704`; `region-scoped-rooted`
-`3.97 s`, RSS `94306304`; `checked-epoch-scoped` `3.86 s`, RSS `94306304`;
-`checked-epoch-topk-scoped` `4.12 s`, RSS `93536256`. The matching L2
-standard-stats row is `checked-epoch-scoped` `207.490 ms`, GC `0 ms`, versus
-heap `269.491 ms`, median GC `23.715 ms`. Interpretation: direct checked epoch
-is the best safe topology for this real text row; reusable `EpochTopKByKey` is
-a large RSS/slight elapsed win over heap but still slower than direct epoch, so
+(`1,400,891,844` bytes, `945,113` lines). The new 20M real-token scale-up from
+child `59c181746` has L1 final-clean rows: `gc-heap` `7.77 s`, RSS
+`986415104`; `region-scoped-rooted` `7.42 s`, RSS `174342144`;
+`checked-epoch-scoped` `7.16 s`, RSS `174374912`;
+`checked-epoch-topk-scoped` `7.86 s`, RSS `173621248`. The matching L2
+standard-stats row is `checked-epoch-scoped` `432.824 ms`, GC `0 ms`, versus
+heap `511.485 ms`, median GC `33.471 ms`. Interpretation: direct checked
+epoch is the best safe topology for this real text row; reusable
+`EpochTopKByKey` remains a large RSS win but loses elapsed to heap at 20M, so
 top-k remains an operator-cost target.
 
 Latest ReML/MLKit checkpoint:
