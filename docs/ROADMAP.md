@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-11 11:59 CEST
+Last updated: 2026-05-11 12:14 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -35,6 +35,11 @@ the same pattern: checked scoped top-k removes heap's `122.440 ms` median timed
 GC and wins the L2 loop (`548.806 ms` versus `679.123 ms`), while L1 process
 time improves modestly (`31.28 s` versus `32.37 s`) and RSS is tied/slightly
 worse.
+The richer Windows q3 template/session row is negative/control evidence: heap
+L2 `17405.613 ms`, median GC `147.336 ms`, L1 `88.57 s`, RSS `408715264`;
+checked scoped page-token L2 `17783.560 ms`, median GC `33.945 ms`, L1
+`90.26 s`, RSS `445661184`. Do not tune this q3 shape unless a new reusable
+operator changes the CPU profile.
 
 Latest presentation-normalization update: parent checkpoints `5185a3e`
 (`Normalize final-clean evidence tables`) and `5cf9ac3` (`Audit legacy evidence

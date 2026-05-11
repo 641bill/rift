@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-11 11:59 CEST
+Last updated: 2026-05-11 12:14 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -47,6 +47,13 @@ matched checksums. At 5M lines x3, retained heap is L1 `32.37 s`, RSS
 L1 `31.28 s`, RSS `513048576`, L2 `548.806 ms`, GC `0 ms`. Interpretation:
 same as Spark, a retained top-k loop win and timed-GC removal, but only modest
 end-to-end process gain because file reading dominates.
+The richer Windows `LogHubRegionMatrix` q3 template/session row was also run
+as a check against the "maybe richer real logs become GC-heavy" hypothesis. At
+1M lines x3, heap is still the fastest L2 row (`17405.613 ms`) despite
+`147.336 ms` median timed GC; checked scoped page-token is `17783.560 ms` with
+`33.945 ms` median GC and higher RSS. Treat this as a negative/control row:
+more object materialization in this parser/query shape did not create the
+missing real-input flagship.
 
 Latest final-clean evidence update:
 the retained-row gap-fill now has L1 final-clean rows for DSPBench Fraud q2 and

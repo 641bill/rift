@@ -1,7 +1,7 @@
 # Real-Input GC-Heavy Stream Benchmark Search
 
 Date: 2026-05-07
-Last updated: 2026-05-11 11:59 CEST
+Last updated: 2026-05-11 12:14 CEST
 
 Status: active Phase 6 search ledger. This file tracks public real-input
 stream/dataflow candidates before implementation work. It is deliberately a
@@ -311,6 +311,20 @@ on retained real log-template objects at larger input scale, but it still does
 not create the missing huge end-to-end real-input win. Use it as evidence that
 the current LogHub top-template shape is memory-management-positive inside the
 work loop while remaining file/parser dominated at process level.
+
+The richer `LogHubRegionMatrix` `q3-template-session` path was also run on
+Windows to test whether materializing more per-line template/session objects
+would create a stronger real-input case. It did not:
+
+| Row | Heap/control | Best region/checked row | Interpretation |
+|---|---:|---:|---|
+| Windows q3 20k smoke | heap `217.586 ms`, GC `0 ms`, L1 RSS `21938176` | checked scoped page-token `218.801 ms`, GC `0 ms`, RSS `27426816` | Smoke only; checksums/output matched. |
+| Windows q3 1M x3 | heap L2 `17405.613 ms`, GC `147.336 ms`, max GC `151.350 ms`; L1 `88.57 s`, RSS `408715264` | checked scoped page-token L2 `17783.560 ms`, GC `33.945 ms`; L1 `90.26 s`, RSS `445661184`; trusted Streaming L2 `17854.141 ms`, GC `23.482 ms` | Negative/control row. q3 is much more CPU/file dominated than top-template; region rows cut timed GC but lose elapsed and RSS. |
+
+Decision: do not tune Windows q3. It is useful evidence that richer real log
+materialization alone is not enough; the query must retain enough ordinary
+objects with reclaim-sensitive lifetimes for region bulk close to matter more
+than parser/query CPU.
 
 ## Theodolite Source Triage
 
