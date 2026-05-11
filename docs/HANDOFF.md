@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-11 21:28 CEST
+Last updated: 2026-05-12 00:22 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -173,6 +173,39 @@ time in strict L1 is `5.45 s` for checked scoped versus heap `5.46 s`, with RSS
 `304398336` versus heap `306872320`. Treat it as real-input
 GC-elimination/tie evidence, not a new flagship. Evidence is in
 `evidence/THEODOLITE_POWER_REGION_MATRIX.md`.
+
+Latest streaming-input checkpoint:
+`docs/FAIR_EVALUATION_PROTOCOL.md` and
+`evidence/STREAMING_INPUT_PROTOCOL.md` now define `real-streaming-input` as a
+stricter evidence class than `real-file-backed`: records are consumed through a
+source cursor/visitor, the full input is not preloaded into parsed arrays, and
+memory must be bounded by active epochs/windows plus durable state.
+`LogHubTopTemplatesMatrix` now accepts `LOGHUB_TOP_INPUT_MODE=streaming-file`
+and uses `BenchmarkInputSupport.StreamingByteLineSource` to replay real HDFS
+log lines inside each benchmark run. The 20k smoke matched checksums across
+heap, retained heap, checked scoped retained, and checked scoped
+`EpochTopKByKey`. The first 1M candidate row is recorded in
+`evidence/REAL_STREAMING_INPUT_MATRIX.md`: retained heap is L1 `8.10 s`, RSS
+`75.6 MB`, L2 `2765.068 ms` with `32.681 ms` median GC; checked scoped
+`EpochTopKByKey` is L1 `8.06 s`, RSS `12.2 MB`, L2 `2697.653 ms`, GC `0`.
+This is retained-object/RSS streaming evidence; parser/file/query CPU still
+dominates, so it is not yet a flagship GC-heavy stream result.
+
+Latest StreamIt/StreamFlex-axis checkpoint:
+`StreamItKernelMatrix` is now in the child working tree, along with
+`sandbox/run_streamit_kernel_matrix.sh` and `evidence/STREAMIT_KERNEL_MATRIX.md`.
+It ports the public StreamIt `FilterBankNew` and `BeamFormer` kernel shapes as
+primitive throughput/latency controls. Smoke rows matched heap and checked
+scoped epoch checksums for FilterBank and BeamFormer throughput/latency. The
+strict L1 smoke reports heap `0.17 s`, RSS `7929856`, and checked scoped epoch
+`0.17 s`, RSS `7946240` at tiny scale. This is StreamFlex-axis control
+evidence, not a Rift memory-management win: the faithful kernels are
+primitive/array dominated and should not be promoted as GC-heavy stream proof.
+The first 3-run L2 candidate gives FilterBank throughput tied around `406 ms`
+with zero GC and BeamFormer latency around `3.25-3.29 s` with only about
+`21-22 ms` median GC. Use this to explain why exact StreamIt-style DSP controls
+are useful throughput/latency methodology rows but not the missing
+object-heavy streaming flagship.
 
 Latest final-clean evidence update:
 the retained-row gap-fill now has L1 final-clean rows for DSPBench Fraud q2 and

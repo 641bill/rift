@@ -1,7 +1,7 @@
 # Evaluation Classified Summary
 
 Date: 2026-05-09
-Last updated: 2026-05-11 21:28 CEST
+Last updated: 2026-05-12 00:22 CEST
 
 Status: thesis-facing classified summary built from committed evidence.
 Baseline commits for clean rows: parent `1cc3b2c`, child `13a3df1c7`.
@@ -56,10 +56,12 @@ not presentation requirements.
 | Yak AskUbuntu topwordreal | complete at 10M and 20M | complete | real-input best checked epoch topology | keep as first real text/top-word row; 20M strengthens direct epoch claim |
 | Dataflow SELECT/AGGREGATE/JOIN | complete | complete | Broom-style generated methodology, direct epoch API | keep as prior-work-shaped checked epoch row |
 | StreamFlex throughput/latency | complete | complete | StreamFlex-style generated methodology, latency/deadline axes | keep; report latency tail/deadline misses separately from throughput |
+| StreamIt BeamFormer/FilterBank ports | smoke L1 only; 3-run L1 pending | 3-run L2 complete | StreamFlex/StreamIt-style primitive DSP controls | keep as methodology/control rows; run clean 3-run L1 before presentation |
 | Stancu and SPECjbb2005 workload port | complete | complete | transaction/epoch topology | keep; label SPECjbb row as clean-room port, not official SPEC |
 | Common Crawl WET-shaped q1/q2 | complete | complete | generated stream stressor, checked page-token | keep as generated high-object-pressure row only |
 | NEXMark q3/q8/q9/q11 | complete | L2 remains interpretation source | generated Beam-default-style methodology | keep; not exact Beam runner evidence |
 | LogHub HDFS top templates | complete at 1M and 5M | complete | real retained top-k API row | keep as strongest real retained top-k row |
+| LogHub HDFS streaming-file top templates | complete for first 1M candidate | complete | real-streaming-input retained top-k API row | keep as first true streaming-input row; not yet flagship GC-heavy evidence |
 | LogHub HDFS q2, Spark/Windows q3, DSPBench Log q2, GH Archive q1/q2, Theodolite power q2 | complete where used; Spark q3 L1 elapsed not promoted because `/usr/bin/time` real field was anomalous | complete | real-input page/window/epoch modest/RSS/control rows | keep as real-input modest/control evidence |
 | ReML/MLKit Tier 1 and first Tier 2 ports | complete for local ports | complete for local ports | local Scala Native port evidence | keep same-axes table; no raw ReML-vs-Rift wall-clock claim |
 | Summary-only/direct-aggregate rows | complete for selected symmetric rows | complete where needed | topology lower bound | keep only with heap and checked counterparts; never claim reclaim win |
@@ -100,6 +102,7 @@ not presentation requirements.
 | LogHub top templates 1M | generated LogHub-shaped stressor | retained-object drop-anchor | `heap-retained-drop-anchor` `424.443 ms`, GC `126.371 ms`, RSS `408 MB` | checked scoped retained top templates `290.610 ms`, GC `0 ms`, RSS `304 MB` | `31.5%` faster | `-126.371 ms` | about `-25%` | Generated retained top-k memory-management and RSS win; supports a reusable top-k API candidate. |
 | LogHub reusable EpochTopKByKey HDFS 1M x20 | real HDFS file-backed/preloaded replay | retained-object drop-anchor / reusable operator gate / L1 final-clean | `heap-retained-drop-anchor` `5.52 s`, RSS `205 MB`; L2 heap `111.704 ms`, GC `30.542 ms` | L1 `checked-scoped-epoch-topk-retained-no-traverse` `4.88 s`, RSS `28 MB`; L2 checked `82.170 ms`, GC `0 ms` | L1 `11.6%` faster; L2 `26.4%` faster | L2 removes heap timed GC | about `-86%` in L1 | L1 reusable checked top-k API passes real-input retained gate with a strong RSS win; report-facing API overhead versus benchmark-local checked is now about `1.7%`. |
 | LogHub reusable EpochTopKByKey HDFS 5M x5 | real HDFS file-backed/preloaded replay | retained-object drop-anchor / reusable operator gate / L1 final-clean | L1 `heap-retained-drop-anchor` `19.04 s`, RSS `504 MB`; L2 heap `463.633 ms`, GC `62.421 ms` | L1 `checked-scoped-epoch-topk-retained-no-traverse` `18.26 s`, RSS `92 MB`; L2 checked `402.916 ms`, GC `0 ms` | L1 `4.1%` faster; L2 `13.1%` faster | L2 removes heap timed GC | about `-82%` in L1 | Larger real-input retained top-k scale-up: modest L1 throughput win, strong RSS win, and clear L2 GC removal. |
+| LogHub reusable EpochTopKByKey HDFS streaming-file 1M | real-streaming-input HDFS log replay | retained-object drop-anchor / reusable operator gate / L1 final-clean | L1 `heap-retained-drop-anchor` `8.10 s`, RSS `76 MB`; L2 heap `2765.068 ms`, GC `32.681 ms` | L1 `checked-scoped-epoch-topk-retained-no-traverse` `8.06 s`, RSS `12 MB`; L2 checked `2697.653 ms`, GC `0 ms` | L1 `0.5%` faster; L2 `2.4%` faster | L2 removes heap timed GC | about `-84%` in L1 | First true `real-streaming-input` row: input is consumed incrementally without parsed total-input arrays. Retained-object/RSS streaming evidence, not a huge-GC flagship because file/parser/query CPU dominates; benchmark-local checked retained is slightly faster than reusable top-k. |
 | LogHub reusable EpochTopKByKey 1M | generated LogHub-shaped stressor | retained-object drop-anchor / reusable operator gate | `heap-retained-drop-anchor` `397.788 ms`, GC `126.601 ms`, RSS `408 MB` | `checked-scoped-epoch-topk-retained-no-traverse` `274.914 ms`, GC `0 ms`, RSS `305 MB` | `30.9%` faster | `-126.601 ms` | about `-25%` | Reusable checked top-k API passes generated retained gate; same-run overhead versus benchmark-local checked is about `5.7%`. |
 | ReML-shaped Tier 2 logic/ray/tsp | local Scala Native ports | ceiling/control / L1 final-clean | `logic` heap `1.27 s`, RSS `7.9 MB`; `ray` heap `0.75 s`, RSS `4.1 MB`; `tsp` heap `3.40 s`, RSS `7.9 MB` | `logic` checked stream `1.27 s`, RSS `65.6 MB`; `ray` rooted/checked rows near `0.74-0.75 s`, RSS `4.1 MB`; `tsp` checked scoped `3.48 s`, RSS `5.9 MB` | logic tied; ray near-tie; tsp `2.4%` slower | L2 reduces/removes small timed GC, but GC is not material except logic's scaled heap row | logic RSS regression; ray near-tie; tsp about `-26%` RSS | Broader ReML-shaped local-port evidence, not a headline win. `logic` shows whole-region RSS risk, `ray` is compute/control, and `tsp` is an RSS/control row. |
 
@@ -121,7 +124,10 @@ not presentation requirements.
   the RSS reduction.
   LogHub top templates is now a real-preloaded retained top-k row at both
   1M x20 and 5M x5, and `EpochTopKByKey` is the first reusable top-k API to
-  pass the retained gate. Yak generated topword provides a second generated
+  pass the retained gate. The same matrix now has the first
+  `real-streaming-input` candidate row over HDFS `streaming-file`: checked
+  scoped reusable top-k is a near-tie/slight throughput win and large RSS win while
+  removing timed heap GC. Yak generated topword provides a second generated
   methodology top-k confirmation, while GH Archive byte-slice q1/q2, LogHub
   HDFS q2, and DSPBench Log q2 remain modest page/window rows.
 - **Non-claim:** summary-only/direct-aggregate rows are topology/operator lower

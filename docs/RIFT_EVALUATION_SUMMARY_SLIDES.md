@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-11 15:44 CEST
+Last updated: 2026-05-12 00:22 CEST
 
 Status: markdown slide deck outline. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report,
@@ -26,7 +26,7 @@ Recommended talk order:
 6. Real-input Yak LiveJournal and AskUbuntu as checked epoch rows.
 7. Page-token stream evidence for page/window append workloads.
 8. ReML/MLKit PLDI-style comparison as a non-stream typed-region axis.
-9. Open work: remaining L1 final-clean gaps, real-input GC-heavy search, and gated
+9. Open work: streaming-input conversions, real-input GC-heavy search, and gated
    rank/hash/median/join
    operators.
 
@@ -41,10 +41,12 @@ Representative numbers to keep on slides:
 | Real-input text checked epoch | AskUbuntu `topwordreal` 20M x5: checked epoch scoped `7.16 s`, `174 MB` RSS vs heap `7.77 s`, `986 MB`; L2 checked `432.824 ms`, `0 ms` GC vs heap `511.485 ms`, `33.471 ms` GC. | First real text/top-word row; local Yak/Hadoop-shaped replay, not exact Yak/Hadoop. Reusable top-k is an RSS win but trails direct epoch and heap elapsed at 20M. |
 | Reusable Dataflow epoch | SELECT/AGGREGATE/JOIN: checked epoch scoped `19.691/34.676/19.762 ms` vs heap `27.775/50.837/30.387 ms`. | Direct epoch covers the full Broom-style operator family. |
 | StreamFlex/Stancu epoch | L1 StreamFlex throughput `0.58 s` vs heap `0.79 s`; L1 Stancu `0.57 s` vs heap `0.85 s`. | Direct epoch supersedes older TransactionRegion/EpochBuffer rows for shared batch lifetimes. |
+| StreamIt BeamFormer/FilterBank controls | Initial ports validate throughput/latency/RSS table plumbing and checksum matching. | Primitive DSP kernels are StreamFlex-axis controls, not GC-heavy Rift wins. |
 | SPECjbb2005-workload port | L1 8 warehouses x20: checked epoch scoped `2.21 s` vs heap `2.64 s` and rooted scoped `2.48 s`; RSS about `8.0 MB` vs heap `12.4 MB`. | Clean-room Scala Native port strengthens the Stancu/SPECjbb transaction-lifetime story; not official SPECjbb2005. |
 | Generated page/window stressor | Common Crawl-shaped q1/q2: checked scoped page-token `3707.214/3902.795 ms` vs heap `5577.965/5183.074 ms`. | Strong generated stream-object pressure win; RSS caveat; not real-input proof. |
 | Modest real-input page/window | GH Archive byte-slice q1/q2 L1 checked scoped page-token `12.89/12.87 s`, `101/102 MB` RSS vs heap `13.17/13.18 s`, `265/244 MB`; LogHub HDFS q2 L1 checked scoped page-token `25.56 s`, `79 MB` RSS vs heap `25.60 s`, `409 MB` RSS; DSPBench Log q2 L1 checked `8.79 s`, `47.6 MB` vs heap `8.89 s`, `308 MB`. | Real-input page/window wins are mostly RSS/tail/modest-throughput because parser/query CPU dominates and heap GC is small. |
 | Real-preloaded retained top-k | L1 LogHub HDFS 1M x20 after hot-path pass: reusable `EpochTopKByKey` checked scoped `4.88 s`, `28 MB` RSS vs retained heap `5.52 s`, `205 MB` RSS; 5M x5 scale-up is `18.26 s`, `92 MB` RSS vs retained heap `19.04 s`, `504 MB`. | First retained top-k API gate has L1 real-input confirmation and strong RSS win; report-facing API overhead is about `1.7%` at 1M x20 and the 5M row keeps a modest throughput/RSS win. |
+| Real streaming-input retained top-k | LogHub HDFS `streaming-file` 1M: reusable checked scoped `EpochTopKByKey` L1 `8.06 s`, `12 MB` RSS vs retained heap/drop-anchor `8.10 s`, `76 MB`; L2 checked `2697.653 ms`, GC `0 ms` vs heap `2765.068 ms`, GC `32.681 ms`. | First true streaming-input row: the HDFS file is consumed inside each run with no parsed total-input arrays. This is retained-object/RSS streaming evidence, not yet a huge-GC flagship. |
 
 Slide-level rule: summary-only/direct-aggregate rows are topology/operator
 lower bounds. Retained heap versus retained checked epoch is the fair

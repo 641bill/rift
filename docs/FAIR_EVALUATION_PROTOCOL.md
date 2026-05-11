@@ -1,7 +1,7 @@
 # Fair Evaluation Protocol
 
 Date: 2026-05-09
-Last updated: 2026-05-11 14:48 CEST
+Last updated: 2026-05-12 00:22 CEST
 
 Status: active evaluation contract for report, slides, and future benchmark
 runs. This document is the reviewer-facing rulebook for deciding what a Rift
@@ -32,7 +32,7 @@ Every headline or summary row must state:
 
 | Field | Required meaning |
 |---|---|
-| Input type | synthetic, generated methodology, generated stressor, real-preloaded, or real-file-backed |
+| Input type | synthetic, generated methodology, generated stressor, real-preloaded, real-file-backed, or real-streaming-input |
 | API/topology | for example natural heap, same-shape heap, `RiftRegion.epoch`, page/window token, retained epoch, `EpochTopKByKey` |
 | Comparison class | one of the classes below |
 | Measurement level | L1 final-clean, L2 standard stats, L3 diagnostic, or L4 external profile |
@@ -53,6 +53,13 @@ Every headline or summary row must state:
 Memory-management claims require retained heap/drop-anchor versus retained
 checked-region rows. Summary-only rows must be described as topology/operator
 evidence, even if they are much faster than natural heap.
+
+`real-streaming-input` is stricter than `real-file-backed`: records must be
+consumed incrementally from a source cursor/visitor, no parsed array/list may
+grow with the total input, and memory must be bounded by active epochs/windows
+plus durable keyed state. A bounded replay from a real file qualifies for v1;
+Kafka/Flink/Beam runtimes are intentionally excluded from local measurements so
+external framework overhead does not hide the memory-management effect.
 
 When a table includes a `summary-only` or direct-aggregate lower bound, it must
 include both sides of the same topology whenever implemented: the heap
@@ -120,7 +127,7 @@ own axes first, then add Rift's standardized local metrics.
 |---|---|
 | Broom/Dataflow | elapsed, GC share, operator lifetime boundary |
 | Yak | app time, GC time, epoch topology, promotion/escape analogue, peak memory |
-| StreamFlex | throughput, p95/max latency, deadline/tail events, GC pauses |
+| StreamFlex / StreamIt | throughput, p95/max latency, deadline/tail events, GC pauses; BeamFormer/FilterBank-style primitive DSP rows are methodology controls unless object-retained stream state is added |
 | Stancu/SPECjbb-style | transaction boundary, region-freed object proxy, GC count/time, annotation/API burden |
 | ReML/MLKit | real time, RSS, GC count, region-vs-GC modes, safety/annotation burden |
 

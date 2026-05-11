@@ -1,7 +1,7 @@
 # Final-Clean Headline Results
 
 Date: 2026-05-09
-Last updated: 2026-05-11 21:28 CEST
+Last updated: 2026-05-12 00:22 CEST
 
 Status: L1 runner support exists for the first representative binaries. One
 focused retained-epoch L1 row has been collected from clean child commit
@@ -38,6 +38,10 @@ Child `0773d4c17` is the clean implementation checkpoint for the retained-row
 gap fill in this update: DSPBench Fraud retained q2 and LogHub q2/q3 retained
 now have L1 final-clean rows with valid `/usr/bin/time -l` RSS. The same
 checkpoint also adds a larger real-input LogHub HDFS top-k row at 5M lines x5.
+Child working tree after `0a042b920` adds `LOGHUB_TOP_INPUT_MODE=streaming-file`
+for the first real streaming-input top-template rows; those candidate L1 rows
+are recorded below and should be treated as first streaming-input evidence
+until committed.
 Child `d1fd16a64` adds ReML/MLKit-shaped Tier 2 ports for `logic`, `ray`, and
 `tsp`; their first report-grade L1/L2 rows are recorded below.
 Child `cd08f23d4` adds Yak `topwordreal` over the real Stack Exchange
@@ -52,6 +56,11 @@ L2 row in `evidence/LOGHUB_REGION_MATRIX.md` for elapsed/GC interpretation.
 `TheodolitePowerRegionMatrix` now has strict L1 rows for the full local UCI
 household-power q2 hierarchical aggregation row. Use L1 for elapsed/RSS and
 `evidence/THEODOLITE_POWER_REGION_MATRIX.md` L2 rows for GC interpretation.
+Child working tree now adds `StreamItKernelMatrix`, a StreamIt/StreamFlex-axis
+control for FilterBank and BeamFormer. The first tiny L1 smoke is recorded in
+`evidence/STREAMIT_KERNEL_MATRIX.md`; do not use it as a headline result until
+a 3-run L1 matrix is collected. A 3-run L2 candidate now exists and confirms
+that these primitive StreamIt controls are not materially GC-heavy.
 
 ## Definition
 
@@ -87,6 +96,7 @@ Set `RIFT_FINAL_CLEAN=1` or `RIFT_EVAL_MEASUREMENT_LEVEL=L1` for:
 - `NexmarkRegionMatrix`
 - `GithubArchiveRegionMatrix`
 - `TheodolitePowerRegionMatrix`
+- `StreamItKernelMatrix`
 
 The binaries print `RESULT ... measurement_level=L1 final_clean=1 ...` and
 avoid internal timed-section stats.
@@ -203,6 +213,9 @@ for those 20 iterations.
 | LogHub top templates HDFS 1M x20 | real HDFS file-backed/preloaded replay | reusable checked `EpochTopKByKey` | framework API win | `checked-scoped-epoch-topk-retained-no-traverse` | 3 processes x 20 iterations | `4.88 s` total (`244.0 ms/iter`) | `4.87 s` | `4.94 s` | `28098560 bytes` | checksum `4142347521733569598`, output `1280` | L1 reusable checked top-k win over heap retained with much lower RSS; API overhead now about `1.7%` versus benchmark-local checked row |
 | LogHub top templates HDFS 5M x5 | real HDFS file-backed/preloaded replay | retained epoch/drop-anchor | retained-object memory-management | `heap-retained-drop-anchor` | 3 processes x 5 iterations | `19.04 s` total (`3808 ms/iter`) | `18.59 s` | `19.06 s` | `503775232 bytes` | checksum `-4760084277314313220`, output `6400` | L1 larger real-input retained heap/drop-anchor control; process includes one HDFS input load plus five 5M-line replays |
 | LogHub top templates HDFS 5M x5 | real HDFS file-backed/preloaded replay | reusable checked `EpochTopKByKey` | framework API win | `checked-scoped-epoch-topk-retained-no-traverse` | 3 processes x 5 iterations | `18.26 s` total (`3652 ms/iter`) | `18.23 s` | `18.27 s` | `92209152 bytes` | checksum `-4760084277314313220`, output `6400` | L1 larger real-input reusable checked top-k win: `4.1%` faster than retained heap and about `82%` lower RSS; matching L2 row is heap `463.633 ms`, GC `62.421 ms` versus checked `402.916 ms`, GC `0 ms` |
+| LogHub top templates HDFS streaming-file 1M x3 | real-streaming-input HDFS replay | retained epoch/drop-anchor | retained-object memory-management | `heap-retained-drop-anchor` | 1 process x 3 streaming replays | `8.10 s` total (`2700 ms/iter`) | `8.10 s` | `8.10 s` | `75595776 bytes` | checksum `4142347521733569598`, output `1280`, bytes read `141557760` | First streaming-input retained heap/drop-anchor control; no parsed total-input arrays. |
+| LogHub top templates HDFS streaming-file 1M x3 | real-streaming-input HDFS replay | checked retained epoch | framework API / retained-object memory-management | `checked-scoped-epoch-retained-no-traverse` | 1 process x 3 streaming replays | `8.02 s` total (`2673 ms/iter`) | `8.02 s` | `8.02 s` | `12189696 bytes` | checksum `4142347521733569598`, output `1280`, bytes read `141557760` | First checked scoped retained streaming-input row; L2 checked `2672.825 ms`, GC `0 ms`. |
+| LogHub top templates HDFS streaming-file 1M x3 | real-streaming-input HDFS replay | reusable checked `EpochTopKByKey` | framework API / retained-object memory-management | `checked-scoped-epoch-topk-retained-no-traverse` | 1 process x 3 streaming replays | `8.06 s` total (`2687 ms/iter`) | `8.06 s` | `8.06 s` | `12173312 bytes` | checksum `4142347521733569598`, output `1280`, bytes read `141557760` | First reusable checked top-k streaming-input row: slight L1 win over retained heap and about `84%` lower RSS; matching L2 row removes heap's `32.681 ms` median GC. |
 | LogHub HDFS q2 1M x3 | real HDFS file-backed stream | page/window token | natural heap baseline | `heap-immix` | 3 processes x 3 iterations | `25.60 s` total (`8533 ms/iter`) | `25.58 s` | `25.75 s` | `408649728 bytes` | checksum `-4515648042024502814`, output `41` | L1 natural heap baseline; process loads 1M HDFS lines and runs q2 three times |
 | LogHub HDFS q2 1M x3 | real HDFS file-backed stream | scoped page/window token | safe rooted baseline | `safezone-improved-32k` | 3 processes x 3 iterations | `25.35 s` total (`8450 ms/iter`) | `25.33 s` | `25.39 s` | `79003648 bytes` | checksum `-4515648042024502814`, output `41` | L1 rooted scoped RSS win with near-tie elapsed |
 | LogHub HDFS q2 1M x3 | real HDFS file-backed stream | checked scoped page-token | framework API / RSS win | `rift-checked-safezone-page-token` | 3 processes x 3 iterations | `25.56 s` total (`8520 ms/iter`) | `25.56 s` | `25.58 s` | `79036416 bytes` | checksum `-4515648042024502814`, output `41` | L1 checked page/window row essentially ties heap elapsed and cuts RSS by about 81%; L2 row remains the GC interpretation source |

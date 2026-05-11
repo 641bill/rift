@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-11 21:28 CEST
+Last updated: 2026-05-12 00:22 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -98,6 +98,31 @@ records per input; heap is `287.296 ms` with `20.354 ms` median timed GC, while
 elapsed in strict L1 (`5.45 s` versus heap `5.46 s`) with slightly lower RSS.
 Do not tune this as a flagship unless a larger/richer real power trace creates
 material RSS/tail/fixed-memory pressure.
+
+Latest streaming-input update: the evaluation protocol now has a stricter
+`real-streaming-input` class for bounded replay that consumes records
+incrementally and forbids parsed arrays/lists proportional to total input.
+Child working tree after `0a042b920` adds
+`LOGHUB_TOP_INPUT_MODE=streaming-file` to `LogHubTopTemplatesMatrix` through
+`BenchmarkInputSupport.StreamingByteLineSource`. The first HDFS 1M row streams
+the real log file inside each run: retained heap is L1 `8.10 s`, RSS `76 MB`,
+while reusable checked scoped `EpochTopKByKey` is L1 `8.06 s`, RSS `12 MB`;
+the L2 row removes `32.681 ms` median heap GC. Treat this as the first
+streaming-input retained/RSS candidate, not as the missing GC-heavy flagship.
+Next conversions should be GH Archive byte-slice q1/q2, Theodolite power
+streaming windows, StackExchange/StackOverflow text, SNAP/Yak edge streams,
+and DSPBench Fraud/Log only if retained pressure remains material.
+
+Latest StreamIt/StreamFlex-axis update: child working tree now has
+`StreamItKernelMatrix` and `sandbox/run_streamit_kernel_matrix.sh`, with local
+ports of the public StreamIt FilterBank and BeamFormer kernels. The first smoke
+validates heap versus checked scoped epoch checksums for throughput and
+latency, including p95/p99/p999/max and deadline-miss metrics. Treat this as a
+StreamFlex-axis methodology control: faithful primitive DSP kernels are not
+expected to be GC-heavy Rift wins. The first 3-run L2 candidate confirms that
+FilterBank is essentially zero-GC and BeamFormer remains compute/array
+dominated. Next step is a clean 3-run L1 matrix, then only add object-retained
+variants if we need a separate GC-pressure stressor.
 
 Latest Yak real-text update: child `cd08f23d4` adds Stack Exchange AskUbuntu
 support, and child `59c181746` adds the current 20M scale-up rows. The dataset
