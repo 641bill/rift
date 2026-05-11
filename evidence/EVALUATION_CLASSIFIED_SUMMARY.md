@@ -1,7 +1,7 @@
 # Evaluation Classified Summary
 
 Date: 2026-05-09
-Last updated: 2026-05-11 00:36 CEST
+Last updated: 2026-05-11 01:08 CEST
 
 Status: thesis-facing classified summary built from committed evidence.
 Baseline commits for clean rows: parent `1cc3b2c`, child `13a3df1c7`.
@@ -89,6 +89,23 @@ reference, but the retained heap objects still remain for GC tracing/reclaim.
   modest page/window rows.
 - **Non-claim:** summary-only/direct-aggregate rows are topology/operator lower
   bounds. They must not be described as pure memory-management wins.
+
+## Legacy / Rerun Required
+
+These rows remain useful as history, diagnostics, or lower bounds, but they are
+not presentation-headline evidence unless the action says they already have a
+replacement.
+
+| Evidence family | Why non-headline | Action | Presentation rule |
+|---|---|---|---|
+| Dirty page-token fast-path checkpoints | Collected before the committed clean fast-path state and may include transient local changes. | archive/control only | Cite only as motivation for the later clean page-token and Common Crawl-shaped L1 rows. |
+| Dirty DSPBench Fraud q2 fast-path row | The dirty row made checked scoped page-token fastest, but the committed rerun was more conservative. | replace with L1 row | Use DSPBench Fraud q2 L1: checked scoped page-token is an RSS win and trusted Streaming is the lower-bound elapsed win. |
+| Older L2 rows that now have L1 replacements | L2 reads GC/region counters in the timed section and is not final-clean headline timing. | keep as L2 interpretation only | Use L1 for elapsed/RSS and L2 only for GC/region explanations. |
+| Old/current SafeZone root-mode-0 rows | They show provenance and old root-bookkeeping cliffs, not the fair SafeZone baseline. | archive/control only | Competitive tables use `region-scoped-rooted` / improved SafeZone-family rows; root-mode-0 appears only in historical/control tables. |
+| Benchmark-local manual count arrays and direct-summary loops | They change the processing topology and often remove record retention entirely. | keep as lower-bound topology evidence | Always show heap and checked counterparts when available; never call these pure memory-management wins. |
+| Exact-array Dataflow AGGREGATE rows used near `EpochFold` | The fast aggregate row is not the true generic `EpochFold` operator. | keep as lower-bound topology evidence | Present direct epoch/exact-array aggregate as the current win and keep generic `EpochFold` gated until it passes its own 1M API gate. |
+| Older DEBS, TableRank, rank, median, and hash-heavy rows | Many predate the fair evaluation protocol or failed focused gates. | archive/control only | Do not use as final application claims; rerun only after natural heap, same-shape heap, retained controls, and focused 1M gates are defined. |
+| Legacy GH Archive string-parser rows | Parser/string/decompression dominates and byte-slice L1 rows now replace them for current page-token evidence. | keep as L2 interpretation only | Use byte-slice GH Archive L1 rows for current elapsed/RSS; cite legacy parser rows only to explain parser allocation sensitivity. |
 
 ## Next Evidence Rules
 

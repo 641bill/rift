@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-11 00:36 CEST
+Last updated: 2026-05-11 01:08 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -13,7 +13,7 @@ Latest implementation checkpoint:
 `0773d4c17` (`Record Yak topword L1 top-k row`)
 
 Latest parent evidence checkpoint:
-current parent worktree after Yak topword L1 evidence update
+`5185a3e` (`Normalize final-clean evidence tables`)
 
 Latest final-clean evidence update:
 the retained-row gap-fill now has L1 final-clean rows for DSPBench Fraud q2 and
@@ -25,6 +25,17 @@ versus retained heap `463.633 ms`, GC `62.421 ms`. ReML/MLKit PLDI-style rows
 now use L1 timing/RSS for local Tier 1 ports in the combined table; exact MLKit
 artifact timing remains blocked by missing local `mlkit`/`mlton` and no running
 Docker daemon.
+
+Latest normalized-report audit:
+`evidence/EVALUATION_CLASSIFIED_SUMMARY.md` now has a
+“Legacy / Rerun Required” section. Dirty page-token and DSPBench fast-path
+checkpoints, old/current SafeZone root-mode-0 rows, L2 rows with L1
+replacements, benchmark-local manual count/direct-summary rows, exact-array
+Dataflow AGGREGATE rows used near `EpochFold`, older DEBS/TableRank/rank-heavy
+rows, and legacy GH Archive string-parser rows are all explicitly non-headline
+unless rerun or classified under the current fair-evaluation protocol. Use
+`docs/PERFORMANCE_EVALUATION_REPORT.md` as the normalized presentation source
+and regenerate `docs/report.html` after report edits.
 
 Report HTML companion:
 `docs/PERFORMANCE_EVALUATION_REPORT.md` remains the source of truth for the

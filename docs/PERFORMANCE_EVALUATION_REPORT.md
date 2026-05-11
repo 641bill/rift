@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-11 00:36 CEST
+Last updated: 2026-05-11 01:08 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -16,7 +16,9 @@ Latest classified evidence summary:
 `evidence/EVALUATION_CLASSIFIED_SUMMARY.md`. This is the first table to use
 when deciding whether a row is topology evidence, retained-object
 memory-management evidence, a best checked topology result, a real-input modest
-win, or a ceiling/control row.
+win, or a ceiling/control row. It now also contains the explicit
+“Legacy / Rerun Required” audit for dirty, old-SafeZone, L2-only,
+benchmark-local, and gated-operator rows.
 
 Latest fair-evaluation contract:
 `docs/FAIR_EVALUATION_PROTOCOL.md`. This is now the reviewer-facing rulebook:
@@ -374,6 +376,15 @@ Current claim table:
 | Page/window checked stream topology | Generated Common Crawl WET-shaped q1/q2, focused page-token rows, modest real LogHub/DSPBench rows. | Strongest rows are generated stressors; real-input rows are modest. |
 | Topology/operator lower bound | Summary-only/direct-aggregate rows for GH Archive-shaped, LogHub-shaped, and DSPBench q2/q3. | Not a pure memory-management win. |
 | Gated operators | Rank/table/fold/hash-heavy operators. | Require natural heap, same-shape heap, retained control if applicable, and a focused 1M gate before application claims. |
+
+Legacy and rerun-required evidence is not removed from the project history, but
+it is demoted in presentation tables. Dirty fast-path rows, root-mode-0
+SafeZone rows, old L2 rows with L1 replacements, benchmark-local count arrays,
+legacy GH Archive string-parser rows, and pre-protocol DEBS/TableRank/rank rows
+must be treated according to the audit in
+`evidence/EVALUATION_CLASSIFIED_SUMMARY.md`: either replace with a current L1
+row, keep as L2 interpretation, keep as lower-bound topology evidence, or
+archive/control only.
 
 Measurement levels are separate from comparison classes. Current evidence rows
 are mostly **L2 standard stats**: they are valid for interpreting GC, RSS, and

@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-11 00:36 CEST
+Last updated: 2026-05-11 01:08 CEST
 
 Status: markdown slide deck outline. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report,
@@ -47,7 +47,9 @@ Representative numbers to keep on slides:
 
 Slide-level rule: summary-only/direct-aggregate rows are topology/operator
 lower bounds. Retained heap versus retained checked epoch is the fair
-memory-management story.
+memory-management story. Dirty checkpoints, old SafeZone root-mode-0 rows,
+legacy parser rows, and gated DEBS/TableRank/rank rows are not slide headline
+evidence unless rerun under the current fair-evaluation protocol.
 
 ## Slide 1: One-Sentence Thesis
 

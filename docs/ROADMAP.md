@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-11 00:36 CEST
+Last updated: 2026-05-11 01:08 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -11,6 +11,13 @@ has a 5M x5 scale-up (`18.26 s`, `92 MB` RSS) against retained heap
 (`19.04 s`, `504 MB` RSS). ReML/MLKit PLDI-style local Tier 1 combined rows now
 use L1 timing/RSS rather than stale L2 elapsed; exact MLKit timing remains
 toolchain/provenance-blocked.
+
+Latest presentation-normalization update: parent checkpoint `5185a3e` is the
+current committed evidence baseline, child checkpoint `0773d4c17` remains the
+implementation baseline, and `evidence/EVALUATION_CLASSIFIED_SUMMARY.md` now
+explicitly marks dirty, old-SafeZone, L2-only, benchmark-local, legacy parser,
+and gated DEBS/TableRank/rank rows as replace-with-L1, L2-interpretation-only,
+lower-bound topology, or archive/control-only evidence.
 
 Active worktree: `/Users/siyaoliu/rift/scala-native-rift`
 
