@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-11 12:14 CEST
+Last updated: 2026-05-11 12:43 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -40,6 +40,17 @@ L2 `17405.613 ms`, median GC `147.336 ms`, L1 `88.57 s`, RSS `408715264`;
 checked scoped page-token L2 `17783.560 ms`, median GC `33.945 ms`, L1
 `90.26 s`, RSS `445661184`. Do not tune this q3 shape unless a new reusable
 operator changes the CPU profile.
+
+Latest Yak real-text update: child `cd08f23d4` adds Stack Exchange AskUbuntu
+support. The dataset is now local under
+`cache/benchmark-data/yak/stackexchange`. `YakRegionMatrix topwordreal`
+tokenizes real `Posts.xml` title/body text into replayed epoch-local
+`WordRecord` objects. At 10M real tokens x5, L1 `checked-epoch-scoped` is
+`3.86 s` and `94 MB` RSS versus heap `4.19 s` and `428 MB`; the matching L2 row
+is `207.490 ms`, GC `0 ms`, versus heap `269.491 ms`, median GC `23.715 ms`.
+This is the first real text/top-word row in the Yak ladder. It strengthens the
+checked epoch real-input story, while the reusable `EpochTopKByKey` row remains
+a tuning target because it is slower than direct checked epoch on this input.
 
 Latest presentation-normalization update: parent checkpoints `5185a3e`
 (`Normalize final-clean evidence tables`) and `5cf9ac3` (`Audit legacy evidence

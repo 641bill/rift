@@ -1,7 +1,7 @@
 # Rift All-Phase Results Rollup
 
 Date: 2026-05-01
-Last updated: 2026-05-09 23:55 CEST
+Last updated: 2026-05-11 12:43 CEST
 
 This file gathers the current numeric and validation evidence across all
 roadmap phases. It is a rollup, not the primary raw log. Prefer the source files
@@ -86,6 +86,16 @@ sort row uses `Array[SortRecord^{epoch}]^{epoch}` and region-owned
 Sort remains CPU-bound because heap timed GC is only `3.333 ms`.
 LiveJournal is now the strongest real-input
 prior-work-shaped row, while still not exact Yak/GraphChi artifact evidence.
+The real text follow-up adds Stack Exchange AskUbuntu `topwordreal`.
+`YakRegionMatrix` tokenizes the public AskUbuntu `Posts.xml` title/body text
+into real token key/weight control arrays, then replays 10M tokens as
+epoch-local `WordRecord` objects. L1 10M x5 rows are: heap `4.19 s`, RSS
+`427720704`; `region-scoped-rooted` `3.97 s`, RSS `94306304`;
+`checked-epoch-scoped` `3.86 s`, RSS `94306304`; reusable
+`checked-epoch-topk-scoped` `4.12 s`, RSS `93536256`. The L2 row shows direct
+checked epoch at `207.490 ms`, GC `0 ms`, versus heap `269.491 ms`, median GC
+`23.715 ms`. This is the first real text/top-word checked epoch row; it is not
+exact Yak/Hadoop, and top-k remains slower than direct epoch on this input.
 The reusable `RiftRegion.epoch { ... }` API has now also been applied to the
 Broom/Dataflow methodology harness. At 10 epochs x 100k documents,
 `checked-epoch-scoped` is the fastest full-operator row for

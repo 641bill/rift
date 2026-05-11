@@ -336,6 +336,13 @@ RESULT_ROWS = [
         "The strongest real-input result: epoch regions improve both time and memory footprint.",
     ],
     [
+        "Real text top-word",
+        "Stack Exchange AskUbuntu `Posts.xml`, 10M real tokens x5.",
+        "Checked epoch scoped: `3.86s`, RSS about `94 MB`.",
+        "GC heap: `4.19s`, RSS about `428 MB`.",
+        "First real text/top-word row: direct checked epoch wins; reusable top-k is lower-RSS but still slower than direct epoch.",
+    ],
+    [
         "Controlled retained-object reclaim",
         "Focused retained-epoch matrix, 1M ordinary records x20.",
         "Checked scoped retained/drop-anchor: `0.47s`.",
@@ -368,6 +375,7 @@ RESULT_ROWS = [
 
 REAL_INPUT_ROWS = [
     ["Yak LiveJournal", "Real SNAP graph input", "Strong checked epoch time and RSS win", "Flagship real-input row."],
+    ["AskUbuntu topwordreal", "Real Stack Exchange text", "Checked epoch time/RSS win", "First real text/top-word row; not exact Yak/Hadoop."],
     ["LogHub HDFS top templates", "Real LogHub HDFS logs", "Modest time win and large RSS reduction", "Promising reusable top-k API row."],
     ["LogHub HDFS q2", "Real LogHub HDFS logs", "Elapsed tie, strong RSS reduction", "Useful page/window control."],
     ["GH Archive", "Real NDJSON events", "Small time/RSS wins; parser CPU dominates", "Useful but not GC-heavy enough yet."],

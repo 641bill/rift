@@ -583,7 +583,7 @@ pre code {
         </div>
       </div>
       <aside class="hero-panel" aria-label="Report metadata">
-        <div class="panel-row"><span>Generated</span><strong>2026-05-11 12:16 CEST</strong></div>
+        <div class="panel-row"><span>Generated</span><strong>2026-05-11 12:53 CEST</strong></div>
         <div class="panel-row"><span>Source</span><strong>docs/PERFORMANCE_EVALUATION_REPORT.md</strong></div>
         <div class="panel-row"><span>Audience</span><strong>External systems / PL reader</strong></div>
         <div class="panel-row"><span>Headline rule</span><strong>Clean total time and RSS first</strong></div>
@@ -847,6 +847,13 @@ pre code {
 <td>The strongest real-input result: epoch regions improve both time and memory footprint.</td>
 </tr>
 <tr>
+<td>Real text top-word</td>
+<td>Stack Exchange AskUbuntu `Posts.xml`, 10M real tokens x5.</td>
+<td>Checked epoch scoped: <code>3.86s</code>, RSS about <code>94 MB</code>.</td>
+<td>GC heap: <code>4.19s</code>, RSS about <code>428 MB</code>.</td>
+<td>First real text/top-word row: direct checked epoch wins; reusable top-k is lower-RSS but still slower than direct epoch.</td>
+</tr>
+<tr>
 <td>Controlled retained-object reclaim</td>
 <td>Focused retained-epoch matrix, 1M ordinary records x20.</td>
 <td>Checked scoped retained/drop-anchor: <code>0.47s</code>.</td>
@@ -902,6 +909,12 @@ pre code {
 <td>Real SNAP graph input</td>
 <td>Strong checked epoch time and RSS win</td>
 <td>Flagship real-input row.</td>
+</tr>
+<tr>
+<td>AskUbuntu topwordreal</td>
+<td>Real Stack Exchange text</td>
+<td>Checked epoch time/RSS win</td>
+<td>First real text/top-word row; not exact Yak/Hadoop.</td>
 </tr>
 <tr>
 <td>LogHub HDFS top templates</td>

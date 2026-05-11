@@ -1,7 +1,7 @@
 # Benchmark Data Sources
 
 Date: 2026-05-01
-Last updated: 2026-05-11 11:59 CEST
+Last updated: 2026-05-11 12:43 CEST
 
 Local data root:
 `/Users/siyaoliu/rift/cache/benchmark-data`
@@ -42,6 +42,8 @@ The ignored per-download manifest is
 | LogHub Windows extracted log | `/Users/siyaoliu/rift/cache/benchmark-data/loghub/Windows/Windows.log` | 28012696901 | Extracted real Windows log with `114608388` lines; used for the 2026-05-11 `LogHubTopTemplatesMatrix` top-template follow-up. |
 | SNAP Twitter ego graph | `/Users/siyaoliu/rift/cache/benchmark-data/yak/snap/twitter_combined.txt.gz` | 10634845 | Real SNAP Twitter ego-network combined edge list. Used for the first `YakRegionMatrix graphreal` row. SHA-256: `d9f99b0e6a53b9204b8c215f41b3c10fb99a1e1e783858c012b06d0d3d4bd129`. |
 | SNAP LiveJournal graph | `/Users/siyaoliu/rift/cache/benchmark-data/yak/snap/soc-LiveJournal1.txt.gz` | 259619239 | Real SNAP LiveJournal directed social graph, `68993777` edge-list lines. Used for larger `YakRegionMatrix graphreal` rows. SHA-256: `d7bcd5a87b88c896c35fdb9611e804c3f4033c39b58c4c9ea3ba53c680d516d8`. |
+| Stack Exchange AskUbuntu archive | `/Users/siyaoliu/rift/cache/benchmark-data/yak/stackexchange/askubuntu.com.7z` | 1071610861 | Public Stack Exchange data dump site archive, fetched from Internet Archive for Yak-style real text/top-word replay. SHA-256: `59632526b760472f0345347d30f478975a5a3c88206598d1420bb69b9ae5df4e`. |
+| Stack Exchange AskUbuntu Posts XML | `/Users/siyaoliu/rift/cache/benchmark-data/yak/stackexchange/askubuntu-Posts.xml` | 1400891844 | Extracted `Posts.xml` from `askubuntu.com.7z`, `945113` lines. Used by `YakRegionMatrix topwordreal` to tokenize real title/body text into replayed epoch-local word records. |
 | Theodolite source clone | `/Users/siyaoliu/rift/cache/benchmark-data/theodolite/source` | directory | Ignored local clone of `cau-se/theodolite`; inspected commit `dfa768a25eec3c3f5a57b7d4839a0c255fd6fa7d`. Theodolite provides official UC2/UC4 stream benchmark methodology and load generators, but no static real input file in the repo. |
 | DSPBench source clone | `/Users/siyaoliu/rift/cache/benchmark-data/dspbench/source` | directory | Ignored local clone of `GMAP/DSPBench` for real-input stream benchmark triage; inspected commit `00c20da828faf2b960fdb697c61d34cb25461875`. |
 | RIoTBench source clone | `/Users/siyaoliu/rift/cache/benchmark-data/riot-bench/source` | directory | Ignored local clone of `dream-lab/riot-bench`; inspected commit `c86414f7f926ed5ae0fab756bb3d82fbfb6e5bf7`. |

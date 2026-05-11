@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-11 01:08 CEST
+Last updated: 2026-05-11 12:43 CEST
 
 Status: markdown slide deck outline. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report,
@@ -23,7 +23,7 @@ Recommended talk order:
 4. Direct `RiftRegion.epoch { ... }` as the reusable checked topology for
    batch/epoch workloads.
 5. Retained-object evidence as the fair memory-management comparison.
-6. Real-input Yak LiveJournal as the strongest checked epoch row.
+6. Real-input Yak LiveJournal and AskUbuntu as checked epoch rows.
 7. Page-token stream evidence for page/window append workloads.
 8. ReML/MLKit PLDI-style comparison as a non-stream typed-region axis.
 9. Open work: remaining L1 final-clean gaps, real-input GC-heavy search, and gated
@@ -38,6 +38,7 @@ Representative numbers to keep on slides:
 | Retained generated/preloaded stressor | GH Archive-shaped retained q2 L1: checked scoped `3.44 s`, `16 MB` RSS vs retained heap `4.62 s`, `147 MB` RSS for 20 x 1M iterations; L2 checked scoped `186.868 ms` vs retained heap `257.377 ms`, `77.208 ms` GC. | Strong retained memory/RSS win, but not real-input proof. |
 | Direct-summary lower bound | GH Archive-shaped q2 L1: heap direct-summary `1.36 s`; checked stream/scoped direct-summary `1.45/1.45 s`. DSPBench Fraud/Log q2 and LogHub q2/q3 now also have checked direct-summary counterparts within about `1-4%` of heap direct-summary, except LogHub q3's CPU-heavy row at about `2-3%`. | Symmetric topology lower bound: direct-summary is fast for heap and checked regions, but it is not a reclaim claim. |
 | Real-input checked epoch | SNAP LiveJournal 50M: checked epoch scoped `2008.320 ms`, `0 ms` GC, `2.11 GB` RSS vs heap `2958.659 ms`, `400.484 ms` GC, `3.91 GB` RSS. | Strongest real-input prior-work-shaped row; local graph replay, not exact Yak/GraphChi. |
+| Real-input text checked epoch | AskUbuntu `topwordreal` 10M x5: checked epoch scoped `3.86 s`, `94 MB` RSS vs heap `4.19 s`, `428 MB`; L2 checked `207.490 ms`, `0 ms` GC vs heap `269.491 ms`, `23.715 ms` GC. | First real text/top-word row; local Yak/Hadoop-shaped replay, not exact Yak/Hadoop. Reusable top-k is an RSS/slight elapsed win but trails direct epoch. |
 | Reusable Dataflow epoch | SELECT/AGGREGATE/JOIN: checked epoch scoped `19.691/34.676/19.762 ms` vs heap `27.775/50.837/30.387 ms`. | Direct epoch covers the full Broom-style operator family. |
 | StreamFlex/Stancu epoch | L1 StreamFlex throughput `0.58 s` vs heap `0.79 s`; L1 Stancu `0.57 s` vs heap `0.85 s`. | Direct epoch supersedes older TransactionRegion/EpochBuffer rows for shared batch lifetimes. |
 | SPECjbb2005-workload port | L1 8 warehouses x20: checked epoch scoped `2.21 s` vs heap `2.64 s` and rooted scoped `2.48 s`; RSS about `8.0 MB` vs heap `12.4 MB`. | Clean-room Scala Native port strengthens the Stancu/SPECjbb transaction-lifetime story; not official SPECjbb2005. |

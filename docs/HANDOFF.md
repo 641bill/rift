@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-11 12:14 CEST
+Last updated: 2026-05-11 12:43 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -10,10 +10,25 @@ Active implementation branch for this update:
 `feature/rift`
 
 Latest implementation checkpoint:
-`d1fd16a64` (`Add ReML Tier 2 shaped ports`)
+`cd08f23d4` (`Add real text Yak topword workload`)
 
 Latest parent evidence checkpoint:
 `9a05426` (`Record presentation audit checkpoint`)
+
+Latest in-progress real-input checkpoint:
+`YakRegionMatrix` now has `topwordreal`, a real Stack Exchange AskUbuntu
+text/top-word replay over the public `askubuntu.com.7z` data dump. The local
+extracted input is
+`/Users/siyaoliu/rift/cache/benchmark-data/yak/stackexchange/askubuntu-Posts.xml`
+(`1,400,891,844` bytes, `945,113` lines). At 10M real tokens, the L1
+final-clean row is: `gc-heap` `4.19 s`, RSS `427720704`; `region-scoped-rooted`
+`3.97 s`, RSS `94306304`; `checked-epoch-scoped` `3.86 s`, RSS `94306304`;
+`checked-epoch-topk-scoped` `4.12 s`, RSS `93536256`. The matching L2
+standard-stats row is `checked-epoch-scoped` `207.490 ms`, GC `0 ms`, versus
+heap `269.491 ms`, median GC `23.715 ms`. Interpretation: direct checked epoch
+is the best safe topology for this real text row; reusable `EpochTopKByKey` is
+a large RSS/slight elapsed win over heap but still slower than direct epoch, so
+top-k remains an operator-cost target.
 
 Latest ReML/MLKit checkpoint:
 child `d1fd16a64` adds Scala Native shaped Tier 2 ports for `logic`, `ray`,

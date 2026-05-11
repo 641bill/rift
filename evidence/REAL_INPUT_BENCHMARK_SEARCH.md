@@ -1,7 +1,7 @@
 # Real-Input GC-Heavy Stream Benchmark Search
 
 Date: 2026-05-07
-Last updated: 2026-05-11 12:14 CEST
+Last updated: 2026-05-11 12:43 CEST
 
 Status: active Phase 6 search ledger. This file tracks public real-input
 stream/dataflow candidates before implementation work. It is deliberately a
@@ -16,15 +16,18 @@ window, session, transaction, or epoch lifetime, and make `gc-heap` spend
 material time or memory on garbage collection.
 
 Current real-input rows are useful but not decisive. Yak LiveJournal is the
-strongest real-input epoch row. LogHub HDFS top templates is now the strongest
-real-input retained top-k row: the reusable checked `EpochTopKByKey` row at
-5M HDFS lines x5 is `18.26 s` versus retained heap `19.04 s`, while max RSS
-drops from about `504 MB` to `92 MB`. GH Archive byte-slice, LogHub BGL/HDFS
-line-token-window rows, DSPBench Fraud/Log, and RIoTBench/MHEALTH are modest
-throughput/RSS/tail wins or near-ties. Parser/query CPU often dominates and
-heap GC remains under a few percent of elapsed at the measured scale, so the
-next benchmark must force more natural object materialization, not just read
-more bytes.
+strongest real-input epoch row. The new Stack Exchange AskUbuntu `topwordreal`
+row is the strongest real text/top-word follow-up so far: at 10M real tokens,
+L1 `checked-epoch-scoped` is `3.86 s` versus heap `4.19 s` and cuts RSS from
+about `428 MB` to `94 MB`; the matching L2 row removes `23.715 ms` median
+timed heap GC. LogHub HDFS top templates remains the strongest real-input
+retained top-k row: the reusable checked `EpochTopKByKey` row at 5M HDFS lines
+x5 is `18.26 s` versus retained heap `19.04 s`, while max RSS drops from about
+`504 MB` to `92 MB`. GH Archive byte-slice, LogHub BGL/HDFS line-token-window
+rows, DSPBench Fraud/Log, and RIoTBench/MHEALTH are modest throughput/RSS/tail
+wins or near-ties. Parser/query CPU often dominates and heap GC remains under a
+few percent of elapsed at the measured scale, so the next benchmark must force
+more natural object materialization, not just read more bytes.
 
 ## Search Gates
 
@@ -45,6 +48,7 @@ modest/control row and move to the next candidate.
 | Rank | Candidate | Source / provenance | Query shape to test | Expected object materialization | Lifetime boundary | Local status | Decision |
 |---:|---|---|---|---|---|---|---|
 | 1 | Yak-style real graph replay | SNAP Twitter ego graph at `cache/benchmark-data/yak/snap/twitter_combined.txt.gz`; SNAP LiveJournal graph at `cache/benchmark-data/yak/snap/soc-LiveJournal1.txt.gz`; future larger candidate is SNAP Twitter-2010. | `graphreal`: preload real edge pairs into primitive control arrays, replay source/destination pairs as epoch-local `EdgeUpdate` objects, and update durable vertex state. | `EdgeUpdate` objects from real graph edges. | Epoch boundary; durable vertex array remains heap/primitive. | Implemented in `YakRegionMatrix`; Twitter ego smoke/1M/2M and LiveJournal 5M/10M/50M medians completed, including checked page-token, checked epoch topology, and reusable `EpochBuffer` rows. `RiftRegion.epoch { ... }` now exposes direct checked epoch topology; it has a 2-epoch smoke, a 10M API-backed rerun, and an apples-to-apples 50M API-backed rerun with the same 10 x 5M topology as the earlier topology table. | Current top real-input Yak-shaped row. LiveJournal 50M topology follow-up has `gc-heap` `1618.105 ms`, median GC `273.410 ms`, RSS `2.76 GB`; low-RSS epoch rows are `checked-epoch-scoped` `1069.241 ms`, `checked-epoch-stream` `1113.261 ms`, `region-scoped-rooted` `1256.538 ms`, and `region-stream-rootless` `1345.479 ms`, with region RSS about `1.53 GB`. Whole-run checked scoped is faster (`1048.751 ms`) but high-RSS (`2.98 GB`). Reusable `EpochBuffer` scoped also beats heap (`1343.071 ms` vs same-rerun heap `1514.313 ms`) but is not yet the fastest checked epoch lowering. The API-backed 10M row confirms direct checked epoch (`212.691/229.532 ms` scoped/stream) stays ahead of heap (`317.779 ms`) and `EpochBuffer` (`285.605/287.201 ms`); the apples-to-apples 50M API-backed row has `checked-epoch-scoped` `1055.958 ms`, `checked-epoch-stream` `1101.001 ms`, and heap `1604.811 ms` with `288.801 ms` GC. This is still not exact Yak/GraphChi artifact evidence, but it is a strong real graph ladder row and shows that checked epoch topology is the right safe shape. |
+| 1a | Stack Exchange AskUbuntu top-word replay | Public Stack Exchange data dump from Internet Archive. Local archive `cache/benchmark-data/yak/stackexchange/askubuntu.com.7z`; extracted `Posts.xml` is `1400891844` bytes and `945113` lines. | `topwordreal`: tokenize real AskUbuntu post titles/bodies into key/weight control arrays, replay tokens as epoch-local `WordRecord` objects, and compute per-epoch top word/count. | `WordRecord` objects from real text tokens. | Epoch boundary; token key/weight arrays and durable counters remain heap/primitive control metadata. | Implemented in `YakRegionMatrix`; 20k smoke, 1M L2, 10M L2, and 10M x5 L1 final-clean rows completed. | Keep as the first real text/top-word evidence row. At 10M real tokens, L1 `checked-epoch-scoped` is `3.86 s`, RSS `94 MB`, versus heap `4.19 s`, RSS `428 MB`; the L2 row is `207.490 ms` versus heap `269.491 ms` and removes heap's `23.715 ms` median timed GC. Rooted SafeZone is also strong (`3.97 s` L1). Reusable `EpochTopKByKey` is an RSS win and slight L1 elapsed win (`4.12 s` vs heap `4.19 s`) but loses to direct checked epoch, so top-k API cost remains a tuning target. Not exact Yak/Hadoop evidence. |
 | 2 | DSPBench Spike Detection | DSPBench paper/source; local clone at `cache/benchmark-data/dspbench/source`, commit `00c20da828faf2b960fdb697c61d34cb25461875`; bundled `dspbench-threads/data/sensors.dat` has `79999` usable lines after filtering. | `q0-parse` sensor readings; `q1-moving-average` emits moving-average records; `q2-spike-window` groups spike alerts by time/device. | `SensorReading`, `MovingAverageRecord`, `SpikeCandidate`, optional per-device window contribution objects. The original threads implementation uses parser `Values`, tuples, and per-device `LinkedList[Double]` state. | Sensor-event bucket and moving-average window; durable per-device sums/windows stay heap/primitive. | Implemented as `DSPBenchRegionMatrix`; 20k smoke, 100k medians, and 1M medians completed. | Park as real-input modest/control evidence. At 1M, heap GC is real but only `10.880-32.793 ms`; best throughput wins are modest and checked q2 loses slightly. Move to Fraud Detection next. |
 | 3 | DSPBench Fraud Detection | Same DSPBench clone; bundled `dspbench-threads/data/credit-card.dat` has `185000` lines plus Markov model resources. | `fraud-q0-parse` transaction records; `fraud-q1-predict` creates prediction/state records; `fraud-q2-alert-window` windows outlier alerts. | `Transaction`, `Prediction`, state-token list/string pieces, alert records. | Transaction/alert bucket; Markov model remains durable heap metadata. | Implemented as `DSPBenchRegionMatrix`; 20k smoke, 100k medians, 1M medians, q2 heap-cap follow-up, dirty fast-path row, and committed-code safe-fast-path rerun completed. | Keep as the best DSPBench real-input regression row. The dirty fast-path row made checked scoped page-token fastest (`818.574 ms` vs heap `862.834 ms`), but the committed-code rerun is more conservative: trusted Streaming `788.040 ms`, checked scoped page-token `810.770 ms`, heap `820.945 ms`, with checked RSS about `279 MB` vs heap `358 MB`. Heap caps did not create a fixed-memory checked win at 1M. |
 | 4 | DSPBench Log Processing | Same DSPBench clone; bundled Spark `logprocessing/http-server.log` has `55000` common-log lines. | `log-q0-parse`, `log-q1-status`, and `log-q2-window`. | HTTP log records, status/update records, and window contribution records. | Event/window bucket; durable status counters on heap/primitive arrays. | Implemented as `DSPBenchRegionMatrix`; 20k smoke, 100k medians, and 1M medians completed. | Keep q2 as a modest real-input throughput/GC-tail control. At 1M, checked scoped page-token is fastest (`1733.654 ms` vs heap `1750.291 ms`) and cuts heap max GC from `88.210 ms` to `18.584 ms`, but heap GC is only about `2.6%` of elapsed and region RSS is higher. |
