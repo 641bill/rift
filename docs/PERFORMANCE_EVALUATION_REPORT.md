@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-12 01:03 CEST
+Last updated: 2026-05-12 01:30 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -617,6 +617,14 @@ Latest clean final-selection headline interpretation:
   `1.52 s`, `12.4 MB`; L2 pressure-latency shows checked scoped fastest
   (`192.432 ms` vs heap-same-shape `202.148 ms`) while checked stream gives
   the best tail/deadline row (`0` misses, max `20875 ns`).
+- `evidence/STREAMFLEX_GAP_ANALYSIS.md` explains why this is not yet a
+  StreamFlex-scale speedup. On the 1M L2 throughput row, heap spends
+  `69-100 ms` of `477-509 ms` in timed GC, so the best possible speedup from
+  removing only median GC is about `1.17-1.25x`; checked scoped reaches about
+  `1.13-1.20x`. The remaining gap is therefore mostly non-GC work:
+  allocation lowering, object construction, linked-object traversal, primitive
+  capsule export, and the fact that this is not the original Ovm/StreamFlex
+  scheduler/capsule runtime.
 - NEXMark Beam-default is broadly favorable but modest. The L1 selected rows
   now show checked q3/q8/q9/q11 at `5.86/9.21/15.03/4.36 s` versus heap
   `6.18/9.54/16.27/4.47 s`; q9 is the strongest selected row at about `7.6%`

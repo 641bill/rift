@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-12 01:03 CEST
+Last updated: 2026-05-12 01:30 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -29,6 +29,17 @@ capsule export. First rows are in
 (`192.432 ms`) and checked stream strongest on tails (`0` deadline misses,
 max `20875 ns`). This is a Rift-native StreamFlex design reproduction, not an
 exact StreamFlex/Ovm artifact rerun.
+
+Latest StreamFlex gap-analysis checkpoint:
+`evidence/STREAMFLEX_GAP_ANALYSIS.md` now records why current Rift rows do not
+show StreamFlex-scale speedups. The current StreamFlex-design throughput row is
+already close to the heap-GC-removal bound: heap spends `69-100 ms` of
+`477-509 ms` in L2 timed GC, while checked scoped reaches `422.638 ms`.
+Remaining overhead is mostly allocation lowering, object construction,
+linked-object traversal, primitive capsule export, and missing original
+Ovm/StreamFlex scheduler/capsule/runtime integration. Use this note when
+explaining why the result is a local design reproduction, not an exact
+StreamFlex artifact match.
 
 Latest StreamIt-control follow-up:
 `evidence/STREAMIT_KERNEL_MATRIX.md` now has the clean 3-run L1 control matrix

@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-12 01:03 CEST
+Last updated: 2026-05-12 01:30 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -135,8 +135,14 @@ boundary. First evidence is in `evidence/STREAMFLEX_DESIGN_MATRIX.md`: L1 1M
 throughput has checked scoped `1.27 s` / `7.9 MB` RSS versus heap/same-shape
 heap `1.52 s` / `12.4 MB`; L2 throughput removes heap's `100.234 ms` median
 GC; L2 pressure-latency has checked scoped fastest and checked stream with
-zero deadline misses. Next step is to scale this row and then decide whether a
-retained-object BeamFormer/FilterBank variant is worthwhile.
+zero deadline misses. `evidence/STREAMFLEX_GAP_ANALYSIS.md` now records the
+current gap to the original StreamFlex-style magnitude: checked scoped is close
+to the GC-removal bound for this workload, so further gains require profiling
+and reducing non-GC work such as allocation lowering, object construction,
+linked traversal, capsule transfer overhead, and the missing VM/scheduler
+integration. Next step is to profile this row and then decide whether a
+retained-object BeamFormer/FilterBank variant or closer capsule runtime is
+worthwhile.
 
 Latest Yak real-text update: child `cd08f23d4` adds Stack Exchange AskUbuntu
 support, and child `59c181746` adds the current 20M scale-up rows. The dataset
