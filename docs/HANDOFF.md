@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-11 20:42 CEST
+Last updated: 2026-05-11 21:28 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -10,7 +10,7 @@ Active implementation branch for this update:
 `feature/rift`
 
 Latest child checkpoint:
-`80cf37311` (`Record Spark LogHub q3 control`)
+`0a042b920` (`Add Theodolite power real-input matrix`)
 
 Latest implementation-code checkpoint:
 `55ce32ec6` (`Extend open region safety probes`)
@@ -162,6 +162,17 @@ L1 elapsed field for two modes was anomalous and should not be promoted. Treat
 Spark q3 as real-input modest/control evidence: RSS and timed-GC improve, but
 heap GC is still under 2% of elapsed and the query is parser/session CPU
 dominated.
+Theodolite UC2/UC4-style local rows are now implemented in
+`TheodolitePowerRegionMatrix` using the real UCI Household Electric Power
+Consumption trace. This is not official Theodolite artifact reproduction; it
+pairs the Theodolite downsampling/hierarchical aggregation shape with a public
+real power-meter file. Full local q2 loads `2049280` usable records and shows
+heap `287.296 ms`, median GC `20.354 ms`, RSS `306806784`, versus
+`checked-epoch-scoped` `288.495 ms`, GC `0`, RSS `310067200`; external process
+time in strict L1 is `5.45 s` for checked scoped versus heap `5.46 s`, with RSS
+`304398336` versus heap `306872320`. Treat it as real-input
+GC-elimination/tie evidence, not a new flagship. Evidence is in
+`evidence/THEODOLITE_POWER_REGION_MATRIX.md`.
 
 Latest final-clean evidence update:
 the retained-row gap-fill now has L1 final-clean rows for DSPBench Fraud q2 and

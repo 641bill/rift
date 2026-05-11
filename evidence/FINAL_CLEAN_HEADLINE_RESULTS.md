@@ -1,7 +1,7 @@
 # Final-Clean Headline Results
 
 Date: 2026-05-09
-Last updated: 2026-05-11 20:42 CEST
+Last updated: 2026-05-11 21:28 CEST
 
 Status: L1 runner support exists for the first representative binaries. One
 focused retained-epoch L1 row has been collected from clean child commit
@@ -49,6 +49,9 @@ The Spark q3 template/session control row has an L1 RSS/checksum run, but its
 Darwin `/usr/bin/time -l` elapsed field was anomalous for two modes. Do not use
 that L1 elapsed as headline timing; use it only for RSS/checksum and use the
 L2 row in `evidence/LOGHUB_REGION_MATRIX.md` for elapsed/GC interpretation.
+`TheodolitePowerRegionMatrix` now has strict L1 rows for the full local UCI
+household-power q2 hierarchical aggregation row. Use L1 for elapsed/RSS and
+`evidence/THEODOLITE_POWER_REGION_MATRIX.md` L2 rows for GC interpretation.
 
 ## Definition
 
@@ -83,6 +86,7 @@ Set `RIFT_FINAL_CLEAN=1` or `RIFT_EVAL_MEASUREMENT_LEVEL=L1` for:
 - `DSPBenchRegionMatrix`
 - `NexmarkRegionMatrix`
 - `GithubArchiveRegionMatrix`
+- `TheodolitePowerRegionMatrix`
 
 The binaries print `RESULT ... measurement_level=L1 final_clean=1 ...` and
 avoid internal timed-section stats.
@@ -99,6 +103,7 @@ avoid internal timed-section stats.
 | StreamFlex | throughput and latency rows | prior-work latency/throughput axis |
 | Stancu/SPECjbb-style | transaction rows | transaction-boundary region axis |
 | retained top-k API | LogHub HDFS top templates; Yak topword | reusable `EpochTopKByKey` evidence |
+| real-input controls | Theodolite power q2 | Theodolite-style UC2/UC4 local kernel over a real power trace |
 
 ## L1/L2 Completeness Audit
 
@@ -109,7 +114,7 @@ avoid internal timed-section stats.
 | page/window token | Common Crawl-shaped, LogHub HDFS q2, DSPBench Fraud/Log q2, GH Archive q1/q2 have L1 rows | L2 rows exist for GC/RSS interpretation | complete for current report |
 | generated methodology | NEXMark q3/q8/q9/q11 have L1 rows | L2 rows remain the GC source | complete for selected rows |
 | ReML/MLKit ports | Tier 1 and first Tier 2 local ports have L1 rows | L2 rows exist for Tier 1 and first Tier 2 interpretation | exact artifact rerun still blocked |
-| real-input top-k/text | LogHub HDFS 1M x20 and 5M x5 have L1 rows; AskUbuntu `topwordreal` 10M x5 has L1 rows | HDFS 5M and AskUbuntu 10M L2 rows added for GC interpretation | continue larger real-input search after report update |
+| real-input top-k/text/control | LogHub HDFS 1M x20 and 5M x5 have L1 rows; AskUbuntu `topwordreal` 10M/20M x5 has L1 rows; Theodolite power q2 has L1 rows | HDFS 5M, AskUbuntu 10M/20M, and Theodolite q2 L2 rows added for GC interpretation | continue larger real-input search after report update |
 
 Presentation status: the current report/slides use only rows marked complete
 in this audit or explicitly labeled lower-bound/control rows in
@@ -219,6 +224,10 @@ for those 20 iterations.
 | GH Archive q2 repo window 200k x3 | real GH Archive file-backed byte-slice JSON-lines | rooted scoped page/window repo aggregation | safe rooted baseline | `safezone-improved-32k` | 3 processes x 3 iterations | `12.90 s` total | `12.78 s` | `16.97 s` | `101892096 bytes` | checksum `3318970041429315053`, output `31794` | L1 rooted scoped modest elapsed/RSS win |
 | GH Archive q2 repo window 200k x3 | real GH Archive file-backed byte-slice JSON-lines | trusted streaming page/window repo aggregation | unsafe/trusted lower bound | `rift-trusted-streaming` | 3 processes x 3 iterations | `12.79 s` total | `12.08 s` | `258.37 s` | `101826560 bytes` | checksum `3318970041429315053`, output `31794` | L1 trusted lower-bound modest elapsed/RSS win; max real time includes one external wall-clock outlier with normal CPU time |
 | GH Archive q2 repo window 200k x3 | real GH Archive file-backed byte-slice JSON-lines | checked scoped page-token | framework API / RSS win | `rift-checked-safezone-page-token` | 3 processes x 3 iterations | `12.87 s` total | `12.53 s` | `14.72 s` | `101859328 bytes` | checksum `3318970041429315053`, output `31794` | L1 checked page-token modest elapsed win over heap and about 58% lower RSS; L2 remains the GC interpretation source |
+| Theodolite power q2 full trace x3 | real UCI household power trace | direct checked epoch | natural heap baseline | `heap-immix` | 1 process x 3 iterations | `5.46 s` total (`1820 ms/iter`) | `5.46 s` | `5.46 s` | `306872320 bytes` | checksum `6485914950390341066`, output `83968` | L1 real-input Theodolite-style heap baseline; matching L2 median loop `287.296 ms`, GC `20.354 ms` |
+| Theodolite power q2 full trace x3 | real UCI household power trace | rooted scoped region | safe rooted baseline | `region-scoped-rooted` | 1 process x 3 iterations | `5.50 s` total (`1833 ms/iter`) | `5.50 s` | `5.50 s` | `304349184 bytes` | checksum `6485914950390341066`, output `83968` | L1 rooted scoped control; L2 removes heap GC but loses elapsed |
+| Theodolite power q2 full trace x3 | real UCI household power trace | direct checked epoch stream | framework API control | `checked-epoch-stream` | 1 process x 3 iterations | `5.49 s` total (`1830 ms/iter`) | `5.49 s` | `5.49 s` | `304332800 bytes` | checksum `6485914950390341066`, output `83968` | L1 checked stream control; L2 removes heap GC but is slower than scoped |
+| Theodolite power q2 full trace x3 | real UCI household power trace | direct checked epoch scoped | framework API win/control | `checked-epoch-scoped` | 1 process x 3 iterations | `5.45 s` total (`1817 ms/iter`) | `5.45 s` | `5.45 s` | `304398336 bytes` | checksum `6485914950390341066`, output `83968` | L1 elapsed/RSS tie or tiny win; L2 removes `20.354 ms` median heap GC. Keep as modest/control, not flagship. |
 | NEXMark q3 1M x20 | Beam-default generated methodology | heap stream/window records | natural heap baseline | `heap-immix` | 3 processes x 20 iterations | `6.18 s` total (`309 ms/iter`) | `6.15 s` | `6.24 s` | `75153408 bytes` | checksum `-1870509861264400004`, output `98266` | L1 generated-methodology heap baseline |
 | NEXMark q3 1M x20 | Beam-default generated methodology | rooted scoped stream/window records | safe rooted baseline | `safezone-improved` | 3 processes x 20 iterations | `6.38 s` total (`319 ms/iter`) | `6.37 s` | `6.47 s` | `9814016 bytes` | checksum `-1870509861264400004`, output `98266` | L1 rooted scoped RSS win but elapsed loss |
 | NEXMark q3 1M x20 | Beam-default generated methodology | checked stream/window records | framework API win | `rift-checked` | 3 processes x 20 iterations | `5.86 s` total (`293 ms/iter`) | `5.85 s` | `5.93 s` | `9551872 bytes` | checksum `-1870509861264400004`, output `98266` | L1 checked generated-methodology win over heap and rooted scoped baseline |

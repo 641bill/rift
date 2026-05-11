@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-11 20:42 CEST
+Last updated: 2026-05-11 21:28 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -87,6 +87,17 @@ slightly faster in L2 (`7534.013 ms` versus heap `7602.328 ms`) and cuts L1 RSS
 (`56 MB` versus heap `408 MB`), but heap timed GC is still only `140.934 ms`
 or about `1.9%` of elapsed. Park Spark q3 as real-input modest/control
 evidence, not a GC-heavy flagship.
+Theodolite UC2/UC4-style local rows are now wired to the real UCI Household
+Electric Power trace in `TheodolitePowerRegionMatrix`. This closes the
+"Theodolite only has generated input" gap for a local methodology row, but the
+result is still modest/control evidence. q1 downsampling has zero timed heap
+GC. Full local q2 hierarchical aggregation loads `2049280` usable real
+measurements and allocates one measurement plus three hierarchy contribution
+records per input; heap is `287.296 ms` with `20.354 ms` median timed GC, while
+`checked-epoch-scoped` is `288.495 ms` with zero timed GC and tied process
+elapsed in strict L1 (`5.45 s` versus heap `5.46 s`) with slightly lower RSS.
+Do not tune this as a flagship unless a larger/richer real power trace creates
+material RSS/tail/fixed-memory pressure.
 
 Latest Yak real-text update: child `cd08f23d4` adds Stack Exchange AskUbuntu
 support, and child `59c181746` adds the current 20M scale-up rows. The dataset

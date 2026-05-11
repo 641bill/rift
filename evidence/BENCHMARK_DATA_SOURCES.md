@@ -1,7 +1,7 @@
 # Benchmark Data Sources
 
 Date: 2026-05-01
-Last updated: 2026-05-11 12:43 CEST
+Last updated: 2026-05-11 21:28 CEST
 
 Local data root:
 `/Users/siyaoliu/rift/cache/benchmark-data`
@@ -45,6 +45,8 @@ The ignored per-download manifest is
 | Stack Exchange AskUbuntu archive | `/Users/siyaoliu/rift/cache/benchmark-data/yak/stackexchange/askubuntu.com.7z` | 1071610861 | Public Stack Exchange data dump site archive, fetched from Internet Archive for Yak-style real text/top-word replay. SHA-256: `59632526b760472f0345347d30f478975a5a3c88206598d1420bb69b9ae5df4e`. |
 | Stack Exchange AskUbuntu Posts XML | `/Users/siyaoliu/rift/cache/benchmark-data/yak/stackexchange/askubuntu-Posts.xml` | 1400891844 | Extracted `Posts.xml` from `askubuntu.com.7z`, `945113` lines. Used by `YakRegionMatrix topwordreal` to tokenize real title/body text into replayed epoch-local word records. |
 | Theodolite source clone | `/Users/siyaoliu/rift/cache/benchmark-data/theodolite/source` | directory | Ignored local clone of `cau-se/theodolite`; inspected commit `dfa768a25eec3c3f5a57b7d4839a0c255fd6fa7d`. Theodolite provides official UC2/UC4 stream benchmark methodology and load generators, but no static real input file in the repo. |
+| UCI Household Electric Power Consumption archive | `/Users/siyaoliu/rift/cache/benchmark-data/theodolite/real-power/household_power_consumption.zip` | 20640916 | Public real household power-meter trace used as the real-input source for `TheodolitePowerRegionMatrix`. SHA-256: `9f84b46ade8a2d8e1286ec4b2b6c2987a45a755c59f263be3b3b3d10dfbda3ff`. |
+| UCI Household Electric Power Consumption text | `/Users/siyaoliu/rift/cache/benchmark-data/theodolite/real-power/household_power_consumption.txt` | 132960755 | Extracted semicolon-separated power trace, `2075260` lines including header. The current Theodolite-style parser loads `2049280` usable records after skipping missing values. |
 | DSPBench source clone | `/Users/siyaoliu/rift/cache/benchmark-data/dspbench/source` | directory | Ignored local clone of `GMAP/DSPBench` for real-input stream benchmark triage; inspected commit `00c20da828faf2b960fdb697c61d34cb25461875`. |
 | RIoTBench source clone | `/Users/siyaoliu/rift/cache/benchmark-data/riot-bench/source` | directory | Ignored local clone of `dream-lab/riot-bench`; inspected commit `c86414f7f926ed5ae0fab756bb3d82fbfb6e5bf7`. |
 | UCI MHEALTH archive | `/Users/siyaoliu/rift/cache/benchmark-data/riot-bench/mhealth/mhealth_dataset.zip` | 75503476 | Public MHEALTH sensor dataset used as the RIoTBench FIT-style real-input candidate. SHA-256: `16ad0ce709f3f00df18f348610d15bce0884b79e2143f57f446493673f02b8e0`. |
@@ -81,6 +83,8 @@ Beam source archive passed the official `sha512` check.
   `https://github.com/cau-se/theodolite`
 - Theodolite benchmark overview:
   `https://www.theodolite.rocks/theodolite-benchmarks/`
+- UCI Household Electric Power Consumption dataset:
+  `https://archive.ics.uci.edu/dataset/235/individual+household+electric+power+consumption`
 - DSPBench paper/source:
   `https://zenodo.org/records/4671407` and `https://github.com/GMAP/DSPBench`
 - RIoTBench source:
@@ -137,9 +141,11 @@ Those directories are also ignored by git.
   the current BGL/HDFS/Spark/Windows line-template paths.
 - Theodolite source has now been cloned for methodology inspection. It
   includes UC1-UC4 implementations and load generators; the official
-  generator simulates industrial active-power measurements, so local use would
-  be generated methodology evidence unless paired with a separate real
-  industrial-energy trace.
+  generator simulates industrial active-power measurements. A separate real
+  UCI household power trace has now been downloaded and wired into
+  `TheodolitePowerRegionMatrix`, so those rows are real-input
+  Theodolite-style methodology evidence rather than official Theodolite
+  artifact reproduction.
 - DSPBench source has now been cloned into ignored cache, and Spike Detection
   plus Fraud Detection are wired into `DSPBenchRegionMatrix`. The bundled
   `dspbench-threads` data includes `sensors.dat` (`79999` usable lines in the
