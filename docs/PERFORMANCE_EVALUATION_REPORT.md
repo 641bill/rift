@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-11 14:08 CEST
+Last updated: 2026-05-11 14:17 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -135,9 +135,12 @@ latest local check found no `mlkit`/`mlton`, and Docker was installed but its
 daemon was unavailable. Do not claim raw cross-language wall-clock wins until
 exact local runs exist.
 The same file now includes a same-axes thesis interpretation table over the
-full PLDI Figure 9 program list. Each row keeps the paper axes visible and adds
-local Scala Native status plus a short explanation of why Rift is better,
-worse, neutral, or unavailable on that shape.
+full PLDI Figure 9 program list. It also includes a wide same-metric table:
+the paper columns (`loc`, `fcns`, `inst`, `delta`, ReML/MLKit time, RSS, and
+GC count) stay intact, while local Scala Native columns add `gc-heap`,
+`region-scoped-rooted`, `checked-region-stream`, and `checked-region-scoped`
+time/RSS plus L2 GC interpretation where available. Each row then explains why
+Rift is better, worse, neutral, or unavailable on that shape.
 
 Latest SPECjbb2005-workload port checkpoint:
 `evidence/SPECJBB2005_PORT_MATRIX.md`. This is a clean-room Scala Native

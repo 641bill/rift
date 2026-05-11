@@ -384,7 +384,7 @@ EVALUATION_ROWS = [
     ],
     [
         "ReML same-axes table",
-        "The PLDI Figure 9 program list keeps paper `loc`/`fcns`/`inst`/time/RSS/GC axes and adds local Scala Native ratios where ports exist.",
+        "The PLDI Figure 9 program list keeps paper `loc`/`fcns`/`inst`/time/RSS/GC axes and adds local `gc-heap`, rooted-region, checked-stream, and checked-scoped time/RSS/GC columns where ports exist.",
         "Explains why Rift is better, worse, neutral, or unavailable without claiming raw cross-language wall-clock wins.",
     ],
 ]
