@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-11 11:20 CEST
+Last updated: 2026-05-11 11:55 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -17,11 +17,12 @@ Latest parent evidence checkpoint:
 
 Latest ReML/MLKit checkpoint:
 child `d1fd16a64` adds Scala Native shaped Tier 2 ports for `logic`, `ray`,
-and `tsp` to `ReMLRegionMatrix`. A tiny L1 checksum smoke passed across
-`gc-heap`, `region-scoped-rooted`, `checked-region-stream`, and
-`checked-region-scoped`; this is implementation/provenance evidence only.
-Report-grade L1 timing and L2 interpretation rows are still pending before
-these can enter the combined PLDI-style table as local port rows.
+and `tsp` to `ReMLRegionMatrix`. Report-grade L1/L2 rows are now recorded in
+`evidence/FINAL_CLEAN_HEADLINE_RESULTS.md` and
+`evidence/REML_MLKIT_PLDI_TABLE.md`. Interpretation: `logic` is an elapsed tie
+with a large region RSS regression, `ray` is a near-tie control, and `tsp` is
+an RSS/control row with a small elapsed loss. These broaden the ReML/MLKit
+comparison axis but are not new headline wins.
 
 Latest final-clean evidence update:
 the retained-row gap-fill now has L1 final-clean rows for DSPBench Fraud q2 and

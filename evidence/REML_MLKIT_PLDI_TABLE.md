@@ -1,7 +1,7 @@
 # ReML / MLKit PLDI-Style Table
 
 Date: 2026-05-09
-Last updated: 2026-05-11 11:20 CEST
+Last updated: 2026-05-11 11:55 CEST
 
 Status: dedicated PLDI-style table artifact. Paper rows are transcribed from
 Elsman 2023 Figure 9 and are **paper-reported, not rerun locally**. Local L1
@@ -33,36 +33,55 @@ the same machine. Until then, compare ratios and axes:
 |---|---|---|
 | paper-reported | Figure 9 data transcribed below | literature anchor only |
 | exact artifact rerun | source provenance partial; local `mlkit`/`mlton` not installed and Docker daemon unavailable in the latest check | required for raw wall-clock comparison |
-| Scala Native ports | Tier 1 L1 final-clean rows for `fib37`, `tak`, `mandel`, `msort`, `msort-r`, `life`, `fft`, `ratio`; Tier 2 `logic`, `ray`, and `tsp` implementations have checksum smoke only | valid local Rift-vs-Scala-Native ratios only after L1 rows exist |
+| Scala Native ports | Tier 1 L1 final-clean rows for `fib37`, `tak`, `mandel`, `msort`, `msort-r`, `life`, `fft`, `ratio`; Tier 2 L1 final-clean rows for `logic`, `ray`, and `tsp` | valid local Rift-vs-Scala-Native ratios, not exact ReML reproduction |
 | safety probes | ReML-style polymorphic/generic heap-retention probes active | design/safety evidence |
 
-## Tier 2 Scala Native Port Checkpoint
+## Tier 2 Scala Native Port Rows
 
 Child implementation now includes the first Tier 2 shaped ports in
 `ReMLRegionMatrix`: `logic`, `ray`, and `tsp`. These are **Scala Native shaped
 ports**, not exact MLKit/ReML source reproductions.
 
-| Program | Local port shape | Current status | Claim boundary |
-|---|---|---|---|
-| `logic` | symbolic expression chain with ordinary node objects | tiny L1 checksum smoke passed across `gc-heap`, `region-scoped-rooted`, `checked-region-stream`, and `checked-region-scoped` | implementation/provenance only; report-grade L1 timing pending |
-| `ray` | ray/sphere/hit object allocation and intersection loop | tiny L1 checksum smoke passed across the same four modes | implementation/provenance only; report-grade L1 timing pending |
-| `tsp` | nearest-neighbor tour construction with point and tour-node objects | tiny L1 checksum smoke passed across the same four modes | implementation/provenance only; report-grade L1 timing pending |
+Rows below use three external L1 final-clean repeats. Each process ran 20
+iterations. `logic` was scaled with `REML_LOGIC_ITERATIONS=200000`; `ray` was
+scaled with `REML_RAY_RAYS=50000`; `tsp` used the current default size.
 
-Smoke command:
+| Program | Local port shape | Heap total s | Best checked/rooted mode | Best total s | Approx speedup | Heap RSS bytes | Best RSS bytes | L1 interpretation |
+|---|---|---:|---|---:|---:|---:|---:|---|
+| `logic` | symbolic expression chain with ordinary node objects | `1.27` | `checked-region-stream` | `1.27` | `1.00x` | `7880704` | `65601536` | elapsed tie but large RSS regression; not a win |
+| `ray` | ray/sphere/hit object allocation and intersection loop | `0.75` | `region-scoped-rooted` | `0.74` | `1.01x` | `4145152` | `4096000` | near-tie compute/control row |
+| `tsp` | nearest-neighbor tour construction with point and tour-node objects | `3.40` | `checked-region-scoped` | `3.48` | `0.98x` | `7913472` | `5881856` | RSS win with small elapsed loss; heap GC is tiny |
+
+L1 command:
 
 ```sh
 cd /Users/siyaoliu/rift/scala-native-rift
-RIFT_FINAL_CLEAN=1 \
-REML_OUTPUT_DIR=/tmp/reml-tier2-smoke-2026-05-11b \
+for i in 1 2 3; do
+  RIFT_FINAL_CLEAN=1 \
+  REML_BUILD=0 \
+  REML_OUTPUT_DIR=/tmp/reml-tier2-l1-2026-05-11-r${i} \
+  REML_WORKLOADS="logic ray tsp" \
+  REML_MODES="gc-heap region-scoped-rooted checked-region-stream checked-region-scoped" \
+  REML_LOGIC_ITERATIONS=200000 \
+  REML_RAY_RAYS=50000 \
+  REML_BENCHMARK_RUNS=20 \
+  REML_WARMUPS=0 \
+  zsh sandbox/run_reml_region_matrix.sh
+done
+```
+
+L2 standard-stats interpretation command:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+REML_BUILD=0 \
+REML_OUTPUT_DIR=/tmp/reml-tier2-l2-scaled-2026-05-11 \
 REML_WORKLOADS="logic ray tsp" \
 REML_MODES="gc-heap region-scoped-rooted checked-region-stream checked-region-scoped" \
-REML_LOGIC_DEPTH=5 \
-REML_LOGIC_ITERATIONS=4 \
-REML_RAY_SPHERES=8 \
-REML_RAY_RAYS=32 \
-REML_TSP_POINTS=32 \
-REML_TSP_STARTS=4 \
-REML_BENCHMARK_RUNS=1 \
+REML_LOGIC_ITERATIONS=200000 \
+REML_RAY_RAYS=50000 \
+REML_BENCHMARK_RUNS=3 \
+REML_WARMUPS=1 \
 zsh sandbox/run_reml_region_matrix.sh
 ```
 
@@ -157,7 +176,7 @@ timing.
 | kbc | source/config still open | 0.21 | 0.19 | 0.07 | 10 | 10 | -- | -- | -- | -- | -- | -- | paper-reported |
 | lexgen | source/config still open | 0.74 | 0.62 | 0.43 | 15 | 109 | -- | -- | -- | -- | -- | -- | paper-reported |
 | life | Tier 1 SN port | 0.44 | 0.43 | 0.43 | 3 | 58 | 0.69 | `checked-region-stream` / `region-scoped-rooted` | 0.68 | 1.01x | 1.00x | L2 reports no timed GC | SN port compute/control |
-| logic | Tier 2 SN port; smoke only | 0.63 | 0.43 | 0.13 | 4 | 1843 | -- | -- | -- | -- | -- | -- | SN port pending L1 |
+| logic | Tier 2 SN port | 0.63 | 0.43 | 0.13 | 4 | 1843 | 1.27 | `checked-region-stream` | 1.27 | 1.00x | 8.32x | L2 heap GC `6.705 ms`; checked stream GC `1.288 ms`; scoped rows are slower/higher RSS | SN port L1 control |
 | mandel | Tier 1 SN port; config differs and is too short locally | 0.53 | 0.38 | 0.31 | 3 | 1 | 0.06 | -- | -- | -- | -- | L2 reports no timed GC | SN port timing-control |
 | mlyacc | source/config still open | 0.36 | 0.30 | 0.33 | 18 | 29 | -- | -- | -- | -- | -- | -- | paper-reported |
 | mpuz | source candidate found; Tier 2 planned | 0.68 | 0.46 | 0.27 | 3 | 2 | -- | -- | -- | -- | -- | -- | paper-reported |
@@ -166,10 +185,10 @@ timing.
 | nucleic | source candidate found; Tier 2 planned | 0.34 | 0.33 | 0.17 | 5 | 645 | -- | -- | -- | -- | -- | -- | paper-reported |
 | prof | source candidate found; no SN port | 0.49 | 0.38 | 0.42 | 4 | 263 | -- | -- | -- | -- | -- | -- | paper-reported |
 | ratio | Tier 1 SN port | 1.71 | 1.33 | 0.48 | 16 | 14 | 0.93 | `checked-region-scoped` | 0.91 | 1.02x | 0.20x | L2 heap GC `3.191 ms` to checked `0 ms` | SN port L1 |
-| ray | Tier 2 SN port; smoke only | 0.69 | 0.64 | 0.25 | 14 | 12 | -- | -- | -- | -- | -- | -- | SN port pending L1 |
+| ray | Tier 2 SN port | 0.69 | 0.64 | 0.25 | 14 | 12 | 0.75 | `region-scoped-rooted` | 0.74 | 1.01x | 0.99x | L2 reports no timed GC | SN port L1 ceiling/control |
 | simple | source candidate found; no SN port | 0.19 | 0.13 | 0.28 | 5 | 4 | -- | -- | -- | -- | -- | -- | paper-reported |
 | tak | Tier 1 SN port; config differs and is too short locally | 2.09 | 0.55 | 2.12 | 3 | 1 | 0.00 | -- | -- | -- | -- | L2 reports no timed GC | SN port timing-control |
-| tsp | Tier 2 SN port; smoke only | 0.14 | 0.11 | 0.14 | 11 | 7 | -- | -- | -- | -- | -- | -- | SN port pending L1 |
+| tsp | Tier 2 SN port | 0.14 | 0.11 | 0.14 | 11 | 7 | 3.40 | `checked-region-scoped` | 3.48 | 0.98x | 0.74x | L2 heap GC `0.339 ms`; checked rows remove it but query CPU dominates | SN port L1 RSS/control |
 | vliw | source/config still open | 0.78 | 0.56 | 0.30 | 14 | 15 | -- | -- | -- | -- | -- | -- | paper-reported |
 | zebra | source/config still open | 1.58 | 1.15 | 0.45 | 3 | 1066 | -- | -- | -- | -- | -- | -- | paper-reported |
 | zern | source candidate found; no SN port | 0.80 | 0.52 | 0.30 | 6 | 4503 | -- | -- | -- | -- | -- | -- | paper-reported |
@@ -183,10 +202,11 @@ timing.
   `mandel` are too short at the current configuration for headline timing.
 - The combined snapshot now uses L1 final-clean local timing/RSS for the local
   Scala Native ports. Use L2 only to explain GC behavior.
-- `logic`, `ray`, and `tsp` now exist as Scala Native Tier 2 shaped ports and
-  passed checksum smoke across the main safe/reporting modes. They are not
-  headline rows until report-grade L1 timing and L2 interpretation rows are
-  collected.
+- `logic`, `ray`, and `tsp` now have Scala Native Tier 2 shaped-port L1/L2
+  rows. They broaden the ReML comparison axis, but they do not add a new
+  headline Rift win: `logic` is an elapsed tie with a large region RSS
+  regression, `ray` is a near-tie control, and `tsp` is an RSS win with a small
+  elapsed loss.
 - Exact MLKit/ReML artifact reruns remain open. The latest local check found no
   `mlkit` or `mlton` executable, and Docker was installed but the daemon was not
   available, so exact timing is provenance/toolchain-blocked for now. Use

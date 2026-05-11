@@ -1,7 +1,7 @@
 # Evaluation Classified Summary
 
 Date: 2026-05-09
-Last updated: 2026-05-11 01:08 CEST
+Last updated: 2026-05-11 11:55 CEST
 
 Status: thesis-facing classified summary built from committed evidence.
 Baseline commits for clean rows: parent `1cc3b2c`, child `13a3df1c7`.
@@ -67,6 +67,7 @@ reference, but the retained heap objects still remain for GC tracing/reclaim.
 | LogHub reusable EpochTopKByKey HDFS 1M x20 | real HDFS file-backed/preloaded replay | retained-object drop-anchor / reusable operator gate / L1 final-clean | `heap-retained-drop-anchor` `5.52 s`, RSS `205 MB`; L2 heap `111.704 ms`, GC `30.542 ms` | L1 `checked-scoped-epoch-topk-retained-no-traverse` `4.88 s`, RSS `28 MB`; L2 checked `82.170 ms`, GC `0 ms` | L1 `11.6%` faster; L2 `26.4%` faster | L2 removes heap timed GC | about `-86%` in L1 | L1 reusable checked top-k API passes real-input retained gate with a strong RSS win; report-facing API overhead versus benchmark-local checked is now about `1.7%`. |
 | LogHub reusable EpochTopKByKey HDFS 5M x5 | real HDFS file-backed/preloaded replay | retained-object drop-anchor / reusable operator gate / L1 final-clean | L1 `heap-retained-drop-anchor` `19.04 s`, RSS `504 MB`; L2 heap `463.633 ms`, GC `62.421 ms` | L1 `checked-scoped-epoch-topk-retained-no-traverse` `18.26 s`, RSS `92 MB`; L2 checked `402.916 ms`, GC `0 ms` | L1 `4.1%` faster; L2 `13.1%` faster | L2 removes heap timed GC | about `-82%` in L1 | Larger real-input retained top-k scale-up: modest L1 throughput win, strong RSS win, and clear L2 GC removal. |
 | LogHub reusable EpochTopKByKey 1M | generated LogHub-shaped stressor | retained-object drop-anchor / reusable operator gate | `heap-retained-drop-anchor` `397.788 ms`, GC `126.601 ms`, RSS `408 MB` | `checked-scoped-epoch-topk-retained-no-traverse` `274.914 ms`, GC `0 ms`, RSS `305 MB` | `30.9%` faster | `-126.601 ms` | about `-25%` | Reusable checked top-k API passes generated retained gate; same-run overhead versus benchmark-local checked is about `5.7%`. |
+| ReML-shaped Tier 2 logic/ray/tsp | local Scala Native ports | ceiling/control / L1 final-clean | `logic` heap `1.27 s`, RSS `7.9 MB`; `ray` heap `0.75 s`, RSS `4.1 MB`; `tsp` heap `3.40 s`, RSS `7.9 MB` | `logic` checked stream `1.27 s`, RSS `65.6 MB`; `ray` rooted/checked rows near `0.74-0.75 s`, RSS `4.1 MB`; `tsp` checked scoped `3.48 s`, RSS `5.9 MB` | logic tied; ray near-tie; tsp `2.4%` slower | L2 reduces/removes small timed GC, but GC is not material except logic's scaled heap row | logic RSS regression; ray near-tie; tsp about `-26%` RSS | Broader ReML-shaped local-port evidence, not a headline win. `logic` shows whole-region RSS risk, `ray` is compute/control, and `tsp` is an RSS/control row. |
 
 ## Current Claims
 

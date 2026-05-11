@@ -1,7 +1,7 @@
 # Final-Clean Headline Results
 
 Date: 2026-05-09
-Last updated: 2026-05-11 00:36 CEST
+Last updated: 2026-05-11 11:55 CEST
 
 Status: L1 runner support exists for the first representative binaries. One
 focused retained-epoch L1 row has been collected from clean child commit
@@ -38,6 +38,8 @@ Child `0773d4c17` is the clean implementation checkpoint for the retained-row
 gap fill in this update: DSPBench Fraud retained q2 and LogHub q2/q3 retained
 now have L1 final-clean rows with valid `/usr/bin/time -l` RSS. The same
 checkpoint also adds a larger real-input LogHub HDFS top-k row at 5M lines x5.
+Child `d1fd16a64` adds ReML/MLKit-shaped Tier 2 ports for `logic`, `ray`, and
+`tsp`; their first report-grade L1/L2 rows are recorded below.
 
 ## Definition
 
@@ -84,7 +86,7 @@ avoid internal timed-section stats.
 | direct epoch | Yak LiveJournal 10M/50M; Dataflow SELECT/AGGREGATE/JOIN; StreamFlex throughput; Stancu/SPECjbb-style | user-facing `RiftRegion.epoch` evidence |
 | page/window token | generated Common Crawl-shaped q1/q2; DSPBench Fraud/Log q2; LogHub HDFS q2 | page/window stream operator evidence |
 | generated stream methodology | NEXMark q3/q8/q9/q11 | recognized generated Beam-default-style stream controls |
-| ReML/MLKit ports | `msort`, `msort-r`, `ratio`, plus `fib37`/`tak`/`mandel` controls | non-stream typed-region comparison axis |
+| ReML/MLKit ports | `msort`, `msort-r`, `ratio`, Tier 2 `logic`/`ray`/`tsp`, plus compute/timing controls | non-stream typed-region comparison axis |
 | StreamFlex | throughput and latency rows | prior-work latency/throughput axis |
 | Stancu/SPECjbb-style | transaction rows | transaction-boundary region axis |
 | retained top-k API | LogHub HDFS top templates; Yak topword | reusable `EpochTopKByKey` evidence |
@@ -97,7 +99,7 @@ avoid internal timed-section stats.
 | direct epoch | Yak LiveJournal, Dataflow, StreamFlex, Stancu, SPECjbb-style rows have L1 rows | L2 rows exist in per-matrix docs/report | complete for current report |
 | page/window token | Common Crawl-shaped, LogHub HDFS q2, DSPBench Fraud/Log q2, GH Archive q1/q2 have L1 rows | L2 rows exist for GC/RSS interpretation | complete for current report |
 | generated methodology | NEXMark q3/q8/q9/q11 have L1 rows | L2 rows remain the GC source | complete for selected rows |
-| ReML/MLKit ports | Tier 1 local ports have L1 rows | L2 rows remain GC/RSS interpretation | Tier 1 table cleanup done separately |
+| ReML/MLKit ports | Tier 1 and first Tier 2 local ports have L1 rows | L2 rows exist for Tier 1 and first Tier 2 interpretation | exact artifact rerun still blocked |
 | real-input top-k | LogHub HDFS 1M x20 and 5M x5 have L1 rows | 5M L2 row added for GC interpretation | continue larger real-input search after report update |
 
 ## L1 Headline Rows
@@ -223,6 +225,18 @@ for those 20 iterations.
 | ReML-shaped ratio x20 | local Scala Native port | heap ratio objects | natural heap baseline | `gc-heap` | 3 processes x 20 iterations | `0.93 s` total (`46.5 ms/iter`) | `0.92 s` | `0.94 s` | `79888384 bytes` | checksum `499038617794598401` | L1 clean local port baseline |
 | ReML-shaped ratio x20 | local Scala Native port | scoped ratio objects | safe rooted baseline | `region-scoped-rooted` | 3 processes x 20 iterations | `0.93 s` total (`46.5 ms/iter`) | `0.92 s` | `0.95 s` | `15925248 bytes` | checksum `499038617794598401` | L1 clean RSS win, elapsed near-tie |
 | ReML-shaped ratio x20 | local Scala Native port | checked scoped ratio objects | framework API/RSS win | `checked-region-scoped` | 3 processes x 20 iterations | `0.91 s` total (`45.5 ms/iter`) | `0.90 s` | `0.93 s` | `15892480 bytes` | checksum `499038617794598401` | L1 clean modest elapsed win and strong RSS win |
+| ReML-shaped logic x20 | local Scala Native port | heap symbolic node chain | natural heap baseline | `gc-heap` | 3 processes x 20 iterations | `1.27 s` total (`63.5 ms/iter`) | `1.26 s` | `1.29 s` | `7880704 bytes` | checksum `-8976243430947238143` | L1 local Tier 2 heap baseline |
+| ReML-shaped logic x20 | local Scala Native port | rooted scoped symbolic node chain | safe rooted baseline | `region-scoped-rooted` | 3 processes x 20 iterations | `1.71 s` total (`85.5 ms/iter`) | `1.68 s` | `1.73 s` | `65732608 bytes` | checksum `-8976243430947238143` | L1 negative scoped row: slower and higher RSS for this whole-region chain |
+| ReML-shaped logic x20 | local Scala Native port | checked stream symbolic node chain | checked local port control | `checked-region-stream` | 3 processes x 20 iterations | `1.27 s` total (`63.5 ms/iter`) | `1.25 s` | `1.28 s` | `65601536 bytes` | checksum `-8976243430947238143` | L1 elapsed tie but large RSS regression; not a headline win |
+| ReML-shaped logic x20 | local Scala Native port | checked scoped symbolic node chain | checked local port control | `checked-region-scoped` | 3 processes x 20 iterations | `1.54 s` total (`77.0 ms/iter`) | `1.53 s` | `1.57 s` | `65732608 bytes` | checksum `-8976243430947238143` | L1 checked scoped negative/control row |
+| ReML-shaped ray x20 | local Scala Native port | heap ray/sphere/hit objects | natural heap baseline | `gc-heap` | 3 processes x 20 iterations | `0.75 s` total (`37.5 ms/iter`) | `0.74 s` | `0.75 s` | `4145152 bytes` | checksum `8305719071369304666` | L1 local Tier 2 compute-heavy baseline |
+| ReML-shaped ray x20 | local Scala Native port | rooted scoped ray/sphere/hit objects | safe rooted baseline | `region-scoped-rooted` | 3 processes x 20 iterations | `0.74 s` total (`37.0 ms/iter`) | `0.74 s` | `0.78 s` | `4096000 bytes` | checksum `8305719071369304666` | L1 near-tie / tiny RSS row; ceiling/control |
+| ReML-shaped ray x20 | local Scala Native port | checked stream ray/sphere/hit objects | checked local port control | `checked-region-stream` | 3 processes x 20 iterations | `0.75 s` total (`37.5 ms/iter`) | `0.74 s` | `0.76 s` | `4096000 bytes` | checksum `8305719071369304666` | L1 near-tie; no GC-heavy claim |
+| ReML-shaped ray x20 | local Scala Native port | checked scoped ray/sphere/hit objects | checked local port control | `checked-region-scoped` | 3 processes x 20 iterations | `0.75 s` total (`37.5 ms/iter`) | `0.74 s` | `0.76 s` | `4079616 bytes` | checksum `8305719071369304666` | L1 near-tie / tiny RSS row; ceiling/control |
+| ReML-shaped tsp x20 | local Scala Native port | heap nearest-neighbor tour nodes | natural heap baseline | `gc-heap` | 3 processes x 20 iterations | `3.40 s` total (`170.0 ms/iter`) | `3.39 s` | `3.71 s` | `7913472 bytes` | checksum `-8586201700104072648` | L1 local Tier 2 heap baseline |
+| ReML-shaped tsp x20 | local Scala Native port | rooted scoped nearest-neighbor tour nodes | safe rooted baseline | `region-scoped-rooted` | 3 processes x 20 iterations | `3.54 s` total (`177.0 ms/iter`) | `3.52 s` | `3.63 s` | `5947392 bytes` | checksum `-8586201700104072648` | L1 RSS win but elapsed loss |
+| ReML-shaped tsp x20 | local Scala Native port | checked stream nearest-neighbor tour nodes | checked local port control | `checked-region-stream` | 3 processes x 20 iterations | `3.49 s` total (`174.5 ms/iter`) | `3.47 s` | `3.51 s` | `5881856 bytes` | checksum `-8586201700104072648` | L1 RSS win with small elapsed loss; not a throughput claim |
+| ReML-shaped tsp x20 | local Scala Native port | checked scoped nearest-neighbor tour nodes | checked local port control | `checked-region-scoped` | 3 processes x 20 iterations | `3.48 s` total (`174.0 ms/iter`) | `3.44 s` | `3.54 s` | `5881856 bytes` | checksum `-8586201700104072648` | L1 RSS win with small elapsed loss; not a throughput claim |
 | retained epoch smoke | synthetic focused matrix | retained epoch/drop-anchor | retained-object memory-management | `heap-epoch-retained-no-traverse` | 1 | external runner smoke only | external runner smoke only | external runner smoke only | `3801088 bytes` | checksum `-2003786531644562922`, output `1873` | L1 smoke only, not headline |
 | retained epoch smoke | synthetic focused matrix | retained epoch/drop-anchor | retained-object memory-management | `checked-scoped-epoch-retained-no-traverse` | 1 | external runner smoke only | external runner smoke only | external runner smoke only | `3768320 bytes` | checksum `-2003786531644562922`, output `1873` | L1 smoke only, not headline |
 
@@ -310,6 +324,24 @@ for i in 1 2 3; do
   REML_WORKLOADS="fib37 tak mandel msort msort-r life fft ratio" \
   REML_MODES="gc-heap region-scoped-rooted checked-region-stream checked-region-scoped" \
   REML_OUTPUT_DIR=/tmp/rift-l1-reml-tier1-x20-7573d7577-r${i} \
+  zsh sandbox/run_reml_region_matrix.sh
+done
+```
+
+ReML-shaped Tier 2 x20 command:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+for i in 1 2 3; do
+  RIFT_FINAL_CLEAN=1 \
+  REML_BUILD=0 \
+  REML_OUTPUT_DIR=/tmp/reml-tier2-l1-2026-05-11-r${i} \
+  REML_WORKLOADS="logic ray tsp" \
+  REML_MODES="gc-heap region-scoped-rooted checked-region-stream checked-region-scoped" \
+  REML_LOGIC_ITERATIONS=200000 \
+  REML_RAY_RAYS=50000 \
+  REML_BENCHMARK_RUNS=20 \
+  REML_WARMUPS=0 \
   zsh sandbox/run_reml_region_matrix.sh
 done
 ```

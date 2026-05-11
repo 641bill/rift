@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-11 01:08 CEST
+Last updated: 2026-05-11 11:55 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -30,10 +30,10 @@ Latest measurement-overhead protocol:
 `evidence/MEASUREMENT_OVERHEAD_PROTOCOL.md` and
 `evidence/FINAL_CLEAN_HEADLINE_RESULTS.md`. Initial L1 final-clean support now
 exists for retained epoch, Yak, Dataflow, Common Crawl WET-shaped, ReML
-Tier 1, StreamFlex, Stancu, SPECjbb2005-workload, LogHub, DSPBench, and
+Tier 1/Tier 2, StreamFlex, Stancu, SPECjbb2005-workload, LogHub, DSPBench, and
 NEXMark binaries. The L1 table
 now includes retained, Dataflow, Yak LiveJournal, generated Common
-Crawl-shaped q1/q2, ReML Tier 1, StreamFlex direct epoch, Stancu transaction,
+Crawl-shaped q1/q2, ReML Tier 1/Tier 2, StreamFlex direct epoch, Stancu transaction,
 SPECjbb2005-workload port, LogHub top-template, and LogHub HDFS q2 page/window
 rows, plus DSPBench Fraud/Log q2, NEXMark q3/q8/q9/q11, GH Archive
 file-backed byte-slice q1/q2 rows, retained DSPBench/LogHub gap-fill rows, and
@@ -81,10 +81,14 @@ external timing/RSS: reusable checked top-k scoped is `4.94 s` and about
 Latest ReML/MLKit PLDI-style table:
 `evidence/REML_MLKIT_PLDI_TABLE.md`. It recreates the paper table shape as
 paper-reported evidence, then places local Scala Native Tier 1 port ratios next
-to it using L1 local timing/RSS where available. Exact MLKit/ReML artifact
-reruns are still open; the latest local check found no `mlkit`/`mlton`, and
-Docker was installed but its daemon was unavailable. Do not claim raw
-cross-language wall-clock wins until exact local runs exist.
+to it using L1 local timing/RSS where available. It also now includes first
+Tier 2 shaped-port rows for `logic`, `ray`, and `tsp`. These broaden the
+comparison axis but are not new headline wins: `logic` ties elapsed while
+regressing RSS, `ray` is a near-tie control, and `tsp` is an RSS/control row
+with a small elapsed loss. Exact MLKit/ReML artifact reruns are still open; the
+latest local check found no `mlkit`/`mlton`, and Docker was installed but its
+daemon was unavailable. Do not claim raw cross-language wall-clock wins until
+exact local runs exist.
 
 Latest SPECjbb2005-workload port checkpoint:
 `evidence/SPECJBB2005_PORT_MATRIX.md`. This is a clean-room Scala Native
@@ -790,7 +794,7 @@ tracing-GC safety when region values can be hidden by polymorphic types.
 |---|---|---|
 | Paper-reported ReML table | Elsman 2023 Figure 9 is transcribed into tracked evidence. | Literature anchor only; not local measurement. |
 | Exact artifact rerun | Open. Current MLKit HEAD was inspected and contains many benchmark sources; paper-era source/configuration and local `mlkit`/`mlton` toolchain runs remain to be pinned. Host `mlkit`/`mlton` are missing, and Docker is installed but the daemon is not running. | Required before any raw wall-clock "Rift beats ReML" claim. |
-| Scala Native ports | `ReMLRegionMatrix` has Tier 1 medians for `fib37`, `tak`, `mandel`, `msort`, `msort-r`, `life`, `fft`, and `ratio`. | Valid for local Rift-vs-Scala-Native ratios, not exact ReML reproduction. |
+| Scala Native ports | `ReMLRegionMatrix` has Tier 1 medians for `fib37`, `tak`, `mandel`, `msort`, `msort-r`, `life`, `fft`, and `ratio`, plus first Tier 2 rows for `logic`, `ray`, and `tsp`. | Valid for local Rift-vs-Scala-Native ratios, not exact ReML reproduction. |
 | Safety probes | ReML-inspired compiler probes now include local polymorphic use, generic identity escape, generic heap-cell durable retention, widened `AnyRef`, heap arrays, closure hiding, and unrooted heap metadata. | The previous erased-generic gap is fixed at the current durable/static-retention probe level. Broader heap alias analysis remains open. |
 
 Tier 1 interpretation:
@@ -801,6 +805,14 @@ Tier 1 interpretation:
 | `msort-r` | checked stream `104.929 ms`, RSS `10.4 MB` | `126.163 ms`, RSS `39.2 MB`, GC `27.280 ms` | allocation/RSS win on reverse-input linked sort. |
 | `ratio` | checked scoped `48.929 ms`, RSS `16.0 MB`, GC `0` | `51.302 ms`, RSS `44.0 MB`, GC `3.191 ms` | modest elapsed win and strong RSS/GC reduction. |
 | `fib37`/`tak`/`mandel`/`life` | small or noisy differences | heap has no material GC | compute/control rows, not memory-management evidence. |
+
+Tier 2 interpretation:
+
+| Workload | Best local checked/rooted row | Heap row | Current meaning |
+|---|---:|---:|---|
+| `logic` | checked stream L1 `1.27 s`, RSS `65.6 MB`; L2 GC `1.288 ms` | L1 `1.27 s`, RSS `7.9 MB`; L2 GC `6.705 ms` | elapsed tie but large region RSS regression; whole-region chain is a control/negative row. |
+| `ray` | rooted scoped L1 `0.74 s`, RSS `4.1 MB` | L1 `0.75 s`, RSS `4.1 MB` | near-tie compute/control row; no material GC. |
+| `tsp` | checked scoped L1 `3.48 s`, RSS `5.9 MB`; L2 GC `0 ms` | L1 `3.40 s`, RSS `7.9 MB`; L2 GC `0.339 ms` | RSS win with small elapsed loss; heap GC is too small for a throughput claim. |
 
 These should be interpreted separately from stream workloads and compared to
 ReML by relative ratios until exact MLKit/ReML artifacts are run locally.
@@ -1025,9 +1037,10 @@ The next implementation work should be ordered like this:
    gates pass.
 
 7. **Continue the ReML/MLKit comparison as a separate axis.**
-   Tier 1 local medians now exist. Next, pin the exact MLKit/ReML artifact or
-   build environment, verify the paper's `rg`/`rg-`/`r` command mapping, and
-   decide whether Tier 2 ports are worth adding. Keep exact ReML artifact search
+   Tier 1 and the first Tier 2 local shaped-port rows now exist. Next, pin the
+   exact MLKit/ReML artifact or build environment and verify the paper's
+   `rg`/`rg-`/`r` command mapping. Additional Tier 2 ports should be added only
+   when they map clearly to the paper sources. Keep exact ReML artifact search
    open, and treat the fixed erased-generic probe as current compiler evidence
    rather than a full proof of arbitrary heap alias safety.
 

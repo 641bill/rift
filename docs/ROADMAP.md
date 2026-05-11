@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-11 11:20 CEST
+Last updated: 2026-05-11 11:55 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -14,9 +14,11 @@ toolchain/provenance-blocked.
 
 Latest ReML/MLKit implementation update: child `d1fd16a64` adds the first
 Tier 2 Scala Native shaped ports, `logic`, `ray`, and `tsp`, to
-`ReMLRegionMatrix`. Tiny L1 checksum smokes passed across the main safe
-reporting modes. These rows remain pending for report-grade L1/L2 collection
-before they can be interpreted as local port evidence.
+`ReMLRegionMatrix`. L1/L2 rows have now been collected and classified:
+`logic` is an elapsed tie with a large region RSS regression, `ray` is a
+near-tie control, and `tsp` is an RSS/control row with a small elapsed loss.
+The next ReML step is exact MLKit artifact/toolchain reproduction or carefully
+selected additional Tier 2 ports with clear paper-source mappings.
 
 Latest presentation-normalization update: parent checkpoints `5185a3e`
 (`Normalize final-clean evidence tables`) and `5cf9ac3` (`Audit legacy evidence
