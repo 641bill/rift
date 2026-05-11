@@ -1,7 +1,7 @@
 # ReML / MLKit PLDI-Style Table
 
 Date: 2026-05-09
-Last updated: 2026-05-11 14:17 CEST
+Last updated: 2026-05-11 14:32 CEST
 
 Status: dedicated PLDI-style table artifact. Paper rows are transcribed from
 Elsman 2023 Figure 9 and are **paper-reported, not rerun locally**. Local L1
@@ -32,7 +32,7 @@ the same machine. Until then, compare ratios and axes:
 | Layer | Status | Claim boundary |
 |---|---|---|
 | paper-reported | Figure 9 data transcribed below | literature anchor only |
-| exact artifact rerun | source provenance partial; local `mlkit`/`mlton` not installed and Docker daemon unavailable in the latest check | required for raw wall-clock comparison |
+| exact artifact rerun | gated/low-priority; source provenance partial, local `mlkit`/`mlton` not installed, and Docker daemon unavailable in the latest check | resume only if raw same-machine wall-clock comparison becomes necessary |
 | Scala Native ports | Tier 1 L1 final-clean rows for `fib37`, `tak`, `mandel`, `msort`, `msort-r`, `life`, `fft`, `ratio`; Tier 2 L1 final-clean rows for `logic`, `ray`, and `tsp` | valid local Rift-vs-Scala-Native ratios, not exact ReML reproduction |
 | safety probes | ReML-style polymorphic/generic heap-retention probes active | design/safety evidence |
 
@@ -253,11 +253,10 @@ timing.
   headline Rift win: `logic` is an elapsed tie with a large region RSS
   regression, `ray` is a near-tie control, and `tsp` is an RSS win with a small
   elapsed loss.
-- Exact MLKit/ReML artifact reruns remain open. The latest local check found no
-  `mlkit` or `mlton` executable, and Docker was installed but the daemon was not
-  available, so exact timing is provenance/toolchain-blocked for now. Use
-  `docs/REML_ARTIFACT_RUNBOOK.md` before making any raw cross-language timing
-  claim.
+- Exact MLKit/ReML artifact reruns are gated/low-priority. The latest local
+  check found no `mlkit` or `mlton` executable, and Docker was installed but
+  the daemon was not available. Use `docs/REML_ARTIFACT_RUNBOOK.md` only if a
+  raw same-machine cross-language timing claim becomes necessary.
 
 ## Same-Axes Thesis Interpretation Table
 

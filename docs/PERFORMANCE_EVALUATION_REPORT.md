@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-11 14:17 CEST
+Last updated: 2026-05-11 14:32 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -130,10 +130,10 @@ to it using L1 local timing/RSS where available. It also now includes first
 Tier 2 shaped-port rows for `logic`, `ray`, and `tsp`. These broaden the
 comparison axis but are not new headline wins: `logic` ties elapsed while
 regressing RSS, `ray` is a near-tie control, and `tsp` is an RSS/control row
-with a small elapsed loss. Exact MLKit/ReML artifact reruns are still open; the
-latest local check found no `mlkit`/`mlton`, and Docker was installed but its
-daemon was unavailable. Do not claim raw cross-language wall-clock wins until
-exact local runs exist.
+with a small elapsed loss. Exact MLKit/ReML artifact reruns are now
+**gated/low-priority**, not an active blocker: they are useful only if we need a
+same-machine raw wall-clock comparison. The report should otherwise compare
+paper axes, local Scala Native ratios, RSS, GC, and safety/API burden.
 The same file now includes a same-axes thesis interpretation table over the
 full PLDI Figure 9 program list. It also includes a wide same-metric table:
 the paper columns (`loc`, `fcns`, `inst`, `delta`, ReML/MLKit time, RSS, and
@@ -451,6 +451,19 @@ Design implications for Rift:
   escape tables, or stale-token checks.
 - Do not turn the system into a large operator catalog unless the operator
   exposes a reusable lifetime boundary and passes same-shape controls.
+
+Design-lesson backlog:
+
+| Candidate | Why it matters | Runtime work it could remove | Current status |
+|---|---|---|---|
+| Active/closed region typestate | Names which handles may allocate, close, or only observe. | Hot-path `isOpen` checks and stale-token defenses in operator-owned paths. | Design/proof backlog, not public API. |
+| Immutable/static metadata references | Lets region objects point at durable read-only metadata safely. | Blanket page/root registration for root-free eligible checked rows. | Partially reflected in safety rules; backend lowering not claimed yet. |
+| Bridge/root handles | Makes mixed heap-region edges explicit. | Ad hoc heap-region tracking and conservative roots. | Existing `HeapRoot` idea; needs measured backend payoff. |
+| StreamFlex-style latency reporting | Captures wins from removing GC tails even when median throughput is close. | Not runtime removal; it changes what evidence we collect. | Keep p95/max/deadline metrics in latency workloads. |
+| Stancu-style annotation/API burden | Measures how much code users must mark with epoch/page/window/root scopes. | Not runtime removal directly; constrains API complexity. | Add burden columns when presenting final components. |
+
+Rule: none of these becomes a user-facing capability until it either removes a
+measured runtime cost or fixes a concrete safety gap.
 
 Current claim table:
 
@@ -874,7 +887,7 @@ tracing-GC safety when region values can be hidden by polymorphic types.
 | Evidence class | Current status | Claim boundary |
 |---|---|---|
 | Paper-reported ReML table | Elsman 2023 Figure 9 is transcribed into tracked evidence. | Literature anchor only; not local measurement. |
-| Exact artifact rerun | Open. Current MLKit HEAD was inspected and contains many benchmark sources; paper-era source/configuration and local `mlkit`/`mlton` toolchain runs remain to be pinned. Host `mlkit`/`mlton` are missing, and Docker is installed but the daemon is not running. | Required before any raw wall-clock "Rift beats ReML" claim. |
+| Exact artifact rerun | Gated/low-priority. Current MLKit HEAD was inspected and contains many benchmark sources, but paper-era source/configuration and local `mlkit`/`mlton` toolchain runs are not pinned. Host `mlkit`/`mlton` are missing, and Docker is installed but the daemon is not running. | Resume only if we need raw same-machine "Rift beats ReML" timing; otherwise compare paper axes plus local Scala Native ratios/RSS/GC/safety burden. |
 | Scala Native ports | `ReMLRegionMatrix` has Tier 1 medians for `fib37`, `tak`, `mandel`, `msort`, `msort-r`, `life`, `fft`, and `ratio`, plus first Tier 2 rows for `logic`, `ray`, and `tsp`. | Valid for local Rift-vs-Scala-Native ratios, not exact ReML reproduction. |
 | Safety probes | ReML-inspired compiler probes now include local polymorphic use, generic identity escape, generic heap-cell durable retention, widened `AnyRef`, heap arrays, closure hiding, and unrooted heap metadata. | The previous erased-generic gap is fixed at the current durable/static-retention probe level. Broader heap alias analysis remains open. |
 

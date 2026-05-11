@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-11 14:17 CEST
+Last updated: 2026-05-11 14:32 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -27,6 +27,23 @@ Native/Rift time, RSS, and L2 GC interpretation columns for available ports.
 Exact MLKit/ReML reruns stay deferred; the immediate ReML deliverable is
 explaining local Scala Native ratios and why Rift wins, loses, or is
 unavailable on each paper row.
+
+Latest ReML priority decision:
+Exact MLKit/ReML artifact reruns are now gated/low-priority. Keep the
+paper-reported Figure 9 table and local Scala Native shaped-port columns as the
+main deliverable. Only resume exact artifact reproduction if a same-machine raw
+wall-clock comparison becomes necessary; otherwise compare relative
+region-vs-heap ratios, RSS, GC, and safety/API burden.
+
+Design-lesson backlog:
+
+| Candidate | Runtime work it might remove | Gate before public API |
+|---|---|---|
+| Active/closed region typestate | hot-path `isOpen` and stale-token checks | measured operator-owned path payoff or safety gap |
+| Immutable/static metadata references | blanket root registration for durable read-only metadata | compiler proof plus backend root-removal evidence |
+| Bridge/root handles | conservative heap-region tracking and roots | concrete mixed-reference workload and checks |
+| StreamFlex-style latency reporting | none directly; exposes GC-tail wins | keep as reporting axis for latency workloads |
+| Stancu-style annotation/API burden | none directly; limits API complexity | include in final component selection |
 
 Latest final-clean table update: retained L1 gaps are now filled for DSPBench
 Fraud q2 and LogHub q2/q3, and the reusable LogHub HDFS `EpochTopKByKey` row

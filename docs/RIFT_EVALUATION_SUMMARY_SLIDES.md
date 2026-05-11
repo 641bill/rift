@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-11 13:30 CEST
+Last updated: 2026-05-11 14:32 CEST
 
 Status: markdown slide deck outline. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report,
@@ -423,13 +423,14 @@ programs where region values can be hidden by type abstraction.
 | Evidence | Status |
 |---|---|
 | ReML paper Figure 9 | transcribed as paper-reported, not rerun. |
-| Exact MLKit/ReML artifact | open; needed for raw timing comparisons. |
+| Exact MLKit/ReML artifact | gated/low-priority; resume only if raw same-machine timing becomes necessary. |
 | Scala Native Tier 1 ports | scaffolded for `fib37`, `tak`, `mandel`, `msort`, `msort-r`, `life`, `fft`, `ratio`. |
 | Safety probes | erased-generic heap retention is now rejected in durable/static state; local polymorphic use remains legal. |
 
 Claim boundary: compare relative region-vs-heap/RSS/GC effects and safety
-burden until exact artifacts are rerun. The generic-retention fix is compiler
-probe evidence, not a full mechanized proof.
+burden. Do not spend thesis time on exact artifact reruns unless raw
+same-machine ReML timing becomes necessary. The generic-retention fix is
+compiler probe evidence, not a full mechanized proof.
 
 ## Slide 16: Prior-Work Memory-Management Lesson
 

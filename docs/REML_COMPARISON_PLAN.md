@@ -1,6 +1,6 @@
 # ReML / MLKit Comparison Plan
 
-Last updated: 2026-05-09 23:31 CEST
+Last updated: 2026-05-11 14:32 CEST
 
 ## Goal
 
@@ -13,14 +13,16 @@ Type-Polymorphic Programs", PLDI 2023.
 
 The thesis-facing table artifact is now
 `evidence/REML_MLKIT_PLDI_TABLE.md`; this plan remains the implementation and
-artifact-reproduction tracker.
+artifact-reproduction tracker. Exact artifact reproduction is currently
+gated/low-priority and should resume only if raw same-machine ReML/MLKit timing
+is needed.
 
 ## Evidence Classes
 
 | Evidence class | Meaning | Claim boundary |
 |---|---|---|
 | Paper-reported ReML | Figure 9 benchmark table transcribed into `evidence/REML_COMPARISON_MATRIX.md`. | Use as literature anchor only; not local evidence. |
-| Exact ReML artifact rerun | Original MLKit/ReML benchmarks run locally with `rg`, `rg-`, `r`, and MLton. | Required for direct cross-system timing claims. |
+| Exact ReML artifact rerun | Original MLKit/ReML benchmarks run locally with `rg`, `rg-`, `r`, and MLton. | Gated/low-priority; required only for direct raw cross-system timing claims. |
 | Scala Native ReML-shaped ports | Local ports in `ReMLRegionMatrix`. | Valid Rift-vs-Scala-Native evidence, not exact ReML reproduction. |
 | ReML-inspired safety probes | Compiler tests for polymorphic/higher-order GC-safety hazards. | Valid safety/design evidence even before full benchmark reproduction. |
 
@@ -204,7 +206,8 @@ Design issue to fix:
 
    - `b-hut`, `nucleic`, `ray`, `logic`, `zebra`, `kbc`, `tsp`, `mpuz`.
 
-5. Continue exact artifact/source provenance:
+5. Continue exact artifact/source provenance only if raw same-machine timing is
+   needed:
 
    - record MLKit/ReML source URL or archive, commit/hash if available,
      compiler versions, MLton version, machine, commands, and run counts;

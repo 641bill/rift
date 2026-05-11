@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-11 14:17 CEST
+Last updated: 2026-05-11 14:32 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -46,6 +46,21 @@ Scala Native/Rift columns add `gc-heap`, `region-scoped-rooted`,
 `checked-region-stream`, and `checked-region-scoped` time/RSS plus L2 GC
 interpretation where available. Exact MLKit/ReML reruns remain deferred; do
 not make raw same-machine wall-clock claims.
+
+Current ReML priority decision:
+Exact MLKit/ReML artifact reruns are gated/low-priority. The current thesis
+deliverable is the same-metric table: paper Figure 9 columns plus local
+Scala Native/Rift columns. Resume exact artifact reproduction only if a
+same-machine raw wall-clock comparison becomes necessary.
+
+Current design-lesson backlog location:
+`docs/PERFORMANCE_EVALUATION_REPORT.md`, `docs/ROADMAP.md`,
+`docs/PRIOR_WORK_MEMORY_MANAGEMENT_INTERPRETATION.md`, and the slides now
+track active/closed typestate, immutable/static metadata references,
+bridge/root handles, StreamFlex-style latency reporting, and Stancu-style
+annotation/API burden as design/proof candidates. They are not public API
+commitments; each needs either measured runtime-overhead removal or a concrete
+safety gap before implementation.
 
 Latest in-progress real-input checkpoint:
 `YakRegionMatrix` now has `topwordreal`, a real Stack Exchange AskUbuntu
