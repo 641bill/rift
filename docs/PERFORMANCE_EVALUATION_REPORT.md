@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-12 00:22 CEST
+Last updated: 2026-05-12 01:03 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -55,8 +55,9 @@ file-backed byte-slice q1/q2 rows, retained DSPBench/LogHub gap-fill rows, and
 a larger LogHub HDFS top-template 5M x5 L1 row. It also now includes symmetric
 direct-summary counterpart rows for GH Archive-shaped, DSPBench, and LogHub
 generated/indexable lower bounds, plus the first AskUbuntu real text/top-word
-L1 rows in `YakRegionMatrix`. Remaining benchmark result files are still
-mostly L2 standard-stats evidence.
+L1 rows in `YakRegionMatrix`, plus the first `StreamFlexDesignMatrix` L1
+throughput rows for the stable/transient/capsule design reproduction.
+Remaining benchmark result files are still mostly L2 standard-stats evidence.
 `evidence/EVALUATION_CLASSIFIED_SUMMARY.md` now also has a presentation
 completeness audit: every representative row used by the report/slides is
 complete for L1 elapsed/RSS, L2 interpretation, input type, topology/API,
@@ -602,10 +603,20 @@ Latest clean final-selection headline interpretation:
 - The StreamIt BeamFormer/FilterBank track is now started as a StreamFlex-axis
   control. The initial local ports are based on public StreamIt sources and
   report throughput, p95/p99/p999/max latency, deadline misses, RSS, and GC.
-  The 3-run L2 rows show FilterBank throughput tied around `406 ms` with zero
-  GC, while BeamFormer latency is about `3.28 s` with only `22 ms` heap GC.
+  The 3-run L1 control matrix is now complete: heap `15.00 s`, checked scoped
+  `15.23 s`, checked stream `15.56 s`. The 3-run L2 rows show FilterBank
+  throughput tied around `406 ms` with zero GC, while BeamFormer latency is
+  about `3.28 s` with only `22 ms` heap GC.
   They are not memory-management wins yet because faithful BeamFormer/FilterBank
   are primitive DSP kernels rather than retained object-stream workloads.
+- `StreamFlexDesignMatrix` is now the Rift-native StreamFlex system-design
+  reproduction: stable state on heap, transient packet/feature/decision/alert
+  objects in per-period epochs, and a bounded primitive capsule that exports
+  values without retaining transient object references. First L1 throughput
+  rows at 1M events x3 show checked scoped `1.27 s`, `7.9 MB` RSS versus heap
+  `1.52 s`, `12.4 MB`; L2 pressure-latency shows checked scoped fastest
+  (`192.432 ms` vs heap-same-shape `202.148 ms`) while checked stream gives
+  the best tail/deadline row (`0` misses, max `20875 ns`).
 - NEXMark Beam-default is broadly favorable but modest. The L1 selected rows
   now show checked q3/q8/q9/q11 at `5.86/9.21/15.03/4.36 s` versus heap
   `6.18/9.54/16.27/4.47 s`; q9 is the strongest selected row at about `7.6%`

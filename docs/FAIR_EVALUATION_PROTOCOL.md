@@ -1,7 +1,7 @@
 # Fair Evaluation Protocol
 
 Date: 2026-05-09
-Last updated: 2026-05-12 00:22 CEST
+Last updated: 2026-05-12 01:03 CEST
 
 Status: active evaluation contract for report, slides, and future benchmark
 runs. This document is the reviewer-facing rulebook for deciding what a Rift
@@ -127,7 +127,7 @@ own axes first, then add Rift's standardized local metrics.
 |---|---|
 | Broom/Dataflow | elapsed, GC share, operator lifetime boundary |
 | Yak | app time, GC time, epoch topology, promotion/escape analogue, peak memory |
-| StreamFlex / StreamIt | throughput, p95/max latency, deadline/tail events, GC pauses; BeamFormer/FilterBank-style primitive DSP rows are methodology controls unless object-retained stream state is added |
+| StreamFlex / StreamIt | throughput, p95/max latency, deadline/tail events, GC pauses; `StreamFlexDesignMatrix` is the Rift-native stable/transient/capsule design reproduction, while BeamFormer/FilterBank-style primitive DSP rows are methodology controls unless object-retained stream state is added |
 | Stancu/SPECjbb-style | transaction boundary, region-freed object proxy, GC count/time, annotation/API burden |
 | ReML/MLKit | real time, RSS, GC count, region-vs-GC modes, safety/annotation burden |
 

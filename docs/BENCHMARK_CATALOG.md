@@ -1,7 +1,7 @@
 # Rift Benchmark Catalog
 
 Date: 2026-05-05
-Last updated: 2026-05-12 00:22 CEST
+Last updated: 2026-05-12 01:03 CEST
 
 Status: working benchmark guide. Use this document to understand what each
 benchmark is meant to test before reading the detailed result files in
@@ -132,7 +132,8 @@ so it is layout evidence, not a pure allocator comparison.
 |---|---|---|---|
 | Dataflow SELECT/AGGREGATE/JOIN | Broom-style dataflow | Stream operators with short-lived tuples and operator-local lifetimes. | Good prior-work-shaped runtime evidence; SafeZone-family rows are often strong. |
 | StreamFlex matrix | StreamFlex-style memory pressure/latency | Windowed stream pressure and latency-style measurements. | Methodology evidence, not exact artifact reproduction. |
-| StreamIt kernel matrix | StreamFlex / StreamIt BeamFormer and FilterBank names | Initial local ports of FilterBank and BeamFormer from public StreamIt sources, with throughput, p50/p95/p99/p999/max latency, deadline misses, RSS, and GC metrics. | StreamFlex-axis control, not a GC-heavy Rift win. The faithful primitive DSP shape is expected to be compute/array dominated. Evidence is in `evidence/STREAMIT_KERNEL_MATRIX.md`. |
+| StreamFlex design matrix | StreamFlex stable/transient/capsule system design | Four-stage object pipeline with heap stable state, transient per-period objects, bounded primitive capsules, saturated throughput, paced latency, pressure latency, RSS, GC, and deadline metrics. | Rift-native StreamFlex design reproduction. First 1M L1 throughput row: checked epoch scoped `1.27 s` / `7.9 MB` RSS vs heap `1.52 s` / `12.4 MB`; pressure-latency L2: checked epoch scoped is fastest while checked epoch stream eliminates misses. Evidence is in `evidence/STREAMFLEX_DESIGN_MATRIX.md`. |
+| StreamIt kernel matrix | StreamFlex / StreamIt BeamFormer and FilterBank names | Local ports of FilterBank and BeamFormer from public StreamIt sources, with throughput, p50/p95/p99/p999/max latency, deadline misses, RSS, and GC metrics. | StreamFlex-axis control, not a GC-heavy Rift win. The 3-run L1 control matrix is complete; faithful primitive DSP shape is compute/array dominated. Evidence is in `evidence/STREAMIT_KERNEL_MATRIX.md`. |
 | Yak matrix | Yak-style epochs and promotion pressure | Topword/filter, GraphChi-like intervals, grouped sort, escape/promotion proxies, `graphreal` over real SNAP edge lists, and `topwordreal` over real Stack Exchange AskUbuntu `Posts.xml` text. The LiveJournal topology follow-up separately measures whole-run checked regions, per-epoch checked regions, and page-token checked regions. The topword follow-up adds same-shape heap top-k retained controls and reusable `EpochTopKByKey` rows. | Useful to compare static checked regions against dynamic region/promotion ideas and to choose a region topology. `graphreal` is real-input Yak-shaped graph evidence, not exact Yak/GraphChi reproduction. AskUbuntu `topwordreal` is the first real text/top-word row: direct checked epoch is fastest among safe checked rows, while reusable top-k remains a lower-RSS but slower-than-direct API candidate. |
 | Stancu matrix | RegionScope/static hybrid analysis | Transaction/region-boundary style workloads. | Safety/methodology anchor; not full SPECjbb reproduction. |
 | SPECjbb2005 workload port | Stancu/SPECjbb2005 methodology | Deterministic single-process Scala Native port of the transaction workload shape, with durable warehouse/customer/stock state on heap arrays and transaction-local request/line/probe/receipt objects in epochs. | Clean-room workload port, not official SPECjbb2005. L2 rows cover warehouses 4..8; an L1 final-clean 8-warehouse representative row is reported in `evidence/SPECJBB2005_PORT_MATRIX.md`. |

@@ -301,6 +301,11 @@ DESIGN_CARDS = [
         "api": "checked-region-scoped or checked-region-stream",
         "body": "The user-facing API is checked; the runtime backend can be selected by evidence. Unsafe rootless modes are lower-bound controls only.",
     },
+    {
+        "title": "StreamFlex design",
+        "api": "stable heap + transient epoch + capsule",
+        "body": "For filter pipelines: durable state stays on heap, transient packet/feature/decision objects live in epochs, and bounded capsules export values across boundaries.",
+    },
 ]
 
 
@@ -336,6 +341,14 @@ TOPOLOGY_CARDS = [
         "strategy": "The operator owns bucket lookup, child-region caching, append, and close, so static safety removes stale-token checks in the hot path.",
         "claim": "Generated stream-object pressure win",
         "tone": "method",
+    },
+    {
+        "title": "Stable / transient / capsule",
+        "label": "StreamFlex design",
+        "shape": "Durable filter state remains on heap; each period owns transient stream objects; a bounded capsule exports primitive values or safe handles.",
+        "strategy": "Use checked epochs for the transient period and treat capsule export as the explicit ownership boundary between filters.",
+        "claim": "Throughput and tail-latency evidence",
+        "tone": "win",
     },
     {
         "title": "Summary-only",
@@ -451,6 +464,13 @@ RESULT_ROWS = [
         "Shows the intended high-allocation stream regime, but it is generated, not a real-data proof.",
     ],
     [
+        "StreamFlex design reproduction",
+        "Stable heap state, transient period objects, bounded capsules, 1M generated events.",
+        "Checked epoch scoped: `1.27s`, RSS about `7.9 MB`.",
+        "Heap same-shape: `1.52s`, RSS about `12.4 MB`.",
+        "Rift-native StreamFlex design row: throughput win, GC reduction in L2, and pressure-latency tail/deadline wins.",
+    ],
+    [
         "Real log top-k",
         "LogHub HDFS top templates, real HDFS logs, 1M x20.",
         "Checked top-k scoped API: `4.88s`, RSS about `28 MB`.",
@@ -482,6 +502,7 @@ LIMITATIONS = [
 OPEN_WORK_ROWS = [
     ["Finalize L1 rows", "Finish final-clean headline runs for the selected representative API wins."],
     ["Find a stronger real stream input", "Continue with larger LiveJournal/SNAP, richer LogHub sessions/templates, Theodolite traces, and DSPBench kernels."],
+    ["Extend StreamFlex design rows", "Scale the stable/transient/capsule matrix and add object-retained BeamFormer/FilterBank variants only if they remain fair same-shape controls."],
     ["Complete ReML/MLKit table", "Separate paper-reported, exact artifact rerun, and Scala Native port evidence."],
     ["Gate complex operators", "Only headline rank/hash/median/join after natural heap, same-shape heap, retained controls, and focused 1M API gates."],
 ]
@@ -622,6 +643,31 @@ def render_topology_story() -> str:
     <text x="47" y="240" class="svg-legend">used by Yak graph replay, Dataflow, StreamFlex, Stancu/SPECjbb port</text>
   </svg>
   <p>Each batch or transaction gets one checked region. Durable state remains on heap; temporary records die when the epoch closes.</p>
+</article>'''
+    )
+    parts.append(
+        '''<article class="paper-figure">
+  <h3>StreamFlex stable / transient / capsule topology</h3>
+  <svg viewBox="0 0 360 260" role="img" aria-label="StreamFlex design topology with stable heap state, transient period region, and bounded capsule export">
+    <defs>
+      <marker id="capsuleArrow" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L0,6 L7,3 z" fill="#238443"></path>
+      </marker>
+    </defs>
+    <rect x="24" y="24" width="312" height="50" rx="15" fill="#f1f5f9" stroke="#cbd5e1"></rect>
+    <text x="68" y="55" class="svg-title">heap stable state: thresholds / counters / tables</text>
+    <rect x="32" y="111" width="154" height="76" rx="18" fill="#e8f5ec" stroke="#8fc49c" stroke-width="2"></rect>
+    <text x="58" y="139" class="svg-title">transient period region</text>
+    <circle cx="62" cy="164" r="7" fill="#1f78b4"></circle><circle cx="84" cy="164" r="7" fill="#1f78b4"></circle><circle cx="106" cy="164" r="7" fill="#1f78b4"></circle><circle cx="128" cy="164" r="7" fill="#1f78b4"></circle><circle cx="150" cy="164" r="7" fill="#1f78b4"></circle>
+    <rect x="228" y="117" width="94" height="64" rx="16" fill="#dbeafe" stroke="#93b4e8" stroke-width="2"></rect>
+    <text x="246" y="143" class="svg-title">capsule</text>
+    <text x="241" y="163" class="svg-legend">bounded export</text>
+    <path d="M186 150 L227 150" stroke="#238443" stroke-width="4" marker-end="url(#capsuleArrow)"></path>
+    <path d="M275 117 C275 88, 216 76, 180 75" fill="none" stroke="#238443" stroke-width="3" marker-end="url(#capsuleArrow)"></path>
+    <text x="38" y="218" class="svg-legend">materialize packet → feature → decision → alert objects inside period</text>
+    <text x="38" y="236" class="svg-legend">export only capsule values, then close transient region</text>
+  </svg>
+  <p>This is the new StreamFlex-design row: stable state is durable, transient objects die by period, and capsules make transfer explicit.</p>
 </article>'''
     )
     parts.append(
@@ -832,7 +878,7 @@ def render_results_table() -> str:
     return render_table_block(
         ["Result", "Workload", "Best checked row", "Baseline/control", "Interpretation"],
         rows,
-        "Table 3. Five results to remember.",
+        "Table 3. Six results to remember.",
         "The current story is strongest for epochal graph/dataflow/transaction shapes and controlled retained-object reclaim; generated stream pressure is promising but not yet real-input proof.",
     )
 
@@ -1041,10 +1087,11 @@ def build_html(source: Path, markdown: str, title: str) -> str:
       <div class="section-kicker">Main results</div>
       <h2>The important numbers fit on one table</h2>
       <p>
-        The strongest current story has five representative rows: one real
+        The strongest current story has six representative rows: one real
         graph workload, one controlled retained-object reclaim test, two
         prior-work-shaped methodology groups, one generated high-allocation
-        stream stressor, and one real log top-k workload.
+        stream stressor, one StreamFlex-design reproduction, and one real log
+        top-k workload.
       </p>
       {render_results_table()}
     </section>
@@ -1144,6 +1191,8 @@ code {
   background: #edf2f7;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.92em;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .site-header {
   position: sticky;
@@ -1228,6 +1277,7 @@ h3 { font-size: 1.08rem; }
 p {
   margin: 0;
   color: var(--muted);
+  overflow-wrap: anywhere;
 }
 figure {
   margin: 0;
@@ -1343,6 +1393,7 @@ figure {
   border: 1px solid var(--line);
   border-radius: 18px;
   background: var(--paper-soft);
+  min-width: 0;
 }
 .metric-win { background: linear-gradient(180deg, var(--green-soft), white); }
 .metric-method { background: linear-gradient(180deg, var(--blue-soft), white); }
@@ -1390,12 +1441,14 @@ figure {
   border: 1px solid var(--line);
   border-radius: 18px;
   background: var(--paper-soft);
+  min-width: 0;
 }
 .context-box {
   padding: 18px;
   border: 1px solid var(--line);
   border-radius: 18px;
   background: var(--paper-soft);
+  min-width: 0;
 }
 .emphasis-box {
   background: linear-gradient(180deg, var(--blue-soft), white);
@@ -1427,6 +1480,7 @@ figure {
   border: 1px solid var(--line);
   border-radius: 18px;
   background: var(--paper-soft);
+  min-width: 0;
 }
 .flow-number {
   position: absolute;
@@ -1550,6 +1604,7 @@ figure {
   border: 1px solid var(--line);
   border-radius: 18px;
   background: #fff;
+  min-width: 0;
 }
 .paper-figure h3 {
   margin-bottom: 2px;
@@ -1607,6 +1662,8 @@ th, td {
   border-bottom: 1px solid var(--line);
   text-align: left;
   vertical-align: top;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 th {
   background: #eef3f8;
@@ -1720,6 +1777,7 @@ pre {
   border-radius: 12px;
   background: #111827;
   color: #f8fafc;
+  white-space: pre-wrap;
 }
 pre code {
   padding: 0;

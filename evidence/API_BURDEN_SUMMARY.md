@@ -1,7 +1,7 @@
 # API Burden Summary
 
 Date: 2026-05-11
-Last updated: 2026-05-11 15:36 CEST
+Last updated: 2026-05-12 01:03 CEST
 
 Status: representative reporting artifact. These counts are code-level burden
 summaries for the presentation rows, not a language-level annotation calculus.
@@ -35,6 +35,7 @@ Rift API burden. Those rows remain lower-bound controls under
 | LogHub HDFS top templates | real-preloaded logs | `EpochTopKByKey` retained epoch | 1 | 0 | 0 | 1 | Strong reusable retained top-k row with large RSS win. |
 | Dataflow SELECT/AGGREGATE/JOIN | generated methodology | `RiftRegion.epoch` direct epoch | 1 | 0 | 0 | 0 | Broom-style rows expose operator lifetime through one epoch boundary. |
 | StreamFlex throughput/latency | generated methodology | `RiftRegion.epoch` direct epoch | 1 | 0 | 0 | 0 | Lifetime boundary is stream batch/epoch; latency metrics carry the StreamFlex-style claim. |
+| StreamFlex design stable/transient/capsule | generated methodology | `RiftRegion.epoch` per-period transient region plus bounded capsule export | 1 | 0 | 0 | 0 | Same low checked-boundary burden as direct epoch, but the benchmark explicitly models StreamFlex stable state and capsule transfer. |
 | Stancu/SPECjbb-style transactions | generated methodology / clean-room port | `RiftRegion.epoch` transaction boundary | 1 | 0 | 0 | 0 | Transaction-local data uses one checked epoch boundary; report with region-freed proxy. |
 | Common Crawl-shaped q1/q2 | generated stressor | checked page-token | 0 | 1 | 0 | 1 | Page/window stream burden: user exposes page/bucket lifetime to the operator. |
 | GH Archive q1/q2 | real-file-backed NDJSON | checked scoped page-token | 0 | 1 | 0 | 1 | Modest real-input RSS/elapsed row; not a flagship GC-heavy result. |

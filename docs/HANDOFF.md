@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-12 00:22 CEST
+Last updated: 2026-05-12 01:03 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -10,13 +10,33 @@ Active implementation branch for this update:
 `feature/rift`
 
 Latest child checkpoint:
-`0a042b920` (`Add Theodolite power real-input matrix`)
+`90c899644` (`Add StreamFlex design matrix`)
 
 Latest implementation-code checkpoint:
 `55ce32ec6` (`Extend open region safety probes`)
 
 Latest parent evidence checkpoint:
-current parent commit (`Record internal design feature checkpoint`)
+current parent commit (`Record StreamFlex design evidence`)
+
+Latest StreamFlex-design checkpoint:
+`StreamFlexDesignMatrix` and `sandbox/run_streamflex_design_matrix.sh` are now
+committed in child `90c899644`. The benchmark models StreamFlex's system design
+directly in Rift: stable heap state, transient per-period objects, and bounded
+capsule export. First rows are in
+`evidence/STREAMFLEX_DESIGN_MATRIX.md`: L1 1M throughput shows
+`checked-epoch-scoped` `1.27 s` / `7.9 MB` RSS versus heap/same-shape heap
+`1.52 s` / `12.4 MB`; L2 pressure-latency shows checked scoped fastest
+(`192.432 ms`) and checked stream strongest on tails (`0` deadline misses,
+max `20875 ns`). This is a Rift-native StreamFlex design reproduction, not an
+exact StreamFlex/Ovm artifact rerun.
+
+Latest StreamIt-control follow-up:
+`evidence/STREAMIT_KERNEL_MATRIX.md` now has the clean 3-run L1 control matrix
+for BeamFormer/FilterBank: heap `15.00 s`, checked scoped `15.23 s`, checked
+stream `15.56 s`, with matching checksums and RSS around `7.9-8.0 MB`. Keep
+these rows as primitive StreamIt/StreamFlex-axis controls. The L2 rows still
+show FilterBank is essentially zero-GC and BeamFormer is compute/array
+dominated, so they are not memory-management wins.
 
 Latest prior-work interpretation checkpoint:
 `docs/PRIOR_WORK_MEMORY_MANAGEMENT_INTERPRETATION.md` now records the zoomed-out

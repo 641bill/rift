@@ -1,7 +1,7 @@
 # Final-Clean Headline Results
 
 Date: 2026-05-09
-Last updated: 2026-05-12 00:22 CEST
+Last updated: 2026-05-12 01:03 CEST
 
 Status: L1 runner support exists for the first representative binaries. One
 focused retained-epoch L1 row has been collected from clean child commit
@@ -57,10 +57,13 @@ L2 row in `evidence/LOGHUB_REGION_MATRIX.md` for elapsed/GC interpretation.
 household-power q2 hierarchical aggregation row. Use L1 for elapsed/RSS and
 `evidence/THEODOLITE_POWER_REGION_MATRIX.md` L2 rows for GC interpretation.
 Child working tree now adds `StreamItKernelMatrix`, a StreamIt/StreamFlex-axis
-control for FilterBank and BeamFormer. The first tiny L1 smoke is recorded in
-`evidence/STREAMIT_KERNEL_MATRIX.md`; do not use it as a headline result until
-a 3-run L1 matrix is collected. A 3-run L2 candidate now exists and confirms
-that these primitive StreamIt controls are not materially GC-heavy.
+control for FilterBank and BeamFormer. A 3-run L1 control matrix and 3-run L2
+candidate are recorded in `evidence/STREAMIT_KERNEL_MATRIX.md`; these primitive
+StreamIt controls are not materially GC-heavy.
+Child working tree now also adds `StreamFlexDesignMatrix`, a Rift-native
+StreamFlex stable/transient/capsule design reproduction. Its first L1 1M
+throughput row and L2 latency/pressure-latency rows are recorded below and in
+`evidence/STREAMFLEX_DESIGN_MATRIX.md`.
 
 ## Definition
 
@@ -97,6 +100,7 @@ Set `RIFT_FINAL_CLEAN=1` or `RIFT_EVAL_MEASUREMENT_LEVEL=L1` for:
 - `GithubArchiveRegionMatrix`
 - `TheodolitePowerRegionMatrix`
 - `StreamItKernelMatrix`
+- `StreamFlexDesignMatrix`
 
 The binaries print `RESULT ... measurement_level=L1 final_clean=1 ...` and
 avoid internal timed-section stats.
@@ -111,6 +115,8 @@ avoid internal timed-section stats.
 | generated stream methodology | NEXMark q3/q8/q9/q11 | recognized generated Beam-default-style stream controls |
 | ReML/MLKit ports | `msort`, `msort-r`, `ratio`, Tier 2 `logic`/`ray`/`tsp`, plus compute/timing controls | non-stream typed-region comparison axis |
 | StreamFlex | throughput and latency rows | prior-work latency/throughput axis |
+| StreamFlex design | stable/transient/capsule throughput and paced-latency rows | Rift-native reproduction of the StreamFlex design axes |
+| StreamIt controls | BeamFormer and FilterBank primitive DSP rows | StreamFlex/StreamIt methodology controls, not memory-management wins |
 | Stancu/SPECjbb-style | transaction rows | transaction-boundary region axis |
 | retained top-k API | LogHub HDFS top templates; Yak topword | reusable `EpochTopKByKey` evidence |
 | real-input controls | Theodolite power q2 | Theodolite-style UC2/UC4 local kernel over a real power trace |
@@ -123,6 +129,7 @@ avoid internal timed-section stats.
 | direct epoch | Yak LiveJournal, Dataflow, StreamFlex, Stancu, SPECjbb-style rows have L1 rows | L2 rows exist in per-matrix docs/report | complete for current report |
 | page/window token | Common Crawl-shaped, LogHub HDFS q2, DSPBench Fraud/Log q2, GH Archive q1/q2 have L1 rows | L2 rows exist for GC/RSS interpretation | complete for current report |
 | generated methodology | NEXMark q3/q8/q9/q11 have L1 rows | L2 rows remain the GC source | complete for selected rows |
+| StreamIt controls | BeamFormer/FilterBank have a 3-run L1 control matrix | 3-run L2 rows exist for GC/latency interpretation | complete as primitive StreamFlex-axis controls |
 | ReML/MLKit ports | Tier 1 and first Tier 2 local ports have L1 rows | L2 rows exist for Tier 1 and first Tier 2 interpretation | exact artifact rerun still blocked |
 | real-input top-k/text/control | LogHub HDFS 1M x20 and 5M x5 have L1 rows; AskUbuntu `topwordreal` 10M/20M x5 has L1 rows; Theodolite power q2 has L1 rows | HDFS 5M, AskUbuntu 10M/20M, and Theodolite q2 L2 rows added for GC interpretation | continue larger real-input search after report update |
 
@@ -202,6 +209,14 @@ for those 20 iterations.
 | StreamFlex latency 10k x20 | generated methodology | heap per-event latency | natural heap baseline | `heap` | 3 processes x 20 iterations | `0.18 s` total | `0.18 s` | `0.18 s` | `7946240 bytes` | checksum `657450396996205`, p50 `625 ns`, p99 `792 ns`, max `327334 ns`, misses `4` | L1 clean natural heap baseline with deadline misses |
 | StreamFlex latency 10k x20 | generated methodology | scoped per-event latency | safe rooted baseline / tail win | `improved-safezone` | 3 processes x 20 iterations | `0.21 s` total | `0.21 s` | `0.21 s` | `7979008 bytes` | checksum `657450396996205`, p50 `875 ns`, p99 `1083 ns`, max `2459 ns`, misses `0` | L1 clean slower elapsed but removes deadline misses |
 | StreamFlex latency 10k x20 | generated methodology | checked direct epoch latency | framework API win / tail win | `rift-checked-safezone-direct-epoch` | 3 processes x 20 iterations | `0.17 s` total | `0.17 s` | `0.17 s` | `7962624 bytes` | checksum `657450396996205`, p50 `708 ns`, p99 `833 ns`, max `25167 ns`, misses `0` | L1 clean checked direct epoch elapsed and deadline win over heap |
+| StreamFlex design throughput 1M x3 | generated methodology | stable heap state + transient object epochs + bounded capsule | natural heap baseline | `gc-heap` | 1 process x 3 iterations | `1.52 s` total (`506.7 ms/iter`) | `1.52 s` | `1.52 s` | `12402688 bytes` | checksum `-7120610804659902001`, output `997627` | L1 clean natural heap baseline for Rift-native StreamFlex design reproduction |
+| StreamFlex design throughput 1M x3 | generated methodology | stable heap state + transient object epochs + bounded capsule | same-shape heap control | `heap-same-shape` | 1 process x 3 iterations | `1.52 s` total (`506.7 ms/iter`) | `1.52 s` | `1.52 s` | `12402688 bytes` | checksum `-7120610804659902001`, output `997627` | L1 same-shape heap control; v1 natural heap and same-shape heap use the same object pipeline |
+| StreamFlex design throughput 1M x3 | generated methodology | stable/transient/capsule scoped regions | safe rooted baseline | `region-scoped-rooted` | 1 process x 3 iterations | `1.44 s` total (`480.0 ms/iter`) | `1.44 s` | `1.44 s` | `7897088 bytes` | checksum `-7120610804659902001`, output `997627` | L1 rooted scoped baseline for stable/transient/capsule design |
+| StreamFlex design throughput 1M x3 | generated methodology | checked `RiftRegion.epoch` scoped backend + bounded capsule | framework API win | `checked-epoch-scoped` | 1 process x 3 iterations | `1.27 s` total (`423.3 ms/iter`) | `1.27 s` | `1.27 s` | `7913472 bytes` | checksum `-7120610804659902001`, output `997627` | L1 checked scoped StreamFlex-design win: about `16.4%` faster than heap and lower RSS |
+| StreamFlex design throughput 1M x3 | generated methodology | checked `RiftRegion.epoch` streaming backend + bounded capsule | framework API win | `checked-epoch-stream` | 1 process x 3 iterations | `1.33 s` total (`443.3 ms/iter`) | `1.33 s` | `1.33 s` | `8028160 bytes` | checksum `-7120610804659902001`, output `997627` | L1 checked stream StreamFlex-design win over heap; use L2 for region-op interpretation |
+| StreamIt BeamFormer/FilterBank controls | generated primitive DSP methodology | primitive arrays / checked wrapper only | ceiling/control | `heap` | 1 process x 3 iterations | `15.00 s` total | `15.00 s` | `15.00 s` | `7929856 bytes` | all FilterBank/BeamFormer throughput/latency checksums matched | L1 clean StreamIt/StreamFlex-axis primitive control baseline |
+| StreamIt BeamFormer/FilterBank controls | generated primitive DSP methodology | primitive arrays / checked scoped wrapper only | ceiling/control | `checked-epoch-scoped` | 1 process x 3 iterations | `15.23 s` total | `15.23 s` | `15.23 s` | `7979008 bytes` | all FilterBank/BeamFormer throughput/latency checksums matched | L1 checked wrapper control; not a memory-management win because the kernels are primitive array/compute dominated |
+| StreamIt BeamFormer/FilterBank controls | generated primitive DSP methodology | primitive arrays / checked stream wrapper only | ceiling/control | `checked-epoch-stream` | 1 process x 3 iterations | `15.56 s` total | `15.56 s` | `15.56 s` | `8011776 bytes` | all FilterBank/BeamFormer throughput/latency checksums matched | L1 checked wrapper control; not a memory-management win |
 | Stancu transactions 200k x20 | generated transaction methodology | heap transaction batches | natural heap baseline | `heap` | 3 processes x 20 iterations | `0.85 s` total (`42.5 ms/iter`) | `0.85 s` | `0.85 s` | `7847936 bytes` | checksum `-1953196317317355226` | L1 clean natural heap baseline |
 | Stancu transactions 200k x20 | generated transaction methodology | scoped transaction batches | safe rooted baseline | `improved-safezone` | 3 processes x 20 iterations | `0.71 s` total (`35.5 ms/iter`) | `0.71 s` | `0.71 s` | `7897088 bytes` | checksum `-1953196317317355226` | L1 clean rooted scoped transaction win |
 | Stancu transactions 200k x20 | generated transaction methodology | checked direct epoch transactions | framework API win | `rift-checked-safezone-direct-epoch` | 3 processes x 20 iterations | `0.57 s` total (`28.5 ms/iter`) | `0.57 s` | `0.57 s` | `7880704 bytes` | checksum `-1953196317317355226` | L1 clean checked transaction/epoch win over heap and rooted scoped baseline |

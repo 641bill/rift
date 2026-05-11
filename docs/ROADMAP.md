@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-12 00:22 CEST
+Last updated: 2026-05-12 01:03 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -121,8 +121,22 @@ latency, including p95/p99/p999/max and deadline-miss metrics. Treat this as a
 StreamFlex-axis methodology control: faithful primitive DSP kernels are not
 expected to be GC-heavy Rift wins. The first 3-run L2 candidate confirms that
 FilterBank is essentially zero-GC and BeamFormer remains compute/array
-dominated. Next step is a clean 3-run L1 matrix, then only add object-retained
-variants if we need a separate GC-pressure stressor.
+dominated. The clean 3-run L1 control matrix is now complete too: heap
+`15.00 s`, checked scoped `15.23 s`, checked stream `15.56 s`. Only add
+object-retained variants if we need a separate GC-pressure stressor.
+
+Latest StreamFlex design-reproduction update: child `90c899644` now has
+`StreamFlexDesignMatrix` and `sandbox/run_streamflex_design_matrix.sh`. This is
+the Rift-native reproduction of StreamFlex's system design, separate from the
+primitive BeamFormer/FilterBank controls: stable filter state stays on heap,
+transient packet/feature/decision/alert objects live in per-period regions,
+and a bounded capsule exports primitive alert values across the transient
+boundary. First evidence is in `evidence/STREAMFLEX_DESIGN_MATRIX.md`: L1 1M
+throughput has checked scoped `1.27 s` / `7.9 MB` RSS versus heap/same-shape
+heap `1.52 s` / `12.4 MB`; L2 throughput removes heap's `100.234 ms` median
+GC; L2 pressure-latency has checked scoped fastest and checked stream with
+zero deadline misses. Next step is to scale this row and then decide whether a
+retained-object BeamFormer/FilterBank variant is worthwhile.
 
 Latest Yak real-text update: child `cd08f23d4` adds Stack Exchange AskUbuntu
 support, and child `59c181746` adds the current 20M scale-up rows. The dataset
