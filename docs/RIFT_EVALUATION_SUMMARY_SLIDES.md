@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-11 12:43 CEST
+Last updated: 2026-05-11 13:30 CEST
 
 Status: markdown slide deck outline. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report,
@@ -431,7 +431,39 @@ Claim boundary: compare relative region-vs-heap/RSS/GC effects and safety
 burden until exact artifacts are rerun. The generic-retention fix is compiler
 probe evidence, not a full mechanized proof.
 
-## Slide 16: Prior-System Metric Rule
+## Slide 16: Prior-Work Memory-Management Lesson
+
+The prior systems are not primarily operator-library stories. They are lifetime
+visibility stories.
+
+| System | What becomes visible | Why it helps |
+|---|---|---|
+| Broom | dataflow/operator lifetime | short-lived fate-sharing data does not need repeated heap tracing |
+| Yak | data-space epochs separate from durable control space | data objects are reclaimed by epoch; control objects remain under GC |
+| StreamFlex | stream/filter/period scopes | fewer GC-induced tail pauses and deadline misses |
+| Stancu et al. | transaction/phase scopes | transaction-local allocation can be region-freed |
+| ReML/MLKit | inferred lexical regions with GC safety | tracing GC work is reduced while preserving polymorphic safety |
+
+Rift's central claim should be framed the same way: checked capture/separation
+rules make epoch/page/window/transaction lifetimes visible enough that the
+runtime can avoid escape tables, promotion barriers, close-time scans, and
+unnecessary tracing of temporary data.
+
+## Slide 17: Design Ideas To Borrow Carefully
+
+| Idea | Use in Rift |
+|---|---|
+| active / closed regions | proof vocabulary for no use-after-close, nested child close order, and possible transfer |
+| immutable/static metadata | safe cross-lifetime references without tracing whole region payloads |
+| bridge/root handles | explicit mixed heap-region links instead of blanket page roots |
+| control path / data path split | report what stays on heap and what moves to regions |
+| reference capabilities | future way to name mutable, read-only, transferable, and region-scoped refs |
+
+Rule: add a capability to the user-facing API only if it removes measured
+runtime work or makes the safety proof simpler. Do not add type vocabulary just
+because another paper has it.
+
+## Slide 18: Prior-System Metric Rule
 
 Compare each prior system on the axes it actually reported:
 

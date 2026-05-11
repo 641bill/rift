@@ -203,6 +203,7 @@ NAV = [
     ("background", "Background"),
     ("question", "Question"),
     ("approach", "Approach"),
+    ("topologies", "Topologies"),
     ("design", "Design"),
     ("evaluation", "Evaluation"),
     ("results", "Results"),
@@ -303,6 +304,58 @@ DESIGN_CARDS = [
 ]
 
 
+TOPOLOGY_CARDS = [
+    {
+        "title": "Natural heap",
+        "label": "baseline",
+        "shape": "Objects flow into the Scala Native Immix heap. The collector later discovers which objects are dead.",
+        "strategy": "No lifetime annotations. Best ergonomics, but temporary stream objects are mixed with durable control state.",
+        "claim": "Practical default baseline",
+        "tone": "neutral",
+    },
+    {
+        "title": "Retained epoch",
+        "label": "memory-management test",
+        "shape": "Heap and region both materialize ordinary records and retain them until an epoch boundary.",
+        "strategy": "Heap drops the anchor and waits for GC. Rift closes the epoch region in bulk, without traversing records at close.",
+        "claim": "Cleanest GC-vs-region reclaim comparison",
+        "tone": "win",
+    },
+    {
+        "title": "Direct epoch",
+        "label": "batch / graph / transaction",
+        "shape": "A batch, graph step, dataflow epoch, or transaction owns temporary records and scratch objects.",
+        "strategy": "Use `RiftRegion.epoch { ... }`; keep durable counters/tables on heap, then close the epoch as one lifetime domain.",
+        "claim": "Best current general Rift topology",
+        "tone": "win",
+    },
+    {
+        "title": "Page / window token",
+        "label": "stream buckets",
+        "shape": "One page, event group, or time window owns many short-lived records such as tokens, parsed rows, or outputs.",
+        "strategy": "The operator owns bucket lookup, child-region caching, append, and close, so static safety removes stale-token checks in the hot path.",
+        "claim": "Generated stream-object pressure win",
+        "tone": "method",
+    },
+    {
+        "title": "Summary-only",
+        "label": "topology lower bound",
+        "shape": "Records update primitive summaries on append and do not survive to close.",
+        "strategy": "Run both heap and checked counterparts when implemented. This shows a good processing topology, not a pure memory-management win.",
+        "claim": "Not a reclaim claim",
+        "tone": "warn",
+    },
+    {
+        "title": "Unsafe / trusted lower bound",
+        "label": "backend potential",
+        "shape": "Rootless or trusted region modes remove safety/root bookkeeping that the final user-facing system must justify statically.",
+        "strategy": "Use only as an internal control to guide backend work. Do not present as the safe final Rift system.",
+        "claim": "Optimization lower bound",
+        "tone": "control",
+    },
+]
+
+
 EVALUATION_ROWS = [
     [
         "Main baseline",
@@ -323,6 +376,30 @@ EVALUATION_ROWS = [
         "Measurement levels",
         "L1 final-clean timing/RSS; L2 standard GC/region stats; L3 diagnostics; L4 sampled profiles.",
         "Prevents instrumentation overhead from becoming the headline result.",
+    ],
+]
+
+
+ENFORCED_ROWS = [
+    [
+        "Actually enforced now",
+        "Region values cannot escape their checked scope; heap/durable state cannot retain region values; nested region values cannot outlive parents; closure and polymorphic escapes are rejected by current compiler probes.",
+        "Supports direct epoch, retained epoch, page/window token, and ReML-style safety claims.",
+    ],
+    [
+        "Actually implemented/evaluated now",
+        "Natural heap, same-shape heap controls, retained epoch/drop-anchor, direct `RiftRegion.epoch`, page/window token, checked scoped backend, checked stream backend, and unsafe/trusted lower bounds.",
+        "These are the topologies shown in the atlas and used in the evidence tables.",
+    ],
+    [
+        "Defensive/runtime today",
+        "Low-level public APIs still keep defensive checks; operator-owned paths remove hot-path checks only where the API controls bucket/epoch order.",
+        "Avoids overstating static checking. Some runtime checks remain by design.",
+    ],
+    [
+        "Design inspiration only",
+        "Full active/closed typestate, transferable regions, concurrency ownership, and richer reference capabilities are not final user-facing Rift semantics yet.",
+        "Use as proof/design vocabulary until measurements justify adding API complexity.",
     ],
 ]
 
@@ -478,9 +555,215 @@ def render_design_cards() -> str:
         )
     parts.append("</div>")
     return figure_block(
-        "Figure 4. User-facing region topologies and controls.",
+        "Figure 5. User-facing checked APIs and controls.",
         "\n".join(parts),
         "Different workloads need different lifetimes. The API should expose epoch, page/window, and retained-object shapes instead of forcing one region topology everywhere.",
+    )
+
+
+def render_topology_story() -> str:
+    parts = ['<div class="paper-figure-grid">']
+    parts.append(
+        '''<article class="paper-figure">
+  <h3>Natural heap topology</h3>
+  <svg viewBox="0 0 360 260" role="img" aria-label="Natural heap topology with temporary and durable objects mixed in one heap">
+    <defs>
+      <marker id="heapScanArrow" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L0,6 L7,3 z" fill="#475569"></path>
+      </marker>
+    </defs>
+    <rect x="28" y="28" width="304" height="178" rx="20" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="2"></rect>
+    <text x="143" y="55" class="svg-title">Immix heap</text>
+    <circle cx="76" cy="96" r="13" fill="#7e57c2"></circle><text x="72" y="101" class="node-text">C</text>
+    <circle cx="122" cy="142" r="13" fill="#1f78b4"></circle><text x="118" y="147" class="node-text">r</text>
+    <circle cx="170" cy="94" r="13" fill="#1f78b4"></circle><text x="166" y="99" class="node-text">r</text>
+    <circle cx="218" cy="146" r="13" fill="#1f78b4"></circle><text x="214" y="151" class="node-text">r</text>
+    <circle cx="270" cy="100" r="13" fill="#7e57c2"></circle><text x="266" y="105" class="node-text">T</text>
+    <path d="M65 184 C118 217, 236 217, 292 184" fill="none" stroke="#475569" stroke-width="3" stroke-dasharray="7 6" marker-end="url(#heapScanArrow)"></path>
+    <text x="72" y="232" class="svg-legend">temporary records and durable tables share one heap</text>
+    <text x="72" y="248" class="svg-legend">GC later traces to discover dead records</text>
+  </svg>
+  <p>This is the baseline: durable control objects and short-lived records are mixed. The collector finds dead temporary objects later.</p>
+</article>'''
+    )
+    parts.append(
+        '''<article class="paper-figure">
+  <h3>Direct epoch topology</h3>
+  <svg viewBox="0 0 360 260" role="img" aria-label="Direct epoch topology with durable heap state and repeated epoch regions">
+    <defs>
+      <marker id="epochArrow" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L0,6 L7,3 z" fill="#238443"></path>
+      </marker>
+    </defs>
+    <rect x="22" y="24" width="316" height="54" rx="16" fill="#f1f5f9" stroke="#cbd5e1"></rect>
+    <text x="64" y="57" class="svg-title">heap: vertex tables / counters / durable state</text>
+    <rect x="30" y="116" width="84" height="68" rx="16" fill="#e8f5ec" stroke="#8fc49c" stroke-width="2"></rect>
+    <rect x="138" y="116" width="84" height="68" rx="16" fill="#e8f5ec" stroke="#8fc49c" stroke-width="2"></rect>
+    <rect x="246" y="116" width="84" height="68" rx="16" fill="#e8f5ec" stroke="#8fc49c" stroke-width="2"></rect>
+    <text x="52" y="145" class="svg-title">epoch 1</text>
+    <text x="160" y="145" class="svg-title">epoch 2</text>
+    <text x="268" y="145" class="svg-title">epoch 3</text>
+    <circle cx="57" cy="166" r="7" fill="#1f78b4"></circle><circle cx="75" cy="166" r="7" fill="#1f78b4"></circle><circle cx="93" cy="166" r="7" fill="#1f78b4"></circle>
+    <circle cx="165" cy="166" r="7" fill="#1f78b4"></circle><circle cx="183" cy="166" r="7" fill="#1f78b4"></circle><circle cx="201" cy="166" r="7" fill="#1f78b4"></circle>
+    <circle cx="273" cy="166" r="7" fill="#1f78b4"></circle><circle cx="291" cy="166" r="7" fill="#1f78b4"></circle><circle cx="309" cy="166" r="7" fill="#1f78b4"></circle>
+    <path d="M114 150 L137 150" stroke="#238443" stroke-width="4" marker-end="url(#epochArrow)"></path>
+    <path d="M222 150 L245 150" stroke="#238443" stroke-width="4" marker-end="url(#epochArrow)"></path>
+    <text x="47" y="222" class="svg-legend">open epoch → allocate records → update heap/control metadata → close epoch</text>
+    <text x="47" y="240" class="svg-legend">used by Yak graph replay, Dataflow, StreamFlex, Stancu/SPECjbb port</text>
+  </svg>
+  <p>Each batch or transaction gets one checked region. Durable state remains on heap; temporary records die when the epoch closes.</p>
+</article>'''
+    )
+    parts.append(
+        '''<article class="paper-figure">
+  <h3>Retained epoch drop-anchor</h3>
+  <svg viewBox="0 0 360 260" role="img" aria-label="Retained epoch topology with heap and region both retaining records until close">
+    <defs>
+      <marker id="dropArrow" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L0,6 L7,3 z" fill="#238443"></path>
+      </marker>
+    </defs>
+    <rect x="28" y="36" width="304" height="50" rx="14" fill="#f1f5f9" stroke="#cbd5e1"></rect>
+    <text x="90" y="67" class="svg-title">bucket anchor: head / tail / count</text>
+    <circle cx="72" cy="142" r="15" fill="#1f78b4"></circle><text x="68" y="148" class="node-text">r</text>
+    <circle cx="126" cy="142" r="15" fill="#1f78b4"></circle><text x="122" y="148" class="node-text">r</text>
+    <circle cx="180" cy="142" r="15" fill="#1f78b4"></circle><text x="176" y="148" class="node-text">r</text>
+    <circle cx="234" cy="142" r="15" fill="#1f78b4"></circle><text x="230" y="148" class="node-text">r</text>
+    <path d="M87 142 L110 142" stroke="#334155" stroke-width="3" marker-end="url(#dropArrow)"></path>
+    <path d="M141 142 L164 142" stroke="#334155" stroke-width="3" marker-end="url(#dropArrow)"></path>
+    <path d="M195 142 L218 142" stroke="#334155" stroke-width="3" marker-end="url(#dropArrow)"></path>
+    <path d="M180 86 L180 122" stroke="#238443" stroke-width="4" marker-end="url(#dropArrow)"></path>
+    <rect x="268" y="122" width="54" height="40" rx="10" fill="#e8f5ec" stroke="#8fc49c"></rect>
+    <text x="282" y="147" class="svg-title">close</text>
+    <text x="43" y="208" class="svg-legend">heap retained: drop anchor, GC reclaims later</text>
+    <text x="43" y="228" class="svg-legend">region retained: clear anchor, close region now; no record traversal</text>
+  </svg>
+  <p>This is the fair memory-management test: both sides retain ordinary objects until close; only reclaim differs.</p>
+</article>'''
+    )
+    parts.append(
+        '''<article class="paper-figure">
+  <h3>Page / window token topology</h3>
+  <svg viewBox="0 0 360 260" role="img" aria-label="Page and window token topology with parent metadata and child bucket regions">
+    <defs>
+      <marker id="tokenArrow" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L0,6 L7,3 z" fill="#238443"></path>
+      </marker>
+    </defs>
+    <rect x="24" y="26" width="312" height="58" rx="16" fill="#f1f5f9" stroke="#cbd5e1"></rect>
+    <text x="66" y="61" class="svg-title">parent stream: bucket table + current token</text>
+    <rect x="32" y="124" width="82" height="68" rx="16" fill="#e8f5ec" stroke="#8fc49c" stroke-width="2"></rect>
+    <rect x="139" y="124" width="82" height="68" rx="16" fill="#e8f5ec" stroke="#8fc49c" stroke-width="2"></rect>
+    <rect x="246" y="124" width="82" height="68" rx="16" fill="#e8f5ec" stroke="#8fc49c" stroke-width="2"></rect>
+    <text x="51" y="148" class="svg-title">bucket</text>
+    <text x="158" y="148" class="svg-title">current</text>
+    <text x="268" y="148" class="svg-title">future</text>
+    <circle cx="58" cy="171" r="6" fill="#1f78b4"></circle><circle cx="76" cy="171" r="6" fill="#1f78b4"></circle><circle cx="94" cy="171" r="6" fill="#1f78b4"></circle>
+    <circle cx="165" cy="171" r="6" fill="#1f78b4"></circle><circle cx="183" cy="171" r="6" fill="#1f78b4"></circle><circle cx="201" cy="171" r="6" fill="#1f78b4"></circle>
+    <circle cx="273" cy="171" r="6" fill="#1f78b4"></circle><circle cx="291" cy="171" r="6" fill="#1f78b4"></circle><circle cx="309" cy="171" r="6" fill="#1f78b4"></circle>
+    <path d="M180 84 L180 123" stroke="#238443" stroke-width="4" marker-end="url(#tokenArrow)"></path>
+    <path d="M73 124 C68 104, 92 91, 132 84" fill="none" stroke="#238443" stroke-width="3" stroke-dasharray="6 5" marker-end="url(#tokenArrow)"></path>
+    <text x="44" y="220" class="svg-legend">token caches child region; hot append skips stale/open checks</text>
+    <text x="44" y="238" class="svg-legend">close expired bucket regions independently</text>
+  </svg>
+  <p>This is the Common Crawl/log-style shape: parent metadata lives longer; each page/window bucket owns many records.</p>
+</article>'''
+    )
+    parts.append(
+        '''<article class="paper-figure">
+  <h3>Summary-only topology</h3>
+  <svg viewBox="0 0 360 260" role="img" aria-label="Summary-only topology where records are not retained until close">
+    <defs>
+      <marker id="sumArrow" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L0,6 L7,3 z" fill="#238443"></path>
+      </marker>
+    </defs>
+    <rect x="28" y="34" width="92" height="56" rx="15" fill="#e8f5ec" stroke="#8fc49c"></rect>
+    <text x="47" y="67" class="svg-title">record</text>
+    <rect x="142" y="34" width="92" height="56" rx="15" fill="#e8f5ec" stroke="#8fc49c"></rect>
+    <text x="161" y="67" class="svg-title">record</text>
+    <rect x="256" y="34" width="72" height="56" rx="15" fill="#e8f5ec" stroke="#8fc49c"></rect>
+    <text x="273" y="67" class="svg-title">...</text>
+    <rect x="82" y="144" width="196" height="62" rx="16" fill="#f9d778" stroke="#c28a18"></rect>
+    <text x="112" y="171" class="svg-title">primitive summary</text>
+    <text x="138" y="192" class="svg-legend">counts / sums / sketches</text>
+    <path d="M74 91 L138 143" stroke="#238443" stroke-width="4" marker-end="url(#sumArrow)"></path>
+    <path d="M188 91 L188 143" stroke="#238443" stroke-width="4" marker-end="url(#sumArrow)"></path>
+    <path d="M288 91 L232 143" stroke="#238443" stroke-width="4" marker-end="url(#sumArrow)"></path>
+    <text x="42" y="230" class="svg-legend">fast for heap and regions; not a retained-object reclaim claim</text>
+  </svg>
+  <p>Records do not survive to the close boundary. This can be the right processing topology, but it is not evidence that region reclaim beat GC.</p>
+</article>'''
+    )
+    parts.append(
+        '''<article class="paper-figure">
+  <h3>Backend choice under the same API</h3>
+  <svg viewBox="0 0 360 260" role="img" aria-label="Same checked API can lower to scoped or streaming region backends">
+    <defs>
+      <marker id="backendArrow" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L0,6 L7,3 z" fill="#238443"></path>
+      </marker>
+    </defs>
+    <rect x="78" y="26" width="204" height="48" rx="16" fill="#dbeafe" stroke="#93b4e8"></rect>
+    <text x="114" y="56" class="svg-title">checked API shape</text>
+    <rect x="30" y="122" width="132" height="70" rx="16" fill="#e8f5ec" stroke="#8fc49c"></rect>
+    <text x="58" y="151" class="svg-title">scoped/rooted</text>
+    <text x="59" y="171" class="svg-legend">SafeZone-backed</text>
+    <rect x="198" y="122" width="132" height="70" rx="16" fill="#e8f5ec" stroke="#8fc49c"></rect>
+    <text x="226" y="151" class="svg-title">stream/reset</text>
+    <text x="230" y="171" class="svg-legend">Rift backend</text>
+    <path d="M136 75 L96 121" stroke="#238443" stroke-width="4" marker-end="url(#backendArrow)"></path>
+    <path d="M224 75 L264 121" stroke="#238443" stroke-width="4" marker-end="url(#backendArrow)"></path>
+    <text x="42" y="226" class="svg-legend">same topology, different allocator/root/reset mechanics</text>
+    <text x="42" y="244" class="svg-legend">unsafe/rootless rows remain lower bounds, not public safety claims</text>
+  </svg>
+  <p>The topology is what the program expresses. The backend is how that topology is implemented and optimized.</p>
+</article>'''
+    )
+    parts.append("</div>")
+
+    parts.append('<div class="topology-board">')
+    parts.append(
+        '''<div class="topology-lane topology-heap">
+  <div class="lane-heading">GC heap view</div>
+  <div class="memory-stack">
+    <div class="memory-cell durable">durable control state</div>
+    <div class="memory-cell temp">temporary stream objects</div>
+    <div class="memory-cell temp">window / epoch records</div>
+    <div class="memory-cell durable">global metadata</div>
+  </div>
+  <p>GC must later rediscover which temporary objects died.</p>
+</div>'''
+    )
+    parts.append('<div class="topology-arrow" aria-hidden="true">→</div>')
+    parts.append(
+        '''<div class="topology-lane topology-region">
+  <div class="lane-heading">Rift lifetime view</div>
+  <div class="memory-split">
+    <div class="heap-box">heap: durable control metadata</div>
+    <div class="region-box">region: epoch / page / window objects</div>
+    <div class="close-box">bulk close/reset at boundary</div>
+  </div>
+  <p>Static checks make the boundary safe enough for bulk reclaim.</p>
+</div>'''
+    )
+    parts.append("</div>")
+    parts.append('<div class="topology-card-grid">')
+    for card in TOPOLOGY_CARDS:
+        parts.append(
+            f'''<article class="topology-card topology-{attr(card["tone"])}">
+  <div class="topology-label">{esc(card["label"])}</div>
+  <h3>{esc(card["title"])}</h3>
+  <p>{inline_markdown(card["shape"])}</p>
+  <p><strong>Strategy:</strong> {inline_markdown(card["strategy"])}</p>
+  <div>{tag(card["claim"], card["tone"])}</div>
+</article>'''
+        )
+    parts.append("</div>")
+    return figure_block(
+        "Figure 4. Rift topology atlas.",
+        "\n".join(parts),
+        "These are the actual shapes used in the evaluation. A result should say which topology it uses before claiming a memory-management win.",
     )
 
 
@@ -516,8 +799,18 @@ def render_evaluation_table() -> str:
     return render_table_block(
         ["Evaluation component", "What was measured", "Why it matters"],
         rows,
-        "Table 1. Evaluation setup and baselines.",
+        "Table 2. Evaluation setup and baselines.",
         "The report separates user-facing checked rows from allocator lower bounds and separates clean headline timing from diagnostic counters.",
+    )
+
+
+def render_enforced_table() -> str:
+    rows = [[esc(a), inline_markdown(b), esc(c)] for a, b, c in ENFORCED_ROWS]
+    return render_table_block(
+        ["Status", "What it means", "Use in the report"],
+        rows,
+        "Table 1. What Rift actually enforces today versus design vocabulary.",
+        "The figures should be read as the actual evaluation topologies. Prior-work ideas like active/closed capabilities are useful only when marked as future design vocabulary.",
     )
 
 
@@ -529,7 +822,7 @@ def render_results_table() -> str:
     return render_table_block(
         ["Result", "Workload", "Best checked row", "Baseline/control", "Interpretation"],
         rows,
-        "Table 2. Five results to remember.",
+        "Table 3. Five results to remember.",
         "The current story is strongest for epochal graph/dataflow/transaction shapes and controlled retained-object reclaim; generated stream pressure is promising but not yet real-input proof.",
     )
 
@@ -539,7 +832,7 @@ def render_real_input_table() -> str:
     return render_table_block(
         ["Benchmark", "Input", "Current result", "Report status"],
         rows,
-        "Table 3. Real-input evidence status.",
+        "Table 4. Real-input evidence status.",
         "Real datasets are not automatically GC-heavy. The strongest real row is LiveJournal; several others are useful RSS or ceiling controls.",
     )
 
@@ -549,7 +842,7 @@ def render_open_work() -> str:
     return render_table_block(
         ["Open track", "Next action"],
         rows,
-        "Table 4. Work remaining before a final paper-style evaluation.",
+        "Table 5. Work remaining before a final paper-style evaluation.",
         "The next work is about finalizing evidence quality and extending real inputs, not adding benchmark-specific shortcuts.",
     )
 
@@ -560,7 +853,7 @@ def render_limitations() -> str:
         parts.append(f"<li>{esc(item)}</li>")
     parts.append("</ul>")
     return figure_block(
-        "Figure 5. What these results do not prove yet.",
+        "Figure 6. What these results do not prove yet.",
         "\n".join(parts),
         "The prototype has encouraging evidence, but the final claim should stay narrower than 'regions always beat GC'.",
     )
@@ -692,6 +985,22 @@ def build_html(source: Path, markdown: str, title: str) -> str:
       {render_approach_steps()}
     </section>
 
+    <section id="topologies" class="section">
+      <div class="section-kicker">Topology story</div>
+      <h2>The central choice is the lifetime boundary, not the operator name</h2>
+      <p>
+        Prior work wins by separating temporary data from durable control state.
+        Rift should be read the same way: epoch, page/window, and retained
+        controls are different ways to expose when ordinary objects die. The
+        reusable API is important because it lets the backend exploit that
+        boundary without unsafe manual memory management. The figures below
+        are Rift's current evaluation topologies; borrowed concepts are
+        included only when they describe what Rift enforces or what remains
+        future design vocabulary.
+      </p>
+      {render_topology_story()}
+    </section>
+
     <section id="design" class="section">
       <div class="section-kicker">Key design idea</div>
       <h2>Use static safety to remove runtime memory bookkeeping</h2>
@@ -703,6 +1012,7 @@ def build_html(source: Path, markdown: str, title: str) -> str:
         stale-token checks inside operator-owned paths.
       </p>
       {render_design_cards()}
+      {render_enforced_table()}
     </section>
 
     <section id="evaluation" class="section">
@@ -1051,6 +1361,8 @@ figure {
 }
 .tag-win { border-color: #b8dec6; background: var(--green-soft); color: var(--green); }
 .tag-method { border-color: #c4d5f4; background: var(--blue-soft); color: var(--blue); }
+.tag-warn { border-color: #ead099; background: var(--amber-soft); color: var(--amber); }
+.tag-control { border-color: #d0d7de; background: #f1f5f9; color: #475569; }
 .feature-grid, .class-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1119,6 +1431,140 @@ figure {
   color: white;
   font-size: 0.82rem;
   font-weight: 800;
+}
+.topology-board {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px minmax(0, 1fr);
+  gap: 14px;
+  align-items: stretch;
+  margin-top: 22px;
+}
+.topology-lane {
+  display: grid;
+  gap: 14px;
+  min-height: 250px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--paper-soft);
+}
+.topology-heap {
+  background: linear-gradient(180deg, #fff7e6, white);
+}
+.topology-region {
+  background: linear-gradient(180deg, #eaf7ef, white);
+}
+.lane-heading {
+  color: #334155;
+  font-size: 0.82rem;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.memory-stack,
+.memory-split {
+  display: grid;
+  gap: 8px;
+}
+.memory-cell,
+.heap-box,
+.region-box,
+.close-box {
+  padding: 11px 12px;
+  border: 1px solid rgba(51, 65, 85, 0.16);
+  border-radius: 12px;
+  font-weight: 750;
+}
+.memory-cell.durable,
+.heap-box {
+  background: #edf2f7;
+  color: #334155;
+}
+.memory-cell.temp,
+.region-box {
+  background: #dff3e7;
+  color: #1d4430;
+}
+.close-box {
+  background: #dbeafe;
+  color: #1e3a8a;
+}
+.topology-arrow {
+  display: grid;
+  place-items: center;
+  color: var(--accent-dark);
+  font-size: 2.3rem;
+  font-weight: 850;
+}
+.topology-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+.topology-card {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: white;
+}
+.topology-card p {
+  font-size: 0.95rem;
+}
+.topology-card p strong {
+  color: var(--ink);
+}
+.topology-label {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.topology-win { border-color: #b8dec6; background: linear-gradient(180deg, var(--green-soft), white); }
+.topology-method { border-color: #c4d5f4; background: linear-gradient(180deg, var(--blue-soft), white); }
+.topology-warn { border-color: #ead099; background: linear-gradient(180deg, var(--amber-soft), white); }
+.topology-control { background: linear-gradient(180deg, #f1f5f9, white); }
+.paper-figure-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 22px;
+}
+.paper-figure {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #fff;
+}
+.paper-figure h3 {
+  margin-bottom: 2px;
+}
+.paper-figure svg {
+  width: 100%;
+  height: auto;
+  border: 1px solid #dbe2ea;
+  border-radius: 14px;
+  background: #fbfdff;
+}
+.paper-figure p {
+  font-size: 0.95rem;
+}
+.svg-title {
+  fill: #243244;
+  font: 700 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+.svg-legend {
+  fill: #475569;
+  font: 11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+.node-text {
+  fill: #fff;
+  font: 800 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 .callout {
   margin-top: 22px;
@@ -1299,8 +1745,16 @@ pre code {
   .class-grid,
   .context-grid,
   .flow-grid,
+  .paper-figure-grid,
+  .topology-card-grid,
   .evidence-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .topology-board {
+    grid-template-columns: 1fr;
+  }
+  .topology-arrow {
+    transform: rotate(90deg);
   }
 }
 @media (max-width: 640px) {
@@ -1313,6 +1767,8 @@ pre code {
   .class-grid,
   .context-grid,
   .flow-grid,
+  .paper-figure-grid,
+  .topology-card-grid,
   .evidence-list {
     grid-template-columns: 1fr;
   }

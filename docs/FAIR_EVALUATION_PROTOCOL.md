@@ -1,7 +1,7 @@
 # Fair Evaluation Protocol
 
 Date: 2026-05-09
-Last updated: 2026-05-10 17:47 CEST
+Last updated: 2026-05-11 13:13 CEST
 
 Status: active evaluation contract for report, slides, and future benchmark
 runs. This document is the reviewer-facing rulebook for deciding what a Rift
@@ -18,6 +18,13 @@ The core claim is:
 > Rift provides checked stream-region APIs whose static capture/separation
 > guarantees let the backend remove runtime GC/region bookkeeping, and those
 > APIs win when workloads have structured epoch, page, or window lifetimes.
+
+This is a memory-management claim first and an operator-library claim second.
+Prior systems such as Broom, Yak, StreamFlex, Stancu et al., and ReML/MLKit
+win by making lifetime boundaries visible to the allocator/collector. Rift
+operators are headline-worthy only when they expose such a boundary through a
+reusable checked API. The broader prior-work interpretation is tracked in
+`docs/PRIOR_WORK_MEMORY_MANAGEMENT_INTERPRETATION.md`.
 
 ## Required Row Metadata
 

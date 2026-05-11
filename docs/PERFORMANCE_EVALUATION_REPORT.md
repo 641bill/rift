@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-11 12:43 CEST
+Last updated: 2026-05-11 13:46 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -25,6 +25,21 @@ Latest fair-evaluation contract:
 headline rows must use reusable checked framework APIs or be clearly labeled as
 controls; memory-management claims require retained-object heap controls; and
 manual summary/count-array rows remain topology/operator lower bounds.
+
+Latest prior-work interpretation:
+`docs/PRIOR_WORK_MEMORY_MANAGEMENT_INTERPRETATION.md`. This is the zoomed-out
+principle layer for Broom, Yak, StreamFlex, Stancu et al., and ReML/MLKit:
+their core performance argument is exposing a lifetime boundary so temporary
+objects are not repeatedly traced by GC. Operators are evidence mechanisms for
+those boundaries, not the root contribution by themselves.
+
+Latest visual report update:
+`docs/report.html` now includes a Rift topology atlas rather than copies of
+prior-work figures. It shows the actual topologies used in the evaluation:
+natural heap, direct epoch, retained epoch/drop-anchor, page/window token,
+summary-only lower bound, and same-API backend choices. It also adds a table
+separating what Rift enforces today from design vocabulary borrowed from prior
+work.
 
 Latest measurement-overhead protocol:
 `evidence/MEASUREMENT_OVERHEAD_PROTOCOL.md` and
@@ -395,6 +410,35 @@ splits, stream periods, transaction annotations, or compiler-inferred regions.
 Rift should therefore report the best safe checked topology for each workload,
 but include same-shape heap controls whenever the topology changes computation.
 Unsafe/rootless modes remain lower bounds, not user-facing claims.
+
+The project-level interpretation is now recorded in
+`docs/PRIOR_WORK_MEMORY_MANAGEMENT_INTERPRETATION.md`. The short version is:
+prior work gets wins when it can keep durable control state under the normal GC
+while moving high-churn data objects into a lifetime domain that is closed in
+bulk. That is why `RiftRegion.epoch`, retained epoch controls, and page/window
+tokens are the central abstractions. More specialized top-k/join/rank/median
+operators are useful only when they expose the same lifetime principle without
+turning the benchmark into a manual algorithm rewrite.
+
+| Prior system | General reason it can win | Rift reporting lesson |
+|---|---|---|
+| Broom | Dataflow operators create fate-sharing objects whose lifetime is bounded by the dataflow step/operator. | Dataflow rows should report operator lifetime boundaries and GC share, not just elapsed. |
+| Yak | Data-space objects are epochal while control objects are durable. | Checked epochs should replace dynamic escape/promotion where static capture checks are strong enough. |
+| StreamFlex | Scoped stream memory reduces GC interference and deadline/tail events. | Latency/tail rows matter even when throughput deltas are modest. |
+| Stancu et al. | Transaction/phase-local allocation can be region-freed, especially under young-gen pressure. | SPECjbb/Stancu-shaped rows need transaction-boundary, region-freed proxy, GC count/time, and API burden. |
+| ReML/MLKit | Region inference and GC safety reduce tracing while preserving polymorphic correctness. | ReML comparisons should report ratios/RSS/GC/safety burden, not raw cross-language wall-clock unless exact artifacts rerun locally. |
+
+Design implications for Rift:
+
+- Keep the primary public story at the lifetime level: epoch, page/window,
+  transaction, retained-object reclaim.
+- Treat reference capabilities, active/closed region type-state, immutable or
+  static metadata, and bridge/root objects as proof/design vocabulary first.
+- Add those capabilities to the user-facing API only when they remove measured
+  runtime work such as blanket root registration, close-time scans, dynamic
+  escape tables, or stale-token checks.
+- Do not turn the system into a large operator catalog unless the operator
+  exposes a reusable lifetime boundary and passes same-shape controls.
 
 Current claim table:
 

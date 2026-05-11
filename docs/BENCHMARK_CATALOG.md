@@ -1,7 +1,7 @@
 # Rift Benchmark Catalog
 
 Date: 2026-05-05
-Last updated: 2026-05-11 12:43 CEST
+Last updated: 2026-05-11 13:13 CEST
 
 Status: working benchmark guide. Use this document to understand what each
 benchmark is meant to test before reading the detailed result files in
@@ -46,7 +46,9 @@ The clean direct-epoch topology sweep is summarized in
 Prior-system comparison tables should not force all systems into one metric
 schema. Use the metric axes each paper reports, then add Rift's standardized
 local metrics separately. The detailed contract is
-`docs/LITERATURE_BENCHMARK_CONTRACT.md`.
+`docs/LITERATURE_BENCHMARK_CONTRACT.md`. The higher-level interpretation of
+why those systems win and what their limits are is
+`docs/PRIOR_WORK_MEMORY_MANAGEMENT_INTERPRETATION.md`.
 
 ## 1.1 Outcome Labels
 
@@ -104,6 +106,12 @@ transaction-region annotations, and ReML/MLKit use compiler-selected region
 modes. Rift should follow the same discipline: state the topology, state which
 objects are region-local, include same-shape heap controls when computation
 changes, and report unsafe/rootless modes only as lower bounds.
+
+That prior-work principle is memory-management-first: reusable operators are
+valuable only insofar as they expose an epoch/page/window/transaction lifetime
+that the backend can reclaim in bulk. Do not present a benchmark-specific
+operator as the main contribution unless it generalizes the lifetime boundary
+and passes same-shape controls.
 
 ## 2. Core Runtime Baselines
 

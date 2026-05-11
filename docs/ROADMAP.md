@@ -1,9 +1,22 @@
 # Rift Roadmap
 
-Last updated: 2026-05-11 12:43 CEST
+Last updated: 2026-05-11 13:30 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
+
+Latest prior-work interpretation update:
+`docs/PRIOR_WORK_MEMORY_MANAGEMENT_INTERPRETATION.md` now captures the
+principled lesson from Broom, Yak, StreamFlex, Stancu et al., and ReML/MLKit.
+The main Rift goal should stay framed as regions versus GC: expose safe
+epoch/page/window/transaction lifetimes so the runtime avoids tracing,
+promotion, close-time scans, and unnecessary bookkeeping for temporary data.
+Reusable operators remain important when they expose those lifetimes, but they
+are not the root contribution by themselves.
+The same doc now records design vocabulary to borrow cautiously: active/closed
+regions, nested-region state, immutable/static metadata, bridge/root handles,
+and reference-capability-style ownership. These should be added to the public
+API only when they remove measured runtime work or simplify the proof story.
 
 Latest final-clean table update: retained L1 gaps are now filled for DSPBench
 Fraud q2 and LogHub q2/q3, and the reusable LogHub HDFS `EpochTopKByKey` row

@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-11 12:43 CEST
+Last updated: 2026-05-11 13:46 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -14,6 +14,26 @@ Latest implementation checkpoint:
 
 Latest parent evidence checkpoint:
 `9a05426` (`Record presentation audit checkpoint`)
+
+Latest prior-work interpretation checkpoint:
+`docs/PRIOR_WORK_MEMORY_MANAGEMENT_INTERPRETATION.md` now records the zoomed-out
+lesson from Broom, Yak, StreamFlex, Stancu et al., and ReML/MLKit. The short
+version is that prior systems win by making lifetime boundaries visible to
+memory management, not by claiming benchmark-specific operators as the primary
+contribution. The report, benchmark catalog, slides, and fair-evaluation
+protocol now point to that principle: reusable Rift APIs matter when they
+expose epoch/page/window/transaction lifetimes that static capture/separation
+checks can protect and the backend can reclaim in bulk.
+
+Latest report-HTML visualization checkpoint:
+`scripts/generate-report-html.py` now renders a dedicated Rift topology atlas
+in `docs/report.html`. It shows the actual evaluation topologies: natural
+heap, direct epoch, retained epoch/drop-anchor, page/window token,
+summary-only lower-bound, and same-API backend choices. The design section also
+has a table separating what Rift enforces today from design vocabulary inspired
+by prior work, such as active/closed regions and richer reference
+capabilities. Regenerate the HTML with `python3 scripts/generate-report-html.py`
+after report changes.
 
 Latest in-progress real-input checkpoint:
 `YakRegionMatrix` now has `topwordreal`, a real Stack Exchange AskUbuntu
