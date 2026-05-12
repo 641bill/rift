@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-12 15:07 CEST
+Last updated: 2026-05-12 16:00 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -111,6 +111,17 @@ the single-run gate (`8.07 s -> 7.72 s`), while generated Common Crawl-shaped
 q2 is flat (`3.98 s -> 4.00 s`). The attempted dirty-slab bulk-zero policy was
 rejected because it slightly regressed the 5M allocation row (`70.044 ms`
 versus `69.912 ms`) and moved time into slab attach.
+
+Latest clean-rerun update:
+child `ca1978ef4` upgrades the open-allocation sanity gates into clean
+final-clean evidence rows. Focused page-token 1M x5: heap `38.378 ms`,
+checked Rift page-token `25.007 ms`, checked SafeZone-backed page-token
+`25.591 ms`, all checksums matching. StreamFlexDesign 20M x3 L1:
+heap `31.26 s`, checked scoped `24.39 s`, checked stream `22.81 s`.
+Generated Common Crawl-shaped q1/q2 1M x3 L1: heap `17.49/16.73 s`, checked
+Rift page-token `10.88/11.49 s`, checked SafeZone-backed page-token
+`13.29/14.84 s`. Next optimization work should be guided by post-rerun L4
+profiles rather than more speculative allocator policy changes.
 
 Latest ReML priority decision:
 Exact MLKit/ReML artifact reruns are now gated/low-priority. Keep the

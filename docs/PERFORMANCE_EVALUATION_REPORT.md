@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-12 15:07 CEST
+Last updated: 2026-05-12 16:00 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -152,6 +152,18 @@ stream moves from `8.07 s` to `7.72 s`, while generated Common Crawl-shaped q2
 is flat at `3.98 s -> 4.00 s`. A dirty-slab bulk-zeroing attempt was rejected:
 it preserved zero-init semantics but regressed focused 5M allocation slightly
 (`70.044 ms` versus the committed `69.912 ms`) by moving work into slab attach.
+
+Latest clean final-clean reruns:
+The post-cleanup rows now have clean L1 reruns from child `ca1978ef4`.
+Focused 1M page-token, five measured runs: heap `38.378 ms` with `11.513 ms`
+median GC and `75.1 MB` RSS, checked Rift page-token `25.007 ms` with zero GC
+and `47.6 MB` RSS, and checked SafeZone-backed page-token `25.591 ms` with
+zero GC and `47.5 MB` RSS. StreamFlexDesign throughput at 20M events x3:
+heap `31.26 s`, checked scoped `24.39 s`, checked stream `22.81 s`. Generated
+Common Crawl-shaped q1/q2 at 1M pages x3: heap `17.49/16.73 s`, checked Rift
+page-token `10.88/11.49 s`, checked SafeZone-backed page-token
+`13.29/14.84 s`. These are presentation-grade generated/StreamFlex-design
+rows; Common Crawl remains generated stressor evidence.
 
 Latest operator-gate status:
 `evidence/OPERATOR_GATE_STATUS.md`. This keeps rank/top-k/median/hash/join work

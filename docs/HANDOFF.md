@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-12 15:07 CEST
+Last updated: 2026-05-12 16:00 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -10,7 +10,21 @@ Active implementation branch for this update:
 `feature/rift`
 
 Latest child checkpoint:
-`c22c78d57` (`Inline open-region unchecked allocation`)
+`ca1978ef4` (`Record clean allocation rerun medians`)
+
+Latest clean rerun checkpoint:
+child `ca1978ef4` records clean final-clean reruns from the open-allocation
+checkpoint. Focused 1M page-token, 5 measured runs: heap `38.378 ms` with
+`11.513 ms` median GC and `75.1 MB` RSS, checked Rift page-token `25.007 ms`
+with zero GC and `47.6 MB` RSS, checked SafeZone-backed page-token `25.591 ms`
+with zero GC and `47.5 MB` RSS. StreamFlexDesign 20M throughput, three
+internal runs per L1 process: heap `31.26 s`, checked scoped `24.39 s`,
+checked stream `22.81 s`, all with matching checksum. Generated Common
+Crawl-shaped q1/q2, three internal runs per L1 process: heap `17.49/16.73 s`,
+checked Rift page-token `10.88/11.49 s`, and checked SafeZone-backed
+page-token `13.29/14.84 s`, with matching checksums. These are clean
+presentation rows; Common Crawl remains generated stressor evidence, not
+real-input proof.
 
 Latest open-allocation checkpoint:
 child `c22c78d57` removes the extra superclass hop in the final
