@@ -1,6 +1,6 @@
 # Rift CPU Profiling Report
 
-Last updated: 2026-05-12 09:43 CEST
+Last updated: 2026-05-12 11:35 CEST
 
 Status: profiling runbook plus first sampled profile row and the first
 profile-driven implementation follow-up. The sampled GH Archive row identified
@@ -56,8 +56,8 @@ RIFT_PROFILE_OUTPUT_DIR=/Users/siyaoliu/rift/cache/profile-sweep-$(date +%Y%m%d-
 The current representative cases cover StreamFlex-design, generated Common
 Crawl-shaped q2, DSPBench Fraud q2, LogHub HDFS streaming top-k, StreamIt
 FilterBank, StreamIt BeamFormer, Yak LiveJournal graph replay, Dataflow
-AGGREGATE, SPECjbb2005-workload, and ReML-shaped Tier 1 ports. Details and
-smoke/full-sweep results are tracked in
+AGGREGATE, SPECjbb2005-workload, ReML-shaped Tier 1 ports, and a Yak graphstep
+epoch-body profile. Details and smoke/full-sweep results are tracked in
 `evidence/PROFILE_SWEEP_MATRIX.md`.
 
 ## Representative L4 Sweep Findings
@@ -69,6 +69,9 @@ Raw profile artifacts are kept under:
 - `/Users/siyaoliu/rift/cache/profile-sweep-20260512-fixes`
 - `/Users/siyaoliu/rift/cache/profile-sweep-20260512-streamit-final`
 - `/Users/siyaoliu/rift/cache/profile-sweep-20260512-epoch-reml`
+- `/Users/siyaoliu/rift/cache/profile-sweep-20260512-yak-graphstep`
+- `/Users/siyaoliu/rift/cache/profile-sweep-20260512-yak-graphstep-post-zone-page-cache`
+- `/Users/siyaoliu/rift/cache/profile-sweep-20260512-yak-graphstep-post-pad-macro`
 
 Summary:
 
@@ -80,10 +83,53 @@ Summary:
 | LogHub HDFS streaming top-k | checked scoped top-k, heap retained/drop-anchor | The top sampled paths are streaming line read, stable hash, template-token parsing, and token counting. `EpochTopKByKey` and region allocation are small in the sampled window. | This explains why LogHub is a modest/RSS real-streaming row, not a GC-heavy throughput proof. |
 | StreamIt FilterBank/BeamFormer | checked epoch, heap | FilterBank is almost entirely numeric kernel work; BeamFormer is almost entirely FIR filter state stepping. Allocator/GC frames are tiny. | Keep BeamFormer/FilterBank as StreamFlex/StreamIt methodology controls. They do not currently demonstrate region memory-management wins. |
 | Yak LiveJournal graph replay | `checked-epoch-scoped`, `gc-heap` | The first 50M LiveJournal samples mostly catch gzip/file input parsing and byte-line read/inflate paths before the direct-epoch processing phase dominates. | This profile is useful input-path evidence, but it should not drive epoch allocator tuning. Add a processing-phase profile or preloaded processing-only profile before optimizing Yak. |
+| Yak graphstep epoch body | `checked-epoch-scoped`, `gc-heap` | The generated 50M-message graphstep profile isolates the epoch processing body. The original checked scoped sample showed graphstep loop work plus `scalanative_zone_alloc`, `_platform_memset`, padding/page-size helpers, SafeZone-backed `allocUncheckedImpl`, and checksum. The post-allocator-cleanup sample removes `MemoryPool_page_size`, `Util_pad`, and `scalanative_zone_pad8` from the sampled checked stack. Heap has the same graphstep/message floor plus Immix allocation, object metadata, mark/sweep, and weak-reference marking; the sampled heap footprint is about `799.8M`. | This is the actionable Yak CPU profile. The first allocator bookkeeping cleanup is validated; the remaining checked cost is allocation body, object construction/mandatory zeroing, and SafeZone-backed allocation wrappers in a tight linked-object epoch, not bucket close/open bookkeeping. |
 | Dataflow AGGREGATE | direct checked scoped, true `EpochFold`, heap | Direct checked scoped aggregate is mostly a tight aggregate loop plus SafeZone allocation/zeroing. Generic `EpochFold` spends time in fold-slot lookup/probing, contribution updates, fold-table clear/capacity, append/cursor traversal, Rift allocation/stat paths, and `checkOpen`. Heap shows Immix allocation/metadata/mark/sweep on top of the same query floor. | Keep direct `RiftRegion.epoch` as the Dataflow aggregate headline topology. Do not headline `EpochFold` until it is redesigned as a specialized operator-owned table or the generic lookup/cursor/allocation costs are removed. |
 | SPECjbb2005-workload port | checked scoped transaction, heap | The 1M transaction samples are short and mostly hit transaction proxy/count helpers (`txObjectCount`, `txByteProxy`, `txKind`), with only small allocator/metadata samples. | Use larger or delayed profiles before tuning transaction allocation. Current evidence says the row is too short for reliable attribution. |
 | ReML-shaped `msort` | checked scoped, heap | Both local Scala Native ports are dominated by boxed `Integer` compare/valueOf, `ScalaRunTime` array apply/update, and `java.util.Arrays` stable merge/insertion sort. Allocation/zeroing and Immix mark/sweep are visible but not isolated as the only bottleneck. | Interpret `msort` as a Scala object/boxing/list-sort comparison, not a pure allocator benchmark. If it becomes important, add a same-shape unboxed/control row rather than claiming raw Rift-vs-ReML wall-clock. |
 | ReML-shaped `ratio` | checked scoped, heap | Both modes are mostly `gcd` and arithmetic. Region allocation and GC are small in the sampled windows. | Keep `ratio` as compute/control evidence in the ReML same-axes table. It is not a memory-management optimization target. |
+
+## Profile-Guided Allocator Follow-Up
+
+Date/time: 2026-05-12 11:24-11:31 CEST.
+
+Child checkpoints:
+
+- `6c23be380` (`Cache zone page size in allocator`)
+- `9ee340950` (`Inline zone allocation padding`)
+
+Commands:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+RIFT_PROFILE_BUILD=1 \
+RIFT_PROFILE_SECONDS=3 \
+RIFT_PROFILE_DELAY_SECONDS=0.1 \
+RIFT_PROFILE_CASES="yak-graphstep-checked-scoped yak-graphstep-heap" \
+RIFT_PROFILE_OUTPUT_DIR=/Users/siyaoliu/rift/cache/profile-sweep-20260512-yak-graphstep-post-zone-page-cache \
+  zsh sandbox/run_l4_profile_sweep.sh
+
+RIFT_PROFILE_BUILD=1 \
+RIFT_PROFILE_SECONDS=3 \
+RIFT_PROFILE_DELAY_SECONDS=0.1 \
+RIFT_PROFILE_CASES="yak-graphstep-checked-scoped yak-graphstep-heap" \
+RIFT_PROFILE_OUTPUT_DIR=/Users/siyaoliu/rift/cache/profile-sweep-20260512-yak-graphstep-post-pad-macro \
+  zsh sandbox/run_l4_profile_sweep.sh
+```
+
+Result:
+
+| Checkpoint | Checked scoped sampled allocator finding | Interpretation |
+|---|---|---|
+| Baseline graphstep profile | `MemoryPool_page_size` and `Util_pad` were visible under `scalanative_zone_alloc`. | Page-size lookup and generic padding were avoidable allocator bookkeeping in the checked scoped epoch body. |
+| `6c23be380` | `MemoryPool_page_size` disappeared, but the debug-build local helper `scalanative_zone_pad8` still appeared in the sample. | Caching page size worked; the inline helper was still callable in the native debug profile. |
+| `9ee340950` | `MemoryPool_page_size`, `Util_pad`, and `scalanative_zone_pad8` are all absent. Remaining sampled checked frames are `scalanative_zone_alloc`, `_platform_memset`, and SafeZone-backed `allocUncheckedImpl` wrappers. | The first allocator bookkeeping cleanup is complete. Further speed work would need to address allocation lowering/object construction/zeroing rather than this page-size/padding path. |
+
+Validation:
+
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile`
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"`: `141/141`
+- `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionCheckedTest"`: `64/64`, rerun after the macro change
 
 ## Profiling Rules
 

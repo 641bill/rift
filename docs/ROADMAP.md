@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-12 09:43 CEST
+Last updated: 2026-05-12 11:35 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -29,16 +29,33 @@ explaining local Scala Native ratios and why Rift wins, loses, or is
 unavailable on each paper row.
 
 Latest profiling update:
-child `1084077d3` extends `sandbox/run_l4_profile_sweep.sh` with Yak
+child `70b8e5ccb` extends `sandbox/run_l4_profile_sweep.sh` with Yak
 LiveJournal graph replay, Dataflow AGGREGATE, SPECjbb2005-workload, and
-ReML-shaped `msort`/`ratio` cases. The follow-up sweep is recorded in
+ReML-shaped `msort`/`ratio` cases, plus a generated Yak `graphstep` profile
+case to isolate epoch-body CPU. The follow-up sweep is recorded in
 `evidence/PROFILE_SWEEP_MATRIX.md` and `docs/CPU_PROFILE_REPORT.md`. It confirms
 that generic `EpochFold` is slow because of table/probe, cursor, allocator/stat,
 and `checkOpen` costs; direct Dataflow epoch is mostly tight aggregate loop plus
 allocation/zeroing; ReML `msort` is boxed-sort/object-shape dominated; ReML
-`ratio` is compute-bound; and the first Yak LiveJournal profile mostly samples
-gzip/file parsing, so a delayed or processing-only profile is needed before
-tuning the graph epoch body.
+`ratio` is compute-bound; the first Yak LiveJournal profile mostly samples
+gzip/file parsing; and the generated graphstep epoch-body profile shows the
+remaining checked cost as allocation/object construction/zeroing in a tight
+linked-object epoch, while heap pays the same graph loop plus Immix
+allocation/object metadata/mark/sweep.
+
+Latest allocator optimization update:
+child `9ee340950` completes the first profile-guided zone allocator cleanup:
+cache `MemoryPool_page_size()` in each opened `Zone` and make the allocator's
+pad-to-8 calculation a macro instead of a sampled helper call. This is a narrow
+response to the Yak graphstep samples in `MemoryPool_page_size`, `Util_pad`,
+`scalanative_zone_pad8`, and `scalanative_zone_alloc`; it does not skip zeroing
+or change object layout. The normal validation gate now passes:
+`sandbox3_next/compile`, `RiftRegionCheckedCompilerTest` (`141/141`), and
+`RiftRegionCheckedTest` (`64/64`, rerun after the macro change). The
+post-change Yak graphstep L4 profile confirms the intended cleanup:
+`MemoryPool_page_size`, `Util_pad`, and `scalanative_zone_pad8` are no longer
+sampled; remaining checked scoped cost is allocator body, mandatory zeroing,
+and SafeZone-backed `allocUncheckedImpl` wrappers.
 
 Latest ReML priority decision:
 Exact MLKit/ReML artifact reruns are now gated/low-priority. Keep the
@@ -1792,9 +1809,11 @@ next action is:
 7. Continue official Scala Native native profiling before more broad operator
    tuning. The first representative L4 sweep now covers StreamFlex-design,
    Common Crawl-shaped q2, DSPBench Fraud q2, LogHub HDFS top-k, StreamIt
-   controls, Dataflow AGGREGATE, SPECjbb2005-workload, ReML-shaped ports, and
-   Yak input parsing. The remaining profiling gap is a Yak processing-phase
-   profile and larger/delayed transaction profiles if transaction tuning resumes.
+   controls, Dataflow AGGREGATE, SPECjbb2005-workload, ReML-shaped ports, Yak
+   input parsing, and generated Yak graphstep epoch-body processing. The
+   remaining profiling gap is a delayed/preloaded real LiveJournal processing
+   profile if real-input provenance matters for attribution, and larger/delayed
+   transaction profiles if transaction tuning resumes.
    Treat profiles as diagnostic-only rows.
 
 Do not move to new runtime micro-optimizations unless a focused benchmark or

@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-12 09:43 CEST
+Last updated: 2026-05-12 11:35 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -70,16 +70,31 @@ for representative benchmark sweeps, with usage recorded in
 complete for StreamFlex-design, generated Common Crawl-shaped q2, DSPBench
 Fraud q2, LogHub HDFS streaming top-k, StreamIt FilterBank, and StreamIt
 BeamFormer, with a follow-up sweep for Yak LiveJournal, Dataflow AGGREGATE,
-SPECjbb2005-workload, and ReML-shaped `msort`/`ratio`. The main finding is
-stable across families: real streaming rows are mostly parser/hash/query
-dominated; generated object-pressure rows expose allocator/zeroing/traversal
-costs; StreamIt primitive kernels and ReML `ratio` are compute controls rather
-than GC-heavy evidence; generic `EpochFold` is slow because of table/probe,
-cursor, allocator/stat, and `checkOpen` work rather than because close/reclaim
-alone is expensive. The first Yak LiveJournal profile mostly samples gzip/file
-input parsing, so a processing-phase profile is still needed before tuning the
-epoch replay body. L4 remains interpretation-only; L1/L2 keep their existing
-roles.
+SPECjbb2005-workload, ReML-shaped `msort`/`ratio`, and a Yak graphstep
+epoch-body profile. The main finding is stable across families: real streaming
+rows are mostly parser/hash/query dominated; generated object-pressure rows
+expose allocator/zeroing/traversal costs; StreamIt primitive kernels and ReML
+`ratio` are compute controls rather than GC-heavy evidence; generic
+`EpochFold` is slow because of table/probe, cursor, allocator/stat, and
+`checkOpen` work rather than because close/reclaim alone is expensive. The
+first Yak LiveJournal profile mostly samples gzip/file input parsing; the
+generated graphstep profile now isolates the epoch body and shows the checked
+cost is allocation/object construction/zeroing in a tight linked-object epoch,
+while heap pays the same graph loop plus Immix allocation/metadata/mark/sweep.
+L4 remains interpretation-only; L1/L2 keep their existing roles.
+
+Latest profile-guided allocator work:
+child `9ee340950` implements and validates the first narrow zone allocator
+cleanup suggested by the Yak graphstep profile: cache the page size in each
+`Zone` and lower the allocator's pad-to-8 calculation to a macro. This removes
+the sampled `MemoryPool_page_size`, `Util_pad`, and `scalanative_zone_pad8`
+frames from the post-change Yak graphstep checked scoped L4 profile without
+changing object layout or zero-initialization semantics. Validation now passes:
+`sandbox3_next/compile`, `RiftRegionCheckedCompilerTest` (`141/141`), and
+`RiftRegionCheckedTest` (`64/64`). This is not a new headline throughput row;
+it is profiling-guided overhead cleanup. The remaining sampled checked cost is
+allocator body, mandatory zeroing, and SafeZone-backed `allocUncheckedImpl`
+wrappers.
 
 Latest operator-gate status:
 `evidence/OPERATOR_GATE_STATUS.md`. This keeps rank/top-k/median/hash/join work

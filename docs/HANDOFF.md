@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-12 09:43 CEST
+Last updated: 2026-05-12 11:35 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -10,10 +10,10 @@ Active implementation branch for this update:
 `feature/rift`
 
 Latest child checkpoint:
-`1084077d3` (`Add epoch and ReML profile cases`)
+`9ee340950` (`Inline zone allocation padding`)
 
 Latest implementation-code checkpoint:
-`55ce32ec6` (`Extend open region safety probes`)
+`9ee340950` (`Inline zone allocation padding`)
 
 Latest parent evidence checkpoint:
 `f8a470b` (`Record epoch and ReML profiling follow-up`)
@@ -55,19 +55,43 @@ representative StreamFlex, generated Common Crawl-shaped q2, DSPBench Fraud q2
 with the bundled real credit-card input, LogHub HDFS streaming top-k, StreamIt
 FilterBank, profile-sized StreamIt BeamFormer rows, Yak LiveJournal graph
 replay, Dataflow AGGREGATE, SPECjbb2005-workload, and ReML-shaped `msort` and
-`ratio` rows. The representative sweep is split across:
+`ratio` rows, plus a generated Yak `graphstep` profile case that isolates the
+epoch body without gzip/file parsing. The representative sweep is split across:
 `/Users/siyaoliu/rift/cache/profile-sweep-20260512-representative`,
 `/Users/siyaoliu/rift/cache/profile-sweep-20260512-fixes`, and
 `/Users/siyaoliu/rift/cache/profile-sweep-20260512-streamit-final`, with the
 epoch/ReML follow-up in
-`/Users/siyaoliu/rift/cache/profile-sweep-20260512-epoch-reml`. Parent evidence
-is in `evidence/PROFILE_SWEEP_MATRIX.md`, with interpretation in
+`/Users/siyaoliu/rift/cache/profile-sweep-20260512-epoch-reml`, and the Yak
+epoch-body follow-up in
+`/Users/siyaoliu/rift/cache/profile-sweep-20260512-yak-graphstep`. Parent
+evidence is in `evidence/PROFILE_SWEEP_MATRIX.md`, with interpretation in
 `docs/CPU_PROFILE_REPORT.md`. Main new findings: generic `EpochFold` is gated
 because table/probe, cursor, allocator/stat, and `checkOpen` paths dominate;
 direct Dataflow epoch is mostly a tight loop plus allocation/zeroing; ReML
 `msort` is boxed-sort/object-shape dominated; ReML `ratio` is compute-bound;
-the first Yak LiveJournal sample caught gzip/file parsing, so use a delayed or
-processing-only profile before tuning the epoch body.
+the first Yak LiveJournal sample caught gzip/file parsing; the generated
+graphstep epoch-body profile shows checked scoped time in the graph loop plus
+SafeZone allocation/zeroing/padding and heap time in the same loop plus Immix
+allocation/object metadata/mark/sweep. The next optimization target, if any,
+is allocation lowering/object construction/zeroing, not more bucket close/open
+bookkeeping.
+
+Latest allocator micro-optimization checkpoint:
+child `9ee340950` completes the first profile-guided SafeZone/zone allocator
+cleanup. It caches the configured page size on each opened `Zone` and lowers
+the per-allocation pad-to-8 calculation to a macro, removing sampled
+`MemoryPool_page_size`, `Util_pad`, and `scalanative_zone_pad8` frames from
+the Yak graphstep checked scoped profile. It does not change object layout,
+constructor semantics, or mandatory zero initialization. Validation passed:
+`ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile`,
+`ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"`
+(`141/141`), and
+`ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionCheckedTest"`
+(`64/64`, rerun after the macro change). The post-change L4 artifacts are in
+`/Users/siyaoliu/rift/cache/profile-sweep-20260512-yak-graphstep-post-zone-page-cache`
+and `/Users/siyaoliu/rift/cache/profile-sweep-20260512-yak-graphstep-post-pad-macro`.
+Remaining checked hot spots are allocator body, zeroing, and
+SafeZone-backed `allocUncheckedImpl` wrappers.
 
 Latest StreamIt-control follow-up:
 `evidence/STREAMIT_KERNEL_MATRIX.md` now has the clean 3-run L1 control matrix
