@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-12 14:40 CEST
+Last updated: 2026-05-12 15:07 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -10,9 +10,24 @@ Active implementation branch for this update:
 `feature/rift`
 
 Latest child checkpoint:
-`b0e1bc232` (`Specialize Rift managed object allocation`)
+`c22c78d57` (`Inline open-region unchecked allocation`)
 
-Latest allocation-lowering checkpoint:
+Latest open-allocation checkpoint:
+child `c22c78d57` removes the extra superclass hop in the final
+`OpenStreamingRegion.allocUncheckedImpl` implementations. The operator-owned
+open allocation path now calls the Rift/SafeZone backend allocators directly;
+public defensive `allocImpl` is unchanged. Validation passed:
+`sandbox3_next/compile`, `RiftRegionCheckedCompilerTest` (`141/141`), and
+`RiftRegionCheckedTest` (`64/64`). Focused final-clean 1M page-token rows are
+`24.665 ms` for checked Rift and `24.816 ms` for checked SafeZone-backed, with
+matching checksum and zero GC. Single-run application gates are
+workload-sensitive: StreamFlex-design `checked-epoch-stream` moves from the
+previous object-fast `8.07 s` gate to `7.72 s`, while generated Common
+Crawl-shaped q2 is essentially flat (`3.98 s -> 4.00 s`). A slab bulk-zeroing
+trial was rejected because focused 5M allocation was slightly worse
+(`70.044 ms`) than the committed object-fast baseline (`69.912 ms`).
+
+Previous allocation-lowering checkpoint:
 child `b0e1bc232` specializes Rift managed-object allocation with a
 pointer-aligned object fast path instead of routing every object through the
 generic raw-allocation alignment helper. Object zero/init and header setup are

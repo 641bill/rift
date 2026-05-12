@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-12 14:40 CEST
+Last updated: 2026-05-12 15:07 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -140,6 +140,18 @@ gates also move in the expected direction: StreamFlex-design checked stream
 `4.23 s -> 3.98 s`. This is allocation-lowering evidence for the Rift-native
 checked backend, not a SafeZone-backed result and not yet a new final headline
 median.
+
+Latest open-allocation cleanup:
+The final `OpenStreamingRegion` classes now call the Rift/SafeZone backend
+allocators directly in `allocUncheckedImpl`, removing an extra superclass hop
+from operator-owned `allocOpen`. Public defensive `allocImpl` is unchanged.
+Focused final-clean 1M page-token rows are `24.665 ms` for checked Rift and
+`24.816 ms` for checked SafeZone-backed, with matching checksum and zero GC.
+Single-run application gates are workload-sensitive: StreamFlex-design checked
+stream moves from `8.07 s` to `7.72 s`, while generated Common Crawl-shaped q2
+is flat at `3.98 s -> 4.00 s`. A dirty-slab bulk-zeroing attempt was rejected:
+it preserved zero-init semantics but regressed focused 5M allocation slightly
+(`70.044 ms` versus the committed `69.912 ms`) by moving work into slab attach.
 
 Latest operator-gate status:
 `evidence/OPERATOR_GATE_STATUS.md`. This keeps rank/top-k/median/hash/join work

@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-12 14:40 CEST
+Last updated: 2026-05-12 15:07 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -97,6 +97,20 @@ StreamFlex-design checked stream `8.57 s -> 8.07 s`; generated Common
 Crawl-shaped checked page-token q2 `4.23 s -> 3.98 s`. This is the clearest
 next optimization target completed after profiling: reduce allocation lowering
 overhead before touching benchmark-specific algorithms.
+
+Latest open-allocation update:
+child `c22c78d57` removes the final-class superclass wrapper from
+`OpenStreamingRegion.allocUncheckedImpl`. Operator-owned `allocOpen` now calls
+the Rift or SafeZone allocator directly in the final concrete open-region
+classes; public defensive allocation remains unchanged. Validation passes:
+`sandbox3_next/compile`, `RiftRegionCheckedCompilerTest` (`141/141`), and
+`RiftRegionCheckedTest` (`64/64`). Focused final-clean 1M page-token rows are
+`24.665 ms` checked Rift and `24.816 ms` checked SafeZone-backed. Application
+impact is mixed but non-negative: StreamFlex-design checked stream improves in
+the single-run gate (`8.07 s -> 7.72 s`), while generated Common Crawl-shaped
+q2 is flat (`3.98 s -> 4.00 s`). The attempted dirty-slab bulk-zero policy was
+rejected because it slightly regressed the 5M allocation row (`70.044 ms`
+versus `69.912 ms`) and moved time into slab attach.
 
 Latest ReML priority decision:
 Exact MLKit/ReML artifact reruns are now gated/low-priority. Keep the
