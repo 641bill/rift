@@ -1,6 +1,6 @@
 # Rift CPU Profiling Report
 
-Last updated: 2026-05-12 16:50 CEST
+Last updated: 2026-05-12 17:22 CEST
 
 Status: representative L4 profiling coverage is complete for the current
 headline/tuning set. The first profile-driven implementation follow-up removed
@@ -129,6 +129,34 @@ This profile pass does not change headline timing. It updates the optimization
 priority: remove remaining final-clean per-allocation checks if practical,
 then investigate object construction/zeroing or same-shape append-time summary
 APIs before adding more page-token lifecycle tweaks.
+
+## Region-Cached Allocation-Stats Follow-Up
+
+Date/time: 2026-05-12 17:11-17:16 CEST.
+
+The final-clean Rift runtime now caches allocation-stats mode on each
+`scalanative_rift_region` at open. A post-change L4 sweep reran the two clean
+winner targets:
+
+- `/Users/siyaoliu/rift/cache/profile-post-region-cached-stats-20260512/streamflex-design-checked-stream.sample.txt`
+- `/Users/siyaoliu/rift/cache/profile-post-region-cached-stats-20260512/commoncrawl-q2-checked-rift.sample.txt`
+
+`scalanative_rift_alloc_stats_enabled` is no longer sampled in either profile.
+The remaining StreamFlex-design samples are in `processCheckedPeriod`,
+`scalanative_rift_region_alloc_object_fast`, `scalanative_rift_region_alloc`,
+`_platform_memset`, stable-state classify/update work, and capsule add/drain.
+The remaining Common Crawl-shaped q2 samples are in `closeRecords`,
+`appendPageTokenOwnedOpen`, `StreamAppendCursor.nextOwnedOrNull`, region
+allocation, `_platform_memset`, and token/hash/query work.
+
+Focused allocation did not improve over the prior object-fast baseline
+(`71.702 ms` versus `69.912 ms` for 5M objects), so this is a profile cleanup
+and modest application-level win rather than a new focused allocation win.
+The application gates moved slightly in the expected direction: page-token
+checked Rift `25.007 -> 24.618 ms`, StreamFlex-design checked stream
+`22.81 -> 22.55 s`, and Common Crawl-shaped q2 checked Rift `11.49 -> 11.39 s`.
+The next optimizer targets remain object construction/zeroing, allocation-body
+code shape, and same-shape operator summaries where query semantics allow them.
 
 ## Profile-Guided Allocator Follow-Up
 

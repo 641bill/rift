@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-12 16:50 CEST
+Last updated: 2026-05-12 17:22 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -83,6 +83,18 @@ to `8.57 s`, and generated Common Crawl-shaped q2 `rift-checked-page-token`
 improves from `4.33 s` to `4.23 s`. Dataflow AGGREGATE and Yak graphstep are
 too noisy at the single-process gate scale, so do not present this as a
 universal application-speedup claim.
+
+Latest region-cached stats cleanup:
+child `450465743` caches allocation-stats mode per Rift region, removing
+`scalanative_rift_alloc_stats_enabled` from the sampled final-clean winner
+profiles while preserving `RIFT_ALLOC_STATS=1` diagnostics. This is a modest
+application cleanup, not a focused allocation win: the 5M object-allocation row
+is `71.702 ms` versus the earlier object-fast `69.912 ms`, while page-token
+checked Rift improves `25.007 -> 24.618 ms`, StreamFlexDesign checked stream
+`22.81 -> 22.55 s`, and generated Common Crawl-shaped q2 checked Rift
+`11.49 -> 11.39 s`. Next low-level work should target object construction,
+mandatory zeroing, allocation-body code shape, and same-shape operator summaries
+rather than more stats/check-open cleanup.
 
 Latest allocation-lowering update:
 child `b0e1bc232` specializes Rift managed-object allocation with a

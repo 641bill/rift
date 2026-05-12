@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-12 16:50 CEST
+Last updated: 2026-05-12 17:22 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -40,6 +40,17 @@ natural heap, direct epoch, retained epoch/drop-anchor, page/window token,
 summary-only lower bound, and same-API backend choices. It also adds a table
 separating what Rift enforces today from design vocabulary borrowed from prior
 work.
+
+Latest profile-guided backend cleanup:
+child `450465743` caches Rift allocation-stats mode per opened region. The
+post-change profiles no longer sample `scalanative_rift_alloc_stats_enabled`;
+diagnostic counters still work with `RIFT_ALLOC_STATS=1`. The focused
+allocation row is mixed (`71.702 ms` versus the earlier object-fast
+`69.912 ms`), so this is reported as a cleanup/modest app improvement rather
+than a new allocation headline. Representative gates move slightly:
+page-token checked Rift `25.007 -> 24.618 ms`, StreamFlexDesign checked stream
+`22.81 -> 22.55 s`, and generated Common Crawl-shaped q2 checked Rift
+`11.49 -> 11.39 s`.
 
 Latest measurement-overhead protocol:
 `evidence/MEASUREMENT_OVERHEAD_PROTOCOL.md` and

@@ -1,6 +1,6 @@
 # L4 Profile Sweep Matrix
 
-Last updated: 2026-05-12 16:50 CEST
+Last updated: 2026-05-12 17:22 CEST
 
 Status: profiling infrastructure and first representative sweep complete. This
 file tracks representative external-profile sweeps for benchmark families. L4
@@ -190,6 +190,38 @@ RIFT_PROFILE_COMMON_CRAWL_PAGES=2000000 \
 |---|---|---:|---|---|
 | `streamflex-design-checked-stream` | `ok` | 20M generated StreamFlex-design events | `/Users/siyaoliu/rift/cache/profile-post-rerun-20260512-clean-winners/streamflex-design-checked-stream.sample.txt` | The clean checked-stream winner is not close/open dominated. Samples are concentrated in `processCheckedPeriod`, `scalanative_rift_region_alloc_object_fast`, `_platform_memset`, `StableState.classify`, `StableState.recordEvent`, capsule add/drain, and the remaining per-allocation `scalanative_rift_alloc_stats_enabled` check. |
 | `commoncrawl-q2-checked-rift` | `ok` | 2M generated WET-shaped pages | `/Users/siyaoliu/rift/cache/profile-post-rerun-20260512-clean-winners/commoncrawl-q2-checked-rift.sample.txt` | The clean Rift page-token winner spends most sampled time in close cursor traversal, page-token append/linking, region object allocation/zeroing, token hashing/query work, and the same remaining allocation-stats enable check. This reinforces that the next speed work is allocation lowering/zeroing/stat-check removal or reducing required record traversal, not more bucket close/open bookkeeping. |
+
+## Post Region-Cached Stats Profiles
+
+Date/time: 2026-05-12 17:11-17:16 CEST.
+
+Profile directory:
+
+- `/Users/siyaoliu/rift/cache/profile-post-region-cached-stats-20260512`
+
+Command:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+RIFT_PROFILE_OUTPUT_DIR=/Users/siyaoliu/rift/cache/profile-post-region-cached-stats-20260512 \
+RIFT_PROFILE_CASES="streamflex-design-checked-stream commoncrawl-q2-checked-rift" \
+RIFT_PROFILE_SECONDS=4 \
+RIFT_PROFILE_DELAY_SECONDS=0.5 \
+RIFT_PROFILE_BUILD=0 \
+RIFT_PROFILE_STREAMFLEX_EVENTS=20000000 \
+RIFT_PROFILE_COMMON_CRAWL_PAGES=2000000 \
+  zsh sandbox/run_l4_profile_sweep.sh
+```
+
+| Case | Status | Scale | Profile artifact | Main interpretation |
+|---|---|---:|---|---|
+| `streamflex-design-checked-stream` | `ok` | 20M generated StreamFlex-design events | `/Users/siyaoliu/rift/cache/profile-post-region-cached-stats-20260512/streamflex-design-checked-stream.sample.txt` | `scalanative_rift_alloc_stats_enabled` is no longer sampled. Remaining samples are allocation body, `_platform_memset`, stable-state classify/update work, and capsule add/drain. |
+| `commoncrawl-q2-checked-rift` | `ok` | 2M generated WET-shaped pages | `/Users/siyaoliu/rift/cache/profile-post-region-cached-stats-20260512/commoncrawl-q2-checked-rift.sample.txt` | `scalanative_rift_alloc_stats_enabled` is no longer sampled. Remaining samples are close cursor traversal, page-token append/linking, region allocation, `_platform_memset`, and token/hash/query work. |
+
+Interpretation: caching allocation-stats mode at region open removes the
+profiled helper from clean final paths. Focused object allocation is mixed, so
+the accepted claim is profile cleanup plus modest application improvement, not
+a new focused allocation win.
 
 ## Smoke
 

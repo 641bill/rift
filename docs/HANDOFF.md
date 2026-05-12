@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-12 16:50 CEST
+Last updated: 2026-05-12 17:22 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -10,7 +10,23 @@ Active implementation branch for this update:
 `feature/rift`
 
 Latest child checkpoint:
-`61944b487` (`Add clean winner profile cases`)
+`450465743` (`Cache Rift allocation stats mode per region`)
+
+Latest profile-guided overhead cleanup:
+child `450465743` caches `RIFT_ALLOC_STATS`/`RIFT_FINAL_CLEAN` allocation-stats
+mode on each `scalanative_rift_region` at open, so raw/object/slow allocation
+paths no longer call `scalanative_rift_alloc_stats_enabled()` per allocation.
+The forced diagnostic gate still reports counters (`RIFT_ALLOC_STATS=1`, 1M
+objects: `1000001` region objects). The post-change L4 profiles in
+`/Users/siyaoliu/rift/cache/profile-post-region-cached-stats-20260512` no
+longer sample `scalanative_rift_alloc_stats_enabled`. Focused 5M object
+allocation is mixed (`71.702 ms` versus the earlier object-fast `69.912 ms`),
+so this is not a focused allocation win. It is still a modest application-level
+cleanup: focused page-token checked Rift `25.007 -> 24.618 ms`,
+StreamFlexDesign checked stream `22.81 -> 22.55 s`, and generated
+Common Crawl-shaped q2 checked Rift `11.49 -> 11.39 s`. The next optimizer
+targets remain object construction/zeroing, allocation-body shape, and
+same-shape operator summaries where query semantics allow them.
 
 Latest clean rerun checkpoint:
 child `ca1978ef4` records clean final-clean reruns from the open-allocation
