@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-12 11:35 CEST
+Last updated: 2026-05-12 12:05 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -95,6 +95,18 @@ changing object layout or zero-initialization semantics. Validation now passes:
 it is profiling-guided overhead cleanup. The remaining sampled checked cost is
 allocator body, mandatory zeroing, and SafeZone-backed `allocUncheckedImpl`
 wrappers.
+
+Latest post-cleanup timing check:
+`evidence/YAK_REGION_MATRIX.md` now records focused Yak graphstep L1/L2 rows
+after the allocator cleanup. At 10M logical messages, checked scoped graphstep
+improves from the previous clean `181.341 ms` row to `167.164 ms`, with
+external L1 `0.93 s`; heap is `263.051 ms` / `1.31 s`. At the 50M graphstep
+profile scale, checked scoped remains the fastest safe row at `1710.128 ms`
+L2 and `9.57 s` L1, versus heap `2276.697 ms` / `12.25 s`, rooted scoped
+`1746.292 ms` / `9.76 s`, and checked stream `2005.310 ms` / `11.11 s`.
+This upgrades the allocator cleanup from profile-only evidence to a measured
+focused timing improvement, while still leaving allocation body and zeroing as
+the next real bottlenecks.
 
 Latest operator-gate status:
 `evidence/OPERATOR_GATE_STATUS.md`. This keeps rank/top-k/median/hash/join work

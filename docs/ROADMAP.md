@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-12 11:35 CEST
+Last updated: 2026-05-12 12:05 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -56,6 +56,16 @@ post-change Yak graphstep L4 profile confirms the intended cleanup:
 `MemoryPool_page_size`, `Util_pad`, and `scalanative_zone_pad8` are no longer
 sampled; remaining checked scoped cost is allocator body, mandatory zeroing,
 and SafeZone-backed `allocUncheckedImpl` wrappers.
+
+Latest allocator timing update:
+child `be79f93f2` adds the post-cleanup focused graphstep timing rows to
+`evidence/YAK_REGION_MATRIX.md`. The 10M checked scoped graphstep row improves
+from the previous `181.341 ms` to `167.164 ms`, and the 50M profile-scale row
+keeps checked scoped fastest among safe modes (`1710.128 ms` L2,
+`9.57 s` L1 external) versus heap (`2276.697 ms`, `12.25 s`) and rooted scoped
+(`1746.292 ms`, `9.76 s`). Next low-level backend work should target
+allocation lowering/object construction/zeroing rather than page-size or
+padding helpers.
 
 Latest ReML priority decision:
 Exact MLKit/ReML artifact reruns are now gated/low-priority. Keep the

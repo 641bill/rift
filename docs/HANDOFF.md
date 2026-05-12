@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-12 11:35 CEST
+Last updated: 2026-05-12 12:05 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -10,7 +10,7 @@ Active implementation branch for this update:
 `feature/rift`
 
 Latest child checkpoint:
-`9ee340950` (`Inline zone allocation padding`)
+`be79f93f2` (`Record Yak graphstep allocator timing`)
 
 Latest implementation-code checkpoint:
 `9ee340950` (`Inline zone allocation padding`)
@@ -92,6 +92,19 @@ constructor semantics, or mandatory zero initialization. Validation passed:
 and `/Users/siyaoliu/rift/cache/profile-sweep-20260512-yak-graphstep-post-pad-macro`.
 Remaining checked hot spots are allocator body, zeroing, and
 SafeZone-backed `allocUncheckedImpl` wrappers.
+
+Latest allocator timing checkpoint:
+child `be79f93f2` records the focused Yak graphstep timing check after the
+allocator cleanup in `evidence/YAK_REGION_MATRIX.md`. At the old 10M graphstep
+scale, checked scoped epoch improves from the previous clean row `181.341 ms`
+to `167.164 ms` L2, with L1 external time `0.93 s`; heap is `263.051 ms` L2
+and `1.31 s` external. At the 50M graphstep profile scale, checked scoped is
+the fastest safe row: `1710.128 ms` L2 and `9.57 s` external, versus heap
+`2276.697 ms` / `12.25 s`, rooted scoped `1746.292 ms` / `9.76 s`, and
+checked stream `2005.310 ms` / `11.11 s`. This supports the profile-guided
+allocator-bookkeeping cleanup as a real measured win, while the remaining
+profile hot spots still point to allocation body, mandatory zeroing, and
+SafeZone-backed allocation wrappers.
 
 Latest StreamIt-control follow-up:
 `evidence/STREAMIT_KERNEL_MATRIX.md` now has the clean 3-run L1 control matrix
