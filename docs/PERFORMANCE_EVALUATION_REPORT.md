@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-12 16:00 CEST
+Last updated: 2026-05-12 16:50 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -88,6 +88,14 @@ The ReML `logic` profile adds one important caveat: even checked scoped region
 nodes can still trigger heap GC if the port allocates heap scratch arrays inside
 the hot loop.
 L4 remains interpretation-only; L1/L2 keep their existing roles.
+
+Post-rerun profiles now cover the actual clean winners as well:
+StreamFlexDesign `checked-epoch-stream` and generated Common Crawl-shaped q2
+`rift-checked-page-token`. They confirm the same optimization direction after
+the clean medians: remaining checked cost is allocation/object construction,
+mandatory zeroing, stable-state or token-query CPU, capsule/cursor traversal,
+and a still-visible final-clean allocation-stats enable check. They do not
+point to more bucket open/close lifecycle tuning as the next high-value target.
 
 Latest profile-guided allocator work:
 child `9ee340950` implements and validates the first narrow zone allocator

@@ -1,6 +1,6 @@
 # Rift CPU Profiling Report
 
-Last updated: 2026-05-12 13:35 CEST
+Last updated: 2026-05-12 16:50 CEST
 
 Status: representative L4 profiling coverage is complete for the current
 headline/tuning set. The first profile-driven implementation follow-up removed
@@ -81,6 +81,7 @@ Raw profile artifacts are kept under:
 - `/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-nexmark-rerun`
 - `/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-reml-logic-checked-rerun`
 - `/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-reml-logic-heap-rerun`
+- `/Users/siyaoliu/rift/cache/profile-post-rerun-20260512-clean-winners`
 
 Summary:
 
@@ -103,6 +104,31 @@ Summary:
 | SPECjbb2005-workload port | checked scoped transaction, heap | The 1M transaction samples are short and mostly hit transaction proxy/count helpers (`txObjectCount`, `txByteProxy`, `txKind`), with only small allocator/metadata samples. | Use larger or delayed profiles before tuning transaction allocation. Current evidence says the row is too short for reliable attribution. |
 | ReML-shaped `msort` | checked scoped, heap | Both local Scala Native ports are dominated by boxed `Integer` compare/valueOf, `ScalaRunTime` array apply/update, and `java.util.Arrays` stable merge/insertion sort. Allocation/zeroing and Immix mark/sweep are visible but not isolated as the only bottleneck. | Interpret `msort` as a Scala object/boxing/list-sort comparison, not a pure allocator benchmark. If it becomes important, add a same-shape unboxed/control row rather than claiming raw Rift-vs-ReML wall-clock. |
 | ReML-shaped `ratio` | checked scoped, heap | Both modes are mostly `gcd` and arithmetic. Region allocation and GC are small in the sampled windows. | Keep `ratio` as compute/control evidence in the ReML same-axes table. It is not a memory-management optimization target. |
+
+## Post-Rerun Clean-Winner Profiles
+
+Date/time: 2026-05-12 16:41-16:42 CEST.
+
+This pass profiles the actual clean-rerun winners rather than the older default
+cases: `checked-epoch-stream` for `StreamFlexDesignMatrix` and
+`rift-checked-page-token` for generated Common Crawl-shaped q2.
+
+Artifacts:
+
+- `/Users/siyaoliu/rift/cache/profile-post-rerun-20260512-clean-winners/streamflex-design-checked-stream.sample.txt`
+- `/Users/siyaoliu/rift/cache/profile-post-rerun-20260512-clean-winners/commoncrawl-q2-checked-rift.sample.txt`
+
+Findings:
+
+| Target | Main sampled frames | Interpretation |
+|---|---|---|
+| StreamFlexDesign `checked-epoch-stream` | `processCheckedPeriod`, `scalanative_rift_region_alloc_object_fast`, `_platform_memset`, `StableState.classify`, `StableState.recordEvent`, capsule add/drain, and `scalanative_rift_alloc_stats_enabled`. | The clean StreamFlex winner still spends time in allocation/object construction/zeroing plus stable-state and capsule CPU. It is not dominated by epoch reset/close. The remaining per-allocation stats-enabled check is now visible enough to treat as a small final-clean hot-path cleanup candidate. |
+| Common Crawl-shaped q2 `rift-checked-page-token` | `closeRecords`, `appendPageTokenOwnedOpen`, `StreamAppendCursor.nextOwnedOrNull`, `scalanative_rift_region_alloc_object_fast`, `_platform_memset`, token hashing/query work, and `scalanative_rift_alloc_stats_enabled`. | The clean page-token winner still pays required cursor traversal and token/query CPU in addition to allocation/zeroing. Further bucket open/close bookkeeping work is unlikely to be the next large win; the useful targets are allocation lowering/zeroing/stat-check removal and, only where semantics allow, avoiding record traversal by maintaining append-time summaries. |
+
+This profile pass does not change headline timing. It updates the optimization
+priority: remove remaining final-clean per-allocation checks if practical,
+then investigate object construction/zeroing or same-shape append-time summary
+APIs before adding more page-token lifecycle tweaks.
 
 ## Profile-Guided Allocator Follow-Up
 

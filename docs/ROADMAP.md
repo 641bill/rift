@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-12 16:00 CEST
+Last updated: 2026-05-12 16:50 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -122,6 +122,21 @@ Generated Common Crawl-shaped q1/q2 1M x3 L1: heap `17.49/16.73 s`, checked
 Rift page-token `10.88/11.49 s`, checked SafeZone-backed page-token
 `13.29/14.84 s`. Next optimization work should be guided by post-rerun L4
 profiles rather than more speculative allocator policy changes.
+
+Latest post-rerun profile update:
+child `61944b487` updates the L4 harness with explicit clean-winner cases for
+`streamflex-design-checked-stream` and `commoncrawl-q2-checked-rift`. The
+profiles in
+`/Users/siyaoliu/rift/cache/profile-post-rerun-20260512-clean-winners`
+confirm that StreamFlexDesign checked stream is led by epoch-body work,
+Rift allocation/object zeroing, stable-state classify/event updates, and
+capsule add/drain; generated Common Crawl q2 checked page-token is led by
+close cursor traversal, page-token append/linking, allocation/zeroing, and
+token hashing. Both profiles still show `scalanative_rift_alloc_stats_enabled`
+in final-clean allocation paths. Treat that as the next small runtime cleanup
+candidate before larger object-construction/zeroing work; do not spend the next
+pass on more bucket close/open bookkeeping unless a new profile contradicts
+this.
 
 Latest ReML priority decision:
 Exact MLKit/ReML artifact reruns are now gated/low-priority. Keep the

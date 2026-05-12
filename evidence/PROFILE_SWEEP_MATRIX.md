@@ -1,6 +1,6 @@
 # L4 Profile Sweep Matrix
 
-Last updated: 2026-05-12 12:50 CEST
+Last updated: 2026-05-12 16:50 CEST
 
 Status: profiling infrastructure and first representative sweep complete. This
 file tracks representative external-profile sweeps for benchmark families. L4
@@ -44,6 +44,8 @@ approval.
 | Case | Benchmark family | Purpose |
 |---|---|---|
 | `streamflex-design-checked` / `streamflex-design-heap` | StreamFlex design reproduction | Compare checked scoped allocation/zeroing and capsule/query work against heap allocation/object metadata. |
+| `streamflex-design-checked-stream` | StreamFlex design reproduction | Profile the clean rerun winner: checked direct epoch over the Rift streaming backend. |
+| `commoncrawl-q2-checked-rift` | Generated GC-heavy page/window stream | Profile the clean rerun winner: Rift-backed checked page-token q2. |
 | `commoncrawl-q2-checked-scoped` / `commoncrawl-q2-heap` | Generated GC-heavy page/window stream | Explain allocation+append, token hashing, cursor traversal, and GC-heavy generated stream behavior. |
 | `dspbench-fraud-q2-checked-scoped` / `dspbench-fraud-q2-heap` | Real DSPBench stream regression | Check whether parser/replay/predictor CPU still dominates real-input rows. |
 | `loghub-hdfs-stream-topk-checked` / `loghub-hdfs-stream-topk-heap` | True real streaming-input retained top-k | Separate file streaming/template hashing/top-k work from GC and region allocation. |
@@ -161,6 +163,33 @@ Remaining useful additions:
 - `samply` flamegraphs for the same representative rows if `samply` becomes
   available on this shell; use those to inspect visible GC pauses interactively.
 - No further broad profiling sweep is needed before the next optimization pass.
+
+## Post-Rerun Clean-Winner Profiles
+
+Date/time: 2026-05-12 16:41-16:42 CEST.
+
+Profile directory:
+
+- `/Users/siyaoliu/rift/cache/profile-post-rerun-20260512-clean-winners`
+
+Command:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+RIFT_PROFILE_OUTPUT_DIR=/Users/siyaoliu/rift/cache/profile-post-rerun-20260512-clean-winners \
+RIFT_PROFILE_CASES="streamflex-design-checked-stream commoncrawl-q2-checked-rift" \
+RIFT_PROFILE_SECONDS=8 \
+RIFT_PROFILE_DELAY_SECONDS=0.5 \
+RIFT_PROFILE_BUILD=1 \
+RIFT_PROFILE_STREAMFLEX_EVENTS=20000000 \
+RIFT_PROFILE_COMMON_CRAWL_PAGES=2000000 \
+  zsh sandbox/run_l4_profile_sweep.sh
+```
+
+| Case | Status | Scale | Profile artifact | Main interpretation |
+|---|---|---:|---|---|
+| `streamflex-design-checked-stream` | `ok` | 20M generated StreamFlex-design events | `/Users/siyaoliu/rift/cache/profile-post-rerun-20260512-clean-winners/streamflex-design-checked-stream.sample.txt` | The clean checked-stream winner is not close/open dominated. Samples are concentrated in `processCheckedPeriod`, `scalanative_rift_region_alloc_object_fast`, `_platform_memset`, `StableState.classify`, `StableState.recordEvent`, capsule add/drain, and the remaining per-allocation `scalanative_rift_alloc_stats_enabled` check. |
+| `commoncrawl-q2-checked-rift` | `ok` | 2M generated WET-shaped pages | `/Users/siyaoliu/rift/cache/profile-post-rerun-20260512-clean-winners/commoncrawl-q2-checked-rift.sample.txt` | The clean Rift page-token winner spends most sampled time in close cursor traversal, page-token append/linking, region object allocation/zeroing, token hashing/query work, and the same remaining allocation-stats enable check. This reinforces that the next speed work is allocation lowering/zeroing/stat-check removal or reducing required record traversal, not more bucket close/open bookkeeping. |
 
 ## Smoke
 

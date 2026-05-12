@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-12 16:00 CEST
+Last updated: 2026-05-12 16:50 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -10,7 +10,7 @@ Active implementation branch for this update:
 `feature/rift`
 
 Latest child checkpoint:
-`ca1978ef4` (`Record clean allocation rerun medians`)
+`61944b487` (`Add clean winner profile cases`)
 
 Latest clean rerun checkpoint:
 child `ca1978ef4` records clean final-clean reruns from the open-allocation
@@ -25,6 +25,21 @@ checked Rift page-token `10.88/11.49 s`, and checked SafeZone-backed
 page-token `13.29/14.84 s`, with matching checksums. These are clean
 presentation rows; Common Crawl remains generated stressor evidence, not
 real-input proof.
+
+Latest post-rerun profiling checkpoint:
+child `61944b487` adds explicit L4 harness cases for the actual clean
+winners: `streamflex-design-checked-stream` and
+`commoncrawl-q2-checked-rift`. The profiles are in
+`/Users/siyaoliu/rift/cache/profile-post-rerun-20260512-clean-winners`.
+StreamFlexDesign `checked-epoch-stream` samples `processCheckedPeriod`,
+Rift region object allocation, `_platform_memset`, stable-state classify/event
+updates, capsule add/drain, and the remaining per-allocation
+`scalanative_rift_alloc_stats_enabled` check. Common Crawl q2
+`rift-checked-page-token` samples close cursor traversal, page-token append,
+region allocation/zeroing, token hashing/query work, and the same stats-enable
+check. This keeps the next optimization target focused on allocation lowering,
+object construction/zeroing, and removing remaining final-clean per-allocation
+checks if practical, not more bucket open/close bookkeeping.
 
 Latest open-allocation checkpoint:
 child `c22c78d57` removes the extra superclass hop in the final
