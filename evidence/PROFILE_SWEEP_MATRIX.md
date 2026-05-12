@@ -1,6 +1,6 @@
 # L4 Profile Sweep Matrix
 
-Last updated: 2026-05-12 02:35 CEST
+Last updated: 2026-05-12 09:43 CEST
 
 Status: profiling infrastructure and first representative sweep complete. This
 file tracks representative external-profile sweeps for benchmark families. L4
@@ -49,6 +49,11 @@ approval.
 | `loghub-hdfs-stream-topk-checked` / `loghub-hdfs-stream-topk-heap` | True real streaming-input retained top-k | Separate file streaming/template hashing/top-k work from GC and region allocation. |
 | `streamit-filterbank-checked` / `streamit-filterbank-heap` | StreamIt/StreamFlex primitive control | Confirm primitive DSP kernels are compute/array dominated. |
 | `streamit-beamformer-checked` / `streamit-beamformer-heap` | StreamIt/StreamFlex primitive control | Confirm primitive DSP kernels are compute/array dominated. BeamFormer uses a profile-only scale by default because large timing scales are too slow for routine L4 sweeps. |
+| `yak-graphreal-checked-scoped` / `yak-graphreal-heap` | Real SNAP/Yak graph replay | Check whether the direct-epoch LiveJournal row is compute, input, allocation, or GC dominated. |
+| `dataflow-aggregate-checked-scoped` / `dataflow-aggregate-epoch-fold` / `dataflow-aggregate-heap` | Broom/Dataflow aggregate | Explain why direct epoch wins but generic `EpochFold` remains gated. |
+| `specjbb-checked-scoped` / `specjbb-heap` | Stancu/SPECjbb2005-workload port | Check whether transaction rows are dominated by object allocation, transaction proxy helpers, or GC. |
+| `reml-msort-checked-scoped` / `reml-msort-heap` | ReML/MLKit-shaped allocation/list port | Compare local Scala Native list/sort CPU shape with checked scoped placement. |
+| `reml-ratio-checked-scoped` / `reml-ratio-heap` | ReML/MLKit-shaped compute/list control | Check whether `ratio` is compute-bound or memory-management-bound. |
 
 ## Representative Sweep
 
@@ -59,6 +64,7 @@ Profile directories:
 - `/Users/siyaoliu/rift/cache/profile-sweep-20260512-representative`
 - `/Users/siyaoliu/rift/cache/profile-sweep-20260512-fixes`
 - `/Users/siyaoliu/rift/cache/profile-sweep-20260512-streamit-final`
+- `/Users/siyaoliu/rift/cache/profile-sweep-20260512-epoch-reml`
 
 The sweep was split because the first pass exposed two harness issues:
 DSPBench file-backed rows needed an explicit `DSPBENCH_INPUT`, and the
@@ -80,15 +86,26 @@ profile-sized StreamIt controls.
 | `streamit-filterbank-heap` | `ok` | 4096 iterations | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-streamit-final/streamit-filterbank-heap.sample.txt` | Same numeric-kernel result as checked; this supports keeping FilterBank as a methodology control. |
 | `streamit-beamformer-checked` | `ok` | 256 frames | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-streamit-final/streamit-beamformer-checked.sample.txt` | BeamFormer is dominated by FIR filter state stepping; allocator/GC frames are tiny. |
 | `streamit-beamformer-heap` | `ok` | 256 frames | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-streamit-final/streamit-beamformer-heap.sample.txt` | Same FIR-dominated CPU shape as checked. BeamFormer is not a GC-heavy memory-management proof in the current port. |
+| `yak-graphreal-checked-scoped` | `ok` | 50M real LiveJournal edges | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-epoch-reml/yak-graphreal-checked-scoped.sample.txt` | The current 2s sample catches gzip/file input parsing (`RealGraphInput.parseEdge`, zlib inflate, byte-line read) before the direct-epoch phase dominates. Treat this as input-path evidence; rerun with a processing-phase/preloaded profile before using it to tune epoch allocation. |
+| `yak-graphreal-heap` | `ok` | 50M real LiveJournal edges | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-epoch-reml/yak-graphreal-heap.sample.txt` | Same input-path caveat as checked scoped: the sample is dominated by graph input parsing/loading, not the heap-vs-region epoch body. |
+| `dataflow-aggregate-checked-scoped` | `ok` | 20 x 500k docs | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-epoch-reml/dataflow-aggregate-checked-scoped.sample.txt` | Direct checked scoped aggregate is short and mostly a tight aggregate loop plus SafeZone allocation/zeroing. |
+| `dataflow-aggregate-epoch-fold` | `ok` | 20 x 500k docs | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-epoch-reml/dataflow-aggregate-epoch-fold.sample.txt` | Generic `EpochFold` spends visible time in `findFoldInsertSlot`, `addFoldContribution`, fold table capacity/clear, append/cursor traversal, Rift allocation/stat paths, and `checkOpen`. This explains why it remains speed-gated. |
+| `dataflow-aggregate-heap` | `ok` | 20 x 500k docs | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-epoch-reml/dataflow-aggregate-heap.sample.txt` | Heap aggregate shows the same query/document construction floor plus Immix allocation, object metadata, mark, and sweep frames. |
+| `specjbb-checked-scoped` | `ok` | 1M transactions | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-epoch-reml/specjbb-checked-scoped.sample.txt` | The row is too short for a rich call graph; sampled time is mostly transaction proxy/count helpers (`txObjectCount`, `txByteProxy`, `txKind`). Use a larger/delayed profile before tuning allocation here. |
+| `specjbb-heap` | `ok` | 1M transactions | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-epoch-reml/specjbb-heap.sample.txt` | Similar short-profile shape to checked scoped, with a small number of heap allocator/object metadata samples. |
+| `reml-msort-checked-scoped` | `ok` | 1M list size | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-epoch-reml/reml-msort-checked-scoped.sample.txt` | The local Scala Native port is dominated by boxed `Integer` compare/valueOf, `ScalaRunTime` array apply/update, `java.util.Arrays` stable merge/insertion sort, plus allocation/zeroing/GC frames. This is a Scala object/boxing/sort-shape result, not a pure region allocator result. |
+| `reml-msort-heap` | `ok` | 1M list size | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-epoch-reml/reml-msort-heap.sample.txt` | Heap has nearly the same boxed sort shape, plus Immix allocation/object metadata/mark/sweep frames. |
+| `reml-ratio-checked-scoped` | `ok` | 2M ratio count | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-epoch-reml/reml-ratio-checked-scoped.sample.txt` | Checked scoped `ratio` is mostly `gcd` and arithmetic; region allocation is tiny in the sample. Treat as compute/control evidence. |
+| `reml-ratio-heap` | `ok` | 2M ratio count | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-epoch-reml/reml-ratio-heap.sample.txt` | Heap `ratio` is also mostly `gcd`; visible GC frames are secondary. |
 
 Future additions should cover:
 
-- Yak LiveJournal direct epoch, but only at a scale long enough to sample
-  without making the profile run impractical.
-- Dataflow SELECT/AGGREGATE/JOIN once native-link runner support is normalized.
-- SPECjbb2005/Stancu transaction port after the next transaction-scale row.
-- ReML Tier 1 allocation/list ports when the comparison table needs CPU
-  explanation.
+- A Yak LiveJournal processing-phase profile that avoids sampling only gzip/file
+  parsing. Options are a longer delayed profile, a preloaded processing-only
+  mode, or a generated graph-step profile when the question is epoch CPU rather
+  than real input parsing.
+- Larger/delayed SPECjbb2005-workload and ReML `ratio` rows if they become
+  tuning targets; the current samples are useful controls but short.
 
 ## Smoke
 

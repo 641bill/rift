@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-12 02:35 CEST
+Last updated: 2026-05-12 09:43 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -69,11 +69,17 @@ for representative benchmark sweeps, with usage recorded in
 `evidence/PROFILE_SWEEP_MATRIX.md`. The first representative L4 sweep is now
 complete for StreamFlex-design, generated Common Crawl-shaped q2, DSPBench
 Fraud q2, LogHub HDFS streaming top-k, StreamIt FilterBank, and StreamIt
-BeamFormer. The main finding is stable across families: real streaming rows are
-mostly parser/hash/query dominated; generated object-pressure rows expose
-allocator/zeroing/traversal costs; StreamIt primitive kernels are compute
-controls rather than GC-heavy evidence. L4 remains interpretation-only; L1/L2
-keep their existing roles.
+BeamFormer, with a follow-up sweep for Yak LiveJournal, Dataflow AGGREGATE,
+SPECjbb2005-workload, and ReML-shaped `msort`/`ratio`. The main finding is
+stable across families: real streaming rows are mostly parser/hash/query
+dominated; generated object-pressure rows expose allocator/zeroing/traversal
+costs; StreamIt primitive kernels and ReML `ratio` are compute controls rather
+than GC-heavy evidence; generic `EpochFold` is slow because of table/probe,
+cursor, allocator/stat, and `checkOpen` work rather than because close/reclaim
+alone is expensive. The first Yak LiveJournal profile mostly samples gzip/file
+input parsing, so a processing-phase profile is still needed before tuning the
+epoch replay body. L4 remains interpretation-only; L1/L2 keep their existing
+roles.
 
 Latest operator-gate status:
 `evidence/OPERATOR_GATE_STATUS.md`. This keeps rank/top-k/median/hash/join work

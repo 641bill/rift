@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-12 01:03 CEST
+Last updated: 2026-05-12 09:43 CEST
 
 Status: markdown slide deck outline. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report,
@@ -43,6 +43,7 @@ Representative numbers to keep on slides:
 | StreamFlex/Stancu epoch | L1 StreamFlex throughput `0.58 s` vs heap `0.79 s`; L1 Stancu `0.57 s` vs heap `0.85 s`. | Direct epoch supersedes older TransactionRegion/EpochBuffer rows for shared batch lifetimes. |
 | StreamFlex design reproduction | L1 StreamFlexDesign throughput: checked scoped `1.27 s`, `7.9 MB` RSS vs heap `1.52 s`, `12.4 MB`; L2 pressure-latency: checked scoped fastest and checked stream has `0` misses. | Rift-native stable/transient/capsule design reproduction; not exact Ovm artifact evidence. |
 | StreamIt BeamFormer/FilterBank controls | 3-run L1 control: heap `15.00 s`, checked scoped `15.23 s`, checked stream `15.56 s`; L2 confirms FilterBank is zero-GC and BeamFormer is compute/array dominated. | Primitive DSP kernels are StreamFlex-axis controls, not GC-heavy Rift wins. |
+| L4 profile lesson | Dataflow `EpochFold` samples show fold-table lookup/probing, cursor traversal, Rift allocator/stat paths, and `checkOpen`; direct epoch is mostly tight loop plus allocation/zeroing. Yak LiveJournal profiling currently samples gzip/file parsing. | Use profiles to guide optimization, not headline timing. Keep `EpochFold` gated; profile Yak's processing phase before tuning the graph epoch body. |
 | SPECjbb2005-workload port | L1 8 warehouses x20: checked epoch scoped `2.21 s` vs heap `2.64 s` and rooted scoped `2.48 s`; RSS about `8.0 MB` vs heap `12.4 MB`. | Clean-room Scala Native port strengthens the Stancu/SPECjbb transaction-lifetime story; not official SPECjbb2005. |
 | Generated page/window stressor | Common Crawl-shaped q1/q2: checked scoped page-token `3707.214/3902.795 ms` vs heap `5577.965/5183.074 ms`. | Strong generated stream-object pressure win; RSS caveat; not real-input proof. |
 | Modest real-input page/window | GH Archive byte-slice q1/q2 L1 checked scoped page-token `12.89/12.87 s`, `101/102 MB` RSS vs heap `13.17/13.18 s`, `265/244 MB`; LogHub HDFS q2 L1 checked scoped page-token `25.56 s`, `79 MB` RSS vs heap `25.60 s`, `409 MB` RSS; DSPBench Log q2 L1 checked `8.79 s`, `47.6 MB` vs heap `8.89 s`, `308 MB`. | Real-input page/window wins are mostly RSS/tail/modest-throughput because parser/query CPU dominates and heap GC is small. |

@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-12 02:35 CEST
+Last updated: 2026-05-12 09:43 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -27,6 +27,18 @@ Native/Rift time, RSS, and L2 GC interpretation columns for available ports.
 Exact MLKit/ReML reruns stay deferred; the immediate ReML deliverable is
 explaining local Scala Native ratios and why Rift wins, loses, or is
 unavailable on each paper row.
+
+Latest profiling update:
+child `1084077d3` extends `sandbox/run_l4_profile_sweep.sh` with Yak
+LiveJournal graph replay, Dataflow AGGREGATE, SPECjbb2005-workload, and
+ReML-shaped `msort`/`ratio` cases. The follow-up sweep is recorded in
+`evidence/PROFILE_SWEEP_MATRIX.md` and `docs/CPU_PROFILE_REPORT.md`. It confirms
+that generic `EpochFold` is slow because of table/probe, cursor, allocator/stat,
+and `checkOpen` costs; direct Dataflow epoch is mostly tight aggregate loop plus
+allocation/zeroing; ReML `msort` is boxed-sort/object-shape dominated; ReML
+`ratio` is compute-bound; and the first Yak LiveJournal profile mostly samples
+gzip/file parsing, so a delayed or processing-only profile is needed before
+tuning the graph epoch body.
 
 Latest ReML priority decision:
 Exact MLKit/ReML artifact reruns are now gated/low-priority. Keep the
@@ -1778,10 +1790,12 @@ next action is:
 6. Use `SCALANATIVE_GC_ALLOC_STATS=1` selectively for attribution, not as a
    default headline benchmark.
 7. Continue official Scala Native native profiling before more broad operator
-   tuning. The first Common Crawl-shaped q2 page-token samples are recorded;
-   next profile Dataflow AGGREGATE exact-array versus `EpochFold`, StreamFlex
-   trusted Rift versus checked `TransactionRegion`, and Common Crawl q3
-   parser-scratch. Treat profiles as diagnostic-only rows.
+   tuning. The first representative L4 sweep now covers StreamFlex-design,
+   Common Crawl-shaped q2, DSPBench Fraud q2, LogHub HDFS top-k, StreamIt
+   controls, Dataflow AGGREGATE, SPECjbb2005-workload, ReML-shaped ports, and
+   Yak input parsing. The remaining profiling gap is a Yak processing-phase
+   profile and larger/delayed transaction profiles if transaction tuning resumes.
+   Treat profiles as diagnostic-only rows.
 
 Do not move to new runtime micro-optimizations unless a focused benchmark or
 application diagnostic points there. The next runtime change needs concrete

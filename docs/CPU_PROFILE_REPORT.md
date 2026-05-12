@@ -1,6 +1,6 @@
 # Rift CPU Profiling Report
 
-Last updated: 2026-05-12 02:35 CEST
+Last updated: 2026-05-12 09:43 CEST
 
 Status: profiling runbook plus first sampled profile row and the first
 profile-driven implementation follow-up. The sampled GH Archive row identified
@@ -55,8 +55,9 @@ RIFT_PROFILE_OUTPUT_DIR=/Users/siyaoliu/rift/cache/profile-sweep-$(date +%Y%m%d-
 
 The current representative cases cover StreamFlex-design, generated Common
 Crawl-shaped q2, DSPBench Fraud q2, LogHub HDFS streaming top-k, StreamIt
-FilterBank, and StreamIt BeamFormer. Details and smoke/full-sweep results are
-tracked in
+FilterBank, StreamIt BeamFormer, Yak LiveJournal graph replay, Dataflow
+AGGREGATE, SPECjbb2005-workload, and ReML-shaped Tier 1 ports. Details and
+smoke/full-sweep results are tracked in
 `evidence/PROFILE_SWEEP_MATRIX.md`.
 
 ## Representative L4 Sweep Findings
@@ -67,6 +68,7 @@ Raw profile artifacts are kept under:
 - `/Users/siyaoliu/rift/cache/profile-sweep-20260512-representative`
 - `/Users/siyaoliu/rift/cache/profile-sweep-20260512-fixes`
 - `/Users/siyaoliu/rift/cache/profile-sweep-20260512-streamit-final`
+- `/Users/siyaoliu/rift/cache/profile-sweep-20260512-epoch-reml`
 
 Summary:
 
@@ -77,6 +79,11 @@ Summary:
 | DSPBench Fraud q2 real file-backed | checked scoped page-token, heap | The real row is dominated by byte-line reading, stable hashing, CSV parsing, and predictor updates. Allocator work is visible but not the leading sampled cost. | Fraud q2 is useful real-input regression/RSS evidence. It is not the flagship GC-heavy row unless parser/query CPU is made cheaper under fair heap and region controls. |
 | LogHub HDFS streaming top-k | checked scoped top-k, heap retained/drop-anchor | The top sampled paths are streaming line read, stable hash, template-token parsing, and token counting. `EpochTopKByKey` and region allocation are small in the sampled window. | This explains why LogHub is a modest/RSS real-streaming row, not a GC-heavy throughput proof. |
 | StreamIt FilterBank/BeamFormer | checked epoch, heap | FilterBank is almost entirely numeric kernel work; BeamFormer is almost entirely FIR filter state stepping. Allocator/GC frames are tiny. | Keep BeamFormer/FilterBank as StreamFlex/StreamIt methodology controls. They do not currently demonstrate region memory-management wins. |
+| Yak LiveJournal graph replay | `checked-epoch-scoped`, `gc-heap` | The first 50M LiveJournal samples mostly catch gzip/file input parsing and byte-line read/inflate paths before the direct-epoch processing phase dominates. | This profile is useful input-path evidence, but it should not drive epoch allocator tuning. Add a processing-phase profile or preloaded processing-only profile before optimizing Yak. |
+| Dataflow AGGREGATE | direct checked scoped, true `EpochFold`, heap | Direct checked scoped aggregate is mostly a tight aggregate loop plus SafeZone allocation/zeroing. Generic `EpochFold` spends time in fold-slot lookup/probing, contribution updates, fold-table clear/capacity, append/cursor traversal, Rift allocation/stat paths, and `checkOpen`. Heap shows Immix allocation/metadata/mark/sweep on top of the same query floor. | Keep direct `RiftRegion.epoch` as the Dataflow aggregate headline topology. Do not headline `EpochFold` until it is redesigned as a specialized operator-owned table or the generic lookup/cursor/allocation costs are removed. |
+| SPECjbb2005-workload port | checked scoped transaction, heap | The 1M transaction samples are short and mostly hit transaction proxy/count helpers (`txObjectCount`, `txByteProxy`, `txKind`), with only small allocator/metadata samples. | Use larger or delayed profiles before tuning transaction allocation. Current evidence says the row is too short for reliable attribution. |
+| ReML-shaped `msort` | checked scoped, heap | Both local Scala Native ports are dominated by boxed `Integer` compare/valueOf, `ScalaRunTime` array apply/update, and `java.util.Arrays` stable merge/insertion sort. Allocation/zeroing and Immix mark/sweep are visible but not isolated as the only bottleneck. | Interpret `msort` as a Scala object/boxing/list-sort comparison, not a pure allocator benchmark. If it becomes important, add a same-shape unboxed/control row rather than claiming raw Rift-vs-ReML wall-clock. |
+| ReML-shaped `ratio` | checked scoped, heap | Both modes are mostly `gcd` and arithmetic. Region allocation and GC are small in the sampled windows. | Keep `ratio` as compute/control evidence in the ReML same-axes table. It is not a memory-management optimization target. |
 
 ## Profiling Rules
 
