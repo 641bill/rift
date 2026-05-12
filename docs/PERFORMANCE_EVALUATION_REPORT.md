@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-12 01:55 CEST
+Last updated: 2026-05-12 02:35 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -66,11 +66,14 @@ evidence.
 Latest L4 profiling update:
 `sandbox/run_l4_profile_sweep.sh` is now the reusable external-profile harness
 for representative benchmark sweeps, with usage recorded in
-`evidence/PROFILE_SWEEP_MATRIX.md`. The current default profiles StreamFlex
-checked/heap; `RIFT_PROFILE_CASES=all` covers StreamFlex, generated Common
-Crawl-shaped q2, DSPBench Fraud q2, LogHub HDFS streaming top-k, and StreamIt
-BeamFormer checked/heap rows. L4 remains interpretation-only; L1/L2 keep their
-existing roles.
+`evidence/PROFILE_SWEEP_MATRIX.md`. The first representative L4 sweep is now
+complete for StreamFlex-design, generated Common Crawl-shaped q2, DSPBench
+Fraud q2, LogHub HDFS streaming top-k, StreamIt FilterBank, and StreamIt
+BeamFormer. The main finding is stable across families: real streaming rows are
+mostly parser/hash/query dominated; generated object-pressure rows expose
+allocator/zeroing/traversal costs; StreamIt primitive kernels are compute
+controls rather than GC-heavy evidence. L4 remains interpretation-only; L1/L2
+keep their existing roles.
 
 Latest operator-gate status:
 `evidence/OPERATOR_GATE_STATUS.md`. This keeps rank/top-k/median/hash/join work

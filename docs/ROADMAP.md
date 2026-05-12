@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-12 01:55 CEST
+Last updated: 2026-05-12 02:35 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -156,16 +156,16 @@ Conclusion: the checked scoped row is not dominated by close-time cleanup or
 allocation/zeroing, and capsule transfer. Optimize transient object layout,
 allocation zeroing/alignment, linked traversal, or a closer capsule runtime
 before adding another close/open fast path.
-Latest profiling-sweep update: child `55b6c6e0a` adds
-`sandbox/run_l4_profile_sweep.sh`, which now
-provides a reusable L4 profile harness. The default profiles StreamFlex checked
-and heap; `RIFT_PROFILE_CASES=all` expands to representative StreamFlex,
-Common Crawl-shaped q2, DSPBench Fraud q2, LogHub HDFS streaming top-k, and
-StreamIt BeamFormer checked/heap rows. The first smoke profile passed for
-`streamflex-design-checked`; evidence and usage are in
-`evidence/PROFILE_SWEEP_MATRIX.md`. Use this harness whenever a benchmark row
-wins, loses despite GC removal, or changes after an operator/backend
-optimization.
+Latest profiling-sweep update: child `5300e3217` completes the reusable
+`sandbox/run_l4_profile_sweep.sh` harness. The default profiles StreamFlex
+checked and heap; `RIFT_PROFILE_CASES=all` now expands to representative
+StreamFlex, generated Common Crawl-shaped q2, DSPBench Fraud q2 with the
+bundled real credit-card input, LogHub HDFS streaming top-k, StreamIt
+FilterBank, and profile-sized StreamIt BeamFormer rows. The first
+representative `/usr/bin/sample` sweep is recorded in
+`evidence/PROFILE_SWEEP_MATRIX.md` and summarized in
+`docs/CPU_PROFILE_REPORT.md`. Use this harness whenever a benchmark row wins,
+loses despite GC removal, or changes after an operator/backend optimization.
 
 Latest Yak real-text update: child `cd08f23d4` adds Stack Exchange AskUbuntu
 support, and child `59c181746` adds the current 20M scale-up rows. The dataset

@@ -1,6 +1,6 @@
 # Rift CPU Profiling Report
 
-Last updated: 2026-05-12 01:55 CEST
+Last updated: 2026-05-12 02:35 CEST
 
 Status: profiling runbook plus first sampled profile row and the first
 profile-driven implementation follow-up. The sampled GH Archive row identified
@@ -54,9 +54,29 @@ RIFT_PROFILE_OUTPUT_DIR=/Users/siyaoliu/rift/cache/profile-sweep-$(date +%Y%m%d-
 ```
 
 The current representative cases cover StreamFlex-design, generated Common
-Crawl-shaped q2, DSPBench Fraud q2, LogHub HDFS streaming top-k, and
-StreamIt BeamFormer. Details and smoke results are tracked in
+Crawl-shaped q2, DSPBench Fraud q2, LogHub HDFS streaming top-k, StreamIt
+FilterBank, and StreamIt BeamFormer. Details and smoke/full-sweep results are
+tracked in
 `evidence/PROFILE_SWEEP_MATRIX.md`.
+
+## Representative L4 Sweep Findings
+
+The first representative sweep ran on 2026-05-12 using macOS `/usr/bin/sample`.
+Raw profile artifacts are kept under:
+
+- `/Users/siyaoliu/rift/cache/profile-sweep-20260512-representative`
+- `/Users/siyaoliu/rift/cache/profile-sweep-20260512-fixes`
+- `/Users/siyaoliu/rift/cache/profile-sweep-20260512-streamit-final`
+
+Summary:
+
+| Family | Profiled rows | Main finding | Optimization implication |
+|---|---|---|---|
+| StreamFlex design reproduction | `checked-epoch-scoped`, `gc-heap` | Checked scoped time splits across `processCheckedPeriod`, stable-state query work, SafeZone/zone allocation, zeroing, and capsule add/drain. Heap shares the query/capsule floor and pays Immix allocator/object metadata. | More close/open tuning is unlikely to explain the gap. The next useful work is transient object layout/count, allocation zeroing/alignment, or a closer capsule/runtime representation. |
+| Generated Common Crawl-shaped q2 | checked scoped page-token, heap | Both modes spend heavily in required close traversal and token/hash query work. Checked scoped also shows SafeZone allocation/zeroing and marker/root frames; heap shows Immix allocation/mark/sweep frames. | This remains a good GC/object-pressure stressor, but further speedups require reducing allocation/object construction and traversal, not only reclaim. |
+| DSPBench Fraud q2 real file-backed | checked scoped page-token, heap | The real row is dominated by byte-line reading, stable hashing, CSV parsing, and predictor updates. Allocator work is visible but not the leading sampled cost. | Fraud q2 is useful real-input regression/RSS evidence. It is not the flagship GC-heavy row unless parser/query CPU is made cheaper under fair heap and region controls. |
+| LogHub HDFS streaming top-k | checked scoped top-k, heap retained/drop-anchor | The top sampled paths are streaming line read, stable hash, template-token parsing, and token counting. `EpochTopKByKey` and region allocation are small in the sampled window. | This explains why LogHub is a modest/RSS real-streaming row, not a GC-heavy throughput proof. |
+| StreamIt FilterBank/BeamFormer | checked epoch, heap | FilterBank is almost entirely numeric kernel work; BeamFormer is almost entirely FIR filter state stepping. Allocator/GC frames are tiny. | Keep BeamFormer/FilterBank as StreamFlex/StreamIt methodology controls. They do not currently demonstrate region memory-management wins. |
 
 ## Profiling Rules
 
