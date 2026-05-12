@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-12 14:12 CEST
+Last updated: 2026-05-12 14:40 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -126,6 +126,20 @@ universal: StreamFlex-design `checked-epoch-stream` improves from `9.18 s` to
 `8.57 s`, and generated Common Crawl-shaped q2 `rift-checked-page-token`
 improves from `4.33 s` to `4.23 s`; Dataflow AGGREGATE and Yak graphstep
 single-process gates are noisy and should remain interpretation-only.
+
+Latest allocation-lowering cleanup:
+Rift managed-object allocation now has a dedicated pointer-aligned fast path
+instead of routing every checked object allocation through the generic
+raw-allocation alignment helper. This keeps object zero/init and header setup
+unchanged. The focused 5M `ObjectAllocationLoweringMatrix` `rift-checked-rift`
+row improves from the previous final-clean `76.345 ms` to `69.912 ms`, with
+matching checksum and zero GC. The forced-stats row is `89.081 ms`, so L2
+allocation counters remain interpretation overhead. Single-run application
+gates also move in the expected direction: StreamFlex-design checked stream
+`8.57 s -> 8.07 s`, and generated Common Crawl-shaped checked page-token q2
+`4.23 s -> 3.98 s`. This is allocation-lowering evidence for the Rift-native
+checked backend, not a SafeZone-backed result and not yet a new final headline
+median.
 
 Latest operator-gate status:
 `evidence/OPERATOR_GATE_STATUS.md`. This keeps rank/top-k/median/hash/join work

@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-12 14:12 CEST
+Last updated: 2026-05-12 14:40 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -10,23 +10,23 @@ Active implementation branch for this update:
 `feature/rift`
 
 Latest child checkpoint:
-`593346af2` (`Disable Rift allocation stats in final-clean runs`)
+`b0e1bc232` (`Specialize Rift managed object allocation`)
 
-Latest allocator-stat cleanup checkpoint:
-child `593346af2` disables Rift allocation counters automatically for
-`RIFT_FINAL_CLEAN=1`, with `RIFT_ALLOC_STATS=1` as a diagnostic override.
-Validation passed:
+Latest allocation-lowering checkpoint:
+child `b0e1bc232` specializes Rift managed-object allocation with a
+pointer-aligned object fast path instead of routing every object through the
+generic raw-allocation alignment helper. Object zero/init and header setup are
+unchanged. Validation passed:
 `sandbox3_next/compile`, `RiftRegionCheckedCompilerTest` (`141/141`), and
-`RiftRegionCheckedTest` (`64/64`). Focused 5M
-`ObjectAllocationLoweringMatrix` on `rift-checked-rift` improved from
-`87.999 ms` with counters forced on to `76.345 ms` with final-clean counters
-disabled, same checksum and zero GC.
-The first application impact gate is mixed but useful: StreamFlex-design
-`checked-epoch-stream` improves from `9.18 s` to `8.57 s`, and generated
-Common Crawl-shaped q2 `rift-checked-page-token` improves from `4.33 s` to
-`4.23 s`; Dataflow AGGREGATE and Yak graphstep single-process gates are noisy
-and should not be used as headline claims. Treat this as a workload-sensitive
-L1 cleanup, not a universal application-speedup claim.
+`RiftRegionCheckedTest` (`64/64`). Focused 5M `ObjectAllocationLoweringMatrix`
+on `rift-checked-rift` improved from the previous final-clean `76.345 ms` to
+`69.912 ms`, same checksum and zero GC. With `RIFT_ALLOC_STATS=1` forced back
+on, the same row is `89.081 ms`, confirming that L2 allocation counters remain
+interpretation-only. Single-run application gates moved in the expected
+direction: StreamFlex-design `checked-epoch-stream` `8.57 s -> 8.07 s` and
+generated Common Crawl-shaped q2 `rift-checked-page-token` `4.23 s -> 3.98 s`.
+Treat these as focused allocation-lowering evidence plus application sanity
+checks, not a new final headline median.
 
 Latest implementation-code checkpoint:
 `9ee340950` (`Inline zone allocation padding`)

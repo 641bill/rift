@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-12 14:12 CEST
+Last updated: 2026-05-12 14:40 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -83,6 +83,20 @@ to `8.57 s`, and generated Common Crawl-shaped q2 `rift-checked-page-token`
 improves from `4.33 s` to `4.23 s`. Dataflow AGGREGATE and Yak graphstep are
 too noisy at the single-process gate scale, so do not present this as a
 universal application-speedup claim.
+
+Latest allocation-lowering update:
+child `b0e1bc232` specializes Rift managed-object allocation with a
+pointer-aligned fast path that bypasses the generic raw-allocation alignment
+normalizer for ordinary managed objects. It keeps slab refill, zero/init, and
+object header semantics unchanged. The focused 5M `ObjectAllocationLoweringMatrix`
+`rift-checked-rift` row improves from the previous final-clean `76.345 ms` to
+`69.912 ms`, with matching checksum and zero GC. The forced-stats row is
+`89.081 ms`, so allocation statistics remain L2 interpretation overhead rather
+than headline timing. Single-run application gates also move:
+StreamFlex-design checked stream `8.57 s -> 8.07 s`; generated Common
+Crawl-shaped checked page-token q2 `4.23 s -> 3.98 s`. This is the clearest
+next optimization target completed after profiling: reduce allocation lowering
+overhead before touching benchmark-specific algorithms.
 
 Latest ReML priority decision:
 Exact MLKit/ReML artifact reruns are now gated/low-priority. Keep the
