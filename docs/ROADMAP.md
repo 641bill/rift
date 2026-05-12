@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-12 12:05 CEST
+Last updated: 2026-05-12 12:50 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -29,19 +29,21 @@ explaining local Scala Native ratios and why Rift wins, loses, or is
 unavailable on each paper row.
 
 Latest profiling update:
-child `70b8e5ccb` extends `sandbox/run_l4_profile_sweep.sh` with Yak
-LiveJournal graph replay, Dataflow AGGREGATE, SPECjbb2005-workload, and
-ReML-shaped `msort`/`ratio` cases, plus a generated Yak `graphstep` profile
-case to isolate epoch-body CPU. The follow-up sweep is recorded in
+child `e1f140c0a` completes the representative L4 profile harness cases. The
+coverage now includes StreamFlex-design, generated Common Crawl-shaped q2,
+DSPBench Fraud q2, LogHub HDFS/Spark/Windows top-k, Theodolite power q2,
+StreamIt controls, Yak LiveJournal graph replay, AskUbuntu top-word, Dataflow
+AGGREGATE, NEXMark Q8/Q9, SPECjbb2005-workload including a larger transaction
+row, ReML Tier 1/Tier 2 shaped ports, and a generated Yak `graphstep` profile
+case to isolate epoch-body CPU. The sweep is recorded in
 `evidence/PROFILE_SWEEP_MATRIX.md` and `docs/CPU_PROFILE_REPORT.md`. It confirms
-that generic `EpochFold` is slow because of table/probe, cursor, allocator/stat,
-and `checkOpen` costs; direct Dataflow epoch is mostly tight aggregate loop plus
-allocation/zeroing; ReML `msort` is boxed-sort/object-shape dominated; ReML
-`ratio` is compute-bound; the first Yak LiveJournal profile mostly samples
-gzip/file parsing; and the generated graphstep epoch-body profile shows the
-remaining checked cost as allocation/object construction/zeroing in a tight
-linked-object epoch, while heap pays the same graph loop plus Immix
-allocation/object metadata/mark/sweep.
+that real text/log/time-series rows are parser/hash/string dominated, generic
+`EpochFold` is slow because of table/probe/cursor/allocator/stat/`checkOpen`
+costs, NEXMark Q8/Q9 are operator/indexing-heavy, StreamIt and ReML
+`ray`/`tsp`/`ratio` are compute controls, and Yak graphstep remains the most
+actionable allocation-body profile. ReML `logic` adds a port-shape caveat:
+checked region nodes do not remove heap GC if the hot loop still allocates heap
+scratch arrays.
 
 Latest allocator optimization update:
 child `9ee340950` completes the first profile-guided zone allocator cleanup:

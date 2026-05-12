@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-12 12:05 CEST
+Last updated: 2026-05-12 12:50 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -70,17 +70,23 @@ for representative benchmark sweeps, with usage recorded in
 complete for StreamFlex-design, generated Common Crawl-shaped q2, DSPBench
 Fraud q2, LogHub HDFS streaming top-k, StreamIt FilterBank, and StreamIt
 BeamFormer, with a follow-up sweep for Yak LiveJournal, Dataflow AGGREGATE,
-SPECjbb2005-workload, ReML-shaped `msort`/`ratio`, and a Yak graphstep
-epoch-body profile. The main finding is stable across families: real streaming
-rows are mostly parser/hash/query dominated; generated object-pressure rows
-expose allocator/zeroing/traversal costs; StreamIt primitive kernels and ReML
-`ratio` are compute controls rather than GC-heavy evidence; generic
+SPECjbb2005-workload, ReML-shaped `msort`/`ratio`, a Yak graphstep epoch-body
+profile, and a completion pass covering AskUbuntu real text, LogHub
+Spark/Windows top-k, Theodolite power q2, NEXMark Q8/Q9, larger SPECjbb, and
+ReML `logic`/`ray`/`tsp`. The main finding is stable across families: real
+streaming/text/log/time-series rows are mostly parser/hash/query dominated;
+generated object-pressure rows expose allocator/zeroing/traversal costs;
+StreamIt primitive kernels and ReML `ray`/`tsp`/`ratio` are compute controls
+rather than GC-heavy evidence; generic
 `EpochFold` is slow because of table/probe, cursor, allocator/stat, and
 `checkOpen` work rather than because close/reclaim alone is expensive. The
 first Yak LiveJournal profile mostly samples gzip/file input parsing; the
 generated graphstep profile now isolates the epoch body and shows the checked
 cost is allocation/object construction/zeroing in a tight linked-object epoch,
 while heap pays the same graph loop plus Immix allocation/metadata/mark/sweep.
+The ReML `logic` profile adds one important caveat: even checked scoped region
+nodes can still trigger heap GC if the port allocates heap scratch arrays inside
+the hot loop.
 L4 remains interpretation-only; L1/L2 keep their existing roles.
 
 Latest profile-guided allocator work:

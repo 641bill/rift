@@ -1,11 +1,12 @@
 # Rift CPU Profiling Report
 
-Last updated: 2026-05-12 11:35 CEST
+Last updated: 2026-05-12 12:50 CEST
 
-Status: profiling runbook plus first sampled profile row and the first
-profile-driven implementation follow-up. The sampled GH Archive row identified
-`BufferedReader`/UTF-8/`StringBuilder` parser allocation as the avoidable cost;
-the follow-up byte-slice file-backed parser now validates that direction.
+Status: representative L4 profiling coverage is complete for the current
+headline/tuning set. The first profile-driven implementation follow-up removed
+sampled zone page-size/padding helpers from Yak graphstep. The completion pass
+adds real text/top-k, richer LogHub, Theodolite, NEXMark Q8/Q9, larger
+SPECjbb2005-workload, and ReML Tier-2 shaped profiles.
 
 Reference: Scala Native official profiling guide:
 <https://scala-native.org/en/stable/user/profiling.html>
@@ -54,9 +55,10 @@ RIFT_PROFILE_OUTPUT_DIR=/Users/siyaoliu/rift/cache/profile-sweep-$(date +%Y%m%d-
 ```
 
 The current representative cases cover StreamFlex-design, generated Common
-Crawl-shaped q2, DSPBench Fraud q2, LogHub HDFS streaming top-k, StreamIt
-FilterBank, StreamIt BeamFormer, Yak LiveJournal graph replay, Dataflow
-AGGREGATE, SPECjbb2005-workload, ReML-shaped Tier 1 ports, and a Yak graphstep
+Crawl-shaped q2, DSPBench Fraud q2, LogHub HDFS/Spark/Windows top-k,
+Theodolite power q2, StreamIt FilterBank/BeamFormer, Yak LiveJournal graph
+replay, AskUbuntu top-word, Dataflow AGGREGATE, NEXMark Q8/Q9, the
+SPECjbb2005-workload port, ReML-shaped Tier 1/Tier 2 ports, and a Yak graphstep
 epoch-body profile. Details and smoke/full-sweep results are tracked in
 `evidence/PROFILE_SWEEP_MATRIX.md`.
 
@@ -72,6 +74,11 @@ Raw profile artifacts are kept under:
 - `/Users/siyaoliu/rift/cache/profile-sweep-20260512-yak-graphstep`
 - `/Users/siyaoliu/rift/cache/profile-sweep-20260512-yak-graphstep-post-zone-page-cache`
 - `/Users/siyaoliu/rift/cache/profile-sweep-20260512-yak-graphstep-post-pad-macro`
+- `/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-real`
+- `/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-synthetic`
+- `/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-nexmark-rerun`
+- `/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-reml-logic-checked-rerun`
+- `/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-reml-logic-heap-rerun`
 
 Summary:
 
@@ -84,6 +91,12 @@ Summary:
 | StreamIt FilterBank/BeamFormer | checked epoch, heap | FilterBank is almost entirely numeric kernel work; BeamFormer is almost entirely FIR filter state stepping. Allocator/GC frames are tiny. | Keep BeamFormer/FilterBank as StreamFlex/StreamIt methodology controls. They do not currently demonstrate region memory-management wins. |
 | Yak LiveJournal graph replay | `checked-epoch-scoped`, `gc-heap` | The first 50M LiveJournal samples mostly catch gzip/file input parsing and byte-line read/inflate paths before the direct-epoch processing phase dominates. | This profile is useful input-path evidence, but it should not drive epoch allocator tuning. Add a processing-phase profile or preloaded processing-only profile before optimizing Yak. |
 | Yak graphstep epoch body | `checked-epoch-scoped`, `gc-heap` | The generated 50M-message graphstep profile isolates the epoch processing body. The original checked scoped sample showed graphstep loop work plus `scalanative_zone_alloc`, `_platform_memset`, padding/page-size helpers, SafeZone-backed `allocUncheckedImpl`, and checksum. The post-allocator-cleanup sample removes `MemoryPool_page_size`, `Util_pad`, and `scalanative_zone_pad8` from the sampled checked stack. Heap has the same graphstep/message floor plus Immix allocation, object metadata, mark/sweep, and weak-reference marking; the sampled heap footprint is about `799.8M`. | This is the actionable Yak CPU profile. The first allocator bookkeeping cleanup is validated; the remaining checked cost is allocation body, object construction/mandatory zeroing, and SafeZone-backed allocation wrappers in a tight linked-object epoch, not bucket close/open bookkeeping. |
+| AskUbuntu real text top-word | direct checked epoch, reusable checked `EpochTopKByKey`, natural heap, same-shape heap top-k | All four profiles are dominated by XML/text scanning: `RealTextInput.matchesAt`, `scanAttribute`, `tokenByte`, byte-line append/next-byte/read-line, and lower-casing. Region/top-k/GC frames are small in the sampled windows. | This explains why AskUbuntu is a real-input throughput/RSS win but not a huge-GC row. Further speed would come from a better streaming XML/text parser or byte-slice tokenizer, not from more region close/open tuning. |
+| LogHub Spark/Windows top-k | checked scoped top-k and retained heap/drop-anchor | Spark and Windows both sample template scanning and hashing first: `tokenStartAfter`, `tokenSeparator`, `stableHash`, `countTokensFrom`, and byte-line reader paths. Checked and heap have almost identical parser/hash floors. | Reusable top-k is not the bottleneck in these real log rows. They remain retained-object/RSS/modest-throughput evidence; the parser/hash path hides most GC/region-management differences. |
+| Theodolite power q2 | `checked-epoch-scoped`, `gc-heap` | Both modes are dominated by `BufferedReader.readLine`, UTF-8 decoding, `String.indexOf`, `StringBuilder.append0`, `parseMilliDecimal`, and `String.charAt`. | The UCI/Theodolite row is parser/string dominated. If this becomes a case study, the fair next optimization is a shared byte-line numeric parser for both heap and checked modes. |
+| NEXMark Q8/Q9 | Q8 join API checked/heap, Q9 checked/heap | Q8 is operator/bucket CPU: bucket lookup, event kind, bucket start, append/consume record, plus small allocation. Q9 samples allocator paths plus Scala Native string/unsafe-array/boxing/unboxing helpers (`Allocator_Alloc`, `String.equals`, `USize`/`UInt.valueOf`, `UnsafeRichArray.at`, `Boxes.unboxToPtr`). | Q8/Q9 should remain operator-gated methodology rows. A reusable hash/join/top-k API would need to reduce the operator lookup/indexing path, not just change reclaim. |
+| Larger SPECjbb2005-workload port | 8 warehouses x 1M transactions/warehouse | Checked scoped now samples transaction helper CPU (`txObjectCount`, `txByteProxy`, `txKind`), `processCheckedReceipt`, and visible `scalanative_zone_alloc`. Heap samples the same transaction helper floor plus `Allocator_Alloc`. | The larger profile is useful: transaction model/proxy helpers are significant, and allocation is visible but not the only bottleneck. Any optimization should simplify transaction object/proxy construction before claiming scheduler/runtime effects. |
+| ReML Tier-2 shaped ports | `logic`, `ray`, `tsp` checked/heap | `ray` and `tsp` are mostly compute/geometry loops (`runHeapRay`/checked body, `runHeapTsp`/checked body, distance functions). `logic` at larger scale is allocation-sensitive: heap shows `buildHeapLogic`, `evalHeapLogic`, `Allocator_Alloc`, object metadata and memset; checked scoped unexpectedly shows heavy `Heap_IsWordInHeap`/`Marker_markRange` because the port still allocates per-build heap scratch arrays. | ReML-shaped rows need careful interpretation. `ray`/`tsp` are compute controls. `logic` reveals a port-shape issue: checked region nodes are not enough if heap scratch arrays remain in the hot loop. Fixing that would require a same-shape reusable scratch buffer or region-array policy, not a raw Rift-vs-ReML wall-clock claim. |
 | Dataflow AGGREGATE | direct checked scoped, true `EpochFold`, heap | Direct checked scoped aggregate is mostly a tight aggregate loop plus SafeZone allocation/zeroing. Generic `EpochFold` spends time in fold-slot lookup/probing, contribution updates, fold-table clear/capacity, append/cursor traversal, Rift allocation/stat paths, and `checkOpen`. Heap shows Immix allocation/metadata/mark/sweep on top of the same query floor. | Keep direct `RiftRegion.epoch` as the Dataflow aggregate headline topology. Do not headline `EpochFold` until it is redesigned as a specialized operator-owned table or the generic lookup/cursor/allocation costs are removed. |
 | SPECjbb2005-workload port | checked scoped transaction, heap | The 1M transaction samples are short and mostly hit transaction proxy/count helpers (`txObjectCount`, `txByteProxy`, `txKind`), with only small allocator/metadata samples. | Use larger or delayed profiles before tuning transaction allocation. Current evidence says the row is too short for reliable attribution. |
 | ReML-shaped `msort` | checked scoped, heap | Both local Scala Native ports are dominated by boxed `Integer` compare/valueOf, `ScalaRunTime` array apply/update, and `java.util.Arrays` stable merge/insertion sort. Allocation/zeroing and Immix mark/sweep are visible but not isolated as the only bottleneck. | Interpret `msort` as a Scala object/boxing/list-sort comparison, not a pure allocator benchmark. If it becomes important, add a same-shape unboxed/control row rather than claiming raw Rift-vs-ReML wall-clock. |

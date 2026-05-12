@@ -1,6 +1,6 @@
 # L4 Profile Sweep Matrix
 
-Last updated: 2026-05-12 11:35 CEST
+Last updated: 2026-05-12 12:50 CEST
 
 Status: profiling infrastructure and first representative sweep complete. This
 file tracks representative external-profile sweeps for benchmark families. L4
@@ -47,14 +47,20 @@ approval.
 | `commoncrawl-q2-checked-scoped` / `commoncrawl-q2-heap` | Generated GC-heavy page/window stream | Explain allocation+append, token hashing, cursor traversal, and GC-heavy generated stream behavior. |
 | `dspbench-fraud-q2-checked-scoped` / `dspbench-fraud-q2-heap` | Real DSPBench stream regression | Check whether parser/replay/predictor CPU still dominates real-input rows. |
 | `loghub-hdfs-stream-topk-checked` / `loghub-hdfs-stream-topk-heap` | True real streaming-input retained top-k | Separate file streaming/template hashing/top-k work from GC and region allocation. |
+| `yak-topwordreal-*` | Real Stack Exchange text/top-word | Compare natural heap, same-shape heap top-k, direct checked epoch, and reusable checked top-k CPU composition. |
+| `loghub-spark-topk-*` / `loghub-windows-topk-*` | Richer real LogHub top-template rows | Check whether larger Spark/Windows real logs expose top-k or parser/hash bottlenecks. |
+| `theodolite-power-q2-*` | Real UCI/Theodolite-style power stream | Check whether time-series q2 is region/GC-bound or parser/string-bound. |
+| `nexmark-q8-*` / `nexmark-q9-*` | NEXMark hash/join/top-k methodology controls | Profile hash/join and winning-bid style operator costs before designing reusable operators. |
 | `streamit-filterbank-checked` / `streamit-filterbank-heap` | StreamIt/StreamFlex primitive control | Confirm primitive DSP kernels are compute/array dominated. |
 | `streamit-beamformer-checked` / `streamit-beamformer-heap` | StreamIt/StreamFlex primitive control | Confirm primitive DSP kernels are compute/array dominated. BeamFormer uses a profile-only scale by default because large timing scales are too slow for routine L4 sweeps. |
 | `yak-graphreal-checked-scoped` / `yak-graphreal-heap` | Real SNAP/Yak graph replay | Check whether the direct-epoch LiveJournal row is compute, input, allocation, or GC dominated. |
 | `yak-graphstep-checked-scoped` / `yak-graphstep-heap` | Yak epoch-body processing proxy | Profile the graph epoch allocation/traversal body without gzip/file parsing. |
 | `dataflow-aggregate-checked-scoped` / `dataflow-aggregate-epoch-fold` / `dataflow-aggregate-heap` | Broom/Dataflow aggregate | Explain why direct epoch wins but generic `EpochFold` remains gated. |
 | `specjbb-checked-scoped` / `specjbb-heap` | Stancu/SPECjbb2005-workload port | Check whether transaction rows are dominated by object allocation, transaction proxy helpers, or GC. |
+| `specjbb-large-checked-scoped` / `specjbb-large-heap` | Larger Stancu/SPECjbb2005-workload profile | Use a longer transaction row to make allocation/helper attribution reliable. |
 | `reml-msort-checked-scoped` / `reml-msort-heap` | ReML/MLKit-shaped allocation/list port | Compare local Scala Native list/sort CPU shape with checked scoped placement. |
 | `reml-ratio-checked-scoped` / `reml-ratio-heap` | ReML/MLKit-shaped compute/list control | Check whether `ratio` is compute-bound or memory-management-bound. |
+| `reml-logic-*` / `reml-ray-*` / `reml-tsp-*` | ReML/MLKit-shaped Tier-2 ports | Classify local Tier-2 ports as allocation-sensitive or compute/control. |
 
 ## Representative Sweep
 
@@ -69,6 +75,11 @@ Profile directories:
 - `/Users/siyaoliu/rift/cache/profile-sweep-20260512-yak-graphstep`
 - `/Users/siyaoliu/rift/cache/profile-sweep-20260512-yak-graphstep-post-zone-page-cache`
 - `/Users/siyaoliu/rift/cache/profile-sweep-20260512-yak-graphstep-post-pad-macro`
+- `/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-real`
+- `/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-synthetic`
+- `/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-nexmark-rerun`
+- `/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-reml-logic-checked-rerun`
+- `/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-reml-logic-heap-rerun`
 
 The sweep was split because the first pass exposed two harness issues:
 DSPBench file-backed rows needed an explicit `DSPBENCH_INPUT`, and the
@@ -108,14 +119,48 @@ profile-sized StreamIt controls.
 | `yak-graphstep-checked-scoped` post pad macro | `ok` | 10 x 5M generated graph messages | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-yak-graphstep-post-pad-macro/yak-graphstep-checked-scoped.sample.txt` | `MemoryPool_page_size`, `Util_pad`, and `scalanative_zone_pad8` are all absent. Remaining checked scoped samples are allocator body, `_platform_memset`, and SafeZone-backed `allocUncheckedImpl` wrappers. |
 | `yak-graphstep-heap` post pad macro | `ok` | 10 x 5M generated graph messages | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-yak-graphstep-post-pad-macro/yak-graphstep-heap.sample.txt` | Heap profile remains the control: shared graphstep loop plus Immix allocation/object metadata/marking. |
 
-Future additions should cover:
+## Profiling Completion Sweep
+
+Date/time: 2026-05-12 12:31-12:41 CEST.
+
+This pass fills the representative gaps after the first sweep. It does not
+turn every historical/control benchmark into a profile target; it covers the
+families that can affect the next tuning decisions.
+
+| Case | Status | Scale | Profile artifact | Main interpretation |
+|---|---|---:|---|---|
+| `yak-topwordreal-checked-scoped` | `ok` | 20M real AskUbuntu tokens | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-real/yak-topwordreal-checked-scoped.sample.txt` | Dominated by XML/text scanning (`matchesAt`, `scanAttribute`, `tokenByte`) and byte-line reader paths. Region allocation is not the leading sampled cost. |
+| `yak-topwordreal-topk-scoped` | `ok` | 20M real AskUbuntu tokens | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-real/yak-topwordreal-topk-scoped.sample.txt` | Same parser/token floor as direct epoch. Reusable top-k is not the dominant sampled cost. |
+| `yak-topwordreal-heap` | `ok` | 20M real AskUbuntu tokens | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-real/yak-topwordreal-heap.sample.txt` | Natural heap has the same XML/text parsing floor; this explains why real text rows are modest throughput wins but strong RSS wins. |
+| `yak-topwordreal-heap-topk` | `ok` | 20M real AskUbuntu tokens | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-real/yak-topwordreal-heap-topk.sample.txt` | Same-shape heap top-k remains parser dominated. |
+| `loghub-spark-topk-checked` | `ok` | 2M real Spark log lines, 3 files | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-real/loghub-spark-topk-checked.sample.txt` | Byte-line read, `tokenStartAfter`, `stableHash`, token separator, and token counting dominate. |
+| `loghub-spark-topk-heap` | `ok` | 2M real Spark log lines, 3 files | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-real/loghub-spark-topk-heap.sample.txt` | Same parser/hash floor as checked. Heap GC is not the dominant CPU path. |
+| `loghub-windows-topk-checked` | `ok` | 5M real Windows streaming log lines | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-real/loghub-windows-topk-checked.sample.txt` | Template scanning and hashing dominate; top-k/region costs are secondary. |
+| `loghub-windows-topk-heap` | `ok` | 5M real Windows streaming log lines | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-real/loghub-windows-topk-heap.sample.txt` | Same parser/hash floor. This supports classifying Windows as modest/RSS evidence rather than a GC-heavy throughput proof. |
+| `theodolite-power-q2-checked-scoped` | `ok` | 2M real power records x 20 L1 loops | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-real/theodolite-power-q2-checked-scoped.sample.txt` | Dominated by `BufferedReader`, UTF-8 decode, `String.indexOf`, `StringBuilder`, decimal parsing, and `String.charAt`. |
+| `theodolite-power-q2-heap` | `ok` | 2M real power records x 20 L1 loops | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-real/theodolite-power-q2-heap.sample.txt` | Same string/parser floor as checked. Theodolite q2 should stay a parser-heavy control unless a shared byte parser is added. |
+| `nexmark-q8-checked` | `ok` | 5M generated events | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-synthetic/nexmark-q8-checked.sample.txt` | Short but useful checked join sample: join bucket body, event-kind/bucket-start logic, and small memset samples. |
+| `nexmark-q8-heap` | `ok` | 25M generated events rerun | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-nexmark-rerun/nexmark-q8-heap.sample.txt` | Heap join is bucket lookup/consume/append/event-kind CPU with small allocator samples. |
+| `nexmark-q9-checked` | `ok` | 5M generated events | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-synthetic/nexmark-q9-checked.sample.txt` | Allocation and Scala Native helper overhead are visible: `Allocator_Alloc`, `String.equals`, `USize`/`UInt.valueOf`, unsafe array access, and unboxing. |
+| `nexmark-q9-heap` | `ok` | 5M generated events | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-synthetic/nexmark-q9-heap.sample.txt` | Same helper/array/string shape as checked, plus heap allocation/zeroing. |
+| `specjbb-large-checked-scoped` | `ok` | 8 warehouses x 1M transactions/warehouse | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-synthetic/specjbb-large-checked-scoped.sample.txt` | Transaction helper/proxy work is significant (`txObjectCount`, `txByteProxy`, `processCheckedReceipt`), with visible `scalanative_zone_alloc`. |
+| `specjbb-large-heap` | `ok` | 8 warehouses x 1M transactions/warehouse | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-synthetic/specjbb-large-heap.sample.txt` | Same transaction-helper floor plus `Allocator_Alloc`; allocation matters, but transaction model helpers are also hot. |
+| `reml-logic-checked-scoped` | `ok` | 5M iterations rerun | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-reml-logic-checked-rerun/reml-logic-checked-scoped.sample.txt` | Checked region nodes are not enough to remove heap pressure: per-build heap scratch arrays still trigger `Heap_IsWordInHeap` and `Marker_markRange`, with smaller zone allocation samples. |
+| `reml-logic-heap` | `ok` | 5M iterations rerun | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-reml-logic-heap-rerun/reml-logic-heap.sample.txt` | Heap logic shows `buildHeapLogic`, `evalHeapLogic`, `Allocator_Alloc`, object metadata, and memset. |
+| `reml-ray-checked-scoped` | `ok` | 256 spheres x 100k rays | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-synthetic/reml-ray-checked-scoped.sample.txt` | Mostly ray compute body; memory management is not the leading cost. |
+| `reml-ray-heap` | `ok` | 256 spheres x 100k rays | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-synthetic/reml-ray-heap.sample.txt` | Mostly `runHeapRay`; compute/control evidence. |
+| `reml-tsp-checked-scoped` | `ok` | 1024 points x 1024 starts | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-synthetic/reml-tsp-checked-scoped.sample.txt` | Mostly TSP/distance loop. |
+| `reml-tsp-heap` | `ok` | 1024 points x 1024 starts | `/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-synthetic/reml-tsp-heap.sample.txt` | Mostly TSP/distance loop; compute/control evidence. |
+
+Remaining useful additions:
 
 - A Yak LiveJournal processing-phase profile that avoids sampling only gzip/file
   parsing. The generated graphstep profile now covers epoch CPU; a delayed or
   preloaded real LiveJournal profile is still useful if tuning must preserve
   real-input provenance in the profile itself.
-- Larger/delayed SPECjbb2005-workload and ReML `ratio` rows if they become
-  tuning targets; the current samples are useful controls but short.
+- `samply` flamegraphs for the same representative rows if `samply` becomes
+  available on this shell; use those to inspect visible GC pauses interactively.
+- No further broad profiling sweep is needed before the next optimization pass.
 
 ## Smoke
 

@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-12 12:05 CEST
+Last updated: 2026-05-12 12:50 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -10,13 +10,13 @@ Active implementation branch for this update:
 `feature/rift`
 
 Latest child checkpoint:
-`be79f93f2` (`Record Yak graphstep allocator timing`)
+`e1f140c0a` (`Complete representative profile sweep cases`)
 
 Latest implementation-code checkpoint:
 `9ee340950` (`Inline zone allocation padding`)
 
-Latest parent evidence checkpoint:
-`f8a470b` (`Record epoch and ReML profiling follow-up`)
+Previous parent evidence checkpoint:
+`292a4ab` (`Record Yak allocator timing evidence`)
 
 Latest StreamFlex-design checkpoint:
 `StreamFlexDesignMatrix` and `sandbox/run_streamflex_design_matrix.sh` are now
@@ -47,34 +47,40 @@ allocation/zeroing, and capsule add/drain; heap shows the same query floor plus
 Immix allocation/object-metadata paths. `samply` is not installed locally.
 
 Latest profiling-sweep checkpoint:
-child `1084077d3` completes `sandbox/run_l4_profile_sweep.sh`, a reusable L4
-external profile harness. It native-links benchmark main classes and samples
-the native binary with macOS `/usr/bin/sample` or Linux `perf`. Default cases
-profile StreamFlex checked/heap; `RIFT_PROFILE_CASES=all` expands to
-representative StreamFlex, generated Common Crawl-shaped q2, DSPBench Fraud q2
-with the bundled real credit-card input, LogHub HDFS streaming top-k, StreamIt
-FilterBank, profile-sized StreamIt BeamFormer rows, Yak LiveJournal graph
-replay, Dataflow AGGREGATE, SPECjbb2005-workload, and ReML-shaped `msort` and
-`ratio` rows, plus a generated Yak `graphstep` profile case that isolates the
-epoch body without gzip/file parsing. The representative sweep is split across:
+child `e1f140c0a` completes the representative case set in
+`sandbox/run_l4_profile_sweep.sh`, a reusable L4 external profile harness. It
+native-links benchmark main classes and samples the native binary with macOS
+`/usr/bin/sample` or Linux `perf`. Default cases profile StreamFlex checked/heap;
+`RIFT_PROFILE_CASES=all` now expands to representative StreamFlex, generated
+Common Crawl-shaped q2, DSPBench Fraud q2 with the bundled real credit-card
+input, LogHub HDFS/Spark/Windows top-k, Theodolite power q2, StreamIt
+FilterBank/BeamFormer controls, Yak LiveJournal graph replay, AskUbuntu
+topword, Dataflow AGGREGATE, NEXMark Q8/Q9, SPECjbb2005-workload including a
+larger transaction row, ReML Tier 1/Tier 2 shaped ports, and a generated Yak
+`graphstep` profile case that isolates the epoch body without gzip/file
+parsing. The representative sweep is split across:
 `/Users/siyaoliu/rift/cache/profile-sweep-20260512-representative`,
 `/Users/siyaoliu/rift/cache/profile-sweep-20260512-fixes`, and
 `/Users/siyaoliu/rift/cache/profile-sweep-20260512-streamit-final`, with the
 epoch/ReML follow-up in
 `/Users/siyaoliu/rift/cache/profile-sweep-20260512-epoch-reml`, and the Yak
 epoch-body follow-up in
-`/Users/siyaoliu/rift/cache/profile-sweep-20260512-yak-graphstep`. Parent
-evidence is in `evidence/PROFILE_SWEEP_MATRIX.md`, with interpretation in
-`docs/CPU_PROFILE_REPORT.md`. Main new findings: generic `EpochFold` is gated
-because table/probe, cursor, allocator/stat, and `checkOpen` paths dominate;
-direct Dataflow epoch is mostly a tight loop plus allocation/zeroing; ReML
-`msort` is boxed-sort/object-shape dominated; ReML `ratio` is compute-bound;
-the first Yak LiveJournal sample caught gzip/file parsing; the generated
-graphstep epoch-body profile shows checked scoped time in the graph loop plus
-SafeZone allocation/zeroing/padding and heap time in the same loop plus Immix
-allocation/object metadata/mark/sweep. The next optimization target, if any,
-is allocation lowering/object construction/zeroing, not more bucket close/open
-bookkeeping.
+`/Users/siyaoliu/rift/cache/profile-sweep-20260512-yak-graphstep`. The
+completion pass is in
+`/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-real`,
+`/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-synthetic`,
+`/Users/siyaoliu/rift/cache/profile-sweep-20260512-completion-nexmark-rerun`,
+and the larger ReML `logic` reruns. Parent evidence is in
+`evidence/PROFILE_SWEEP_MATRIX.md`, with interpretation in
+`docs/CPU_PROFILE_REPORT.md`. Main new findings: real text/log/time-series rows
+are parser/hash/string dominated; NEXMark Q8/Q9 are operator/indexing-heavy;
+larger SPECjbb shows transaction helper/proxy work plus visible allocation;
+ReML `ray`/`tsp`/`ratio` are compute controls; ReML `logic` exposes a
+port-shape issue where heap scratch arrays still trigger GC even when nodes are
+checked-region allocated; and Yak graphstep remains the actionable allocator
+body profile. The next optimization target, if any, is allocation
+lowering/object construction/zeroing or reusable scratch/storage policy, not
+more bucket close/open bookkeeping.
 
 Latest allocator micro-optimization checkpoint:
 child `9ee340950` completes the first profile-guided SafeZone/zone allocator
