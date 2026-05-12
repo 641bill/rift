@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-12 17:22 CEST
+Last updated: 2026-05-13 00:33 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -10,7 +10,23 @@ Active implementation branch for this update:
 `feature/rift`
 
 Latest child checkpoint:
-`450465743` (`Cache Rift allocation stats mode per region`)
+`126e2950b` (`Cache current slab zeroed state`)
+
+Latest allocation-body cleanup:
+child `126e2950b` caches the current slab's zeroed/dirty state on each
+`scalanative_rift_region` when a slab is opened, appended, or reset. Object
+allocation now reads the cached region flag before deciding whether
+`_platform_memset` is required, preserving the same zeroing semantics while
+removing one current-slab flag load from every object allocation. Validation:
+`RiftRegionCheckedTest` passed (`64/64`), and the benchmark scripts rebuilt the
+affected sandbox binaries. Focused 5M checked Rift allocation improves to
+`68.998 ms` from the earlier object-fast `69.912 ms` and the cached-stats
+`71.702 ms`, with matching checksum and zero GC. Application sanity gates also
+move in the expected direction: page-token checked Rift `24.618 -> 23.930 ms`,
+StreamFlexDesign checked stream `22.55 -> 22.31 s`, and generated
+Common Crawl-shaped q2 checked Rift `11.39 -> 11.17 s`. Next targets are still
+object construction/field initialization, mandatory zeroing on dirty slabs, and
+same-shape summary operators where query semantics permit avoiding traversal.
 
 Latest profile-guided overhead cleanup:
 child `450465743` caches `RIFT_ALLOC_STATS`/`RIFT_FINAL_CLEAN` allocation-stats

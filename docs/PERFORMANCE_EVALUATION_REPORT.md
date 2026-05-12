@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-12 17:22 CEST
+Last updated: 2026-05-13 00:33 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -51,6 +51,14 @@ than a new allocation headline. Representative gates move slightly:
 page-token checked Rift `25.007 -> 24.618 ms`, StreamFlexDesign checked stream
 `22.81 -> 22.55 s`, and generated Common Crawl-shaped q2 checked Rift
 `11.49 -> 11.39 s`.
+
+Latest allocation-body cleanup:
+child `126e2950b` caches current-slab zeroed state on the Rift region so object
+allocation no longer reloads the current slab's flags before the memset
+decision. This keeps the same zeroing semantics and is now the latest accepted
+allocation-body win: focused 5M checked Rift allocation is `68.998 ms`, focused
+page-token checked Rift is `23.930 ms`, StreamFlexDesign checked stream is
+`22.31 s`, and generated Common Crawl-shaped q2 checked Rift is `11.17 s`.
 
 Latest measurement-overhead protocol:
 `evidence/MEASUREMENT_OVERHEAD_PROTOCOL.md` and

@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-12 17:22 CEST
+Last updated: 2026-05-13 00:33 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -95,6 +95,19 @@ checked Rift improves `25.007 -> 24.618 ms`, StreamFlexDesign checked stream
 `11.49 -> 11.39 s`. Next low-level work should target object construction,
 mandatory zeroing, allocation-body code shape, and same-shape operator summaries
 rather than more stats/check-open cleanup.
+
+Latest allocation-body cleanup:
+child `126e2950b` caches the current slab's zeroed/dirty state on each Rift
+region. This preserves the existing zeroing policy but removes a per-object
+current-slab flag load before the `_platform_memset` decision. It is a measured
+allocation-body win: focused 5M checked Rift allocation improves to
+`68.998 ms` from the earlier object-fast `69.912 ms` and cached-stats
+`71.702 ms`; page-token checked Rift improves `24.618 -> 23.930 ms`;
+StreamFlexDesign checked stream improves `22.55 -> 22.31 s`; generated
+Common Crawl-shaped q2 checked Rift improves `11.39 -> 11.17 s`. This confirms
+that small allocator-body cleanup can still matter, but the remaining hard
+targets are object construction/field initialization, mandatory zeroing on
+dirty slabs, and reducing required traversal through reusable same-shape APIs.
 
 Latest allocation-lowering update:
 child `b0e1bc232` specializes Rift managed-object allocation with a
