@@ -16,7 +16,7 @@ Latest implementation-code checkpoint:
 `55ce32ec6` (`Extend open region safety probes`)
 
 Latest parent evidence checkpoint:
-current parent commit (`Record StreamFlex design evidence`)
+`f8a470b` (`Record epoch and ReML profiling follow-up`)
 
 Latest StreamFlex-design checkpoint:
 `StreamFlexDesignMatrix` and `sandbox/run_streamflex_design_matrix.sh` are now
