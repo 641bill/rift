@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-12 12:50 CEST
+Last updated: 2026-05-12 13:35 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -10,7 +10,17 @@ Active implementation branch for this update:
 `feature/rift`
 
 Latest child checkpoint:
-`e1f140c0a` (`Complete representative profile sweep cases`)
+`593346af2` (`Disable Rift allocation stats in final-clean runs`)
+
+Latest allocator-stat cleanup checkpoint:
+child `593346af2` disables Rift allocation counters automatically for
+`RIFT_FINAL_CLEAN=1`, with `RIFT_ALLOC_STATS=1` as a diagnostic override.
+Validation passed:
+`sandbox3_next/compile`, `RiftRegionCheckedCompilerTest` (`141/141`), and
+`RiftRegionCheckedTest` (`64/64`). Focused 5M
+`ObjectAllocationLoweringMatrix` on `rift-checked-rift` improved from
+`87.999 ms` with counters forced on to `76.345 ms` with final-clean counters
+disabled, same checksum and zero GC.
 
 Latest implementation-code checkpoint:
 `9ee340950` (`Inline zone allocation padding`)

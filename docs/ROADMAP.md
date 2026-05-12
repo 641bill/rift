@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-12 12:50 CEST
+Last updated: 2026-05-12 13:35 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -68,6 +68,15 @@ keeps checked scoped fastest among safe modes (`1710.128 ms` L2,
 (`1746.292 ms`, `9.76 s`). Next low-level backend work should target
 allocation lowering/object construction/zeroing rather than page-size or
 padding helpers.
+
+Latest allocation-stat cleanup:
+child `593346af2` disables Rift raw/object/byte allocation counters
+automatically under `RIFT_FINAL_CLEAN=1`, with `RIFT_ALLOC_STATS=1` as an
+explicit diagnostic override. The focused 5M `ObjectAllocationLoweringMatrix`
+gate for `rift-checked-rift` improved from `87.999 ms` with counters forced on
+to `76.345 ms` with final-clean counters disabled, same checksum and zero GC.
+This is a measurement-clean/headline-mode optimization, not a replacement for
+L2 stats rows.
 
 Latest ReML priority decision:
 Exact MLKit/ReML artifact reruns are now gated/low-priority. Keep the

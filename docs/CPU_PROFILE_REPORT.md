@@ -1,12 +1,14 @@
 # Rift CPU Profiling Report
 
-Last updated: 2026-05-12 12:50 CEST
+Last updated: 2026-05-12 13:35 CEST
 
 Status: representative L4 profiling coverage is complete for the current
 headline/tuning set. The first profile-driven implementation follow-up removed
 sampled zone page-size/padding helpers from Yak graphstep. The completion pass
 adds real text/top-k, richer LogHub, Theodolite, NEXMark Q8/Q9, larger
-SPECjbb2005-workload, and ReML Tier-2 shaped profiles.
+SPECjbb2005-workload, and ReML Tier-2 shaped profiles. The first
+post-profiling allocation-path cleanup now disables Rift allocation counters in
+`RIFT_FINAL_CLEAN=1` runs.
 
 Reference: Scala Native official profiling guide:
 <https://scala-native.org/en/stable/user/profiling.html>
@@ -137,6 +139,17 @@ Result:
 | Baseline graphstep profile | `MemoryPool_page_size` and `Util_pad` were visible under `scalanative_zone_alloc`. | Page-size lookup and generic padding were avoidable allocator bookkeeping in the checked scoped epoch body. |
 | `6c23be380` | `MemoryPool_page_size` disappeared, but the debug-build local helper `scalanative_zone_pad8` still appeared in the sample. | Caching page size worked; the inline helper was still callable in the native debug profile. |
 | `9ee340950` | `MemoryPool_page_size`, `Util_pad`, and `scalanative_zone_pad8` are all absent. Remaining sampled checked frames are `scalanative_zone_alloc`, `_platform_memset`, and SafeZone-backed `allocUncheckedImpl` wrappers. | The first allocator bookkeeping cleanup is complete. Further speed work would need to address allocation lowering/object construction/zeroing rather than this page-size/padding path. |
+
+Allocation-counter follow-up, 2026-05-12:
+
+`scalanative_rift_region_alloc` and `scalanative_rift_region_alloc_raw` now skip
+Rift raw/object/byte allocation counters automatically when
+`RIFT_FINAL_CLEAN=1`. A focused 5M `ObjectAllocationLoweringMatrix`
+`rift-checked-rift` gate improved from `87.999 ms` with
+`RIFT_ALLOC_STATS=1` forced on to `76.345 ms` with final-clean counters
+disabled, with matching checksum and no GC. This is a narrow L1/headline-mode
+cleanup. L2/stat rows should keep allocation counters enabled when region object
+counts are needed for interpretation.
 
 Validation:
 

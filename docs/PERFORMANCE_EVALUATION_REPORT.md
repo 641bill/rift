@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-12 12:50 CEST
+Last updated: 2026-05-12 13:35 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -113,6 +113,15 @@ L2 and `9.57 s` L1, versus heap `2276.697 ms` / `12.25 s`, rooted scoped
 This upgrades the allocator cleanup from profile-only evidence to a measured
 focused timing improvement, while still leaving allocation body and zeroing as
 the next real bottlenecks.
+
+Latest final-clean allocator-stat cleanup:
+Rift raw/object/byte allocation counters are now disabled automatically in
+`RIFT_FINAL_CLEAN=1` runs, with `RIFT_ALLOC_STATS=1` as an explicit diagnostic
+override. The focused 5M `ObjectAllocationLoweringMatrix`
+`rift-checked-rift` row improves from `87.999 ms` with counters forced on to
+`76.345 ms` with final-clean counters disabled, with matching checksum and zero
+GC. This improves L1-style headline binaries without changing L2/default stats
+runs.
 
 Latest operator-gate status:
 `evidence/OPERATOR_GATE_STATUS.md`. This keeps rank/top-k/median/hash/join work
