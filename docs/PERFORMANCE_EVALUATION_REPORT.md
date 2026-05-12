@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-12 13:35 CEST
+Last updated: 2026-05-12 14:12 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -121,7 +121,11 @@ override. The focused 5M `ObjectAllocationLoweringMatrix`
 `rift-checked-rift` row improves from `87.999 ms` with counters forced on to
 `76.345 ms` with final-clean counters disabled, with matching checksum and zero
 GC. This improves L1-style headline binaries without changing L2/default stats
-runs.
+runs. The first application impact gate is workload-sensitive rather than
+universal: StreamFlex-design `checked-epoch-stream` improves from `9.18 s` to
+`8.57 s`, and generated Common Crawl-shaped q2 `rift-checked-page-token`
+improves from `4.33 s` to `4.23 s`; Dataflow AGGREGATE and Yak graphstep
+single-process gates are noisy and should remain interpretation-only.
 
 Latest operator-gate status:
 `evidence/OPERATOR_GATE_STATUS.md`. This keeps rank/top-k/median/hash/join work

@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-12 13:35 CEST
+Last updated: 2026-05-12 14:12 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -21,6 +21,12 @@ Validation passed:
 `ObjectAllocationLoweringMatrix` on `rift-checked-rift` improved from
 `87.999 ms` with counters forced on to `76.345 ms` with final-clean counters
 disabled, same checksum and zero GC.
+The first application impact gate is mixed but useful: StreamFlex-design
+`checked-epoch-stream` improves from `9.18 s` to `8.57 s`, and generated
+Common Crawl-shaped q2 `rift-checked-page-token` improves from `4.33 s` to
+`4.23 s`; Dataflow AGGREGATE and Yak graphstep single-process gates are noisy
+and should not be used as headline claims. Treat this as a workload-sensitive
+L1 cleanup, not a universal application-speedup claim.
 
 Latest implementation-code checkpoint:
 `9ee340950` (`Inline zone allocation padding`)

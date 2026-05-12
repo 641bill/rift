@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-12 13:35 CEST
+Last updated: 2026-05-12 14:12 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -77,6 +77,12 @@ gate for `rift-checked-rift` improved from `87.999 ms` with counters forced on
 to `76.345 ms` with final-clean counters disabled, same checksum and zero GC.
 This is a measurement-clean/headline-mode optimization, not a replacement for
 L2 stats rows.
+The first application impact gate confirms the effect on some Rift-native
+stream rows: StreamFlex-design `checked-epoch-stream` improves from `9.18 s`
+to `8.57 s`, and generated Common Crawl-shaped q2 `rift-checked-page-token`
+improves from `4.33 s` to `4.23 s`. Dataflow AGGREGATE and Yak graphstep are
+too noisy at the single-process gate scale, so do not present this as a
+universal application-speedup claim.
 
 Latest ReML priority decision:
 Exact MLKit/ReML artifact reruns are now gated/low-priority. Keep the
