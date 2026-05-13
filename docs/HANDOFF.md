@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-13 13:14 CEST
+Last updated: 2026-05-13 13:35 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -30,6 +30,22 @@ checked page-token `9.62 s` / `1989.461 ms` / zero GC; q2 heap `9.38 s` /
 `~169 MB`). Classify this as real-streaming-input RSS/tail/modest-throughput
 evidence, not a GC-heavy flagship because median heap GC is still zero and
 byte-slice parsing dominates.
+
+Latest Theodolite streaming-input checkpoint:
+Child implementation commit: `22a0f9f4c` (`Add Theodolite streaming input mode`).
+`TheodolitePowerRegionMatrix` now has
+`THEODOLITE_POWER_INPUT_MODE=streaming-file`, which parses the real UCI
+Household Power trace inside each run instead of preloading parsed primitive
+arrays. A 20k smoke and 100k/1M q2 triage matched checksums across heap,
+rooted scoped, and checked scoped epoch. The 1M L1 final-clean row is now a
+real-streaming throughput/RSS/fixed-memory win: heap `10.92 s`, RSS `147 MB`;
+rooted scoped `10.07 s`, RSS `25 MB`; checked scoped epoch `10.07 s`, RSS
+`29.6 MB`. The matching L2 row shows heap `2479.703 ms` with `143.088 ms`
+median GC, versus checked scoped `2436.713 ms` with `54.154 ms` median GC.
+Parser/string allocation still remains, so this is stronger streaming-input
+evidence but not the missing huge-GC flagship. Child and parent changes are
+validated and synced into parent evidence/report docs; parent commit follows
+this handoff update.
 
 Latest child checkpoint:
 `126e2950b` (`Cache current slab zeroed state`)

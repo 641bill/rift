@@ -1,7 +1,7 @@
 # Real Streaming Input Matrix
 
 Date: 2026-05-11
-Last updated: 2026-05-13 13:09 CEST
+Last updated: 2026-05-13 13:35 CEST
 
 Status: started. This matrix records only rows that satisfy the
 `real-streaming-input` protocol: no full-input preload, incremental source
@@ -117,12 +117,56 @@ Interpretation:
   flagship GC-heavy stream row. Scale only if heap caps or larger multi-hour
   input expose material GC/RSS/tail pressure.
 
+### Theodolite Power q2, Streaming-File
+
+Implementation:
+
+- Matrix: `/Users/siyaoliu/rift/scala-native-rift/sandbox/src/main/scala-next/TheodolitePowerRegionMatrix.scala`
+- Mode: `THEODOLITE_POWER_INPUT_MODE=streaming-file`
+- Source: `/Users/siyaoliu/rift/cache/benchmark-data/theodolite/real-power/household_power_consumption.txt`
+- Query: q2 hierarchical aggregation over real UCI household power-meter
+  measurements.
+- API/topology: retained heap/drop-anchor control, rooted SafeZone scoped
+  epochs, and checked scoped `RiftRegion.epoch`.
+
+1M L2 triage, 3 measured runs:
+
+| Mode | External s | L2 median ms | Median GC ms | Max GC ms | Runs with GC | RSS bytes | Records | Checksum | Output |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `gc-heap` | `12.32` | `2479.703` | `143.088` | `143.944` | `3/3` | `147292160` | `1000000` | `7683095093045065342` | `40960` |
+| `region-scoped-rooted` | `12.46` | `2542.816` | `47.324` | `50.442` | `3/3` | `150585344` | `1000000` | `7683095093045065342` | `40960` |
+| `checked-epoch-scoped` | `12.97` | `2436.713` | `54.154` | `76.680` | `3/3` | `150585344` | `1000000` | `7683095093045065342` | `40960` |
+
+1M L1 final-clean, 3 query iterations per external process:
+
+| Mode | External real s | External user s | External sys s | RSS bytes | Records | Checksum | Output |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `gc-heap` | `10.92` | `10.10` | `0.10` | `147144704` | `1000000` | `7683095093045065342` | `40960` |
+| `region-scoped-rooted` | `10.07` | `9.78` | `0.09` | `25247744` | `1000000` | `7683095093045065342` | `40960` |
+| `checked-epoch-scoped` | `10.07` | `9.78` | `0.09` | `29605888` | `1000000` | `7683095093045065342` | `40960` |
+
+Interpretation:
+
+- Theodolite now has an explicit true streaming-input row: the real power
+  trace is parsed inside each benchmark run, with no parsed total-input arrays.
+- The 1M q2 row is a real streaming throughput/RSS/fixed-memory win for the
+  epoch topology: checked scoped epoch matches rooted scoped elapsed at
+  `10.07 s` and beats heap's `10.92 s`, while cutting L1 RSS from about
+  `147 MB` to about `30 MB`.
+- L2 shows heap GC is material enough to be visible (`143.088 ms` median), but
+  parser/string allocation still remains in all modes. Region rows cut heap GC
+  substantially but do not remove all timed GC because the streaming parser
+  still allocates heap strings/split arrays.
+- Classification: real-streaming-input checked epoch RSS/fixed-memory and
+  modest-throughput evidence. It is stronger than the older preloaded
+  Theodolite control row, but still not a flagship "huge GC" stream result.
+
 ## Planned Conversions
 
 | Candidate | First streaming query | Status |
 |---|---|---|
 | GH Archive | byte-slice NDJSON q1/q2 with event-time where cheap | explicit `streaming-file` q1/q2 smoke and 100k triage complete; scale only if heap caps or multi-hour input expose pressure |
-| Theodolite power | real power trace downsampling/window aggregation | next time-series target |
+| Theodolite power | real power trace downsampling/window aggregation | explicit `streaming-file` q2 1M L1/L2 complete; keep as real-streaming throughput/RSS/fixed-memory evidence |
 | StackExchange/StackOverflow | post text top-word/top-template by epoch | after LogHub/GH streaming controls |
 | SNAP/Yak graph edge replay | direct `RiftRegion.epoch` edge-stream epochs | disk/time preflight first |
 | DSPBench Fraud/Log | line-stream q2 regression rows | convert only if retained pressure remains material |

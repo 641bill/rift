@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-13 13:14 CEST
+Last updated: 2026-05-13 13:35 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -10,12 +10,20 @@ Latest handle-backed allocation checkpoint:
 - parent evidence/report commit: `17148ea` (`Record handle-backed allocation evidence`)
 
 Latest streaming-input follow-up:
-Checkpoint commits: child `79b1a6ec2`, parent `289f8ee`.
+Checkpoint commits before the latest working-tree row: child `79b1a6ec2`,
+parent `289f8ee`.
 `GithubArchiveRegionMatrix` now has an explicit `streaming-file` input mode
 for real GH Archive gzip NDJSON replay. The 100k q1/q2 triage gives checked
 page-token modest elapsed/RSS wins and removes the observed heap max-GC tails,
 but median heap GC remains zero, so this is a real-streaming-input
 RSS/tail/control row rather than a flagship GC-heavy stream result.
+Child `22a0f9f4c` adds `THEODOLITE_POWER_INPUT_MODE=streaming-file` to
+`TheodolitePowerRegionMatrix`.
+At 1M real UCI power q2 records, checked scoped epoch is L1 `10.07 s`,
+RSS `29.6 MB`, versus heap `10.92 s`, RSS `147 MB`; L2 reduces median timed
+GC from `143.088 ms` to `54.154 ms`. This is a real-streaming
+throughput/RSS/fixed-memory win, but parser/string allocation still remains in
+all modes, so it is not yet the huge-GC stream flagship.
 
 Latest prior-work interpretation update:
 `docs/PRIOR_WORK_MEMORY_MANAGEMENT_INTERPRETATION.md` now captures the
@@ -397,9 +405,9 @@ external `66.95 s`, L2 `13368.555 ms`, GC `0 ms`. Since heap GC is only about
 `0.8%` of the streaming loop, larger HDFS line streaming remains
 parser/query-bound ceiling evidence. RSS is missing from that sandboxed run and
 needs an external rerun before presentation.
-Next conversions should be GH Archive byte-slice q1/q2, Theodolite power
-streaming windows, StackExchange/StackOverflow text, SNAP/Yak edge streams,
-and DSPBench Fraud/Log only if retained pressure remains material.
+Next conversions should be StackExchange/StackOverflow text, SNAP/Yak edge
+streams, richer LogHub session/template rows, and DSPBench Fraud/Log only if
+retained pressure remains material.
 
 Latest StreamIt/StreamFlex-axis update: child working tree now has
 `StreamItKernelMatrix` and `sandbox/run_streamit_kernel_matrix.sh`, with local
