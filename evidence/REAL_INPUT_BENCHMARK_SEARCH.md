@@ -1,7 +1,7 @@
 # Real-Input GC-Heavy Stream Benchmark Search
 
 Date: 2026-05-07
-Last updated: 2026-05-11 23:49 CEST
+Last updated: 2026-05-13 13:09 CEST
 
 Status: active Phase 6 search ledger. This file tracks public real-input
 stream/dataflow candidates before implementation work. It is deliberately a
@@ -32,6 +32,12 @@ rows, DSPBench Fraud/Log, and RIoTBench/MHEALTH are modest throughput/RSS/tail
 wins or near-ties. Parser/query CPU often dominates and heap GC remains under a
 few percent of elapsed at the measured scale, so the next benchmark must force
 more natural object materialization, not just read more bytes.
+GH Archive now has an explicit `GITHUB_ARCHIVE_INPUT_MODE=streaming-file`
+row over the byte-slice gzip NDJSON reader. At 100k events, checked page-token
+wins q1 (`9.62 s` vs heap `10.39 s`) and q2 (`9.16 s` vs heap `9.38 s`),
+removing the observed heap max-GC tails (`71-72 ms`) with modest RSS savings;
+median heap GC is still zero, so keep it as real-streaming-input
+RSS/tail/modest-throughput evidence.
 
 2026-05-11 local-data preflight: the cache currently has AskUbuntu for
 StackExchange text, HDFS/BGL/Spark/Windows for LogHub, Twitter ego and

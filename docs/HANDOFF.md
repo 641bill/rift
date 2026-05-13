@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-13 12:58 CEST
+Last updated: 2026-05-13 13:09 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -12,6 +12,20 @@ Active implementation branch for this update:
 Latest handle-backed allocation checkpoint:
 - child implementation commit: `1a1c45c75` (`Promote handle-backed checked allocation`)
 - parent evidence/report commit: `17148ea` (`Record handle-backed allocation evidence`)
+
+Latest streaming-input follow-up:
+`GithubArchiveRegionMatrix` now accepts
+`GITHUB_ARCHIVE_INPUT_MODE=streaming-file` as the explicit
+real-streaming-input label for its bounded byte-slice gzip NDJSON replay.
+The old `file-backed` path remains as a legacy alias. A 20k q1/q2 smoke
+matched heap and checked page-token checksums. The 100k triage reports
+q1 heap `10.39 s` external / `2325.844 ms` L2 / max GC `71.641 ms` versus
+checked page-token `9.62 s` / `1989.461 ms` / zero GC; q2 heap `9.38 s` /
+`2151.431 ms` / max GC `72.159 ms` versus checked page-token `9.16 s` /
+`2016.085 ms` / zero GC. RSS is modestly lower for checked (`~162 MB` versus
+`~169 MB`). Classify this as real-streaming-input RSS/tail/modest-throughput
+evidence, not a GC-heavy flagship because median heap GC is still zero and
+byte-slice parsing dominates.
 
 Latest child checkpoint:
 `126e2950b` (`Cache current slab zeroed state`)

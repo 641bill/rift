@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-13 12:58 CEST
+Last updated: 2026-05-13 13:09 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -8,6 +8,13 @@ literature-review comparison contract.
 Latest handle-backed allocation checkpoint:
 - child implementation commit: `1a1c45c75` (`Promote handle-backed checked allocation`)
 - parent evidence/report commit: `17148ea` (`Record handle-backed allocation evidence`)
+
+Latest streaming-input follow-up:
+`GithubArchiveRegionMatrix` now has an explicit `streaming-file` input mode
+for real GH Archive gzip NDJSON replay. The 100k q1/q2 triage gives checked
+page-token modest elapsed/RSS wins and removes the observed heap max-GC tails,
+but median heap GC remains zero, so this is a real-streaming-input
+RSS/tail/control row rather than a flagship GC-heavy stream result.
 
 Latest prior-work interpretation update:
 `docs/PRIOR_WORK_MEMORY_MANAGEMENT_INTERPRETATION.md` now captures the

@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-13 12:49 CEST
+Last updated: 2026-05-13 13:09 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -298,6 +298,13 @@ checksum/output. Heap GC is only about `0.8%` of the streaming loop, so this is
 streaming ceiling/control evidence. The sandboxed 5M run missed RSS because
 `/usr/bin/time -l` hit a `sysctl` permission failure; rerun L1 outside the
 sandbox before using it as a presentation table.
+GH Archive now has the same explicit streaming-input classification:
+`GITHUB_ARCHIVE_INPUT_MODE=streaming-file` replays gzip NDJSON lines through
+the byte-slice reader inside each run. The 100k q1/q2 triage shows modest
+checked page-token wins and removes heap's observed max-GC tails
+(`71-72 ms` in one heap run per query), but median heap GC remains zero and
+byte-slice parsing dominates. Treat this as real-streaming-input RSS/tail
+evidence rather than the missing GC-heavy stream flagship.
 The richer Windows q3 template/session row is negative/control evidence:
 checked page-token cuts median timed GC (`33.945 ms` versus heap `147.336 ms`)
 but loses elapsed (`17783.560 ms` versus heap `17405.613 ms`) and RSS. This

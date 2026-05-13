@@ -1,7 +1,7 @@
 # Real Streaming Input Matrix
 
 Date: 2026-05-11
-Last updated: 2026-05-12 01:46 CEST
+Last updated: 2026-05-13 13:09 CEST
 
 Status: started. This matrix records only rows that satisfy the
 `real-streaming-input` protocol: no full-input preload, incremental source
@@ -71,11 +71,57 @@ RSS caveat: this sandboxed run did not collect `/usr/bin/time -l` RSS because
 the platform `time` command hit a sandboxed `sysctl kern.clockrate` failure.
 Rerun L1 outside the sandbox before using the 5M row as a presentation table.
 
+### GH Archive Byte-Slice q1/q2, Streaming-File
+
+Implementation:
+
+- Matrix: `/Users/siyaoliu/rift/scala-native-rift/sandbox/src/main/scala-next/GithubArchiveRegionMatrix.scala`
+- Mode: `GITHUB_ARCHIVE_INPUT_MODE=streaming-file`
+- Source: `/Users/siyaoliu/rift/cache/benchmark-data/gharchive/2026-04-01-0.json.gz`
+- Parser: `GITHUB_ARCHIVE_FILE_PARSER=byte-slice`
+- Queries: q1 field materialization and q2 repo-window aggregation.
+- API/topology: heap linked buckets versus checked page-token buckets.
+
+The older `file-backed` GH Archive mode already reread gzip JSON lines inside
+each timed run and did not retain parsed arrays. The new `streaming-file` mode
+is the explicit `real-streaming-input` label for the same bounded replay shape;
+`file-backed` remains a legacy alias.
+
+20k smoke:
+
+| Query | Mode | External s | L2 median ms | GC ms | RSS bytes | Records | Checksum | Output |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| q1-fields | `gc-heap` | `1.26` | `390.712` | `0.000` | `30654464` | `20000` | `-6657681314549385601` | `260000` |
+| q1-fields | `rift-checked-page-token` | `0.99` | `391.972` | `0.000` | `36208640` | `20000` | `-6657681314549385601` | `260000` |
+| q2-repo-window | `gc-heap` | `0.99` | `388.237` | `0.000` | `30638080` | `20000` | `-6670490017219798393` | `3874` |
+| q2-repo-window | `rift-checked-page-token` | `0.99` | `389.822` | `0.000` | `36208640` | `20000` | `-6670490017219798393` | `3874` |
+
+100k L2 triage, 3 measured runs:
+
+| Query | Mode | External s | L2 median ms | Median GC ms | Max GC ms | Runs with GC | RSS bytes | Records | Checksum | Output |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| q1-fields | `gc-heap` | `10.39` | `2325.844` | `0.000` | `71.641` | `1/3` | `169263104` | `100000` | `-3372776855869651174` | `1300000` |
+| q1-fields | `rift-checked-page-token` | `9.62` | `1989.461` | `0.000` | `0.000` | `0/3` | `162054144` | `100000` | `-3372776855869651174` | `1300000` |
+| q2-repo-window | `gc-heap` | `9.38` | `2151.431` | `0.000` | `72.159` | `1/3` | `169443328` | `100000` | `-1071649140102953205` | `15877` |
+| q2-repo-window | `rift-checked-page-token` | `9.16` | `2016.085` | `0.000` | `0.000` | `0/3` | `162381824` | `100000` | `-1071649140102953205` | `15877` |
+
+Interpretation:
+
+- GH Archive now has an explicit true streaming-input q1/q2 path. It streams
+  gzip NDJSON lines during each timed run and keeps memory bounded by active
+  page/window buckets plus durable counters.
+- The 100k triage is promising but modest: checked page-token removes heap's
+  GC tail in the sampled runs and is faster on q1/q2, but median heap GC is
+  still zero and parser/byte-slice extraction dominates external time.
+- Classification: real-streaming-input page/window RSS/tail evidence, not a
+  flagship GC-heavy stream row. Scale only if heap caps or larger multi-hour
+  input expose material GC/RSS/tail pressure.
+
 ## Planned Conversions
 
 | Candidate | First streaming query | Status |
 |---|---|---|
-| GH Archive | byte-slice NDJSON q1/q2 with event-time where cheap | next conversion target |
+| GH Archive | byte-slice NDJSON q1/q2 with event-time where cheap | explicit `streaming-file` q1/q2 smoke and 100k triage complete; scale only if heap caps or multi-hour input expose pressure |
 | Theodolite power | real power trace downsampling/window aggregation | next time-series target |
 | StackExchange/StackOverflow | post text top-word/top-template by epoch | after LogHub/GH streaming controls |
 | SNAP/Yak graph edge replay | direct `RiftRegion.epoch` edge-stream epochs | disk/time preflight first |
