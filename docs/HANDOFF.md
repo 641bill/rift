@@ -1,13 +1,17 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-13 12:49 CEST
+Last updated: 2026-05-13 12:58 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
 
 Active implementation branch for this update:
 `feature/rift`
+
+Latest handle-backed allocation checkpoint:
+- child implementation commit: `1a1c45c75` (`Promote handle-backed checked allocation`)
+- parent evidence/report commit: `17148ea` (`Record handle-backed allocation evidence`)
 
 Latest child checkpoint:
 `126e2950b` (`Cache current slab zeroed state`)
