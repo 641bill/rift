@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-13 15:58 CEST
+Last updated: 2026-05-13 16:44 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -12,6 +12,13 @@ Latest handle-backed allocation checkpoint:
 Latest streaming-input follow-up:
 Checkpoint commits before the latest working-tree row: child `79b1a6ec2`,
 parent `289f8ee`.
+Child `7660e54e4` adds `LOGHUB_INPUT_MODE=streaming-file` to
+`LogHubRegionMatrix` and records the first richer HDFS q3 template/session
+streaming-input row. The row is useful as RSS/fixed-memory and GC-tail control
+evidence: checked scoped page-token cuts L1 RSS from heap's `862 MB` to
+`130 MB` and reduces L2 max GC from `131.533 ms` to `58.455 ms`, but loses
+L1 elapsed (`30.29 s` versus heap `26.88 s`). Keep it parked unless heap caps
+or a more naturally retained session workload expose stronger pressure.
 Child `5f8ab6145` adds `YAK_TEXT_INPUT_MODE=streaming-file` for
 `YakRegionMatrix topwordreal`. The 1M AskUbuntu streaming-file row consumes
 `Posts.xml` during the benchmark with no full token replay array: checked

@@ -477,6 +477,13 @@ RESULT_ROWS = [
         "Retained heap: `5.52s`, RSS about `205 MB`.",
         "A reusable top-k API can keep most of the retained-region benefit on real logs.",
     ],
+    [
+        "Real streaming log session",
+        "LogHub HDFS q3 template/session, 1M streaming lines x3.",
+        "Checked page-token: `30.29s`, RSS about `130 MB`.",
+        "GC heap: `26.88s`, RSS about `862 MB`.",
+        "A useful streaming RSS/fixed-memory control, but not a throughput win: parser/template/session CPU dominates.",
+    ],
 ]
 
 
@@ -484,6 +491,7 @@ REAL_INPUT_ROWS = [
     ["Yak LiveJournal", "Real SNAP graph input", "Strong checked epoch time and RSS win", "Flagship real-input row."],
     ["AskUbuntu topwordreal", "Real Stack Exchange text", "Checked epoch time/RSS win", "First real text/top-word row; not exact Yak/Hadoop."],
     ["LogHub HDFS top templates", "Real LogHub HDFS logs", "Modest time win and large RSS reduction", "Promising reusable top-k API row."],
+    ["LogHub HDFS q3 streaming", "Real streaming HDFS logs", "Large RSS reduction, slower elapsed", "Template/session control row; parser/query CPU dominates."],
     ["LogHub HDFS q2", "Real LogHub HDFS logs", "Elapsed tie, strong RSS reduction", "Useful page/window control."],
     ["GH Archive", "Real NDJSON events", "Small time/RSS wins; parser CPU dominates", "Useful but not GC-heavy enough yet."],
     ["Common Crawl WET/WAT", "Real archive shards", "Current real rows are GC-light", "Ceiling/control, not a flagship result."],
@@ -501,7 +509,7 @@ LIMITATIONS = [
 
 OPEN_WORK_ROWS = [
     ["Finalize L1 rows", "Finish final-clean headline runs for the selected representative API wins."],
-    ["Find a stronger real stream input", "Continue with larger LiveJournal/SNAP, richer LogHub sessions/templates, Theodolite traces, and DSPBench kernels."],
+    ["Find a stronger real stream input", "LogHub q3 streaming is now parked as RSS/control evidence; continue with larger text/graph streams, retained sessions, Theodolite traces, and DSPBench kernels."],
     ["Extend StreamFlex design rows", "Scale the stable/transient/capsule matrix and add object-retained BeamFormer/FilterBank variants only if they remain fair same-shape controls."],
     ["Complete ReML/MLKit table", "Separate paper-reported, exact artifact rerun, and Scala Native port evidence."],
     ["Gate complex operators", "Only headline rank/hash/median/join after natural heap, same-shape heap, retained controls, and focused 1M API gates."],

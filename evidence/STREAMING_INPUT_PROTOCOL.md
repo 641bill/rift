@@ -1,7 +1,7 @@
 # Streaming Input Protocol
 
 Date: 2026-05-11
-Last updated: 2026-05-11 23:49 CEST
+Last updated: 2026-05-13 16:44 CEST
 
 Status: active protocol for converting real-data benchmarks from preloaded or
 file-backed controls into true streaming-input replay.
@@ -53,4 +53,7 @@ The first converted row is `LogHubTopTemplatesMatrix` with
 `BenchmarkInputSupport.StreamingByteLineSource` to read HDFS log lines directly
 inside each benchmark run. The old `file-backed` mode still preloads parsed
 primitive arrays and remains a `real-preloaded` memory-management control.
-
+`LogHubRegionMatrix` now also accepts `LOGHUB_INPUT_MODE=streaming-file` for
+page/window q2/q3 rows. The first richer HDFS q3 template/session streaming
+row is classified as RSS/fixed-memory control evidence because checked
+page-token cuts RSS and GC tails but loses throughput.

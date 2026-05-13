@@ -1,13 +1,28 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-13 15:58 CEST
+Last updated: 2026-05-13 16:44 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
 
 Active implementation branch for this update:
 `feature/rift`
+
+Latest LogHub streaming-session checkpoint:
+Child implementation commit: `7660e54e4`
+(`Add LogHub streaming session evidence`).
+`LogHubRegionMatrix` now accepts `LOGHUB_INPUT_MODE=streaming-file` in
+addition to `generated` and `file-backed`. The new mode consumes real HDFS log
+lines during each q2/q3 benchmark run and does not pre-count or retain parsed
+total-input arrays. The first richer HDFS `q3-template-session` streaming row
+matches checksums across heap, rooted scoped, and checked scoped page-token.
+At 1M lines x3, L1 heap is `26.88 s`, RSS `862 MB`; checked scoped page-token
+is `30.29 s`, RSS `130 MB`. L2 shows heap `8546.791 ms`, median GC
+`97.322 ms`, max GC `131.533 ms`; checked scoped page-token is
+`8763.838 ms`, median GC `44.517 ms`, max GC `58.455 ms`. Classify this as
+real-streaming-input RSS/fixed-memory and GC-tail control evidence, not a
+throughput win. Parent evidence/report commit follows this handoff update.
 
 Latest Yak streaming-input checkpoint:
 Child implementation commit: `5f8ab6145` (`Add Yak real text streaming input`).

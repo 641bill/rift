@@ -1,7 +1,7 @@
 # Real Streaming Input Matrix
 
 Date: 2026-05-11
-Last updated: 2026-05-13 15:58 CEST
+Last updated: 2026-05-13 16:44 CEST
 
 Status: started. This matrix records only rows that satisfy the
 `real-streaming-input` protocol: no full-input preload, incremental source
@@ -114,6 +114,48 @@ RSS caveat: this sandboxed run did not collect `/usr/bin/time -l` RSS because
 the platform `time` command hit a sandboxed `sysctl kern.clockrate` failure.
 Rerun L1 outside the sandbox before using the 5M row as a presentation table.
 
+### LogHub HDFS q3 Template/Session, Streaming-File
+
+Implementation:
+
+- Matrix: `/Users/siyaoliu/rift/scala-native-rift/sandbox/src/main/scala-next/LogHubRegionMatrix.scala`
+- Mode: `LOGHUB_INPUT_MODE=streaming-file`
+- Source: `/Users/siyaoliu/rift/cache/benchmark-data/loghub/HDFS_1/HDFS.log`
+- Query: richer `q3-template-session`, which allocates a base log record,
+  template-token records, and a session-candidate record for each streamed
+  line, then counts session summaries per bucket/window.
+- API/topology: checked scoped page/window token over real streaming log
+  replay. Direct epoch/indexable modes remain generated-only for this matrix.
+
+1M L2 standard-stats row:
+
+| Mode | L2 median ms | Median GC ms | Max GC ms | Runs with GC | RSS bytes | Records | Checksum | Output |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `gc-heap` | `8546.791` | `97.322` | `131.533` | `2/3` | `1144930304` | `1000000` | `1444622413215935538` | `81897` |
+| `region-scoped-rooted` | `8567.481` | `53.908` | `60.798` | `2/3` | `693338112` | `1000000` | `1444622413215935538` | `81897` |
+| `checked-page-token` | `8763.838` | `44.517` | `58.455` | `2/3` | `693305344` | `1000000` | `1444622413215935538` | `81897` |
+
+1M L1 final-clean row:
+
+| Mode | L1 external s | User s | Sys s | RSS bytes | Records | Checksum | Output |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `gc-heap` | `26.88` | `26.50` | `0.29` | `861995008` | `1000000` | `1444622413215935538` | `81897` |
+| `region-scoped-rooted` | `30.17` | `29.78` | `0.27` | `130220032` | `1000000` | `1444622413215935538` | `81897` |
+| `checked-page-token` | `30.29` | `30.08` | `0.15` | `130252800` | `1000000` | `1444622413215935538` | `81897` |
+
+Interpretation:
+
+- This is true streaming-input replay: the HDFS file is consumed during each
+  timed run, not preloaded into parsed arrays.
+- It is a large RSS/fixed-memory win and a GC-tail reduction, but not a
+  throughput win. Checked scoped page-token is about `12.7%` slower than heap
+  in L1 while cutting RSS from about `862 MB` to about `130 MB`.
+- L2 confirms heap GC is visible but not dominant: `97.322 ms` median GC on an
+  `8546.791 ms` heap loop. Parser/template/session query CPU dominates.
+- Decision: keep as richer LogHub streaming session/template control evidence
+  and park unless heap caps, latency, or a more naturally retained session
+  workload exposes larger fixed-memory pressure.
+
 ### GH Archive Byte-Slice q1/q2, Streaming-File
 
 Implementation:
@@ -217,6 +259,6 @@ Interpretation:
 |---|---|---|
 | GH Archive | byte-slice NDJSON q1/q2 with event-time where cheap | explicit `streaming-file` q1/q2 smoke and 100k triage complete; scale only if heap caps or multi-hour input expose pressure |
 | Theodolite power | real power trace downsampling/window aggregation | explicit `streaming-file` q2 1M L1/L2 complete; keep as real-streaming throughput/RSS/fixed-memory evidence |
-| StackExchange/StackOverflow | post text top-word/top-template by epoch | after LogHub/GH streaming controls |
+| StackExchange/StackOverflow | post text top-word/top-template by epoch | AskUbuntu streaming-file 1M complete; larger StackExchange/StackOverflow remains next data candidate |
 | SNAP/Yak graph edge replay | direct `RiftRegion.epoch` edge-stream epochs | disk/time preflight first |
 | DSPBench Fraud/Log | line-stream q2 regression rows | convert only if retained pressure remains material |

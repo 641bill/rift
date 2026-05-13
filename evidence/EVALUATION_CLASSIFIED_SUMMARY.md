@@ -1,7 +1,7 @@
 # Evaluation Classified Summary
 
 Date: 2026-05-09
-Last updated: 2026-05-13 15:21 CEST
+Last updated: 2026-05-13 16:44 CEST
 
 Status: thesis-facing classified summary built from committed evidence.
 Baseline commits for clean rows: parent `1cc3b2c`, child `13a3df1c7`.
@@ -11,7 +11,8 @@ real HDFS 5M top-template scale-up from child `0773d4c17`. The AskUbuntu real
 text row now also has a 20M-token scale-up from child `59c181746`. Child
 `ca1978ef4` refreshes the focused page-token, StreamFlexDesign, and generated
 Common Crawl-shaped page-token presentation rows after the open-allocation
-cleanup.
+cleanup. The latest working evidence adds LogHub HDFS q3 template/session
+`streaming-file` rows as real-streaming-input RSS/control evidence.
 
 ## How To Read This Table
 
@@ -66,7 +67,7 @@ not presentation requirements.
 | NEXMark q3/q8/q9/q11 | complete | L2 remains interpretation source | generated Beam-default-style methodology | keep; not exact Beam runner evidence |
 | LogHub HDFS top templates | complete at 1M and 5M | complete | real retained top-k API row | keep as strongest real retained top-k row |
 | LogHub HDFS streaming-file top templates | complete for first 1M candidate | complete | real-streaming-input retained top-k API row | keep as first true streaming-input row; not yet flagship GC-heavy evidence |
-| LogHub HDFS q2, Spark/Windows q3, DSPBench Log q2, GH Archive q1/q2, Theodolite power q2 | complete where used; Spark q3 L1 elapsed not promoted because `/usr/bin/time` real field was anomalous | complete | real-input and real-streaming-input page/window/epoch modest/RSS/control rows | keep as real-input modest/control evidence; Theodolite streaming-file q2 is now a stronger RSS/fixed-memory row than the older preloaded control |
+| LogHub HDFS q2/q3 streaming, Spark/Windows q3, DSPBench Log q2, GH Archive q1/q2, Theodolite power q2 | complete where used; Spark q3 L1 elapsed not promoted because `/usr/bin/time` real field was anomalous | complete | real-input and real-streaming-input page/window/epoch modest/RSS/control rows | keep as real-input modest/control evidence; HDFS q3 streaming is an RSS/fixed-memory control, not a throughput win |
 | ReML/MLKit Tier 1 and first Tier 2 ports | complete for local ports | complete for local ports | local Scala Native port evidence | keep same-axes table; no raw ReML-vs-Rift wall-clock claim |
 | Summary-only/direct-aggregate rows | complete for selected symmetric rows | complete where needed | topology lower bound | keep only with heap and checked counterparts; never claim reclaim win |
 
@@ -99,6 +100,7 @@ not presentation requirements.
 | Common Crawl WET-shaped q2 | generated stream/window stressor | best checked topology / L1 final-clean | 1M x3 L1 heap `16.73 s`, RSS `409 MB`; L2 heap GC `1565.074 ms` from prior stats row | checked Rift page-token `11.49 s`, RSS `63 MB`; checked SafeZone-backed page-token `14.84 s`, RSS `63 MB` | checked Rift page-token `31.3%` faster than heap | L2 prior rows show material heap GC removal | L1 about `-85%` | Strong generated window/object pressure win; not real-input proof. |
 | NEXMark q3/q8/q9/q11 | Beam-default generated methodology | best checked topology / L1 final-clean | heap L1 `6.18/9.54/16.27/4.47 s`, RSS `75/75/147/75 MB` | checked L1 `5.86/9.21/15.03/4.36 s`, RSS `9.6/10.2/13.2/14.2 MB` | `2.5-7.6%` faster | L2 rows remain the GC source; L1 intentionally omits GC reads | large RSS drop vs heap | L1 checked generated-methodology wins across selected NEXMark rows; not real-input proof or exact Beam runner evidence. |
 | LogHub HDFS v1 q2 | real file-backed Hadoop log | best checked topology / L1 final-clean | L2 heap `8227.369 ms`, GC `92.659 ms`, RSS `409 MB`; L1 heap `25.60 s`, RSS `409 MB` for 3 q2 iterations | L2 checked scoped page-token `7871.856 ms`, GC `0 ms`, RSS `395 MB`; L1 checked scoped page-token `25.56 s`, RSS `79 MB` | L1 elapsed tie; L2 `4.3%` faster | L2 `-92.659 ms` | L1 about `-81%` | L1 real-input RSS win with elapsed tie; L2 standard stats remain a modest throughput/GC win. Heap GC is only about 1-2% elapsed, so this is not flagship GC-heavy proof. |
+| LogHub HDFS q3 template/session streaming-file | real-streaming-input HDFS log replay | checked page/window token / L1 final-clean plus L2 standard stats | L1 heap `26.88 s`, RSS `862 MB`; L2 heap `8546.791 ms`, GC `97.322 ms`, max GC `131.533 ms` | L1 checked scoped page-token `30.29 s`, RSS `130 MB`; L2 checked `8763.838 ms`, GC `44.517 ms`, max GC `58.455 ms` | L1 `12.7%` slower | L2 median `-52.805 ms`, max `-73.078 ms` | L1 about `-85%` | Real-streaming-input RSS/fixed-memory and GC-tail control. The richer q3/session query streams the HDFS file without preloading, but parser/template/session CPU dominates and checked page-token is not a throughput win. |
 | LogHub Spark q3 template/session | real file-backed Spark logs, 61-file application subset | ceiling/control / L2 standard stats plus L1 RSS | L2 heap `7602.328 ms`, GC `140.934 ms`; L1 RSS `408 MB` | L2 checked scoped page-token `7534.013 ms`, GC `31.147 ms`; L1 RSS `56 MB` | L2 `0.9%` faster | L2 median `-109.787 ms` | L1 about `-86%` | Real-input modest/control row. Richer Spark template/session materialization cuts RSS and timed GC, but heap timed GC is still only about `1.9%` of elapsed and the row is parser/query dominated. Do not use the anomalous L1 elapsed from this run. |
 | DSPBench Fraud q2 | real DSPBench credit-card replay | best checked topology / L1 final-clean | L1 heap `4.39 s`, RSS `358 MB`; L2 heap `801.790 ms`, GC `69.686 ms` | L1 checked scoped page-token `4.44 s`, RSS `59.5 MB`; L2 checked scoped `822.846 ms`, GC `15.554 ms` | L1 `1.1%` slower | L2 median `-54.132 ms` | L1 about `-83%` | Real-input checked RSS win but not elapsed win; trusted Streaming lower bound is fastest (`4.18 s`). |
 | DSPBench Log q2 | real DSPBench bundled common-log input | best checked topology / L1 final-clean | L1 heap `8.89 s`, RSS `308 MB`; L2 heap `1750.291 ms`, GC `44.992 ms`, max GC `88.210 ms` | L1 checked scoped page-token `8.79 s`, RSS `47.6 MB`; L2 checked scoped `1733.654 ms`, GC `18.402 ms`, max GC `18.584 ms` | L1 `1.1%` faster | L2 median `-26.590 ms`; max `-69.626 ms` | L1 about `-85%` | Modest real-input elapsed/RSS/GC-tail win; still not flagship GC-heavy evidence. |

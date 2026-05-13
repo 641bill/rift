@@ -741,7 +741,7 @@ pre code {
         </div>
       </div>
       <aside class="hero-panel" aria-label="Report metadata">
-        <div class="panel-row"><span>Generated</span><strong>2026-05-13 16:01 CEST</strong></div>
+        <div class="panel-row"><span>Generated</span><strong>2026-05-13 16:52 CEST</strong></div>
         <div class="panel-row"><span>Source</span><strong>docs/PERFORMANCE_EVALUATION_REPORT.md</strong></div>
         <div class="panel-row"><span>Audience</span><strong>External systems / PL reader</strong></div>
         <div class="panel-row"><span>Headline rule</span><strong>Clean total time and RSS first</strong></div>
@@ -1355,6 +1355,13 @@ pre code {
 <td>Retained heap: <code>5.52s</code>, RSS about <code>205 MB</code>.</td>
 <td>A reusable top-k API can keep most of the retained-region benefit on real logs.</td>
 </tr>
+<tr>
+<td>Real streaming log session</td>
+<td>LogHub HDFS q3 template/session, 1M streaming lines x3.</td>
+<td>Checked page-token: <code>30.29s</code>, RSS about <code>130 MB</code>.</td>
+<td>GC heap: <code>26.88s</code>, RSS about <code>862 MB</code>.</td>
+<td>A useful streaming RSS/fixed-memory control, but not a throughput win: parser/template/session CPU dominates.</td>
+</tr>
 </tbody></table></div>
   <p class="so-what"><strong>So what?</strong> The current story is strongest for epochal graph/dataflow/transaction shapes and controlled retained-object reclaim; generated stream pressure is promising but not yet real-input proof.</p>
 </figure>
@@ -1395,6 +1402,12 @@ pre code {
 <td>Real LogHub HDFS logs</td>
 <td>Modest time win and large RSS reduction</td>
 <td>Promising reusable top-k API row.</td>
+</tr>
+<tr>
+<td>LogHub HDFS q3 streaming</td>
+<td>Real streaming HDFS logs</td>
+<td>Large RSS reduction, slower elapsed</td>
+<td>Template/session control row; parser/query CPU dominates.</td>
 </tr>
 <tr>
 <td>LogHub HDFS q2</td>
@@ -1461,7 +1474,7 @@ pre code {
 </tr>
 <tr>
 <td>Find a stronger real stream input</td>
-<td>Continue with larger LiveJournal/SNAP, richer LogHub sessions/templates, Theodolite traces, and DSPBench kernels.</td>
+<td>LogHub q3 streaming is now parked as RSS/control evidence; continue with larger text/graph streams, retained sessions, Theodolite traces, and DSPBench kernels.</td>
 </tr>
 <tr>
 <td>Extend StreamFlex design rows</td>
