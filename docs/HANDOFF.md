@@ -1,13 +1,27 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-13 15:21 CEST
+Last updated: 2026-05-13 15:58 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
 
 Active implementation branch for this update:
 `feature/rift`
+
+Latest Yak streaming-input checkpoint:
+Child implementation commit: `5f8ab6145` (`Add Yak real text streaming input`).
+The child adds `YAK_TEXT_INPUT_MODE=streaming-file` for
+`YakRegionMatrix topwordreal`. The streaming mode scans the real Stack
+Exchange AskUbuntu `Posts.xml` file during each benchmark run instead of
+preloading all token keys/weights into replay arrays. Smoke and 1M L1/L2 rows
+match checksums across `gc-heap`, `region-scoped-rooted`,
+`checked-epoch-scoped`, and `checked-epoch-stream`. At 1M tokens, L1
+`checked-epoch-scoped` is median `0.91 s` / `13.0 MB` RSS versus heap `0.96 s` /
+`39.6 MB`; L2 removes heap's `3.677 ms` median timed GC. This is useful
+real-streaming-input RSS/fixed-memory evidence, but heap GC is still too small
+for a flagship GC-heavy streaming claim. Source evidence:
+`evidence/YAK_REGION_MATRIX.md` and `evidence/REAL_STREAMING_INPUT_MATRIX.md`.
 
 Latest handle-backed allocation checkpoint:
 - child implementation commit: `1a1c45c75` (`Promote handle-backed checked allocation`)

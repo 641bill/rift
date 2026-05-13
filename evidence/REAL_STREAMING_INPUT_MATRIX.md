@@ -1,13 +1,56 @@
 # Real Streaming Input Matrix
 
 Date: 2026-05-11
-Last updated: 2026-05-13 15:21 CEST
+Last updated: 2026-05-13 15:58 CEST
 
 Status: started. This matrix records only rows that satisfy the
 `real-streaming-input` protocol: no full-input preload, incremental source
 replay, bounded active state, and matching checksum/output counts.
 
 ## Implemented Rows
+
+### Yak AskUbuntu Topwordreal, Streaming-File
+
+Implementation:
+
+- Matrix: `/Users/siyaoliu/rift/scala-native-rift/sandbox/src/main/scala-next/YakRegionMatrix.scala`
+- Mode: `YAK_TEXT_INPUT_MODE=streaming-file`
+- Source: `/Users/siyaoliu/rift/cache/benchmark-data/yak/stackexchange/askubuntu-Posts.xml`
+- Query: stream Stack Exchange `Posts.xml` lines, scan `Title` and `Body`
+  attributes, tokenize ASCII words into epoch-local `WordRecord` objects, and
+  compute per-epoch top-word checksums.
+- API/topology: direct `RiftRegion.epoch` over retained epoch records. The
+  reusable `EpochTopKByKey` streaming path is not wired yet.
+
+20k smoke:
+
+| Mode | L1 external s | L2 median ms | GC ms | RSS bytes | Records | Checksum |
+|---|---:|---:|---:|---:|---:|---:|
+| `gc-heap` | `0.02` | `7.299` | `0.190` | `9584640` | `20000` | `-1562585445518255472` |
+| `region-scoped-rooted` | `0.02` | `7.016` | `0.269` | `9551872` | `20000` | `-1562585445518255472` |
+| `checked-epoch-scoped` | `0.02` | `7.258` | `0.273` | `9551872` | `20000` | `-1562585445518255472` |
+| `checked-epoch-stream` | `0.02` | `7.008` | `0.283` | `9584640` | `20000` | `-1562585445518255472` |
+
+1M first candidate row:
+
+| Mode | L1 external s | L2 median ms | GC ms | RSS bytes | Records | Checksum |
+|---|---:|---:|---:|---:|---:|---:|
+| `gc-heap` | `0.96` | `301.923` | `3.677` | `39649280` | `1000000` | `8501908365116000626` |
+| `region-scoped-rooted` | `0.91` | `296.793` | `0.000` | `12943360` | `1000000` | `8501908365116000626` |
+| `checked-epoch-scoped` | `0.91` | `296.119` | `0.000` | `12943360` | `1000000` | `8501908365116000626` |
+| `checked-epoch-stream` | `0.90` | `294.197` | `0.000` | `12943360` | `1000000` | `8501908365116000626` |
+
+Interpretation:
+
+- This is a true `real-streaming-input` row: the XML file is consumed during
+  the benchmark and no full replay token array is retained.
+- It is not GC-heavy at this scale. Heap median timed GC is `3.677 ms` on a
+  `301.923 ms` L2 loop, so parser/token scanning remains the dominant cost.
+- Checked epoch rows still remove timed heap GC, reduce L1 RSS from about
+  `39.6 MB` to `13.0 MB`, and improve median L1 elapsed by about `5-6%`.
+  Classify as
+  modest real-streaming-input RSS/fixed-memory evidence, not as the flagship
+  GC-heavy stream case study.
 
 ### LogHub HDFS Top Templates, Streaming-File
 

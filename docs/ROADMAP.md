@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-13 15:21 CEST
+Last updated: 2026-05-13 15:58 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -12,6 +12,13 @@ Latest handle-backed allocation checkpoint:
 Latest streaming-input follow-up:
 Checkpoint commits before the latest working-tree row: child `79b1a6ec2`,
 parent `289f8ee`.
+Child `5f8ab6145` adds `YAK_TEXT_INPUT_MODE=streaming-file` for
+`YakRegionMatrix topwordreal`. The 1M AskUbuntu streaming-file row consumes
+`Posts.xml` during the benchmark with no full token replay array: checked
+epoch scoped is median L1 `0.91 s`, RSS `13.0 MB`, versus heap `0.96 s`, RSS
+`39.6 MB`; L2 removes only `3.677 ms` heap GC. Keep this as modest
+real-streaming-input RSS/fixed-memory evidence and continue the search for a
+stream workload with material retained-object GC pressure.
 `GithubArchiveRegionMatrix` now has an explicit `streaming-file` input mode
 for real GH Archive gzip NDJSON replay. The 100k q1/q2 triage gives checked
 page-token modest elapsed/RSS wins and removes the observed heap max-GC tails,
