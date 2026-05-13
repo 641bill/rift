@@ -1,7 +1,7 @@
 # Real Streaming Input Matrix
 
 Date: 2026-05-11
-Last updated: 2026-05-13 13:35 CEST
+Last updated: 2026-05-13 15:21 CEST
 
 Status: started. This matrix records only rows that satisfy the
 `real-streaming-input` protocol: no full-input preload, incremental source
@@ -128,38 +128,45 @@ Implementation:
   measurements.
 - API/topology: retained heap/drop-anchor control, rooted SafeZone scoped
   epochs, and checked scoped `RiftRegion.epoch`.
+- Parser: shared byte-line reader plus reusable semicolon-delimited byte-field
+  cursor. This supersedes the first streaming-file row that used
+  `BufferedReader.readLine()` plus `String.split`.
 
 1M L2 triage, 3 measured runs:
 
 | Mode | External s | L2 median ms | Median GC ms | Max GC ms | Runs with GC | RSS bytes | Records | Checksum | Output |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gc-heap` | `12.32` | `2479.703` | `143.088` | `143.944` | `3/3` | `147292160` | `1000000` | `7683095093045065342` | `40960` |
-| `region-scoped-rooted` | `12.46` | `2542.816` | `47.324` | `50.442` | `3/3` | `150585344` | `1000000` | `7683095093045065342` | `40960` |
-| `checked-epoch-scoped` | `12.97` | `2436.713` | `54.154` | `76.680` | `3/3` | `150585344` | `1000000` | `7683095093045065342` | `40960` |
+| `gc-heap` | `4.90` | `1007.030` | `19.932` | `20.834` | `3/3` | `75284480` | `1000000` | `7683095093045065342` | `40960` |
+| `region-scoped-rooted` | `4.79` | `977.056` | `0.000` | `0.000` | `0/3` | `78544896` | `1000000` | `7683095093045065342` | `40960` |
+| `checked-epoch-scoped` | `4.76` | `967.144` | `0.000` | `0.000` | `0/3` | `78528512` | `1000000` | `7683095093045065342` | `40960` |
 
 1M L1 final-clean, 3 query iterations per external process:
 
 | Mode | External real s | External user s | External sys s | RSS bytes | Records | Checksum | Output |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| `gc-heap` | `10.92` | `10.10` | `0.10` | `147144704` | `1000000` | `7683095093045065342` | `40960` |
-| `region-scoped-rooted` | `10.07` | `9.78` | `0.09` | `25247744` | `1000000` | `7683095093045065342` | `40960` |
-| `checked-epoch-scoped` | `10.07` | `9.78` | `0.09` | `29605888` | `1000000` | `7683095093045065342` | `40960` |
+| `gc-heap` | `3.87` | `3.80` | `0.05` | `75300864` | `1000000` | `7683095093045065342` | `40960` |
+| `region-scoped-rooted` | `3.88` | `3.81` | `0.04` | `15925248` | `1000000` | `7683095093045065342` | `40960` |
+| `checked-epoch-scoped` | `3.77` | `3.70` | `0.04` | `24854528` | `1000000` | `7683095093045065342` | `40960` |
 
 Interpretation:
 
 - Theodolite now has an explicit true streaming-input row: the real power
   trace is parsed inside each benchmark run, with no parsed total-input arrays.
-- The 1M q2 row is a real streaming throughput/RSS/fixed-memory win for the
-  epoch topology: checked scoped epoch matches rooted scoped elapsed at
-  `10.07 s` and beats heap's `10.92 s`, while cutting L1 RSS from about
-  `147 MB` to about `30 MB`.
-- L2 shows heap GC is material enough to be visible (`143.088 ms` median), but
-  parser/string allocation still remains in all modes. Region rows cut heap GC
-  substantially but do not remove all timed GC because the streaming parser
-  still allocates heap strings/split arrays.
+- The byte-field cursor removes the old parser allocation cliff: heap L2 drops
+  from `2479.703 ms` / `143.088 ms` GC in the first streaming-file row to
+  `1007.030 ms` / `19.932 ms` GC. This is important methodology evidence:
+  parser allocation can create misleading GC pressure if it is not controlled.
+- The optimized 1M q2 row remains a real streaming RSS/fixed-memory and modest
+  throughput win for the epoch topology: checked scoped epoch is L1 `3.77 s`
+  versus heap `3.87 s`, while cutting RSS from about `75 MB` to about `25 MB`.
+- L2 shows the region rows remove timed heap GC once the parser is byte-based:
+  checked scoped epoch is `967.144 ms`, GC `0`, versus heap `1007.030 ms`,
+  GC `19.932 ms`.
 - Classification: real-streaming-input checked epoch RSS/fixed-memory and
-  modest-throughput evidence. It is stronger than the older preloaded
-  Theodolite control row, but still not a flagship "huge GC" stream result.
+  modest-throughput evidence. It is cleaner than the first streaming-file row
+  but no longer looks GC-heavy, which is the point: after parser allocation is
+  controlled, the real time-series query is mostly source/query CPU plus
+  retained measurement objects.
 
 ## Planned Conversions
 

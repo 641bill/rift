@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-13 13:35 CEST
+Last updated: 2026-05-13 15:21 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -18,12 +18,14 @@ page-token modest elapsed/RSS wins and removes the observed heap max-GC tails,
 but median heap GC remains zero, so this is a real-streaming-input
 RSS/tail/control row rather than a flagship GC-heavy stream result.
 Child `22a0f9f4c` adds `THEODOLITE_POWER_INPUT_MODE=streaming-file` to
-`TheodolitePowerRegionMatrix`.
-At 1M real UCI power q2 records, checked scoped epoch is L1 `10.07 s`,
-RSS `29.6 MB`, versus heap `10.92 s`, RSS `147 MB`; L2 reduces median timed
-GC from `143.088 ms` to `54.154 ms`. This is a real-streaming
-throughput/RSS/fixed-memory win, but parser/string allocation still remains in
-all modes, so it is not yet the huge-GC stream flagship.
+`TheodolitePowerRegionMatrix`; child `ad9f84a07` extends that with a shared
+byte-line/semicolon byte-field parser. At 1M real UCI power q2 records,
+checked scoped epoch is L1 `3.77 s`, RSS `24.9 MB`, versus heap `3.87 s`,
+RSS `75.3 MB`; L2 is `967.144 ms`, GC `0`, versus heap `1007.030 ms`,
+GC `19.932 ms`. This supersedes the earlier `String.split` streaming row,
+which inflated parser allocation and heap GC. The current row is cleaner
+real-streaming throughput/RSS/fixed-memory evidence, but not a huge-GC
+flagship.
 
 Latest prior-work interpretation update:
 `docs/PRIOR_WORK_MEMORY_MANAGEMENT_INTERPRETATION.md` now captures the

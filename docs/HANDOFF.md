@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-13 13:35 CEST
+Last updated: 2026-05-13 15:21 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -46,6 +46,21 @@ Parser/string allocation still remains, so this is stronger streaming-input
 evidence but not the missing huge-GC flagship. Child and parent changes are
 validated and synced into parent evidence/report docs; parent commit follows
 this handoff update.
+
+Latest byte-field parser working-tree update:
+Child implementation commit: `ad9f84a07`
+(`Add byte field parser for Theodolite streaming`).
+The next optimization pass adds a reusable `BenchmarkInputSupport.DelimitedByteFields`
+cursor plus byte-array decimal parsers, and rewires Theodolite streaming/preload
+parsing through `ByteLineReader` instead of `BufferedReader.readLine()` plus
+`String.split`. Validation so far: `sandbox3_next/compile` passed, 20k q2
+streaming smoke matched checksums, and 1M L1/L2 rows matched checksums across
+heap, rooted scoped, and checked scoped epoch. The current 1M streaming q2 row
+is cleaner and faster: heap L1 `3.87 s`, RSS `75.3 MB`, L2 `1007.030 ms` with
+`19.932 ms` median GC; checked scoped epoch L1 `3.77 s`, RSS `24.9 MB`, L2
+`967.144 ms` with zero timed GC. This supersedes the first `String.split`
+streaming row, showing that parser allocation had inflated heap GC and elapsed.
+Parent evidence/report commit follows this handoff update.
 
 Latest child checkpoint:
 `126e2950b` (`Cache current slab zeroed state`)
