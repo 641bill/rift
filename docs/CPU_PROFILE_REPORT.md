@@ -1,6 +1,6 @@
 # Rift CPU Profiling Report
 
-Last updated: 2026-05-12 17:22 CEST
+Last updated: 2026-05-13 02:04 CEST
 
 Status: representative L4 profiling coverage is complete for the current
 headline/tuning set. The first profile-driven implementation follow-up removed
@@ -12,6 +12,16 @@ post-profiling allocation-path cleanup now disables Rift allocation counters in
 
 Reference: Scala Native official profiling guide:
 <https://scala-native.org/en/stable/user/profiling.html>
+
+Optimization literature note:
+`docs/OPTIMIZATION_LITERATURE_NOTES.md` records the post-profile reading pass
+over Blackburn-style zeroing/methodology work, HotSpot allocation and escape
+analysis practice, StreamFlex/Yak/Broom/Stancu/ReML lessons, and
+reference-capability design ideas. The short consequence for this report is
+that `_platform_memset`, object construction, and allocation lowering are real
+targets, but zeroing or allocation work can only be removed with compiler proof
+or same-shape controls. L1 headline timing stays separate from L2/L3/L4
+interpretation.
 
 ## Purpose
 
@@ -157,6 +167,44 @@ checked Rift `25.007 -> 24.618 ms`, StreamFlex-design checked stream
 `22.81 -> 22.55 s`, and Common Crawl-shaped q2 checked Rift `11.49 -> 11.39 s`.
 The next optimizer targets remain object construction/zeroing, allocation-body
 code shape, and same-shape operator summaries where query semantics allow them.
+
+Post-current-slab-zeroed profile and rejected branch split, 2026-05-13:
+the follow-up L4 sweep under
+`/Users/siyaoliu/rift/cache/profile-post-slab-zeroed-20260513-escalated`
+confirms that allocation and zeroing remain visible after the accepted
+current-slab zeroed-state cache. StreamFlexDesign `checked-epoch-stream`
+samples `processCheckedPeriod`, `scalanative_rift_region_alloc_object_fast`,
+`scalanative_rift_region_alloc`, `_platform_memset`, and the streaming
+`allocUncheckedImpl` wrapper. Common Crawl-shaped q2 still samples close
+traversal, page-token append, `nextOwnedOrNull`, region allocation, and
+`_platform_memset`. A C-only split between stats-disabled and stats-enabled
+object helpers improved the focused 5M allocation row slightly (`68.561 ms`)
+but regressed page-token and StreamFlexDesign gates, so it was reverted. The
+next runtime target should be deeper allocation lowering or proven
+initialization, not another final-clean stats-branch reshuffle.
+
+Backend-specific marker prototype follow-up, 2026-05-13:
+a first attempt to make backend-known `allocOpen` lowering use marker traits
+for Rift-open and SafeZone-open regions was rejected. Overloading the existing
+`allocOpen` with marker-specific contextual parameters made generic checked
+operator code ambiguous. Narrowing that to an experimental `allocRiftOpen`
+mode compiled, but the focused allocation run crashed with a null allocation
+path and also regressed the baseline row in the same binary. This points to a
+compiler/NIR lowering problem rather than a Scala type-alias problem: the next
+attempt should introduce an explicit backend-known allocation intrinsic or a
+handle-level fast path, not rely on marker casts.
+
+Handle-level allocation-lowering prototype, 2026-05-13:
+the follow-up implemented a focused Rift-only open handle that lets NIR
+lowering emit `scalanative_rift_region_alloc` directly instead of calling the
+virtual `allocUncheckedImpl` wrapper. On the 5M object-allocation matrix, the
+experimental `rift-checked-rift-open-handle` row ran at `59.777 ms`, compared
+with `70.247 ms` for the same-binary current checked path and `68.998 ms` for
+the accepted current-slab zeroed-cache baseline. This confirms the profile
+diagnosis: allocation lowering/method-dispatch shape is still meaningful CPU
+overhead. The prototype is not yet a final API; the next engineering step is
+to fold this handle-level lowering into compiler-owned checked epoch/page-token
+paths without exposing raw handles or weakening safety.
 
 ## Profile-Guided Allocator Follow-Up
 

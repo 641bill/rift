@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-13 00:33 CEST
+Last updated: 2026-05-13 12:49 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -59,6 +59,36 @@ decision. This keeps the same zeroing semantics and is now the latest accepted
 allocation-body win: focused 5M checked Rift allocation is `68.998 ms`, focused
 page-token checked Rift is `23.930 ms`, StreamFlexDesign checked stream is
 `22.31 s`, and generated Common Crawl-shaped q2 checked Rift is `11.17 s`.
+
+Latest handle-backed allocation promotion:
+the default checked epoch/page-token rows now use handle-backed Rift allocation
+where the operator owns the lifetime. For StreamFlexDesign, default
+`checked-epoch-stream` improves over the legacy open-region path from
+`22.68 s` to `21.01 s` at 20M events, with matching checksum/output and
+essentially unchanged RSS; L2 improves from `8776.217 ms` to `8096.514 ms`
+with the same object/reset counts. For page-token rows, generated Common
+Crawl-shaped q2 L1 improves from legacy `11.18 s` to `10.59 s`, focused
+page-token improves from `23.913 ms` to `22.785 ms`, and DSPBench Fraud q2
+improves slightly from `2.63 s` to `2.60 s` while remaining parser/query
+dominated. Treat DSPBench as an application sanity gate, not a new real-input
+headline win.
+
+Dataflow follow-up: `DataflowRegionMatrix` now promotes handle-backed
+allocation for the full `checked-epoch-stream` direct-epoch family. The
+handle-array crash is fixed by making the internal `RiftOpenStreamingHandle`
+satisfy the allocation-only `SafeZone` contract used by Scala Native's array
+helpers. The 10 epochs x 100k L2 gate reports legacy versus promoted default:
+SELECT `18.956 -> 17.178 ms`, AGGREGATE `36.888 -> 33.551 ms`, and JOIN
+`20.270 -> 19.133 ms`, all with matching checksums and zero GC. The matching
+L1 final-clean rerun now reports promoted `checked-epoch-stream` at
+SELECT/AGGREGATE/JOIN `15.5/30.5/15.5 ms` per iteration, versus
+`gc-heap` `30.5/59.0/28.0 ms`, `region-scoped-rooted` `22.0/39.0/22.0 ms`,
+and `checked-epoch-scoped` `17.5/32.5/18.5 ms`. This closes the current
+Dataflow array blocker and turns the handle-backed stream row into L1 headline
+timing plus L2 interpretation evidence.
+Validation for this checkpoint passed: `sandbox3_next/compile`,
+`RiftRegionCheckedCompilerTest` (`141/141`), `RiftRegionCheckedTest`
+(`65/65`), and parent/child `git diff --check`.
 
 Latest measurement-overhead protocol:
 `evidence/MEASUREMENT_OVERHEAD_PROTOCOL.md` and
@@ -337,6 +367,12 @@ epoch scoped versus heap `27.775/50.837/30.387 ms`; StreamFlex throughput is
 Stancu-style transactions are `155.863 ms` for checked scoped direct epoch
 versus heap `220.951 ms`.
 
+The current handle-backed dirty checkpoint supersedes the Dataflow stream-side
+numbers but not the other clean direct-epoch rows: Dataflow
+SELECT/AGGREGATE/JOIN now report L1 `checked-epoch-stream`
+`15.5/30.5/15.5 ms` per iteration, with same-run heap
+`30.5/59.0/28.0 ms` and checked scoped `17.5/32.5/18.5 ms`.
+
 Latest L1 final-clean direct-epoch follow-up:
 `evidence/FINAL_CLEAN_HEADLINE_RESULTS.md` now records external `/usr/bin/time`
 rows for the same StreamFlex/Stancu story. StreamFlex throughput at 20 x 200k
@@ -455,11 +491,13 @@ back to the real-input benchmark search.
 Latest reusable epoch checkpoint:
 The direct `RiftRegion.epoch { ... }` API that won on Yak/LiveJournal now also
 covers the Broom/Dataflow methodology harness. At 10 epochs x 100k documents,
-`checked-epoch-scoped` is the fastest full-operator row:
-SELECT/AGGREGATE/JOIN `19.691/34.676/19.762 ms` versus `gc-heap`
-`27.775/50.837/30.387 ms` and region-scoped rooted
-`22.971/39.665/22.619 ms`. Heap median timed GC is
-`6.828/11.564/9.331 ms`; direct checked epoch removes it. Page-token remains a
+the current handle-backed `checked-epoch-stream` row is the fastest checked
+direct-epoch row in the L1 presentation gate:
+SELECT/AGGREGATE/JOIN `15.5/30.5/15.5 ms` per iteration versus `gc-heap`
+`30.5/59.0/28.0 ms`, region-scoped rooted `22.0/39.0/22.0 ms`, and
+checked scoped epoch `17.5/32.5/18.5 ms`. The matching L2 gate reports zero
+timed GC for checked rows and confirms the promoted stream row improves all
+three operators versus legacy checked stream allocation. Page-token remains a
 useful SELECT-only control, but the direct epoch API is the reusable topology
 for the whole Dataflow family. The same work closed the Yak grouped-sort gap
 with a region-captured array:
@@ -1015,9 +1053,9 @@ continuation also excludes `current-default`.
 
 | Area | Best / key row | Heap row | Interpretation |
 |---|---:|---:|---|
-| Dataflow SELECT | direct `checked-epoch-scoped` `19.691 ms`; `checked-epoch-stream` `20.091 ms` | `27.775 ms` / `6.828 ms` GC | direct epoch is reusable across all Dataflow operators |
-| Dataflow AGGREGATE | direct `checked-epoch-scoped` `34.676 ms`; generic `EpochFold` remains gated | `50.837 ms` / `11.564 ms` GC | direct epoch is the reusable win |
-| Dataflow JOIN | direct `checked-epoch-scoped` `19.762 ms` | `30.387 ms` / `9.331 ms` GC | direct epoch beats heap and improved SafeZone in the clean direct-epoch sweep |
+| Dataflow SELECT | L1 direct `checked-epoch-stream` `15.5 ms/iter`; checked scoped `17.5 ms/iter` | L1 heap `30.5 ms/iter`; L2 heap GC previously material | handle-backed direct epoch is reusable across all Dataflow operators |
+| Dataflow AGGREGATE | L1 direct `checked-epoch-stream` `30.5 ms/iter`; checked scoped `32.5 ms/iter`; generic `EpochFold` remains gated | L1 heap `59.0 ms/iter`; L2 heap GC previously material | direct epoch is the reusable win; `EpochFold` is still a negative control |
+| Dataflow JOIN | L1 direct `checked-epoch-stream` `15.5 ms/iter`; checked scoped `18.5 ms/iter` | L1 heap `28.0 ms/iter`; L2 heap GC previously material | handle-backed direct epoch beats heap and rooted scoped in the current L1 sweep |
 | StreamFlex throughput | scoped direct checked epoch `157.334 ms`; trusted Streaming `186.029 ms` | `216.853 ms` / `46.036 ms` GC | direct epoch is now the right checked shape for the StreamFlex batch pipeline; `TransactionRegion` is superseded on this row |
 | Stancu transaction boundary | scoped direct checked epoch `155.863 ms`; direct checked epoch `165.116 ms` | `220.951 ms` / `22.819 ms` GC | direct epoch is now the checked Stancu-shaped win; durable accounting arrays stay heap control metadata |
 | SPECjbb2005-workload port | L1 8 warehouses x20: checked epoch scoped `2.21 s`; L2 checked epoch scoped `108.649 ms` | L1 heap `2.64 s`; L2 heap `129.674 ms` / `15.125 ms` GC | clean-room Scala Native port, not official SPEC; reproduces Stancu-style transaction-local lifetime axes |

@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-13 00:33 CEST
+Last updated: 2026-05-13 12:49 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -27,6 +27,163 @@ StreamFlexDesign checked stream `22.55 -> 22.31 s`, and generated
 Common Crawl-shaped q2 checked Rift `11.39 -> 11.17 s`. Next targets are still
 object construction/field initialization, mandatory zeroing on dirty slabs, and
 same-shape summary operators where query semantics permit avoiding traversal.
+
+Latest optimization-literature checkpoint:
+`docs/OPTIMIZATION_LITERATURE_NOTES.md` adds a literature-guided checklist for
+the next profile-driven tuning pass. It folds in Blackburn-style zeroing and
+managed-runtime methodology work, HotSpot TLAB/escape-analysis practice, GC
+lower-bound-overhead evaluation, StreamFlex latency lessons, and
+reference-capability/active-region design ideas. The actionable consequence is
+to treat allocation lowering, object construction, and zeroing as real
+optimization targets, but not to skip zeroing or claim summary-only traversal
+avoidance as memory-management evidence without compiler proof and same-shape
+controls.
+
+Latest rejected optimizer checkpoint:
+a post-current-slab-zeroed L4 profile sweep was recorded under
+`/Users/siyaoliu/rift/cache/profile-post-slab-zeroed-20260513-escalated`.
+It confirms allocation/zeroing and `allocUncheckedImpl` wrappers remain visible
+on StreamFlexDesign and Common Crawl-shaped checked rows. A narrow C-only split
+between stats-disabled and stats-enabled object allocation helpers improved the
+focused 5M checked Rift allocation row to `68.561 ms`, but it regressed
+application gates: page-token checked Rift reran at `24.799 ms` versus the
+accepted `23.930 ms`, and StreamFlexDesign checked stream moved to `23.24 s`
+versus the accepted `22.31 s`. The patch was reverted; child worktree is clean.
+Next serious optimization should be backend-known/compiler allocation lowering
+or proven initialization/zeroing, not another object-helper branch reshuffle.
+
+Latest rejected backend-known allocation prototype:
+an experimental marker-trait path for backend-specific open regions was tested
+and reverted. Marker-specific overloads of `allocOpen` made existing generic
+operator code ambiguous; a distinct `allocRiftOpen` focused mode compiled but
+crashed with a null allocation path, and the same binary regressed the baseline
+allocation row. Child worktree is clean again. Treat this as evidence that
+backend-known allocation needs a true compiler/NIR intrinsic or handle-level
+fast path, not a marker cast layered on top of the current
+`allocUncheckedImpl` lowering.
+
+Latest focused allocation-lowering prototype:
+a Rift-only experimental open handle now proves the handle-level direction in
+the focused allocation matrix. The NIR lowerer recognizes the handle zone and
+emits a direct `scalanative_rift_region_alloc` call instead of a virtual
+`allocUncheckedImpl` call. Validation: `sandbox3_next/compile` passed, and the
+5M `ObjectAllocationLoweringMatrix` gate reported `59.777 ms` for
+`rift-checked-rift-open-handle`, versus `70.247 ms` for the same-binary current
+checked path and the accepted `68.998 ms` current-slab zeroed-cache baseline.
+The existing checked-region compiler/runtime safety suites also pass
+(`141/141` compiler probes, `64/64` runtime tests). A 20k native-link smoke
+after tightening the handle field visibility also passed.
+This is not yet a public API decision; next work should internalize the same
+lowering for safe checked epoch/page-token operators and rerun application
+gates before claiming it.
+
+Latest handle-level application gate:
+`StreamFlexDesignMatrix` now has an experimental
+`checked-epoch-stream-open-handle` row that keeps the same period/reset
+topology as `checked-epoch-stream` while using direct handle-level allocation
+inside the transient epoch body. Same-binary L1 gates are positive:
+at 2M events, current checked stream `1.09 s` vs open-handle `0.67 s`; at
+20M events, current checked stream `7.27 s` vs open-handle `6.60 s`, with the
+same checksum/output and lower RSS (`10354688 -> 9027584`). This confirms the
+allocation-lowering direction on a StreamFlex-style application row. It still
+needs L2 interpretation rows and should be folded behind normal checked APIs
+before being reported as a final public component.
+
+Clean 3-run L1 follow-up: the 20M StreamFlexDesign throughput gate reran
+outside the sandbox so `/usr/bin/time -l` could capture RSS. Results:
+`gc-heap` `30.67 s` / `12435456` RSS, `heap-same-shape` `30.77 s` /
+`12435456`, `region-scoped-rooted` `28.16 s` / `12255232`,
+`checked-epoch-stream` `22.57 s` / `12615680`, and
+`checked-epoch-stream-open-handle` `19.69 s` / `12550144`, all with checksum
+`5305809911915216923` and output count `19999119`. This is a `12.8%`
+improvement over the current checked stream row and a `35.8%` improvement over
+heap on this StreamFlex-design throughput gate.
+
+Promotion follow-up: `StreamFlexDesignMatrix` now treats the handle-backed
+path as the default `checked-epoch-stream` implementation. The previous
+open-region lowering is kept as `checked-epoch-stream-legacy`, and
+`checked-epoch-stream-open-handle` remains as a provenance alias. Validation:
+`sandbox3_next/compile` passed, a 2M final-clean smoke matched checksum/output,
+and the 20M final-clean gate reports legacy `22.68 s`, promoted default
+`21.01 s`, and explicit open-handle alias `20.79 s`, with matching checksum
+`5305809911915216923`, output `19999119`, and essentially identical L1 RSS for
+legacy/default (`12615680` vs `12599296`). L2 shows the same direction:
+legacy `8776.217 ms` versus promoted default `8096.514 ms`, with identical
+`499999119` region-object count and `78125` resets. This makes handle-backed
+allocation the normal checked StreamFlexDesign epoch row, not a user-selected
+experimental mode.
+
+Latest page/window handle-level gate:
+the handle-level allocation owner is now recognized by the checked-store
+analysis, and generated Common Crawl-shaped q2 has an experimental
+`rift-checked-page-token-open-handle` row. The mode keeps the same page-token
+bucket selection and close traversal as `rift-checked-page-token`; only record
+allocation uses `RiftAllocator.allocateOpenHandle`. Validation:
+`sandbox3_next/compile` passed after the compiler guard update. Results:
+20k smoke matched checksum/output (`0.41 s -> 0.07 s`, same RSS), and the 1M
+L1 gate improved current checked page-token from `10.62 s` to `9.66 s` with
+matching checksum/output and near-identical RSS. The matching L2 rows improved
+median internal time from `3883.742 ms` to `3695.704 ms`, with the same
+`137000000` region-object count and `401/401` open/close counts. This confirms
+the handle-lowering direction on both StreamFlex epoch and page/window stream
+shapes.
+
+Promotion follow-up: the normal generated Common Crawl-shaped
+`rift-checked-page-token` row now dispatches to the handle-backed Rift
+page-token implementation. The previous open-region lowering is retained as
+`rift-checked-page-token-legacy`. Clean 1M q2 promoted-label gates:
+L1 legacy `11.18 s` / `63324160` RSS versus promoted default `10.59 s` /
+`63324160` RSS; L2 legacy `3909.015 ms` versus promoted default
+`3562.617 ms`. Checksums/output counts match, and the L2 object/open/close
+counts are identical. This is now a default checked page-token optimization in
+the benchmark matrix, not only a separate `open-handle` experiment.
+
+Focused page-token promotion gate:
+`CheckedAppendWindowMatrix` now mirrors the Common Crawl-shaped promotion.
+`rift-checked-page-token` uses the handle-backed Rift allocation path, and
+`rift-checked-page-token-legacy` preserves the previous open-region lowering.
+20k smoke matched checksums and improved `1.432 ms -> 0.787 ms`. Focused 1M,
+5 measured runs: legacy `23.913 ms` versus promoted default `22.785 ms`, both
+zero GC, `41/41` opens/closes, identical RSS `47562752`, and matching checksum.
+The promoted default also beats `rift-checked-safezone-page-token` in this
+focused shape (`25.520 ms`).
+
+DSPBench page-token promotion gate:
+`DSPBenchRegionMatrix` now also promotes the default
+`rift-checked-page-token` row to the handle-backed Rift page-token path and
+keeps the old open-region lowering as `rift-checked-page-token-legacy`.
+Fraud q2 20k smoke over the real `credit-card.dat` file matched
+checksums/output for legacy/default/SafeZone-backed checked page-token rows.
+The 1M L1 final-clean gate, rerun outside the sandbox for RSS, reports legacy
+`2.63 s` / `59326464` RSS, promoted default `2.60 s` / `59326464` RSS, and
+SafeZone-backed checked `2.78 s` / `59523072` RSS, all with checksum
+`2645894572926148009` and output `594182`. The matching L2 row is noise-tied:
+legacy `863.329 ms`, promoted default `867.751 ms`, and SafeZone-backed
+`857.657 ms`. Treat this as an application sanity gate for handle-backed
+allocation lowering, not a new DSPBench headline throughput claim; Fraud q2
+remains parser/query dominated and best classified as modest checked RSS/GC
+evidence plus a trusted Streaming lower-bound elapsed win.
+
+Latest Dataflow handle-backed gate:
+`DataflowRegionMatrix` now uses handle-backed checked allocation for SELECT,
+AGGREGATE, and JOIN inside the normal `checked-epoch-stream` label. The earlier
+AGGREGATE crash was caused by region-owned table arrays lowering through
+`Array.alloc(length, zone: SafeZone)` while `RiftOpenStreamingHandle` was not a
+`SafeZone`; the handle now implements the internal allocation-only contract and
+keeps close/reset owner-controlled. Validation: `sandbox3_next/compile`
+passed; a 2 epochs x 1000 docs smoke matched SELECT/AGGREGATE/JOIN checksums
+for legacy/default/open-handle rows; a 10 epochs x 100k L2 gate reports legacy
+versus promoted default: SELECT `18.956 -> 17.178 ms`, AGGREGATE
+`36.888 -> 33.551 ms`, and JOIN `20.270 -> 19.133 ms`, all with matching
+checksums and zero GC. The 3-process L1 final-clean control rerun at the same
+scale now reports promoted `checked-epoch-stream` at SELECT/AGGREGATE/JOIN
+`15.5/30.5/15.5 ms` per iteration, versus heap `30.5/59.0/28.0 ms`, rooted
+scoped `22.0/39.0/22.0 ms`, and checked scoped epoch `17.5/32.5/18.5 ms`.
+RSS is unchanged or slightly lower than the scoped checked rows, and checksums
+match. Treat this as the full Dataflow handle-backed L1+L2 gate.
+Validation for this dirty checkpoint: `sandbox3_next/compile` passed,
+`RiftRegionCheckedCompilerTest` passed `141/141`, `RiftRegionCheckedTest`
+passed `65/65`, and parent/child `git diff --check` passed.
 
 Latest profile-guided overhead cleanup:
 child `450465743` caches `RIFT_ALLOC_STATS`/`RIFT_FINAL_CLEAN` allocation-stats
