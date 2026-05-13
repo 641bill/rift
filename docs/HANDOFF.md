@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-13 13:09 CEST
+Last updated: 2026-05-13 13:14 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -14,6 +14,10 @@ Latest handle-backed allocation checkpoint:
 - parent evidence/report commit: `17148ea` (`Record handle-backed allocation evidence`)
 
 Latest streaming-input follow-up:
+Checkpoint commits:
+- child implementation commit: `79b1a6ec2` (`Add GH Archive streaming input mode`)
+- parent evidence/report commit: `289f8ee` (`Record GH Archive streaming input evidence`)
+
 `GithubArchiveRegionMatrix` now accepts
 `GITHUB_ARCHIVE_INPUT_MODE=streaming-file` as the explicit
 real-streaming-input label for its bounded byte-slice gzip NDJSON replay.
