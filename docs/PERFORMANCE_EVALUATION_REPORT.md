@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-14 14:41 CEST
+Last updated: 2026-05-14 23:12 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -88,6 +88,10 @@ streaming-input gate, Theodolite real power q2, is throughput-positive
 (`3.94 s -> 3.60 s`) but RSS-negative (`15,908,864 -> 24,870,912` bytes).
 Therefore this remains a workload-selective experimental policy, not a default
 runtime setting.
+A high-water prefix-zeroing follow-up was rejected: it reduced neither the
+focused allocation elapsed nor region-op cost enough to justify the metadata
+bookkeeping. The transition-only version still ran `69.619 ms` enabled at 5M,
+worse than the accepted full-slab policy's `65.228 ms`.
 
 Latest handle-backed allocation promotion:
 the default checked epoch/page-token rows now use handle-backed Rift allocation

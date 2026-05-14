@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-14 14:41 CEST
+Last updated: 2026-05-14 23:12 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -35,6 +35,12 @@ The first real streaming-input gate, Theodolite real power q2, improves L1
 `15,908,864 -> 24,870,912` bytes because the policy touches reusable pages at
 epoch boundaries. Keep the policy experimental and workload-selective, not a
 new default yet.
+Rejected follow-up: child `f2116677e` records a high-water slab-prefix policy
+that was prototyped to reduce the region-op/RSS cost, then reverted.
+Per-allocation high-water tracking regressed the 5M focused row to
+`76.532 ms`; transition-only tracking still failed to beat the accepted
+full-slab policy (`69.619 ms` enabled versus `65.228 ms`). Do not revive that
+approach without a lower-overhead design.
 
 Latest zeroing attribution checkpoint:
 The next low-level optimization target is now measurable. The Rift runtime

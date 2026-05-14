@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-14 14:41 CEST
+Last updated: 2026-05-14 23:12 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -28,6 +28,12 @@ Common Crawl q2 rises `9.640 -> 68.771 ms`. The real Theodolite streaming q2
 gate is throughput-positive (`3.94 s -> 3.60 s`) but RSS-negative
 (`15,908,864 -> 24,870,912` bytes). Keep this as a workload-selective
 experimental knob until more real streaming rows confirm the tradeoff.
+Rejected follow-up: child `f2116677e` records a high-water prefix-zeroing
+prototype that was reverted. The transition-only version still failed the
+focused 5M gate (`69.619 ms` enabled, worse than the accepted full-slab
+bulk-zero `65.228 ms`). Next zeroing policy work should test coarser knobs
+such as TLS-cache-only zeroing or RSS-aware cache release, or move to
+compiler-proven no-zero.
 
 Latest all-optimizations evaluation update:
 the current child working tree adds a focused warm/dirty-slab measurement mode
