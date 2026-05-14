@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-15 00:37 CEST
+Last updated: 2026-05-15 01:27 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -31,7 +31,14 @@ the proved normal row is `139.832 ms` with all `10,000,000` objects
 zero-skipped. The page-token 1M sanity gate keeps promoted checked page-token
 ahead of legacy (`24.975 ms` versus `26.495 ms`) and heap (`35.918 ms`), with
 matching checksum and lower RSS than heap. Parent evidence/report commit
-follows this handoff update.
+follows this handoff update. Follow-up transfer gates recorded on 2026-05-15:
+Dataflow SELECT/AGGREGATE/JOIN L2 medians are now `18.141/33.574/17.669 ms`
+for optimized `checked-epoch-stream` versus `22.523/36.711/20.202 ms` for
+legacy checked stream and heap `27.952/50.485/28.349 ms` with
+`6.630-11.195 ms` median timed GC. StreamFlexDesign L1 throughput at 20M
+events x3 is heap `29.04 s`, optimized checked stream `19.91 s`, legacy
+checked stream `22.19 s`, and checked scoped `23.57 s`; the pressure-latency
+L2 gate reduces heap's `49` deadline misses to `0-1` checked-region misses.
 
 Latest unsafe no-zero lower-bound checkpoint:
 Child implementation commit: `c5fb808a7`

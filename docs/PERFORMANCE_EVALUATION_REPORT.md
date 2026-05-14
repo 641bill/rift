@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-15 00:37 CEST
+Last updated: 2026-05-15 01:27 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -98,7 +98,15 @@ lower-bound row `65.277 ms`; the 10M row is `139.832 ms` with all
 narrow record-like shape. A focused page-token sanity gate remains positive:
 promoted `rift-checked-page-token` is `24.975 ms`, legacy checked page-token is
 `26.495 ms`, and heap is `35.918 ms` at 1M, with matching checksum and lower
-RSS than heap.
+RSS than heap. Two application transfer gates are now recorded. Dataflow L2 at
+10 epochs x 100k documents keeps the optimized checked stream row ahead of
+legacy on SELECT/AGGREGATE/JOIN (`18.141/33.574/17.669 ms` versus
+`22.523/36.711/20.202 ms`) while removing heap's `6.630-11.195 ms` median
+timed GC. StreamFlexDesign L1 at 20M events x3 reports heap `29.04 s`, legacy
+checked stream `22.19 s`, optimized checked stream `19.91 s`, and checked
+scoped `23.57 s`, all with matching checksum and no material RSS regression;
+the matching pressure-latency L2 row cuts heap's `49` deadline misses to
+`0-1` for checked region rows.
 
 Latest reusable-slab zeroing experiment:
 `RIFT_ZERO_REUSED_SLABS=1` is a gated runtime policy that bulk-zeros dead

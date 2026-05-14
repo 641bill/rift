@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-15 00:37 CEST
+Last updated: 2026-05-15 01:27 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -24,9 +24,15 @@ reaches the unsafe lower-bound ceiling: 5M improves from the pre-proof
 `139.832 ms`, with matching checksums and all allocations zero-skipped. The
 first focused page-token sanity gate remains positive: promoted checked
 page-token is `24.975 ms`, legacy checked page-token is `26.495 ms`, and heap
-is `35.918 ms` at 1M. Next work should broaden the proof carefully to
-reference fields only when GC visibility is proven safe, then rerun selected
-application gates.
+is `35.918 ms` at 1M. The first application transfer gates are also positive:
+Dataflow optimized checked stream beats legacy checked stream on
+SELECT/AGGREGATE/JOIN (`18.141/33.574/17.669 ms` versus
+`22.523/36.711/20.202 ms`) and removes heap's `6.630-11.195 ms` median timed
+GC; StreamFlexDesign final-clean throughput at 20M events x3 is heap
+`29.04 s`, optimized checked stream `19.91 s`, legacy checked stream
+`22.19 s`, and checked scoped `23.57 s`. Next work should broaden the proof
+carefully to reference fields only when GC visibility is proven safe, then
+rerun selected page/window and real-streaming gates.
 
 Latest unsafe no-zero lower-bound update:
 Child implementation commit: `c5fb808a7`
