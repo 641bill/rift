@@ -1,13 +1,33 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-14 13:45 CEST
+Last updated: 2026-05-14 13:59 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
 
 Active implementation branch for this update:
 `feature/rift`
+
+Latest reusable-slab bulk-zero checkpoint:
+The child runtime now has a gated experimental policy,
+`RIFT_ZERO_REUSED_SLABS=1`, that bulk-zeros dead non-huge Rift slabs when they
+return to the TLS/global reusable slab cache or when `reset` keeps the first
+slab. Default behavior is unchanged. This preserves zero-initialization
+semantics because objects are dead at close/reset; the policy moves zeroing
+from per-object allocation to the region close/reset boundary. Validation so
+far: `sandbox3_next/compile` passed, 20k smoke matched checksums, and focused
+5M/10M handle-backed allocation gates ran. At 5M objects x5, default
+`rift-checked-rift-open-handle` is `68.692 ms` with `4,198,392` zeroed objects;
+the bulk-zero policy is `65.228 ms` with all `5,000,000` object allocations
+zero-skipped. At 10M, default is `144.067 ms`; bulk-zero is `138.078 ms`.
+Rift op time rises because close/reset now performs the bulk zero work. Treat
+this as a promising experimental runtime-side zeroing policy. Initial
+application gates are positive: StreamFlexDesign throughput 20M x3 improves
+`19.51 s -> 18.91 s`, and generated Common Crawl-shaped q2 1M x3 improves
+`10.00 s -> 9.22 s`, both with matching checksum/output and unchanged RSS.
+Keep it experimental until L2 interpretation and real streaming-input rows
+confirm the close/reset zeroing tradeoff is broadly favorable.
 
 Latest zeroing attribution checkpoint:
 The next low-level optimization target is now measurable. The Rift runtime

@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-14 13:45 CEST
+Last updated: 2026-05-14 13:59 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -69,6 +69,20 @@ row is `70.197 ms`; `4,198,392` objects (`134,348,544` bytes) are zeroed and
 `801,608` objects (`25,651,456` bytes) skip zeroing. This confirms
 initialization/zeroing is a real remaining allocation-body cost, but it is not
 a no-zero optimization or safety claim.
+
+Latest reusable-slab zeroing experiment:
+`RIFT_ZERO_REUSED_SLABS=1` is a gated runtime policy that bulk-zeros dead
+non-huge slabs at region close/reset before caching them for reuse. It keeps
+Scala object zero-initialization semantics, but moves zeroing out of the
+allocation hot path. Focused handle-backed allocation gates improve from
+`68.692 ms` to `65.228 ms` at 5M objects and from `144.067 ms` to `138.078 ms`
+at 10M objects, with matching checksums and essentially unchanged RSS. Region
+op time rises because close/reset now performs the bulk zero. This is
+promising but remains experimental. First application gates are positive:
+StreamFlexDesign throughput 20M x3 improves `19.51 s -> 18.91 s`, and
+generated Common Crawl-shaped q2 1M x3 improves `10.00 s -> 9.22 s`, both with
+matching checksum/output and unchanged RSS. The next decision point is L2
+interpretation and real streaming-input gates.
 
 Latest handle-backed allocation promotion:
 the default checked epoch/page-token rows now use handle-backed Rift allocation

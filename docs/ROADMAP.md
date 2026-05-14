@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-14 13:45 CEST
+Last updated: 2026-05-14 13:59 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -8,6 +8,21 @@ literature-review comparison contract.
 Latest handle-backed allocation checkpoint:
 - child implementation commit: `1a1c45c75` (`Promote handle-backed checked allocation`)
 - parent evidence/report commit: `17148ea` (`Record handle-backed allocation evidence`)
+
+Latest reusable-slab bulk-zero update:
+`RIFT_ZERO_REUSED_SLABS=1` is now an experimental Rift runtime policy that
+bulk-zeros dead non-huge slabs at region close/reset before caching them for
+reuse. It is safe because it preserves zero-filled allocation semantics; it
+does not skip initialization based on compiler proof. Focused
+`ObjectAllocationLoweringMatrix` gates show a promising tradeoff:
+handle-backed checked Rift improves from `68.692 ms` to `65.228 ms` at 5M
+objects and from `144.067 ms` to `138.078 ms` at 10M objects, while RSS and
+checksums are unchanged. The cost moves into region op time (`2.153 -> 4.121`
+ms at 5M, `10.813 -> 13.817` ms at 10M), so this remains experimental until
+more application gates show it is broadly favorable. The first two gates are
+positive: StreamFlexDesign throughput 20M x3 improves `19.51 s -> 18.91 s`,
+and generated Common Crawl-shaped q2 1M x3 improves `10.00 s -> 9.22 s`,
+with matching checksum/output and unchanged RSS.
 
 Latest all-optimizations evaluation update:
 the current child working tree adds a focused warm/dirty-slab measurement mode
