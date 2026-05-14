@@ -1,13 +1,30 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-14 12:48 CEST
+Last updated: 2026-05-14 13:17 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
 
 Active implementation branch for this update:
 `feature/rift`
+
+Latest Theodolite handle-backed epoch checkpoint:
+The next remaining-path allocation audit target promoted
+`TheodolitePowerRegionMatrix` `checked-epoch-stream` from generic checked
+allocation to backend-known `RiftAllocator.allocateOpenHandle`. The legacy
+generic path remains available as `checked-epoch-stream-legacy`, and
+`checked-epoch-stream-open-handle` is an explicit provenance alias.
+Validation so far: `sandbox3_next/compile` passed. On the real UCI household
+power q2 streaming-file gate at 1M records x3, L1 reports heap `4.33 s`,
+legacy checked stream `3.83 s`, optimized checked stream `3.80 s`, explicit
+open-handle alias `3.80 s`, checked scoped epoch `3.83 s`, and rooted scoped
+`3.90 s`, all with checksum `7683095093045065342`. Matching L2 medians are
+heap `1054.432 ms` with `19.906 ms` GC, legacy checked stream
+`1006.176 ms`, optimized default `993.191 ms`, explicit alias `1002.330 ms`,
+checked scoped `995.167 ms`, and rooted scoped `1009.541 ms`. This is a
+modest real-streaming allocation-lowering win because parser/aggregation CPU
+dominates; the stronger headline is still RSS/fixed-memory versus heap.
 
 Latest SPECjbb handle-backed epoch checkpoint:
 The next allocation-lowering audit target promoted the SPECjbb/Stancu-style

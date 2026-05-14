@@ -1,7 +1,7 @@
 # Final-Clean Headline Results
 
 Date: 2026-05-09
-Last updated: 2026-05-14 12:48 CEST
+Last updated: 2026-05-14 13:17 CEST
 
 Status: L1 runner support exists for the first representative binaries. One
 focused retained-epoch L1 row has been collected from clean child commit
@@ -745,6 +745,12 @@ and `evidence/CHECKED_APPEND_WINDOW_MATRIX.md`.
 | SPECjbb2005-workload port 4 warehouses x5 | clean-room transaction workload port | checked scoped epoch | `checked-epoch-scoped` | `0.31 s` | `7929856` | checksum `-6492448434046782774` | Checked SafeZone-backed scoped control. |
 | SPECjbb2005-workload port 4 warehouses x5 | clean-room transaction workload port | rooted scoped baseline | `region-scoped-rooted` | `0.34 s` | `7929856` | checksum `-6492448434046782774` | Rooted scoped baseline. |
 | SPECjbb2005-workload port 4 warehouses x5 | clean-room transaction workload port | natural heap baseline | `gc-heap` | `0.64 s` | `7913472` | checksum `-6492448434046782774` | Baseline. |
+| Theodolite power q2 streaming-file 1M x3 | real-streaming-input power trace | checked epoch stream | `checked-epoch-stream` | `3.80 s` | `15892480` | checksum `7683095093045065342`, output `40960` | Optimized checked stream now uses handle-backed allocation on a real streaming epoch row; modest throughput/RSS win. |
+| Theodolite power q2 streaming-file 1M x3 | real-streaming-input power trace | explicit open-handle alias | `checked-epoch-stream-open-handle` | `3.80 s` | `15892480` | checksum `7683095093045065342`, output `40960` | Provenance alias for optimized checked stream. |
+| Theodolite power q2 streaming-file 1M x3 | real-streaming-input power trace | legacy checked epoch stream | `checked-epoch-stream-legacy` | `3.83 s` | `15908864` | checksum `7683095093045065342`, output `40960` | Legacy generic checked allocation control. |
+| Theodolite power q2 streaming-file 1M x3 | real-streaming-input power trace | checked scoped epoch | `checked-epoch-scoped` | `3.83 s` | `15974400` | checksum `7683095093045065342`, output `40960` | Checked SafeZone-backed scoped control. |
+| Theodolite power q2 streaming-file 1M x3 | real-streaming-input power trace | rooted scoped baseline | `region-scoped-rooted` | `3.90 s` | `15925248` | checksum `7683095093045065342`, output `40960` | Rooted scoped baseline. |
+| Theodolite power q2 streaming-file 1M x3 | real-streaming-input power trace | natural heap baseline | `gc-heap` | `4.33 s` | `75300864` | checksum `7683095093045065342`, output `40960` | Baseline. |
 
 ## Cross-Check Requirement
 

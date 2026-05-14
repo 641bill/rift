@@ -1,7 +1,7 @@
 # Real Streaming Input Matrix
 
 Date: 2026-05-11
-Last updated: 2026-05-13 16:44 CEST
+Last updated: 2026-05-14 13:17 CEST
 
 Status: started. This matrix records only rows that satisfy the
 `real-streaming-input` protocol: no full-input preload, incremental source
@@ -211,8 +211,8 @@ Implementation:
 - Source: `/Users/siyaoliu/rift/cache/benchmark-data/theodolite/real-power/household_power_consumption.txt`
 - Query: q2 hierarchical aggregation over real UCI household power-meter
   measurements.
-- API/topology: retained heap/drop-anchor control, rooted SafeZone scoped
-  epochs, and checked scoped `RiftRegion.epoch`.
+- API/topology: natural heap, rooted SafeZone scoped epochs, checked scoped
+  `RiftRegion.epoch`, and checked stream epoch with handle-backed allocation.
 - Parser: shared byte-line reader plus reusable semicolon-delimited byte-field
   cursor. This supersedes the first streaming-file row that used
   `BufferedReader.readLine()` plus `String.split`.
@@ -221,17 +221,23 @@ Implementation:
 
 | Mode | External s | L2 median ms | Median GC ms | Max GC ms | Runs with GC | RSS bytes | Records | Checksum | Output |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gc-heap` | `4.90` | `1007.030` | `19.932` | `20.834` | `3/3` | `75284480` | `1000000` | `7683095093045065342` | `40960` |
-| `region-scoped-rooted` | `4.79` | `977.056` | `0.000` | `0.000` | `0/3` | `78544896` | `1000000` | `7683095093045065342` | `40960` |
-| `checked-epoch-scoped` | `4.76` | `967.144` | `0.000` | `0.000` | `0/3` | `78528512` | `1000000` | `7683095093045065342` | `40960` |
+| `gc-heap` | `4.89` | `1054.432` | `19.906` | `20.980` | `3/3` | `75284480` | `1000000` | `7683095093045065342` | `40960` |
+| `checked-epoch-stream-legacy` | `4.71` | `1006.176` | `0.000` | `0.000` | `0/3` | `78495744` | `1000000` | `7683095093045065342` | `40960` |
+| `checked-epoch-stream` | `4.74` | `993.191` | `0.000` | `0.000` | `0/3` | `78495744` | `1000000` | `7683095093045065342` | `40960` |
+| `checked-epoch-stream-open-handle` | `4.72` | `1002.330` | `0.000` | `0.000` | `0/3` | `78512128` | `1000000` | `7683095093045065342` | `40960` |
+| `checked-epoch-scoped` | `4.72` | `995.167` | `0.000` | `0.000` | `0/3` | `78512128` | `1000000` | `7683095093045065342` | `40960` |
+| `region-scoped-rooted` | `4.72` | `1009.541` | `0.000` | `0.000` | `0/3` | `78528512` | `1000000` | `7683095093045065342` | `40960` |
 
 1M L1 final-clean, 3 query iterations per external process:
 
 | Mode | External real s | External user s | External sys s | RSS bytes | Records | Checksum | Output |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| `gc-heap` | `3.87` | `3.80` | `0.05` | `75300864` | `1000000` | `7683095093045065342` | `40960` |
-| `region-scoped-rooted` | `3.88` | `3.81` | `0.04` | `15925248` | `1000000` | `7683095093045065342` | `40960` |
-| `checked-epoch-scoped` | `3.77` | `3.70` | `0.04` | `24854528` | `1000000` | `7683095093045065342` | `40960` |
+| `gc-heap` | `4.33` | `4.18` | `0.09` | `75300864` | `1000000` | `7683095093045065342` | `40960` |
+| `checked-epoch-stream-legacy` | `3.83` | `3.76` | `0.04` | `15908864` | `1000000` | `7683095093045065342` | `40960` |
+| `checked-epoch-stream` | `3.80` | `3.73` | `0.04` | `15892480` | `1000000` | `7683095093045065342` | `40960` |
+| `checked-epoch-stream-open-handle` | `3.80` | `3.73` | `0.04` | `15892480` | `1000000` | `7683095093045065342` | `40960` |
+| `checked-epoch-scoped` | `3.83` | `3.76` | `0.04` | `15974400` | `1000000` | `7683095093045065342` | `40960` |
+| `region-scoped-rooted` | `3.90` | `3.82` | `0.04` | `15925248` | `1000000` | `7683095093045065342` | `40960` |
 
 Interpretation:
 
@@ -242,16 +248,22 @@ Interpretation:
   `1007.030 ms` / `19.932 ms` GC. This is important methodology evidence:
   parser allocation can create misleading GC pressure if it is not controlled.
 - The optimized 1M q2 row remains a real streaming RSS/fixed-memory and modest
-  throughput win for the epoch topology: checked scoped epoch is L1 `3.77 s`
-  versus heap `3.87 s`, while cutting RSS from about `75 MB` to about `25 MB`.
+  throughput win for the epoch topology: optimized checked stream is L1
+  `3.80 s` versus heap `4.33 s`, while cutting RSS from about `75 MB` to about
+  `16 MB`.
 - L2 shows the region rows remove timed heap GC once the parser is byte-based:
-  checked scoped epoch is `967.144 ms`, GC `0`, versus heap `1007.030 ms`,
-  GC `19.932 ms`.
+  optimized checked stream is `993.191 ms`, GC `0`, versus heap
+  `1054.432 ms`, GC `19.906 ms`.
+- The handle-backed checked stream promotion is a small but positive
+  remaining-path allocation-lowering win: L1 improves `3.83 s -> 3.80 s`
+  versus the legacy generic checked stream path, and L2 improves
+  `1006.176 ms -> 993.191 ms`.
 - Classification: real-streaming-input checked epoch RSS/fixed-memory and
-  modest-throughput evidence. It is cleaner than the first streaming-file row
-  but no longer looks GC-heavy, which is the point: after parser allocation is
-  controlled, the real time-series query is mostly source/query CPU plus
-  retained measurement objects.
+  modest-throughput evidence, plus modest backend-lowering evidence. It is
+  cleaner than the first streaming-file row but no longer looks GC-heavy,
+  which is the point: after parser allocation is controlled, the real
+  time-series query is mostly source/query CPU plus retained measurement
+  objects.
 
 ## Planned Conversions
 

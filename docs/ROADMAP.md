@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-14 12:48 CEST
+Last updated: 2026-05-14 13:17 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -37,8 +37,18 @@ generic checked path is retained as `checked-epoch-stream-legacy`; the explicit
 legacy `0.30 s`, checked scoped `0.31 s`, rooted scoped `0.34 s`, and heap
 `0.64 s`. L2 medians are optimized `51.168 ms`, legacy `56.371 ms`, checked
 scoped `54.146 ms`, rooted scoped `60.347 ms`, and heap `67.378 ms` with
-`7.635 ms` GC. Continue the audit on Theodolite/Yak/NEXMark only where profiles
-show generic checked allocation is still material.
+`7.635 ms` GC.
+
+Latest real-streaming allocation-lowering update:
+Theodolite real power q2 `streaming-file` now has the same handle-backed
+checked stream lowering. At 1M records x3, L1 reports optimized
+`checked-epoch-stream` `3.80 s` versus legacy `3.83 s`, checked scoped
+`3.83 s`, rooted scoped `3.90 s`, and heap `4.33 s`. L2 reports optimized
+`993.191 ms` versus legacy `1006.176 ms`, checked scoped `995.167 ms`, rooted
+scoped `1009.541 ms`, and heap `1054.432 ms` with `19.906 ms` GC. Treat this
+as a modest positive remaining-path audit result and continue the audit on
+Yak/NEXMark only where profiles show generic checked allocation is still
+material.
 
 Latest streaming-input follow-up:
 Checkpoint commits before the latest working-tree row: child `79b1a6ec2`,
