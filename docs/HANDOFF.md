@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-14 23:35 CEST
+Last updated: 2026-05-14 23:52 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -49,6 +49,14 @@ zero/skipped counts stayed near default because most useful reuse in this
 allocator row comes through the global pool, not the small TLS cache. This
 leaves full-slab bulk-zeroing as the only measured runtime-side zeroing win so
 far.
+Rejected follow-up: child `41d9c95cc` records a runtime global-pool-cap knob
+that was prototyped and reverted. It was meant to reduce RSS by releasing cold
+reusable slabs while using `RIFT_ZERO_REUSED_SLABS=1`, but the focused 5M gate
+slowed as the cap shrank (`68.124 ms` default cap, `73.023 ms` at 96 MiB,
+`74.595 ms` at 64 MiB, `76.415 ms` at 32 MiB, `78.603 ms` at cap zero), and
+Theodolite q2 did not recover RSS (`78,512,128` bytes default cap versus
+`78,413,824` cap zero). This makes static pool-cap release too blunt; do not
+keep it as a runtime knob.
 
 Latest zeroing attribution checkpoint:
 The next low-level optimization target is now measurable. The Rift runtime

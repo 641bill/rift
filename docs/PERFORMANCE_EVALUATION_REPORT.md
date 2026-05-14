@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-14 23:35 CEST
+Last updated: 2026-05-14 23:52 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -97,6 +97,12 @@ zeroing but kept almost the same object-zeroing shape as default and ran
 `72.339 ms` at 5M, versus `71.834 ms` default and `68.614 ms` full bulk-zero.
 The useful skip-zero benefit in the focused allocator row comes mostly from
 global-pool reuse, so local-only zeroing is too narrow.
+A static global-pool-cap follow-up was rejected too: shrinking the cap made the
+focused allocator row slower (`68.124 ms` at the default cap versus
+`78.603 ms` at cap zero) and did not materially reduce Theodolite q2 RSS
+(`78.5 MB` versus `78.4 MB`). The next serious zeroing target is therefore
+compiler-proven no-zero or a much more precise page-release design, not another
+cache-size knob.
 
 Latest handle-backed allocation promotion:
 the default checked epoch/page-token rows now use handle-backed Rift allocation

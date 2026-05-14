@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-14 23:35 CEST
+Last updated: 2026-05-14 23:52 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -41,6 +41,13 @@ local-only versus `71.834 ms` default and `68.614 ms` full bulk-zero). This
 shows the current allocation row gets most of the skip-zero benefit from
 global-pool reuse, so TLS-only is too narrow. Prefer RSS-aware cold-slab
 release or compiler-proven no-zero next.
+Rejected follow-up: child `41d9c95cc` records a runtime global-pool-cap
+prototype that was also reverted. Lowering the reusable pool cap while using
+full bulk-zeroing introduced mmap/unmap churn in the focused allocator row and
+did not materially reduce Theodolite q2 RSS. Static pool-cap release is
+therefore too blunt. Next work should move to compiler-proven no-zero, or only
+revisit RSS release with a more precise untouched-page/madvise design and a row
+where RSS is demonstrably the blocker.
 
 Latest all-optimizations evaluation update:
 the current child working tree adds a focused warm/dirty-slab measurement mode
