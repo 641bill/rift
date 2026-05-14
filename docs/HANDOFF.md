@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-14 13:59 CEST
+Last updated: 2026-05-14 14:41 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -26,8 +26,15 @@ this as a promising experimental runtime-side zeroing policy. Initial
 application gates are positive: StreamFlexDesign throughput 20M x3 improves
 `19.51 s -> 18.91 s`, and generated Common Crawl-shaped q2 1M x3 improves
 `10.00 s -> 9.22 s`, both with matching checksum/output and unchanged RSS.
-Keep it experimental until L2 interpretation and real streaming-input rows
-confirm the close/reset zeroing tradeoff is broadly favorable.
+L2 interpretation shows the tradeoff directly: StreamFlexDesign median
+improves `7517.881 -> 7330.702 ms`, but region op time rises
+`23.563 -> 254.858 ms`; Common Crawl q2 median improves only
+`3544.071 -> 3507.216 ms`, while region op time rises `9.640 -> 68.771 ms`.
+The first real streaming-input gate, Theodolite real power q2, improves L1
+`3.94 s -> 3.60 s` and L2 `927.612 -> 922.823 ms`, but L1 RSS rises
+`15,908,864 -> 24,870,912` bytes because the policy touches reusable pages at
+epoch boundaries. Keep the policy experimental and workload-selective, not a
+new default yet.
 
 Latest zeroing attribution checkpoint:
 The next low-level optimization target is now measurable. The Rift runtime

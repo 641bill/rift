@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-14 13:59 CEST
+Last updated: 2026-05-14 14:41 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -22,7 +22,12 @@ ms at 5M, `10.813 -> 13.817` ms at 10M), so this remains experimental until
 more application gates show it is broadly favorable. The first two gates are
 positive: StreamFlexDesign throughput 20M x3 improves `19.51 s -> 18.91 s`,
 and generated Common Crawl-shaped q2 1M x3 improves `10.00 s -> 9.22 s`,
-with matching checksum/output and unchanged RSS.
+with matching checksum/output and unchanged RSS. L2 makes the cost transfer
+explicit: StreamFlexDesign region op time rises `23.563 -> 254.858 ms`, and
+Common Crawl q2 rises `9.640 -> 68.771 ms`. The real Theodolite streaming q2
+gate is throughput-positive (`3.94 s -> 3.60 s`) but RSS-negative
+(`15,908,864 -> 24,870,912` bytes). Keep this as a workload-selective
+experimental knob until more real streaming rows confirm the tradeoff.
 
 Latest all-optimizations evaluation update:
 the current child working tree adds a focused warm/dirty-slab measurement mode

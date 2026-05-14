@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-14 13:59 CEST
+Last updated: 2026-05-14 14:41 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -81,8 +81,13 @@ op time rises because close/reset now performs the bulk zero. This is
 promising but remains experimental. First application gates are positive:
 StreamFlexDesign throughput 20M x3 improves `19.51 s -> 18.91 s`, and
 generated Common Crawl-shaped q2 1M x3 improves `10.00 s -> 9.22 s`, both with
-matching checksum/output and unchanged RSS. The next decision point is L2
-interpretation and real streaming-input gates.
+matching checksum/output and unchanged RSS. L2 confirms this is a transfer of
+work, not free: StreamFlexDesign region op time rises `23.563 -> 254.858 ms`,
+and Common Crawl q2 region op time rises `9.640 -> 68.771 ms`. The first real
+streaming-input gate, Theodolite real power q2, is throughput-positive
+(`3.94 s -> 3.60 s`) but RSS-negative (`15,908,864 -> 24,870,912` bytes).
+Therefore this remains a workload-selective experimental policy, not a default
+runtime setting.
 
 Latest handle-backed allocation promotion:
 the default checked epoch/page-token rows now use handle-backed Rift allocation
