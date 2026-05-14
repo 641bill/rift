@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-15 00:09 CEST
+Last updated: 2026-05-15 00:37 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -83,6 +83,22 @@ result makes definite-initialization proof the next serious zeroing target:
 final record-like class, all fields assigned before escape, no virtual
 call/`this` escape during construction, superclass fields handled, and arrays
 excluded.
+
+Latest proof-gated no-zero lowering:
+normal `RiftOpenStreamingHandle` allocation now calls the no-zero allocator
+only when the lowerer proves the local allocation is a definitely initialized
+primitive-field record: concrete/non-module/no-subclass class, primitive
+instance fields, and every field stored before the object is otherwise used,
+before control-flow exit, and before any non-pure operation. If this proof
+fails, the existing zeroing allocation path remains in place. The focused 5M
+`ObjectAllocationLoweringMatrix` row is now `65.528 ms` with `0` zeroed
+objects and `5,000,000` zero-skipped objects, essentially matching the unsafe
+lower-bound row `65.277 ms`; the 10M row is `139.832 ms` with all
+`10,000,000` objects zero-skipped. This is the first safe no-zero result for a
+narrow record-like shape. A focused page-token sanity gate remains positive:
+promoted `rift-checked-page-token` is `24.975 ms`, legacy checked page-token is
+`26.495 ms`, and heap is `35.918 ms` at 1M, with matching checksum and lower
+RSS than heap.
 
 Latest reusable-slab zeroing experiment:
 `RIFT_ZERO_REUSED_SLABS=1` is a gated runtime policy that bulk-zeros dead

@@ -1,13 +1,37 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-15 00:09 CEST
+Last updated: 2026-05-15 00:37 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
 
 Active implementation branch for this update:
 `feature/rift`
+
+Latest proof-gated no-zero checkpoint:
+Child implementation commit: `1ee5bf491`
+(`Add proof-gated no-zero lowering`). Parent evidence/report commit: the commit
+containing this handoff update.
+
+The child lowerer now applies no-zero allocation to normal
+`RiftOpenStreamingHandle` class allocations only when a local NIR proof shows
+that the class is concrete/non-module/no-subclass, has only primitive instance
+fields, and every field is stored before the allocated object is otherwise
+used, before control flow leaves the block, and before any non-pure operation.
+If the proof fails, the normal zeroing allocation path is kept. This is the
+first safe no-zero optimization; the explicit
+`rift-checked-rift-open-handle-nozero-unsafe` mode remains a lower-bound
+control. Validation passed: `sandbox3_next/compile`,
+`RiftRegionCheckedCompilerTest` (`141/141`), and `RiftRegionCheckedTest`
+(`65/65`). Focused 5M `ObjectAllocationLoweringMatrix`: normal handle-backed
+checked Rift is now `65.528 ms`, with `0` zeroed objects and `5,000,000`
+zero-skipped objects, matching the unsafe lower bound `65.277 ms`. At 10M,
+the proved normal row is `139.832 ms` with all `10,000,000` objects
+zero-skipped. The page-token 1M sanity gate keeps promoted checked page-token
+ahead of legacy (`24.975 ms` versus `26.495 ms`) and heap (`35.918 ms`), with
+matching checksum and lower RSS than heap. Parent evidence/report commit
+follows this handoff update.
 
 Latest unsafe no-zero lower-bound checkpoint:
 Child implementation commit: `c5fb808a7`

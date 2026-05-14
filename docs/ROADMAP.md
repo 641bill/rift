@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-15 00:09 CEST
+Last updated: 2026-05-15 00:37 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -8,6 +8,25 @@ literature-review comparison contract.
 Latest handle-backed allocation checkpoint:
 - child implementation commit: `1a1c45c75` (`Promote handle-backed checked allocation`)
 - parent evidence/report commit: `17148ea` (`Record handle-backed allocation evidence`)
+
+Latest proof-gated no-zero update:
+Child implementation commit: `1ee5bf491`
+(`Add proof-gated no-zero lowering`). Parent evidence/report commit: the
+commit containing this roadmap update.
+
+Normal `RiftOpenStreamingHandle` allocation now uses no-zero allocation only
+when the lowerer proves a local definitely-initialized record shape: concrete
+non-module class, no reachable subclasses, primitive instance fields, and all
+fields stored before first object use/control-flow exit/non-pure operation.
+Focused `ObjectAllocationLoweringMatrix` results show the proved normal path
+reaches the unsafe lower-bound ceiling: 5M improves from the pre-proof
+`71.320 ms` to `65.528 ms`, and 10M improves from `155.947 ms` to
+`139.832 ms`, with matching checksums and all allocations zero-skipped. The
+first focused page-token sanity gate remains positive: promoted checked
+page-token is `24.975 ms`, legacy checked page-token is `26.495 ms`, and heap
+is `35.918 ms` at 1M. Next work should broaden the proof carefully to
+reference fields only when GC visibility is proven safe, then rerun selected
+application gates.
 
 Latest unsafe no-zero lower-bound update:
 Child implementation commit: `c5fb808a7`
