@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-13 16:44 CEST
+Last updated: 2026-05-13 17:45 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -63,15 +63,15 @@ page-token checked Rift is `23.930 ms`, StreamFlexDesign checked stream is
 Latest handle-backed allocation promotion:
 the default checked epoch/page-token rows now use handle-backed Rift allocation
 where the operator owns the lifetime. For StreamFlexDesign, default
-`checked-epoch-stream` improves over the legacy open-region path from
-`22.68 s` to `21.01 s` at 20M events, with matching checksum/output and
-essentially unchanged RSS; L2 improves from `8776.217 ms` to `8096.514 ms`
-with the same object/reset counts. For page-token rows, generated Common
-Crawl-shaped q2 L1 improves from legacy `11.18 s` to `10.59 s`, focused
-page-token improves from `23.913 ms` to `22.785 ms`, and DSPBench Fraud q2
-improves slightly from `2.63 s` to `2.60 s` while remaining parser/query
-dominated. Treat DSPBench as an application sanity gate, not a new real-input
-headline win.
+`checked-epoch-stream` now reports `19.25 s` at 20M events versus legacy
+`21.32 s` and heap `30.90 s`, with matching checksum/output and unchanged RSS.
+For page-token rows, generated Common Crawl-shaped q2 now reports optimized
+`rift-checked-page-token` at `9.76 s` versus legacy `11.06 s` and heap
+`16.23 s`; the focused 1M page-token row is `23.059 ms` versus legacy
+`24.687 ms` and heap `38.352 ms`. A focused warm/dirty-slab allocation probe
+does not justify no-zero allocation yet: it likely measures pool warmup as
+well as dirty-slab reuse, so zero-elision remains blocked on a lower-level
+fresh/dirty probe plus definite-initialization proof.
 
 Dataflow follow-up: `DataflowRegionMatrix` now promotes handle-backed
 allocation for the full `checked-epoch-stream` direct-epoch family. The
@@ -211,15 +211,19 @@ it preserved zero-init semantics but regressed focused 5M allocation slightly
 (`70.044 ms` versus the committed `69.912 ms`) by moving work into slab attach.
 
 Latest clean final-clean reruns:
-The post-cleanup rows now have clean L1 reruns from child `ca1978ef4`.
-Focused 1M page-token, five measured runs: heap `38.378 ms` with `11.513 ms`
-median GC and `75.1 MB` RSS, checked Rift page-token `25.007 ms` with zero GC
-and `47.6 MB` RSS, and checked SafeZone-backed page-token `25.591 ms` with
-zero GC and `47.5 MB` RSS. StreamFlexDesign throughput at 20M events x3:
-heap `31.26 s`, checked scoped `24.39 s`, checked stream `22.81 s`. Generated
-Common Crawl-shaped q1/q2 at 1M pages x3: heap `17.49/16.73 s`, checked Rift
-page-token `10.88/11.49 s`, checked SafeZone-backed page-token
-`13.29/14.84 s`. These are presentation-grade generated/StreamFlex-design
+The latest all-optimizations rows refresh the post-cleanup L1 evidence.
+Focused 1M page-token, five measured runs: heap `38.352 ms`, legacy checked
+Rift page-token `24.687 ms`, promoted checked Rift page-token `23.059 ms`,
+and checked SafeZone-backed page-token `25.805 ms`, all with matching
+checksum. StreamFlexDesign throughput at 20M events x3 is heap `30.90 s`,
+legacy checked stream `21.32 s`, promoted checked stream `19.25 s`, and
+checked scoped `23.41 s`. Generated Common Crawl-shaped q1/q2 at 1M pages x3
+is heap `16.67/16.23 s`, promoted checked Rift page-token `9.30/9.76 s`,
+legacy checked page-token `10.29/11.06 s`, and checked SafeZone-backed
+page-token `12.88/14.39 s`. A quick SPECjbb/Stancu-style 4-warehouse
+transaction gate keeps the same direction: heap `0.51 s`, rooted scoped
+`0.21 s`, checked epoch stream `0.18 s`, and checked scoped epoch `0.19 s`.
+These are presentation-grade generated/StreamFlex-design/transaction-topology
 rows; Common Crawl remains generated stressor evidence.
 
 Latest operator-gate status:

@@ -1,7 +1,7 @@
 # Final-Clean Headline Results
 
 Date: 2026-05-09
-Last updated: 2026-05-13 16:44 CEST
+Last updated: 2026-05-13 17:45 CEST
 
 Status: L1 runner support exists for the first representative binaries. One
 focused retained-epoch L1 row has been collected from clean child commit
@@ -70,6 +70,15 @@ throughput row and L2 latency/pressure-latency rows are recorded below and in
 Child `ca1978ef4` records clean final-clean reruns after the open-allocation
 cleanup for focused page-token, StreamFlexDesign 20M throughput, and generated
 Common Crawl-shaped q1/q2 page-token rows.
+The current all-optimizations follow-up refreshes those handle-backed rows:
+StreamFlexDesign 20M throughput now reports default `checked-epoch-stream`
+`19.25 s` versus legacy `21.32 s` and heap `30.90 s`; generated Common
+Crawl-shaped q1/q2 reports optimized `rift-checked-page-token` `9.30/9.76 s`
+versus legacy `10.29/11.06 s` and heap `16.67/16.23 s`; focused page-token
+is `23.059 ms` versus legacy `24.687 ms` and heap `38.352 ms`. A quick
+SPECjbb/Stancu-style 4-warehouse L1 gate keeps the transaction topology
+direction: checked epoch stream `0.18 s`, checked scoped epoch `0.19 s`,
+rooted scoped `0.21 s`, and heap `0.51 s`.
 
 ## Definition
 
@@ -707,6 +716,33 @@ RETAINED_EPOCH_MODES="heap-epoch-retained-no-traverse checked-scoped-epoch-retai
 RETAINED_EPOCH_OUTPUT_DIR=/tmp/rift-final-clean-retained-smoke \
 zsh sandbox/run_retained_epoch_reclaim_matrix.sh
 ```
+
+## All-Optimizations Follow-Up, 2026-05-13
+
+These rows refresh the representative handle-backed checked defaults after the
+current optimization pass. L1 rows use `RIFT_FINAL_CLEAN=1`; L2 interpretation
+for Common Crawl q2 is in `evidence/COMMON_CRAWL_WET_MATRIX.md`, and focused
+allocation/append details are in `evidence/OBJECT_ALLOCATION_LOWERING_MATRIX.md`
+and `evidence/CHECKED_APPEND_WINDOW_MATRIX.md`.
+
+| Benchmark | Input type | API/topology | Mode | L1 external real | RSS bytes | Checksum/output | Allowed claim |
+|---|---|---|---|---:|---:|---|---|
+| StreamFlexDesign throughput 20M x3 | generated methodology | checked epoch stream | `checked-epoch-stream` | `19.25 s` | `12582912` | checksum `5305809911915216923`, output `19999119` | Optimized checked framework API win; default now matches the explicit open-handle alias. |
+| StreamFlexDesign throughput 20M x3 | generated methodology | legacy checked epoch stream | `checked-epoch-stream-legacy` | `21.32 s` | `12599296` | checksum `5305809911915216923`, output `19999119` | Legacy control only. |
+| StreamFlexDesign throughput 20M x3 | generated methodology | natural heap baseline | `gc-heap` | `30.90 s` | `12419072` | checksum `5305809911915216923`, output `19999119` | Baseline. |
+| Common Crawl-shaped q1 1M x3 | generated stressor | checked page-token | `rift-checked-page-token` | `9.30 s` | `63324160` | checksum `-3166891223384968696`, output `137000000` | Generated page/window object-pressure win; not real-input proof. |
+| Common Crawl-shaped q1 1M x3 | generated stressor | legacy checked page-token | `rift-checked-page-token-legacy` | `10.29 s` | `63324160` | checksum `-3166891223384968696`, output `137000000` | Legacy control only. |
+| Common Crawl-shaped q1 1M x3 | generated stressor | natural heap baseline | `heap-immix` | `16.67 s` | `408633344` | checksum `-3166891223384968696`, output `137000000` | Baseline. |
+| Common Crawl-shaped q2 1M x3 | generated stressor | checked page-token | `rift-checked-page-token` | `9.76 s` | `63324160` | checksum `1076064953308107199`, output `929230` | Generated page/window object-pressure win; not real-input proof. |
+| Common Crawl-shaped q2 1M x3 | generated stressor | legacy checked page-token | `rift-checked-page-token-legacy` | `11.06 s` | `63324160` | checksum `1076064953308107199`, output `929230` | Legacy control only. |
+| Common Crawl-shaped q2 1M x3 | generated stressor | natural heap baseline | `heap-immix` | `16.23 s` | `408633344` | checksum `1076064953308107199`, output `929230` | Baseline. |
+| Focused append-window 1M x5 | synthetic focused | checked page-token | `rift-checked-page-token` | `23.059 ms` | `47562752` | checksum `-2507118467295660905` | Focused framework fast-path win. |
+| Focused append-window 1M x5 | synthetic focused | legacy checked page-token | `rift-checked-page-token-legacy` | `24.687 ms` | `47562752` | checksum `-2507118467295660905` | Legacy control only. |
+| Focused append-window 1M x5 | synthetic focused | natural heap baseline | `heap-immix` | `38.352 ms` | `75104256` | checksum `-2507118467295660905` | Baseline. |
+| SPECjbb2005-workload port 4 warehouses | clean-room transaction workload port | checked epoch stream | `checked-epoch-stream` | `0.18 s` | `5980160` | checksum `-6492448434046782774` | Quick all-optimizations transaction/epoch win; not official SPECjbb2005. |
+| SPECjbb2005-workload port 4 warehouses | clean-room transaction workload port | checked scoped epoch | `checked-epoch-scoped` | `0.19 s` | `6307840` | checksum `-6492448434046782774` | Checked scoped transaction/epoch near checked stream. |
+| SPECjbb2005-workload port 4 warehouses | clean-room transaction workload port | rooted scoped baseline | `region-scoped-rooted` | `0.21 s` | `6307840` | checksum `-6492448434046782774` | Rooted scoped baseline. |
+| SPECjbb2005-workload port 4 warehouses | clean-room transaction workload port | natural heap baseline | `gc-heap` | `0.51 s` | `7929856` | checksum `-6492448434046782774` | Baseline. |
 
 ## Cross-Check Requirement
 

@@ -1,13 +1,41 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-13 16:44 CEST
+Last updated: 2026-05-13 17:45 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
 
 Active implementation branch for this update:
 `feature/rift`
+
+Latest all-optimizations checkpoint:
+The child working tree adds a focused
+`rift-checked-rift-open-handle-dirty-slab` allocation mode to
+`ObjectAllocationLoweringMatrix`. It dirties Rift slabs outside the timed
+section, resets stats, and then times the same handle-backed allocation body;
+it does not skip zeroing. The 5M focused gate is heap `82.165 ms`, current
+checked Rift `78.557 ms`, handle-backed checked Rift `69.422 ms`,
+warm/dirty-slab handle-backed checked Rift `67.128 ms`, and checked
+SafeZone-backed `68.868 ms`, all with matching checksum. Interpret the
+warm/dirty row as a measurement probe only, because pool warmup likely hides
+the dirty-zeroing cost.
+
+Application gates with all current optimizations enabled:
+`StreamFlexDesignMatrix` 20M throughput L1 reports heap `30.90 s`, legacy
+checked stream `21.32 s`, promoted default `checked-epoch-stream` `19.25 s`,
+and explicit open-handle alias `19.23 s`. Generated Common Crawl-shaped q2 L1
+reports heap `16.23 s`, legacy checked page-token `11.06 s`, promoted
+`rift-checked-page-token` `9.76 s`, and explicit open-handle alias `9.75 s`.
+The focused 1M append-window gate reports heap `38.352 ms`, legacy checked
+page-token `24.687 ms`, promoted checked page-token `23.059 ms`, and checked
+SafeZone-backed page-token `25.805 ms`. The quick SPECjbb/Stancu-style
+4-warehouse L1 gate reports heap `0.51 s`, rooted scoped `0.21 s`,
+checked epoch stream `0.18 s`, and checked scoped epoch `0.19 s`.
+Compiler probes pass `141/141`; the runtime checked suite passes `65/65`.
+Checkpoint for this update: child commit `eef05a22f`
+(`Add all-optimizations allocation gate`). Parent evidence/report updates are
+synced in the commit containing this handoff update.
 
 Latest LogHub streaming-session checkpoint:
 Child implementation commit: `7660e54e4`

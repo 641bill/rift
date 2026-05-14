@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-13 16:44 CEST
+Last updated: 2026-05-13 17:45 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -8,6 +8,25 @@ literature-review comparison contract.
 Latest handle-backed allocation checkpoint:
 - child implementation commit: `1a1c45c75` (`Promote handle-backed checked allocation`)
 - parent evidence/report commit: `17148ea` (`Record handle-backed allocation evidence`)
+
+Latest all-optimizations evaluation update:
+the current child working tree adds a focused warm/dirty-slab measurement mode
+for handle-backed checked allocation and refreshes the main all-optimizations
+gates. At 5M focused allocations, handle-backed checked Rift is `69.422 ms`
+versus current checked Rift `78.557 ms`; the warm/dirty-slab probe is
+`67.128 ms` but is not a no-zero claim because pool warmup is mixed into the
+setup. Application gates now show promoted defaults clearly beating legacy:
+StreamFlexDesign 20M throughput default `checked-epoch-stream` is `19.25 s`
+versus legacy `21.32 s` and heap `30.90 s`; generated Common Crawl q2 default
+`rift-checked-page-token` is `9.76 s` versus legacy `11.06 s` and heap
+`16.23 s`; focused append-window default is `23.059 ms` versus legacy
+`24.687 ms` and heap `38.352 ms`. A quick SPECjbb/Stancu-style
+4-warehouse gate preserves the transaction topology direction with checked
+epoch stream `0.18 s`, checked scoped epoch `0.19 s`, rooted scoped `0.21 s`,
+and heap `0.51 s`. Next optimization work should either fold handle-backed
+allocation into remaining epoch-shaped matrices where profiles show allocation
+lowering is material, or build a lower-level fresh/dirty zeroing probe before
+considering any compiler-proven no-zero prototype.
 
 Latest streaming-input follow-up:
 Checkpoint commits before the latest working-tree row: child `79b1a6ec2`,
