@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-13 17:45 CEST
+Last updated: 2026-05-14 12:48 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -27,6 +27,18 @@ and heap `0.51 s`. Next optimization work should either fold handle-backed
 allocation into remaining epoch-shaped matrices where profiles show allocation
 lowering is material, or build a lower-level fresh/dirty zeroing probe before
 considering any compiler-proven no-zero prototype.
+
+Latest remaining-path allocation-lowering update:
+the SPECjbb/Stancu-style `checked-epoch-stream` path now follows the same
+backend-known handle-backed lowering used by Dataflow and StreamFlex. The old
+generic checked path is retained as `checked-epoch-stream-legacy`; the explicit
+`checked-epoch-stream-open-handle` row remains as provenance. At 4 warehouses x
+100k transactions, 5-run L1 reports optimized checked stream `0.27 s` versus
+legacy `0.30 s`, checked scoped `0.31 s`, rooted scoped `0.34 s`, and heap
+`0.64 s`. L2 medians are optimized `51.168 ms`, legacy `56.371 ms`, checked
+scoped `54.146 ms`, rooted scoped `60.347 ms`, and heap `67.378 ms` with
+`7.635 ms` GC. Continue the audit on Theodolite/Yak/NEXMark only where profiles
+show generic checked allocation is still material.
 
 Latest streaming-input follow-up:
 Checkpoint commits before the latest working-tree row: child `79b1a6ec2`,

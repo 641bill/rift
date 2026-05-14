@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-13 17:45 CEST
+Last updated: 2026-05-14 12:48 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -225,6 +225,19 @@ transaction gate keeps the same direction: heap `0.51 s`, rooted scoped
 `0.21 s`, checked epoch stream `0.18 s`, and checked scoped epoch `0.19 s`.
 These are presentation-grade generated/StreamFlex-design/transaction-topology
 rows; Common Crawl remains generated stressor evidence.
+
+Latest remaining-path allocation-lowering gate:
+`evidence/SPECJBB2005_PORT_MATRIX.md` now records the SPECjbb/Stancu-style
+checked stream epoch promotion from generic `RiftRegion.allocOpen` to
+backend-known `RiftAllocator.allocateOpenHandle`. The public benchmark label
+`checked-epoch-stream` is the optimized default; `checked-epoch-stream-legacy`
+keeps the old path. At 4 warehouses x 100k transactions, L1 is optimized
+checked stream `0.27 s`, explicit open-handle alias `0.27 s`, legacy checked
+stream `0.30 s`, checked scoped epoch `0.31 s`, rooted scoped `0.34 s`, and
+heap `0.64 s`. L2 medians are optimized checked stream `51.168 ms`, legacy
+`56.371 ms`, checked scoped `54.146 ms`, rooted scoped `60.347 ms`, and heap
+`67.378 ms` with `7.635 ms` GC. This is another positive handle-backed
+allocation result, not a zeroing/root-free claim.
 
 Latest operator-gate status:
 `evidence/OPERATOR_GATE_STATUS.md`. This keeps rank/top-k/median/hash/join work

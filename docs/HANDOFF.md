@@ -1,13 +1,27 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-13 17:45 CEST
+Last updated: 2026-05-14 12:48 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
 
 Active implementation branch for this update:
 `feature/rift`
+
+Latest SPECjbb handle-backed epoch checkpoint:
+The next allocation-lowering audit target promoted the SPECjbb/Stancu-style
+`checked-epoch-stream` path from generic `RiftRegion.allocOpen` to
+backend-known `RiftAllocator.allocateOpenHandle`. The old path is retained as
+`checked-epoch-stream-legacy`; `checked-epoch-stream-open-handle` is an
+explicit alias/provenance row. Validation so far: `sandbox3_next/compile`
+passed. The 4-warehouse x 100k L1 gate with 5 runs reports heap `0.64 s`,
+legacy checked stream `0.30 s`, optimized checked stream `0.27 s`, explicit
+open-handle alias `0.27 s`, checked scoped epoch `0.31 s`, and rooted scoped
+`0.34 s`, all with checksum `-6492448434046782774`. Matching L2 medians are
+heap `67.378 ms` with `7.635 ms` GC, legacy `56.371 ms`, optimized default
+`51.168 ms`, explicit alias `49.977 ms`, checked scoped `54.146 ms`, and
+rooted scoped `60.347 ms`.
 
 Latest all-optimizations checkpoint:
 The child working tree adds a focused

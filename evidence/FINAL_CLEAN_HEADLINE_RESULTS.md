@@ -1,7 +1,7 @@
 # Final-Clean Headline Results
 
 Date: 2026-05-09
-Last updated: 2026-05-13 17:45 CEST
+Last updated: 2026-05-14 12:48 CEST
 
 Status: L1 runner support exists for the first representative binaries. One
 focused retained-epoch L1 row has been collected from clean child commit
@@ -717,7 +717,7 @@ RETAINED_EPOCH_OUTPUT_DIR=/tmp/rift-final-clean-retained-smoke \
 zsh sandbox/run_retained_epoch_reclaim_matrix.sh
 ```
 
-## All-Optimizations Follow-Up, 2026-05-13
+## All-Optimizations Follow-Up, 2026-05-14
 
 These rows refresh the representative handle-backed checked defaults after the
 current optimization pass. L1 rows use `RIFT_FINAL_CLEAN=1`; L2 interpretation
@@ -739,10 +739,12 @@ and `evidence/CHECKED_APPEND_WINDOW_MATRIX.md`.
 | Focused append-window 1M x5 | synthetic focused | checked page-token | `rift-checked-page-token` | `23.059 ms` | `47562752` | checksum `-2507118467295660905` | Focused framework fast-path win. |
 | Focused append-window 1M x5 | synthetic focused | legacy checked page-token | `rift-checked-page-token-legacy` | `24.687 ms` | `47562752` | checksum `-2507118467295660905` | Legacy control only. |
 | Focused append-window 1M x5 | synthetic focused | natural heap baseline | `heap-immix` | `38.352 ms` | `75104256` | checksum `-2507118467295660905` | Baseline. |
-| SPECjbb2005-workload port 4 warehouses | clean-room transaction workload port | checked epoch stream | `checked-epoch-stream` | `0.18 s` | `5980160` | checksum `-6492448434046782774` | Quick all-optimizations transaction/epoch win; not official SPECjbb2005. |
-| SPECjbb2005-workload port 4 warehouses | clean-room transaction workload port | checked scoped epoch | `checked-epoch-scoped` | `0.19 s` | `6307840` | checksum `-6492448434046782774` | Checked scoped transaction/epoch near checked stream. |
-| SPECjbb2005-workload port 4 warehouses | clean-room transaction workload port | rooted scoped baseline | `region-scoped-rooted` | `0.21 s` | `6307840` | checksum `-6492448434046782774` | Rooted scoped baseline. |
-| SPECjbb2005-workload port 4 warehouses | clean-room transaction workload port | natural heap baseline | `gc-heap` | `0.51 s` | `7929856` | checksum `-6492448434046782774` | Baseline. |
+| SPECjbb2005-workload port 4 warehouses x5 | clean-room transaction workload port | checked epoch stream | `checked-epoch-stream` | `0.27 s` | `6782976` | checksum `-6492448434046782774` | Optimized checked stream now uses handle-backed allocation; not official SPECjbb2005. |
+| SPECjbb2005-workload port 4 warehouses x5 | clean-room transaction workload port | explicit open-handle alias | `checked-epoch-stream-open-handle` | `0.27 s` | `6782976` | checksum `-6492448434046782774` | Provenance alias for optimized checked stream. |
+| SPECjbb2005-workload port 4 warehouses x5 | clean-room transaction workload port | legacy checked epoch stream | `checked-epoch-stream-legacy` | `0.30 s` | `7340032` | checksum `-6492448434046782774` | Legacy generic checked allocation control. |
+| SPECjbb2005-workload port 4 warehouses x5 | clean-room transaction workload port | checked scoped epoch | `checked-epoch-scoped` | `0.31 s` | `7929856` | checksum `-6492448434046782774` | Checked SafeZone-backed scoped control. |
+| SPECjbb2005-workload port 4 warehouses x5 | clean-room transaction workload port | rooted scoped baseline | `region-scoped-rooted` | `0.34 s` | `7929856` | checksum `-6492448434046782774` | Rooted scoped baseline. |
+| SPECjbb2005-workload port 4 warehouses x5 | clean-room transaction workload port | natural heap baseline | `gc-heap` | `0.64 s` | `7913472` | checksum `-6492448434046782774` | Baseline. |
 
 ## Cross-Check Requirement
 
