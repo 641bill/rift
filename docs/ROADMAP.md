@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-15 01:27 CEST
+Last updated: 2026-05-15 01:40 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -33,6 +33,22 @@ GC; StreamFlexDesign final-clean throughput at 20M events x3 is heap
 `22.19 s`, and checked scoped `23.57 s`. Next work should broaden the proof
 carefully to reference fields only when GC visibility is proven safe, then
 rerun selected page/window and real-streaming gates.
+
+Latest reference-field no-zero proof update:
+the proof has now been broadened to definitely initialized reference-field
+records allocated through `RiftOpenStreamingHandle`. The safety boundary is
+still narrow: concrete/non-module/no-subclass classes only, every field stored
+before first object use/control-flow exit/non-pure operation, and Rift-backed
+open handles only. The GC argument relies on Rift slabs not being scanned as
+roots while checked region safety separately rejects unsafe heap-region
+references. Focused 5M linked reference records now put normal checked
+open-handle allocation at the unsafe no-zero ceiling (`66.249 ms` versus
+`66.177 ms`), with all `5,000,001` region objects zero-skipped and matching
+checksum. Primitive-shape regression stays positive (`63.303 ms` at 5M).
+StreamFlexDesign linked-object transfer remains positive versus heap/legacy
+but does not show a fresh application win; next optimization should target
+non-zeroing costs or run a real-streaming/page-window gate where reference
+records dominate.
 
 Latest unsafe no-zero lower-bound update:
 Child implementation commit: `c5fb808a7`

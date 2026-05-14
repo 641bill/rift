@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-15 01:27 CEST
+Last updated: 2026-05-15 01:40 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -106,7 +106,15 @@ timed GC. StreamFlexDesign L1 at 20M events x3 reports heap `29.04 s`, legacy
 checked stream `22.19 s`, optimized checked stream `19.91 s`, and checked
 scoped `23.57 s`, all with matching checksum and no material RSS regression;
 the matching pressure-latency L2 row cuts heap's `49` deadline misses to
-`0-1` for checked region rows.
+`0-1` for checked region rows. The follow-up proof slice now includes
+definitely initialized reference-field records. Focused 5M linked reference
+records put normal checked open-handle allocation at the unsafe no-zero
+ceiling (`66.249 ms` versus `66.177 ms`), with all `5,000,001` checked objects
+zero-skipped and matching checksum; the primitive-shape regression row remains
+positive at `63.303 ms`. StreamFlexDesign linked-object transfer stays
+positive versus heap and legacy but does not show a fresh application win,
+which means remaining StreamFlex-style work is now mostly query/traversal/
+capsule/allocation-body cost rather than reference-field zeroing alone.
 
 Latest reusable-slab zeroing experiment:
 `RIFT_ZERO_REUSED_SLABS=1` is a gated runtime policy that bulk-zeros dead

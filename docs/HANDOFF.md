@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-15 01:27 CEST
+Last updated: 2026-05-15 01:40 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -39,6 +39,16 @@ legacy checked stream and heap `27.952/50.485/28.349 ms` with
 events x3 is heap `29.04 s`, optimized checked stream `19.91 s`, legacy
 checked stream `22.19 s`, and checked scoped `23.57 s`; the pressure-latency
 L2 gate reduces heap's `49` deadline misses to `0-1` checked-region misses.
+The next no-zero proof slice extends eligibility from primitive-only records
+to definitely initialized reference-field records. The focused 5M linked
+reference-record gate is heap `307.568 ms`, checked open-handle `66.249 ms`,
+unsafe no-zero `66.177 ms`, and checked SafeZone-backed `70.196 ms`; all
+`5,000,001` checked open-handle objects are zero-skipped with matching
+checksum. The primitive regression gate remains positive (`63.303 ms` checked
+open-handle at 5M), and the checked compiler/runtime suites pass
+`141/141` and `65/65`. A StreamFlexDesign 1M linked-object transfer gate stays
+positive versus heap and legacy, but does not produce a fresh application
+speedup; query/traversal/capsule work now dominates that row.
 
 Latest unsafe no-zero lower-bound checkpoint:
 Child implementation commit: `c5fb808a7`
