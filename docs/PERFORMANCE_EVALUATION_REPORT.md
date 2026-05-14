@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-14 23:12 CEST
+Last updated: 2026-05-14 23:35 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -92,6 +92,11 @@ A high-water prefix-zeroing follow-up was rejected: it reduced neither the
 focused allocation elapsed nor region-op cost enough to justify the metadata
 bookkeeping. The transition-only version still ran `69.619 ms` enabled at 5M,
 worse than the accepted full-slab policy's `65.228 ms`.
+A TLS/local-only zeroing follow-up was also rejected: it avoided global-pool
+zeroing but kept almost the same object-zeroing shape as default and ran
+`72.339 ms` at 5M, versus `71.834 ms` default and `68.614 ms` full bulk-zero.
+The useful skip-zero benefit in the focused allocator row comes mostly from
+global-pool reuse, so local-only zeroing is too narrow.
 
 Latest handle-backed allocation promotion:
 the default checked epoch/page-token rows now use handle-backed Rift allocation

@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-14 23:12 CEST
+Last updated: 2026-05-14 23:35 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -34,6 +34,13 @@ focused 5M gate (`69.619 ms` enabled, worse than the accepted full-slab
 bulk-zero `65.228 ms`). Next zeroing policy work should test coarser knobs
 such as TLS-cache-only zeroing or RSS-aware cache release, or move to
 compiler-proven no-zero.
+Rejected follow-up: child `7750778f1` records a TLS/local-only zeroing
+prototype that was also reverted. It avoided global-pool page touches, but the
+focused 5M gate was worse than both default and full bulk-zeroing (`72.339 ms`
+local-only versus `71.834 ms` default and `68.614 ms` full bulk-zero). This
+shows the current allocation row gets most of the skip-zero benefit from
+global-pool reuse, so TLS-only is too narrow. Prefer RSS-aware cold-slab
+release or compiler-proven no-zero next.
 
 Latest all-optimizations evaluation update:
 the current child working tree adds a focused warm/dirty-slab measurement mode

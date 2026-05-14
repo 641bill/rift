@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-14 23:12 CEST
+Last updated: 2026-05-14 23:35 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -41,6 +41,14 @@ Per-allocation high-water tracking regressed the 5M focused row to
 `76.532 ms`; transition-only tracking still failed to beat the accepted
 full-slab policy (`69.619 ms` enabled versus `65.228 ms`). Do not revive that
 approach without a lower-overhead design.
+Rejected follow-up: child `7750778f1` records a TLS/local-only zeroing policy
+that was also prototyped and reverted. It zeroed only locally reused slabs
+instead of global-pool slabs, but the focused 5M gate did not improve: default
+`71.834 ms`, full bulk-zero `68.614 ms`, local-only `72.339 ms`. The object
+zero/skipped counts stayed near default because most useful reuse in this
+allocator row comes through the global pool, not the small TLS cache. This
+leaves full-slab bulk-zeroing as the only measured runtime-side zeroing win so
+far.
 
 Latest zeroing attribution checkpoint:
 The next low-level optimization target is now measurable. The Rift runtime
