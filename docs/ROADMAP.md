@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-14 13:17 CEST
+Last updated: 2026-05-14 13:45 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -49,6 +49,19 @@ scoped `1009.541 ms`, and heap `1054.432 ms` with `19.906 ms` GC. Treat this
 as a modest positive remaining-path audit result and continue the audit on
 Yak/NEXMark only where profiles show generic checked allocation is still
 material.
+
+Latest zeroing attribution update:
+The object-initialization/zeroing target now has a diagnostic counter instead
+of a guess. Rift allocation stats record managed object allocations that call
+`memset` and those that skip zeroing on fresh zeroed slabs; final-clean runs
+still keep these counters disabled. At 5M objects x5 in
+`ObjectAllocationLoweringMatrix`, handle-backed checked Rift reports
+`4,198,392` zeroed objects (`134,348,544` bytes) and `801,608` zero-skipped
+objects (`25,651,456` bytes), with median `70.197 ms`. This confirms zeroing
+is a material remaining allocation-body cost, but it is not a no-zero claim.
+Next work should either add compiler proof for definite initialization of
+final record-like classes, or find a runtime policy that improves the
+zeroed/skipped ratio without increasing slab attach/reset cost.
 
 Latest streaming-input follow-up:
 Checkpoint commits before the latest working-tree row: child `79b1a6ec2`,

@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-14 13:17 CEST
+Last updated: 2026-05-14 13:45 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -59,6 +59,16 @@ decision. This keeps the same zeroing semantics and is now the latest accepted
 allocation-body win: focused 5M checked Rift allocation is `68.998 ms`, focused
 page-token checked Rift is `23.930 ms`, StreamFlexDesign checked stream is
 `22.31 s`, and generated Common Crawl-shaped q2 checked Rift is `11.17 s`.
+
+Latest zeroing attribution probe:
+`evidence/OBJECT_ALLOCATION_LOWERING_MATRIX.md` now records diagnostic counters
+for managed object allocations that actually call `memset` versus allocations
+that skip zeroing on fresh zeroed slabs. These counters are L2-only and remain
+off in `RIFT_FINAL_CLEAN=1`. At 5M handle-backed checked Rift allocations, the
+row is `70.197 ms`; `4,198,392` objects (`134,348,544` bytes) are zeroed and
+`801,608` objects (`25,651,456` bytes) skip zeroing. This confirms
+initialization/zeroing is a real remaining allocation-body cost, but it is not
+a no-zero optimization or safety claim.
 
 Latest handle-backed allocation promotion:
 the default checked epoch/page-token rows now use handle-backed Rift allocation

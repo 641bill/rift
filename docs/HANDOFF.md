@@ -1,13 +1,28 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-14 13:17 CEST
+Last updated: 2026-05-14 13:45 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
 
 Active implementation branch for this update:
 `feature/rift`
+
+Latest zeroing attribution checkpoint:
+The next low-level optimization target is now measurable. The Rift runtime
+records diagnostic allocation-stats counters for managed object allocations
+that call `memset` versus allocations that skip zeroing because the current
+slab is known fresh/zero-filled. These counters are disabled with the rest of
+allocation stats in `RIFT_FINAL_CLEAN=1`, so they do not affect headline L1
+timing. Validation so far: `sandbox3_next/compile` passed, and the focused
+`ObjectAllocationLoweringMatrix` native smoke/5M gates ran. At 5M objects x5,
+`rift-checked-rift-open-handle` reports median `70.197 ms`, with
+`4,198,392` zeroed objects (`134,348,544` bytes) and `801,608` zero-skipped
+objects (`25,651,456` bytes). The dirty-slab row is essentially identical at
+this scale (`70.329 ms`). Interpretation: object zeroing is now quantified as
+a real remaining allocation-body cost, but no zero-elision optimization is
+claimed yet.
 
 Latest Theodolite handle-backed epoch checkpoint:
 The next remaining-path allocation audit target promoted

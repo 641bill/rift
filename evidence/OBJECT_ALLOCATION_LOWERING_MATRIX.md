@@ -1,11 +1,12 @@
 # Object Allocation Lowering Matrix
 
 Date: 2026-05-05
-Last updated: 2026-05-13 17:45 CEST
+Last updated: 2026-05-14 13:45 CEST
 
 Status: refined retained-region-array matrix validated at 20k smoke, 100k, 1M,
-and 10M, plus focused final-clean allocator-counter, cached-stats, and
-current-slab zeroed-cache, handle-backed allocation, and warm/dirty-slab gates.
+and 10M, plus focused final-clean allocator-counter, cached-stats,
+current-slab zeroed-cache, handle-backed allocation, warm/dirty-slab gates,
+and object zeroing attribution counters.
 This
 benchmark isolates ordinary Scala object construction through heap, trusted
 Rift, checked Rift, and checked SafeZone-backed allocation paths without
@@ -201,6 +202,58 @@ worse (`70.044 ms`) than the committed object fast-path baseline (`69.912 ms`),
 with slow-allocation/attach time rising to `3.277 ms`. Keep the current
 per-object zeroing policy for dirty reused slabs until a better measured policy
 exists.
+
+Zeroing attribution probe, 2026-05-14: the Rift runtime now records, when
+allocation stats are enabled, how many managed object allocations actually call
+`memset` and how many skip zeroing because the current slab is known fresh and
+zero-filled by the OS. These counters are diagnostic L2 evidence only; they
+are disabled with the rest of allocation stats in `RIFT_FINAL_CLEAN=1`.
+
+Smoke command:
+
+```sh
+cd /Users/siyaoliu/rift/scala-native-rift
+OBJECT_ALLOC_OBJECTS=20000 \
+OBJECT_ALLOC_BENCHMARK_RUNS=1 \
+OBJECT_ALLOC_WARMUPS=0 \
+OBJECT_ALLOC_MODES="rift-checked-rift-open-handle rift-checked-rift-open-handle-dirty-slab" \
+OBJECT_ALLOC_OUTPUT_DIR=/Users/siyaoliu/rift/cache/object-zeroing-probe-smoke-20260514 \
+zsh sandbox/run_object_allocation_lowering_matrix.sh
+```
+
+20k smoke rows:
+
+| Mode | Median ms | Zeroed objects | Zeroed bytes | Zero-skipped objects | Zero-skipped bytes | Checksum |
+|---|---:|---:|---:|---:|---:|---:|
+| `rift-checked-rift-open-handle` | 0.902 | 0 | 0 | 20,000 | 640,000 | -5014597496877744147 |
+| `rift-checked-rift-open-handle-dirty-slab` | 0.444 | 511 | 16,352 | 19,489 | 623,648 | -5014597496877744147 |
+
+Focused diagnostic command:
+
+```sh
+OBJECT_ALLOC_BUILD=0 \
+OBJECT_ALLOC_OBJECTS=5000000 \
+OBJECT_ALLOC_BENCHMARK_RUNS=5 \
+OBJECT_ALLOC_WARMUPS=1 \
+OBJECT_ALLOC_MODES="rift-checked-rift-open-handle rift-checked-rift-open-handle-dirty-slab" \
+OBJECT_ALLOC_OUTPUT_DIR=/Users/siyaoliu/rift/cache/object-zeroing-probe-5m-20260514 \
+zsh sandbox/run_object_allocation_lowering_matrix.sh
+```
+
+5M rows:
+
+| Mode | Median ms | GC median ms | Zeroed objects | Zeroed bytes | Zero-skipped objects | Zero-skipped bytes | Checksum |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `rift-checked-rift-open-handle` | 70.197 | 0.070 | 4,198,392 | 134,348,544 | 801,608 | 25,651,456 | -1183547843768457859 |
+| `rift-checked-rift-open-handle-dirty-slab` | 70.329 | 0.074 | 4,198,392 | 134,348,544 | 801,608 | 25,651,456 | -1183547843768457859 |
+
+Interpretation: zeroing is now quantified, not guessed. At 5M objects, about
+`84%` of managed object allocations are zeroed and about `16%` skip zeroing
+because they land on fresh zeroed slabs. That confirms object initialization /
+zeroing is a real remaining allocation-body cost, but it still does not justify
+unsafe no-zero allocation. The next optimization step needs compiler proof of
+definite initialization for final record-like classes, or a runtime policy that
+changes this ratio without increasing attach/reset cost.
 
 Cached allocation-stats mode follow-up, 2026-05-12: the L4 clean-winner profile
 still sampled `scalanative_rift_alloc_stats_enabled`, so the Rift runtime now
