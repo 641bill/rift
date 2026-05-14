@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-14 23:52 CEST
+Last updated: 2026-05-15 00:09 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -69,6 +69,20 @@ row is `70.197 ms`; `4,198,392` objects (`134,348,544` bytes) are zeroed and
 `801,608` objects (`25,651,456` bytes) skip zeroing. This confirms
 initialization/zeroing is a real remaining allocation-body cost, but it is not
 a no-zero optimization or safety claim.
+
+Latest unsafe no-zero lower-bound:
+`ObjectAllocationLoweringMatrix` now includes
+`rift-checked-rift-open-handle-nozero-unsafe`, which writes the object
+RTTI/header word and skips object-body zeroing. This row is explicitly unsafe
+lower-bound evidence, not a checked/default optimization. It measures the
+ceiling for a future compiler-proven no-zero lowering: at 5M objects, normal
+handle-backed checked Rift is `71.320 ms` while unsafe no-zero is `65.196 ms`;
+at 10M, normal is `155.947 ms` while unsafe no-zero is `142.769 ms`. Checksums
+match and RSS is unchanged in this fully initialized benchmark shape. The
+result makes definite-initialization proof the next serious zeroing target:
+final record-like class, all fields assigned before escape, no virtual
+call/`this` escape during construction, superclass fields handled, and arrays
+excluded.
 
 Latest reusable-slab zeroing experiment:
 `RIFT_ZERO_REUSED_SLABS=1` is a gated runtime policy that bulk-zeros dead

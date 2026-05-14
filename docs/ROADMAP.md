@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-14 23:52 CEST
+Last updated: 2026-05-15 00:09 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -8,6 +8,24 @@ literature-review comparison contract.
 Latest handle-backed allocation checkpoint:
 - child implementation commit: `1a1c45c75` (`Promote handle-backed checked allocation`)
 - parent evidence/report commit: `17148ea` (`Record handle-backed allocation evidence`)
+
+Latest unsafe no-zero lower-bound update:
+Child implementation commit: `c5fb808a7`
+(`Add unsafe no-zero allocation lower-bound`). Parent evidence/report commit:
+the commit containing this roadmap update.
+
+`ObjectAllocationLoweringMatrix` now has
+`rift-checked-rift-open-handle-nozero-unsafe`, an explicit unsafe lower-bound
+mode that skips object-body zeroing after writing the object RTTI/header word.
+This is not a checked/default optimization. It measures the ceiling for future
+compiler-proven no-zero lowering. Focused 5M gates improve normal
+handle-backed checked Rift `71.320 ms -> 65.196 ms`; 10M gates improve
+`155.947 ms -> 142.769 ms`, with matching checksums and unchanged RSS. This
+puts compiler proof of definite initialization back at the top of the low-level
+optimization list. Required proof obligations before any safe/default use:
+final record-like class, all fields definitely assigned before escape, no
+virtual call or `this` escape during construction, superclass fields handled,
+and arrays excluded.
 
 Latest reusable-slab bulk-zero update:
 `RIFT_ZERO_REUSED_SLABS=1` is now an experimental Rift runtime policy that

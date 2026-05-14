@@ -1,13 +1,35 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-14 23:52 CEST
+Last updated: 2026-05-15 00:09 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
 
 Active implementation branch for this update:
 `feature/rift`
+
+Latest unsafe no-zero lower-bound checkpoint:
+Child implementation commit: `c5fb808a7`
+(`Add unsafe no-zero allocation lower-bound`). Parent evidence/report commit:
+the commit containing this handoff update.
+
+The child runtime now has an explicit measurement-only no-zero allocation path,
+`scalanative_rift_region_alloc_nozero`, plus
+`rift-checked-rift-open-handle-nozero-unsafe` in
+`ObjectAllocationLoweringMatrix`. This path writes the object RTTI/header word
+but deliberately skips object-body zeroing. It is unsafe lower-bound evidence,
+not a checked/default optimization. Validation passed:
+`sandbox3_next/compile`, `RiftRegionCheckedCompilerTest` (`141/141`), and
+`RiftRegionCheckedTest` (`65/65`). At 5M objects x5, normal handle-backed
+checked Rift is `71.320 ms` and the unsafe no-zero row is `65.196 ms`, with
+matching checksum and unchanged RSS. At 10M x5, normal is `155.947 ms` and
+unsafe no-zero is `142.769 ms`. This confirms compiler-proven no-zero for
+definitely initialized record-like classes is the next serious zeroing target,
+worth about `8.5-8.6%` in the focused allocator row. Do not enable it outside
+the lower-bound mode until the compiler proves final record-like class shape,
+definite field assignment before escape, no virtual call/`this` escape during
+construction, superclass field handling, and array exclusion.
 
 Latest reusable-slab bulk-zero checkpoint:
 The child runtime now has a gated experimental policy,
