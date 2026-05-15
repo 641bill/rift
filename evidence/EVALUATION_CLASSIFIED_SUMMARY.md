@@ -1,7 +1,7 @@
 # Evaluation Classified Summary
 
 Date: 2026-05-09
-Last updated: 2026-05-14 13:17 CEST
+Last updated: 2026-05-15 21:29 CEST
 
 Status: thesis-facing classified summary built from committed evidence.
 Baseline commits for clean rows: parent `1cc3b2c`, child `13a3df1c7`.
@@ -24,7 +24,12 @@ SPECjbb/Stancu-style 4-warehouse gate reports checked epoch stream `0.18 s`
 versus rooted scoped `0.21 s` and heap `0.51 s`. The follow-up SPECjbb
 handle-backed promotion gate makes that explicit: `checked-epoch-stream` is
 now the optimized default at `0.27 s` L1 / `51.168 ms` L2, versus legacy
-`0.30 s` / `56.371 ms`.
+`0.30 s` / `56.371 ms`. Child `3ee2fc173` also promotes GH Archive checked
+page-token to backend-known allocation; the generated/preloaded 1M L2 transfer
+gate improves q1 `316.947 -> 299.512 ms` and q2 `317.997 -> 298.186 ms` over
+the legacy checked page-token path with matching checksums and object counts.
+This row remains allocation-lowering transfer evidence rather than a
+presentation headline.
 
 ## How To Read This Table
 

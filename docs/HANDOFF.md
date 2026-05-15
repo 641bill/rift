@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-15 20:56 CEST
+Last updated: 2026-05-15 21:29 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -69,6 +69,17 @@ reports legacy `290.539 ms`, handle-backed default `279.469 ms`, and checked
 scoped `280.801 ms`, all with checksum `2111357246734763482` and about
 `372.7 MB` RSS. Treat this as a modest positive real-input allocation-lowering
 gate, not a new headline replacement for the larger clean 50M Yak table.
+Child `3ee2fc173` continues the same audit for GH Archive checked page-token:
+the default `rift-checked-page-token` now uses
+`pageTokenAppendRiftOpenHandleFor` plus `RiftAllocator.allocateOpenHandle`,
+while `rift-checked-page-token-legacy` preserves the old generic open-region
+path. Validation: `sandbox3_next/compile` passed, the 20k q1/q2 final-clean
+smoke matched checksums, and a generated/preloaded 1M L2 transfer gate improved
+q1 `316.947 -> 299.512 ms` and q2 `317.997 -> 298.186 ms` with identical
+checksums, `7,502,145` region objects, and `41/41` open/close counts. This is
+allocation-lowering transfer evidence for a page/window stream shape; it does
+not replace the real GH Archive streaming/file-backed rows, where
+parser/source/query CPU dominates.
 
 Latest proof-gated no-zero checkpoint:
 Child implementation commit: `1ee5bf491`

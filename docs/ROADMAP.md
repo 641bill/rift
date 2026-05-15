@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-15 20:56 CEST
+Last updated: 2026-05-15 21:29 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -45,8 +45,13 @@ allocation for epoch-local `EdgeUpdate` objects; `checked-epoch-stream-legacy`
 keeps the old generic allocation path as a control. The 10M LiveJournal
 same-binary gate improves checked stream `290.539 -> 279.469 ms` with matching
 checksum/RSS and puts the stream row roughly even with checked scoped
-(`280.801 ms`). Continue the allocation-path audit only for rows where profiles
-still show allocation lowering is material.
+(`280.801 ms`). Child `3ee2fc173` extends the audit to GH Archive checked
+page-token: the default `rift-checked-page-token` now uses the backend-known
+Rift open-handle path, with `rift-checked-page-token-legacy` as the old generic
+allocation control. The generated/preloaded 1M L2 transfer gate improves q1
+`316.947 -> 299.512 ms` and q2 `317.997 -> 298.186 ms` with matching checksums
+and identical object/open/close counts. Continue the allocation-path audit only
+for rows where profiles still show allocation lowering is material.
 
 Latest handle-backed allocation checkpoint:
 - child implementation commit: `1a1c45c75` (`Promote handle-backed checked allocation`)

@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-15 20:56 CEST
+Last updated: 2026-05-15 21:29 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -71,6 +71,16 @@ decision. This keeps the same zeroing semantics and is now the latest accepted
 allocation-body win: focused 5M checked Rift allocation is `68.998 ms`, focused
 page-token checked Rift is `23.930 ms`, StreamFlexDesign checked stream is
 `22.31 s`, and generated Common Crawl-shaped q2 checked Rift is `11.17 s`.
+
+Latest remaining generic allocation-path audit:
+child `3ee2fc173` promotes GH Archive `rift-checked-page-token` to the
+backend-known Rift open-handle allocation path and keeps
+`rift-checked-page-token-legacy` as the old generic allocation control. The
+generated/preloaded 1M transfer gate improves q1 `316.947 -> 299.512 ms` and
+q2 `317.997 -> 298.186 ms`, with matching checksums, region object counts, and
+open/close counts. This is page/window allocation-lowering transfer evidence,
+not a new real-input headline row; the real GH Archive streaming/file-backed
+rows remain parser/source/query dominated.
 
 Latest zeroing attribution probe:
 `evidence/OBJECT_ALLOCATION_LOWERING_MATRIX.md` now records diagnostic counters
