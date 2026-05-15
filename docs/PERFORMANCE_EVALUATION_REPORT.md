@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-15 21:29 CEST
+Last updated: 2026-05-15 22:16 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -81,6 +81,15 @@ q2 `317.997 -> 298.186 ms`, with matching checksums, region object counts, and
 open/close counts. This is page/window allocation-lowering transfer evidence,
 not a new real-input headline row; the real GH Archive streaming/file-backed
 rows remain parser/source/query dominated.
+The same audit now covers LogHub top-template retained stream:
+`checked-epoch-retained-no-traverse` uses the handle-backed epoch path and the
+old generic path is `checked-epoch-retained-no-traverse-legacy`.
+Generated/preloaded 1M improves `291.519 -> 269.309 ms`; a real HDFS
+streaming-file 100k sanity row is neutral (`273.834 -> 275.054 ms`). This
+confirms the low-level optimization transfers to another retained-object shape,
+but also reinforces that small real streaming rows are dominated by source and
+query CPU. The report-facing LogHub result remains the scoped/reusable
+`EpochTopKByKey` evidence.
 
 Latest zeroing attribution probe:
 `evidence/OBJECT_ALLOCATION_LOWERING_MATRIX.md` now records diagnostic counters

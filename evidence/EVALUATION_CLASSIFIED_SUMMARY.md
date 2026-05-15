@@ -1,7 +1,7 @@
 # Evaluation Classified Summary
 
 Date: 2026-05-09
-Last updated: 2026-05-15 21:29 CEST
+Last updated: 2026-05-15 22:16 CEST
 
 Status: thesis-facing classified summary built from committed evidence.
 Baseline commits for clean rows: parent `1cc3b2c`, child `13a3df1c7`.
@@ -29,7 +29,11 @@ page-token to backend-known allocation; the generated/preloaded 1M L2 transfer
 gate improves q1 `316.947 -> 299.512 ms` and q2 `317.997 -> 298.186 ms` over
 the legacy checked page-token path with matching checksums and object counts.
 This row remains allocation-lowering transfer evidence rather than a
-presentation headline.
+presentation headline. The LogHub top-template retained stream path now has
+the same legacy/default control: generated/preloaded 1M improves
+`291.519 -> 269.309 ms`, while a real HDFS streaming-file 100k sanity row is
+neutral (`273.834 -> 275.054 ms`). Keep this as transfer evidence; the
+presentation-facing LogHub API row is still scoped `EpochTopKByKey`.
 
 ## How To Read This Table
 

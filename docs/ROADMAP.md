@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-15 21:29 CEST
+Last updated: 2026-05-15 22:16 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -51,7 +51,14 @@ Rift open-handle path, with `rift-checked-page-token-legacy` as the old generic
 allocation control. The generated/preloaded 1M L2 transfer gate improves q1
 `316.947 -> 299.512 ms` and q2 `317.997 -> 298.186 ms` with matching checksums
 and identical object/open/close counts. Continue the allocation-path audit only
-for rows where profiles still show allocation lowering is material.
+for rows where profiles still show allocation lowering is material. The latest
+follow-up promotes LogHub top-template `checked-epoch-retained-no-traverse` to
+the open-handle epoch path with
+`checked-epoch-retained-no-traverse-legacy` as the old generic allocation
+control. Generated/preloaded 1M improves `291.519 -> 269.309 ms`; a real HDFS
+streaming-file 100k sanity row is neutral (`273.834 -> 275.054 ms`), so this is
+transfer evidence rather than a new real-input headline. Leave reusable
+`EpochTopKByKey` scoped rows as the report-facing LogHub API result.
 
 Latest handle-backed allocation checkpoint:
 - child implementation commit: `1a1c45c75` (`Promote handle-backed checked allocation`)

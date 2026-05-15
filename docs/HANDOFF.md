@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-15 21:29 CEST
+Last updated: 2026-05-15 22:16 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -80,6 +80,18 @@ checksums, `7,502,145` region objects, and `41/41` open/close counts. This is
 allocation-lowering transfer evidence for a page/window stream shape; it does
 not replace the real GH Archive streaming/file-backed rows, where
 parser/source/query CPU dominates.
+The next slice promotes the LogHub top-template retained stream path:
+`checked-epoch-retained-no-traverse` now uses `streamingOpenHandle`,
+`resetOpenHandle`, and `RiftAllocator.allocateOpenHandle`; the old generic
+`RiftRegion.epoch`/`allocOpen` path is available as
+`checked-epoch-retained-no-traverse-legacy`. Validation:
+`sandbox3_next/compile` passed. Generated/preloaded 1M improves
+`291.519 -> 269.309 ms` with the same checksum, `15,509,744` objects, and
+`1/1/40` open/close/reset counts. A real HDFS streaming-file 100k sanity row is
+neutral/slightly negative (`273.834 -> 275.054 ms`) with matching checksum,
+showing again that source parsing/template hashing dominate small real
+streaming rows. Keep this as allocation-lowering transfer evidence; the
+presentation-facing LogHub result remains the scoped/reusable top-k rows.
 
 Latest proof-gated no-zero checkpoint:
 Child implementation commit: `1ee5bf491`
