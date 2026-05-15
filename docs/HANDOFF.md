@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-15 01:40 CEST
+Last updated: 2026-05-15 13:38 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -48,7 +48,17 @@ checksum. The primitive regression gate remains positive (`63.303 ms` checked
 open-handle at 5M), and the checked compiler/runtime suites pass
 `141/141` and `65/65`. A StreamFlexDesign 1M linked-object transfer gate stays
 positive versus heap and legacy, but does not produce a fresh application
-speedup; query/traversal/capsule work now dominates that row.
+speedup; query/traversal/capsule work now dominates that row. The selected
+page/window and real-streaming transfer gates have now been rerun. Generated
+Common Crawl-shaped q1/q2 at 1M pages keeps promoted `rift-checked-page-token`
+ahead of legacy (`3590.874/3589.017 ms` versus `3938.596/3961.363 ms`) and
+well ahead of heap (`5501.961/5286.428 ms`) by removing about
+`1.58-1.59 s` of timed heap GC, but it remains generated stressor evidence and
+not an RSS win. Theodolite real streaming q2 keeps optimized
+`checked-epoch-stream` modestly ahead of heap (`952.664 ms` versus
+`988.976 ms`) and legacy (`963.018 ms`) while removing heap's `19.292 ms`
+median timed GC; parser/source/query CPU dominates, so this is modest
+throughput/GC evidence rather than a new flagship GC-heavy case.
 
 Latest unsafe no-zero lower-bound checkpoint:
 Child implementation commit: `c5fb808a7`

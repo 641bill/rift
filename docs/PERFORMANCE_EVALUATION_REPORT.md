@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-15 01:40 CEST
+Last updated: 2026-05-15 13:38 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -114,7 +114,15 @@ zero-skipped and matching checksum; the primitive-shape regression row remains
 positive at `63.303 ms`. StreamFlexDesign linked-object transfer stays
 positive versus heap and legacy but does not show a fresh application win,
 which means remaining StreamFlex-style work is now mostly query/traversal/
-capsule/allocation-body cost rather than reference-field zeroing alone.
+capsule/allocation-body cost rather than reference-field zeroing alone. The
+selected page/window and real-streaming transfer gates keep the optimized
+defaults stable: generated Common Crawl-shaped q1/q2 `rift-checked-page-token`
+is `3590.874/3589.017 ms` versus legacy `3938.596/3961.363 ms` and heap
+`5501.961/5286.428 ms`, cutting about `1.58-1.59 s` of timed heap GC but not
+RSS; Theodolite real streaming q2 `checked-epoch-stream` is `952.664 ms`
+versus heap `988.976 ms` and legacy `963.018 ms`, removing heap's `19.292 ms`
+median timed GC. These are L2 interpretation/transfer rows, not new L1
+headline rows.
 
 Latest reusable-slab zeroing experiment:
 `RIFT_ZERO_REUSED_SLABS=1` is a gated runtime policy that bulk-zeros dead

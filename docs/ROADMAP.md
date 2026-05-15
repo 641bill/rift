@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-15 01:40 CEST
+Last updated: 2026-05-15 13:38 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -46,9 +46,17 @@ open-handle allocation at the unsafe no-zero ceiling (`66.249 ms` versus
 `66.177 ms`), with all `5,000,001` region objects zero-skipped and matching
 checksum. Primitive-shape regression stays positive (`63.303 ms` at 5M).
 StreamFlexDesign linked-object transfer remains positive versus heap/legacy
-but does not show a fresh application win; next optimization should target
-non-zeroing costs or run a real-streaming/page-window gate where reference
-records dominate.
+but does not show a fresh application win. The selected follow-up gates are now
+recorded: generated Common Crawl-shaped q1/q2 keeps promoted
+`rift-checked-page-token` ahead of legacy (`3590.874/3589.017 ms` versus
+`3938.596/3961.363 ms`) and ahead of heap (`5501.961/5286.428 ms`) by removing
+about `1.58-1.59 s` of timed heap GC, while Theodolite real streaming q2 keeps
+optimized `checked-epoch-stream` modestly ahead of heap (`952.664 ms` versus
+`988.976 ms`) and legacy (`963.018 ms`). These are transfer/stability gates:
+Common Crawl remains generated and not an RSS win, and Theodolite remains
+parser/query dominated. Next optimization should target remaining non-zeroing
+costs: constructor/field-store lowering, query/traversal/capsule CPU, and
+root-free scoped checks only after mixed-reference probes pass.
 
 Latest unsafe no-zero lower-bound update:
 Child implementation commit: `c5fb808a7`
