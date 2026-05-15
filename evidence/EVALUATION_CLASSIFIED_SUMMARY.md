@@ -1,7 +1,7 @@
 # Evaluation Classified Summary
 
 Date: 2026-05-09
-Last updated: 2026-05-15 22:16 CEST
+Last updated: 2026-05-16 01:55 CEST
 
 Status: thesis-facing classified summary built from committed evidence.
 Baseline commits for clean rows: parent `1cc3b2c`, child `13a3df1c7`.
@@ -33,7 +33,14 @@ presentation headline. The LogHub top-template retained stream path now has
 the same legacy/default control: generated/preloaded 1M improves
 `291.519 -> 269.309 ms`, while a real HDFS streaming-file 100k sanity row is
 neutral (`273.834 -> 275.054 ms`). Keep this as transfer evidence; the
-presentation-facing LogHub API row is still scoped `EpochTopKByKey`.
+presentation-facing LogHub API row is still scoped `EpochTopKByKey`. The
+2026-05-16 selected all-optimizations sweep now records matching L1/L2
+optimized-vs-legacy rows in `evidence/ALL_OPTIMIZATIONS_SELECTED_SWEEP.md`:
+StreamFlexDesign 1M optimized checked stream is `0.88 s` versus legacy
+`1.09 s`; Common Crawl-shaped q2 100k optimized page-token is `0.96 s`
+versus legacy `1.07 s`; GH Archive-shaped q2 1M optimized page-token is
+`0.80 s` versus legacy `0.85 s`; LogHub retained top-template 1M optimized
+checked epoch is `0.69 s` versus legacy `0.75 s`.
 
 ## How To Read This Table
 

@@ -1,13 +1,27 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-15 22:16 CEST
+Last updated: 2026-05-16 01:55 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
 
 Active implementation branch for this update:
 `feature/rift`
+
+Latest all-optimizations selected sweep:
+`evidence/ALL_OPTIMIZATIONS_SELECTED_SWEEP.md` records the 2026-05-16 compact
+optimized-vs-legacy check after the LogHub retained allocation promotion. L1
+final-clean rows show the current optimized defaults improving over legacy
+generic checked allocation on all three key shapes tried: direct checked epoch
+(`StreamFlexDesign` 1M throughput `0.88 s` vs legacy `1.09 s` and heap
+`1.82 s`), checked page-token (Common Crawl-shaped q2 `0.96 s` vs legacy
+`1.07 s`; GH Archive-shaped q2 `0.80 s` vs legacy `0.85 s`), and retained
+checked epoch (LogHub top-template 1M `0.69 s` vs legacy `0.75 s` and retained
+heap `1.74 s`). L2 rows in that evidence file are interpretation-only and
+confirm the same direction except GH Archive q2, where instrumentation changes
+the heap/checked ordering while still showing optimized checked improves over
+legacy and cuts RSS/GC.
 
 Latest GC-heavy benchmark investigation:
 `evidence/GC_HEAVY_BENCHMARK_INVESTIGATION.md` now records the 2026-05-15

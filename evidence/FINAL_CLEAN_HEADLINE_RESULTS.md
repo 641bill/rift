@@ -1,7 +1,7 @@
 # Final-Clean Headline Results
 
 Date: 2026-05-09
-Last updated: 2026-05-14 13:17 CEST
+Last updated: 2026-05-16 01:55 CEST
 
 Status: L1 runner support exists for the first representative binaries. One
 focused retained-epoch L1 row has been collected from clean child commit
@@ -79,6 +79,16 @@ is `23.059 ms` versus legacy `24.687 ms` and heap `38.352 ms`. A quick
 SPECjbb/Stancu-style 4-warehouse L1 gate keeps the transaction topology
 direction: checked epoch stream `0.18 s`, checked scoped epoch `0.19 s`,
 rooted scoped `0.21 s`, and heap `0.51 s`.
+The 2026-05-16 selected all-optimizations sweep is recorded in
+`evidence/ALL_OPTIMIZATIONS_SELECTED_SWEEP.md`. It refreshes current-default
+optimized-vs-legacy rows after the LogHub retained allocation promotion:
+StreamFlexDesign throughput 1M x3 optimized `checked-epoch-stream` is
+`0.88 s` versus legacy `1.09 s` and heap `1.82 s`; Common Crawl-shaped q2
+100k x3 optimized page-token is `0.96 s` versus legacy `1.07 s` and heap
+`2.06 s`; GH Archive-shaped q2 1M x3 optimized page-token is `0.80 s` versus
+legacy `0.85 s` and heap `1.24 s`; LogHub generated retained top-template 1M
+x3 optimized checked retained epoch is `0.69 s` versus legacy `0.75 s` and
+retained heap `1.74 s`.
 
 ## Definition
 

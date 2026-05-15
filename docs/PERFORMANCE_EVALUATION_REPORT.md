@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-15 22:16 CEST
+Last updated: 2026-05-16 01:55 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -11,6 +11,17 @@ remain the source of detailed command provenance.
 
 Latest clean final-selection headline sweep:
 `evidence/FINAL_SELECTION_HEADLINE_2026_05_06.md`.
+
+Latest all-optimizations selected sweep:
+`evidence/ALL_OPTIMIZATIONS_SELECTED_SWEEP.md`. This compact 2026-05-16
+follow-up checks current optimized defaults against legacy generic checked
+allocation controls on direct epoch, page-token, and retained epoch shapes:
+StreamFlexDesign optimized checked stream `0.88 s` versus legacy `1.09 s` and
+heap `1.82 s`; Common Crawl-shaped q2 optimized page-token `0.96 s` versus
+legacy `1.07 s` and heap `2.06 s`; GH Archive-shaped q2 optimized page-token
+`0.80 s` versus legacy `0.85 s` and heap `1.24 s`; LogHub retained top-template
+optimized checked epoch `0.69 s` versus legacy `0.75 s` and retained heap
+`1.74 s`. L2 rows in the same file are interpretation-only.
 
 Latest classified evidence summary:
 `evidence/EVALUATION_CLASSIFIED_SUMMARY.md`. This is the first table to use

@@ -1,9 +1,20 @@
 # Rift Roadmap
 
-Last updated: 2026-05-15 22:16 CEST
+Last updated: 2026-05-16 01:55 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
+
+Latest all-optimizations selected sweep:
+`evidence/ALL_OPTIMIZATIONS_SELECTED_SWEEP.md` records the 2026-05-16 compact
+L1/L2 check for the optimized checked defaults. The current result supports
+continuing backend-known checked allocation as the best near-term optimization:
+optimized checked direct epoch, page-token, and retained epoch all beat their
+legacy generic checked controls on L1 elapsed while keeping checksums/output
+matched. Next optimization work should audit any remaining generic allocation
+paths and then move to constructor/field-store and traversal/capsule
+simplification; do not spend more time on region reuse policies unless a row
+specifically exposes slab reuse as the bottleneck.
 
 Latest GC-heavy benchmark investigation:
 `evidence/GC_HEAVY_BENCHMARK_INVESTIGATION.md` records the 2026-05-15
