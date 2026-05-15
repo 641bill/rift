@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-15 20:26 CEST
+Last updated: 2026-05-15 20:56 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -38,6 +38,15 @@ The first selected application follow-up is now recorded in
 Common Crawl-shaped q2 are neutral under the canonical policies, so the policy
 track should pause unless a future workload specifically exposes slab reuse as
 the bottleneck. Keep `cache-large` as a focused allocator control.
+
+Latest remaining-path audit update:
+Yak `graphreal` `checked-epoch-stream` now uses backend-known open-handle
+allocation for epoch-local `EdgeUpdate` objects; `checked-epoch-stream-legacy`
+keeps the old generic allocation path as a control. The 10M LiveJournal
+same-binary gate improves checked stream `290.539 -> 279.469 ms` with matching
+checksum/RSS and puts the stream row roughly even with checked scoped
+(`280.801 ms`). Continue the allocation-path audit only for rows where profiles
+still show allocation lowering is material.
 
 Latest handle-backed allocation checkpoint:
 - child implementation commit: `1a1c45c75` (`Promote handle-backed checked allocation`)

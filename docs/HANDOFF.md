@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-15 20:26 CEST
+Last updated: 2026-05-15 20:56 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -56,6 +56,19 @@ against more reuse-policy tuning right now. Keep `cache-large` as focused
 allocator evidence and move back to remaining generic allocation paths,
 constructor/field-store/no-zero proof work, traversal/capsule simplification,
 and retained-object benchmark search.
+
+Latest remaining generic allocation-path audit:
+`YakRegionMatrix` now promotes the `graphreal` `checked-epoch-stream` linked
+epoch path from generic `RiftRegion.allocOpen` to backend-known
+`RiftAllocator.allocateOpenHandle`, while retaining
+`checked-epoch-stream-legacy` as a graphreal-only control. Validation:
+`sandbox3_next/compile` passed. A small Twitter graphreal smoke matched
+checksums and showed default handle-backed `checked-epoch-stream`
+`0.918 ms` versus legacy `1.098 ms`. The 10M LiveJournal same-binary L2 gate
+reports legacy `290.539 ms`, handle-backed default `279.469 ms`, and checked
+scoped `280.801 ms`, all with checksum `2111357246734763482` and about
+`372.7 MB` RSS. Treat this as a modest positive real-input allocation-lowering
+gate, not a new headline replacement for the larger clean 50M Yak table.
 
 Latest proof-gated no-zero checkpoint:
 Child implementation commit: `1ee5bf491`

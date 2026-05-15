@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-15 20:26 CEST
+Last updated: 2026-05-15 20:56 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -225,6 +225,14 @@ timing plus L2 interpretation evidence.
 Validation for this checkpoint passed: `sandbox3_next/compile`,
 `RiftRegionCheckedCompilerTest` (`141/141`), `RiftRegionCheckedTest`
 (`65/65`), and parent/child `git diff --check`.
+
+Yak remaining-path follow-up: the real-input LiveJournal `graphreal`
+`checked-epoch-stream` linked epoch now uses backend-known open-handle
+allocation, with `checked-epoch-stream-legacy` retained as the old generic
+allocation control. The 10M same-binary gate improves checked stream
+`290.539 -> 279.469 ms` with matching checksum and RSS; checked scoped is
+`280.801 ms` in the same run. This is a modest real-input allocation-lowering
+gate, not a replacement for the larger 50M Yak topology headline.
 
 Latest measurement-overhead protocol:
 `evidence/MEASUREMENT_OVERHEAD_PROTOCOL.md` and
