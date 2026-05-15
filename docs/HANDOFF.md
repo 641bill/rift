@@ -1,13 +1,27 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-15 14:50 CEST
+Last updated: 2026-05-15 17:36 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
 
 Active implementation branch for this update:
 `feature/rift`
+
+Latest GC-heavy benchmark investigation:
+`evidence/GC_HEAVY_BENCHMARK_INVESTIGATION.md` now records the 2026-05-15
+literature/online follow-up. Main conclusion: real streaming input is not
+automatically GC-heavy. Current real rows often parse bytes, hash/update
+compact state, and drop records, so parser/query CPU dominates. Prior-work and
+practitioner evidence points to retained ordinary objects as the next target:
+Broom-like joins/aggregates and per-timestamp state, Yak graph/text epochs,
+StreamFlex event-correlation/transaction/IDS latency rows, Spark/Flink
+high-cardinality keyed state, heap-state time-series windows, and
+Stancu/SPECjbb-style transaction batches. Resume the active plan by running
+selected `RIFT_REGION_REUSE_POLICY` application gates and then searching for
+these retained-object workloads; do not expect larger line counts alone to
+create GC pressure.
 
 Latest throughput/RSS reuse-policy checkpoint:
 child implementation commit: `70672972c`

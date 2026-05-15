@@ -1,12 +1,18 @@
 # Real-Input GC-Heavy Stream Benchmark Search
 
 Date: 2026-05-07
-Last updated: 2026-05-13 16:44 CEST
+Last updated: 2026-05-15 17:36 CEST
 
 Status: active Phase 6 search ledger. This file tracks public real-input
 stream/dataflow candidates before implementation work. It is deliberately a
 triage document: generated stressors such as Common Crawl WET-shaped q1/q2
 remain useful memory-pressure detectors, but they are not real-data proof.
+
+The latest GC-heavy benchmark investigation is recorded separately in
+`evidence/GC_HEAVY_BENCHMARK_INVESTIGATION.md`. Its key conclusion is that
+streaming input is not enough: a real row needs retained ordinary objects
+behind joins, sessions, windows, graph epochs, transaction batches, or
+high-cardinality keyed state before heap GC becomes a material bottleneck.
 
 ## Goal
 

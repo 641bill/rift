@@ -1,7 +1,7 @@
 # Rift Benchmark Catalog
 
 Date: 2026-05-05
-Last updated: 2026-05-13 16:44 CEST
+Last updated: 2026-05-15 17:36 CEST
 
 Status: working benchmark guide. Use this document to understand what each
 benchmark is meant to test before reading the detailed result files in
@@ -50,6 +50,12 @@ local metrics separately. The detailed contract is
 `docs/LITERATURE_BENCHMARK_CONTRACT.md`. The higher-level interpretation of
 why those systems win and what their limits are is
 `docs/PRIOR_WORK_MEMORY_MANAGEMENT_INTERPRETATION.md`.
+
+The latest GC-heavy benchmark-search note is
+`evidence/GC_HEAVY_BENCHMARK_INVESTIGATION.md`. Use it when selecting new real
+streaming or data-processing rows: larger input alone is not enough; the next
+candidate should naturally retain ordinary objects in joins, sessions,
+windows, graph epochs, transactions, or high-cardinality keyed state.
 
 ## 1.1 Outcome Labels
 

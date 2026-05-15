@@ -1,9 +1,21 @@
 # Rift Roadmap
 
-Last updated: 2026-05-15 14:50 CEST
+Last updated: 2026-05-15 17:36 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
+
+Latest GC-heavy benchmark investigation:
+`evidence/GC_HEAVY_BENCHMARK_INVESTIGATION.md` records the 2026-05-15
+literature and online follow-up. The conclusion changes the real-input search
+priority: streaming-file replay is necessary for stream claims, but it is not
+sufficient for GC pressure. The next promising candidates are retained-object
+workloads: Broom-like joins/aggregates/session dictionaries, StreamFlex-style
+event-correlation/transaction/IDS latency rows, Yak-scale graph/text epochs,
+Spark/Flink-like high-cardinality keyed state, heap-state time-series windows,
+and Stancu/SPECjbb-style transaction batches. Rows that only read more bytes
+and update compact counters should remain ceiling/control evidence unless they
+show RSS, tail, fixed-memory, or material GC pressure.
 
 Latest throughput/RSS reuse-policy update:
 Child implementation commit: `70672972c`

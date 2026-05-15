@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-15 14:50 CEST
+Last updated: 2026-05-15 17:36 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -32,6 +32,18 @@ principle layer for Broom, Yak, StreamFlex, Stancu et al., and ReML/MLKit:
 their core performance argument is exposing a lifetime boundary so temporary
 objects are not repeatedly traced by GC. Operators are evidence mechanisms for
 those boundaries, not the root contribution by themselves.
+
+Latest GC-heavy benchmark investigation:
+`evidence/GC_HEAVY_BENCHMARK_INVESTIGATION.md`. The key update is that true
+streaming input does not by itself imply GC pressure. Many real stream rows are
+parser/hash/query dominated because production-style stream code reads bytes,
+updates compact state, and discards records quickly. GC-heavy cases in prior
+work and practitioner reports cluster around retained ordinary objects:
+Broom-like joins/aggregates and per-timestamp dictionaries, Yak graph/text
+epochs, StreamFlex event-correlation/transaction/IDS latency workloads,
+Spark/Flink high-cardinality groupBy/join/top-k/session state, and
+Stancu-style transaction batches. The next benchmark-search work should
+therefore target retained-object workloads first, not just larger line counts.
 
 Latest visual report update:
 `docs/report.html` now includes a Rift topology atlas rather than copies of
