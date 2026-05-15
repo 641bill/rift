@@ -741,7 +741,7 @@ pre code {
         </div>
       </div>
       <aside class="hero-panel" aria-label="Report metadata">
-        <div class="panel-row"><span>Generated</span><strong>2026-05-15 13:44 CEST</strong></div>
+        <div class="panel-row"><span>Generated</span><strong>2026-05-15 14:44 CEST</strong></div>
         <div class="panel-row"><span>Source</span><strong>docs/PERFORMANCE_EVALUATION_REPORT.md</strong></div>
         <div class="panel-row"><span>Audience</span><strong>External systems / PL reader</strong></div>
         <div class="panel-row"><span>Headline rule</span><strong>Clean total time and RSS first</strong></div>
@@ -1198,6 +1198,11 @@ pre code {
   <div class="api-chip"><code>stable heap + transient epoch + capsule</code></div>
   <p>For filter pipelines: durable state stays on heap, transient packet/feature/decision objects live in epochs, and bounded capsules export values across boundaries.</p>
 </article>
+<article class="feature-card">
+  <h3>Throughput policy</h3>
+  <div class="api-chip"><code>RIFT_REGION_REUSE_POLICY</code></div>
+  <p>Opt-in slab reuse policies trade resident memory budget for lower allocator bookkeeping. The cache-large policy is currently a focused allocator win, not a default application claim.</p>
+</article>
 </div>
   <p class="so-what"><strong>So what?</strong> Different workloads need different lifetimes. The API should expose epoch, page/window, and retained-object shapes instead of forcing one region topology everywhere.</p>
 </figure>
@@ -1281,6 +1286,11 @@ pre code {
 <td>The PLDI Figure 9 program list keeps paper <code>loc</code>/<code>fcns</code>/<code>inst</code>/time/RSS/GC axes and adds local <code>gc-heap</code>, rooted-region, checked-stream, and checked-scoped time/RSS/GC columns where ports exist.</td>
 <td>Explains why Rift is better, worse, neutral, or unavailable without claiming raw cross-language wall-clock wins.</td>
 </tr>
+<tr>
+<td>Throughput/RSS policies</td>
+<td><code>RIFT_REGION_REUSE_POLICY</code> reports default, bulk-zero, cache-small, cache-large, and prezero-large rows as opt-in speed/RSS tradeoffs.</td>
+<td>Keeps throughput-biased allocation policies from being mistaken for lower-memory wins.</td>
+</tr>
 </tbody></table></div>
   <p class="so-what"><strong>So what?</strong> The report separates user-facing checked rows from allocator lower bounds and separates clean headline timing from diagnostic counters.</p>
 </figure>
@@ -1315,7 +1325,7 @@ pre code {
 </tr>
 <tr>
 <td>Real text top-word</td>
-<td>Stack Exchange AskUbuntu `Posts.xml`, 10M real tokens x5.</td>
+<td>Stack Exchange AskUbuntu <code>Posts.xml</code>, 10M real tokens x5.</td>
 <td>Checked epoch scoped: <code>3.86s</code>, RSS about <code>94 MB</code>.</td>
 <td>GC heap: <code>4.19s</code>, RSS about <code>428 MB</code>.</td>
 <td>First real text/top-word row: direct checked epoch wins; reusable top-k is lower-RSS but still slower than direct epoch.</td>
@@ -1471,6 +1481,10 @@ pre code {
 <tr>
 <td>Finalize L1 rows</td>
 <td>Finish final-clean headline runs for the selected representative API wins.</td>
+</tr>
+<tr>
+<td>Gate throughput policies</td>
+<td>Run selected application L1/L2 gates for cache-large before promoting it beyond focused allocator evidence.</td>
 </tr>
 <tr>
 <td>Find a stronger real stream input</td>

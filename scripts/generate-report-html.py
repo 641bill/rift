@@ -306,6 +306,11 @@ DESIGN_CARDS = [
         "api": "stable heap + transient epoch + capsule",
         "body": "For filter pipelines: durable state stays on heap, transient packet/feature/decision objects live in epochs, and bounded capsules export values across boundaries.",
     },
+    {
+        "title": "Throughput policy",
+        "api": "RIFT_REGION_REUSE_POLICY",
+        "body": "Opt-in slab reuse policies trade resident memory budget for lower allocator bookkeeping. The cache-large policy is currently a focused allocator win, not a default application claim.",
+    },
 ]
 
 
@@ -399,6 +404,11 @@ EVALUATION_ROWS = [
         "ReML same-axes table",
         "The PLDI Figure 9 program list keeps paper `loc`/`fcns`/`inst`/time/RSS/GC axes and adds local `gc-heap`, rooted-region, checked-stream, and checked-scoped time/RSS/GC columns where ports exist.",
         "Explains why Rift is better, worse, neutral, or unavailable without claiming raw cross-language wall-clock wins.",
+    ],
+    [
+        "Throughput/RSS policies",
+        "`RIFT_REGION_REUSE_POLICY` reports default, bulk-zero, cache-small, cache-large, and prezero-large rows as opt-in speed/RSS tradeoffs.",
+        "Keeps throughput-biased allocation policies from being mistaken for lower-memory wins.",
     ],
 ]
 
@@ -509,6 +519,7 @@ LIMITATIONS = [
 
 OPEN_WORK_ROWS = [
     ["Finalize L1 rows", "Finish final-clean headline runs for the selected representative API wins."],
+    ["Gate throughput policies", "Run selected application L1/L2 gates for cache-large before promoting it beyond focused allocator evidence."],
     ["Find a stronger real stream input", "LogHub q3 streaming is now parked as RSS/control evidence; continue with larger text/graph streams, retained sessions, Theodolite traces, and DSPBench kernels."],
     ["Extend StreamFlex design rows", "Scale the stable/transient/capsule matrix and add object-retained BeamFormer/FilterBank variants only if they remain fair same-shape controls."],
     ["Complete ReML/MLKit table", "Separate paper-reported, exact artifact rerun, and Scala Native port evidence."],
@@ -880,7 +891,7 @@ def render_enforced_table() -> str:
 
 def render_results_table() -> str:
     rows = [
-        [esc(a), esc(b), inline_markdown(c), inline_markdown(d), esc(e)]
+        [esc(a), inline_markdown(b), inline_markdown(c), inline_markdown(d), esc(e)]
         for a, b, c, d, e in RESULT_ROWS
     ]
     return render_table_block(

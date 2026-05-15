@@ -1,13 +1,39 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-15 13:38 CEST
+Last updated: 2026-05-15 14:50 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
 
 Active implementation branch for this update:
 `feature/rift`
+
+Latest throughput/RSS reuse-policy checkpoint:
+child implementation commit: `70672972c`
+(`Add Rift region reuse policies`). Parent evidence/report commit: the commit
+containing this handoff update.
+
+The child runtime now has `RIFT_REGION_REUSE_POLICY` as the canonical
+throughput/RSS policy knob. Supported values are `default`,
+`bulk-zero-retained`, `cache-small`, `cache-large`, and `prezero-large`;
+`RIFT_ZERO_REUSED_SLABS=1` remains a compatibility alias for
+`bulk-zero-retained`. Default behavior is unchanged and memory-conservative.
+The policy changes only bounded non-huge slab reuse; huge slabs, explicit close
+semantics, and safety checks are unchanged. Validation passed after the runtime
+change: `sandbox3_next/compile`, `RiftRegionCheckedCompilerTest` (`141/141`),
+`RiftRegionCheckedTest` (`65/65`), plus `RiftRegionTest` under
+`prezero-large` and `cache-large` (`5/5` each). Focused 5M and 10M allocation
+gates show `cache-large` is currently best: 5M improves
+`67.822 -> 63.566 ms`; 10M improves `149.609 -> 130.250 ms`, with region-op
+time dropping `17.445 -> 0.894 ms` at 10M and similar RSS. StreamFlexDesign
+1M throughput L1/L2 is neutral after rerun (`0.93 s` default and
+`0.93 s` cache-large; L2 `373.053 -> 372.851 ms`). Treat `cache-large` as a
+focused allocator win and candidate throughput-biased policy, not a broad
+application default yet. Remaining plan items are selected application policy
+gates, remaining generic allocation-path audit, constructor/field-store
+lowering, traversal/capsule simplification, same-shape summary operators, and
+root-free scoped safety gates.
 
 Latest proof-gated no-zero checkpoint:
 Child implementation commit: `1ee5bf491`

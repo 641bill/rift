@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-15 13:38 CEST
+Last updated: 2026-05-15 14:50 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -157,6 +157,26 @@ focused allocator row slower (`68.124 ms` at the default cap versus
 (`78.5 MB` versus `78.4 MB`). The next serious zeroing target is therefore
 compiler-proven no-zero or a much more precise page-release design, not another
 cache-size knob.
+
+Latest throughput/RSS reuse-policy update:
+the runtime now has a canonical `RIFT_REGION_REUSE_POLICY` knob. Supported
+values are `default`, `bulk-zero-retained` (also the legacy
+`RIFT_ZERO_REUSED_SLABS=1` alias), `cache-small`, `cache-large`, and
+`prezero-large`. Default behavior remains memory-conservative. `cache-small`
+and `cache-large` retain bounded reusable regular-slab pools without eager
+bulk zeroing; `prezero-large` retains the larger pool and prezeros reusable
+slabs at close/reset. Huge slabs, explicit close semantics, and safety checks
+are unchanged. Focused `ObjectAllocationLoweringMatrix` gates show
+`cache-large` as the best allocation-pressure policy so far: at 10M primitive
+handle-backed checked allocations, elapsed improves `149.609 -> 130.250 ms`
+and region-op time drops `17.445 -> 0.894 ms`, with matching checksum and
+similar RSS (`404.0 -> 404.2 MB`). At 5M, `cache-large` improves
+`67.822 -> 63.566 ms`. The first StreamFlexDesign 1M L1 application smoke is
+neutral after a warm rerun (`0.93 s` default and `0.93 s` cache-large), and
+L2 also ties (`373.053 -> 372.851 ms`). Treat `cache-large` as a promising
+throughput-biased focused allocator policy, not a broad application default
+until at least two representative L1 rows improve. These rows are
+throughput/RSS tradeoff evidence, not lower-memory claims.
 
 Latest handle-backed allocation promotion:
 the default checked epoch/page-token rows now use handle-backed Rift allocation

@@ -1,9 +1,26 @@
 # Rift Roadmap
 
-Last updated: 2026-05-15 13:38 CEST
+Last updated: 2026-05-15 14:50 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
+
+Latest throughput/RSS reuse-policy update:
+Child implementation commit: `70672972c`
+(`Add Rift region reuse policies`). Parent evidence/report commit: the commit
+containing this roadmap update.
+
+The child runtime now implements `RIFT_REGION_REUSE_POLICY` with `default`,
+`bulk-zero-retained`, `cache-small`, `cache-large`, and `prezero-large`.
+`RIFT_ZERO_REUSED_SLABS=1` remains an alias for
+`bulk-zero-retained`. Default behavior stays memory-conservative; the cache
+policies are opt-in throughput/RSS tradeoff modes. Focused 10M
+`ObjectAllocationLoweringMatrix` shows `cache-large` as the best current
+policy (`149.609 -> 130.250 ms`, region-op time `17.445 -> 0.894 ms`, similar
+RSS and matching checksum). The first StreamFlexDesign 1M L1/L2 smoke is
+neutral after rerun, so this is not yet a broad application win. Next policy
+work should run selected application gates and only promote a throughput policy
+if at least two representative L1 rows improve without correctness changes.
 
 Latest handle-backed allocation checkpoint:
 - child implementation commit: `1a1c45c75` (`Promote handle-backed checked allocation`)
