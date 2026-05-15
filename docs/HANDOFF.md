@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-15 17:36 CEST
+Last updated: 2026-05-15 20:26 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -48,6 +48,14 @@ application default yet. Remaining plan items are selected application policy
 gates, remaining generic allocation-path audit, constructor/field-store
 lowering, traversal/capsule simplification, same-shape summary operators, and
 root-free scoped safety gates.
+Selected policy gates are now partially complete in
+`evidence/REGION_REUSE_POLICY_MATRIX.md`. Dataflow AGGREGATE is too short and
+neutral across policies, and generated Common Crawl-shaped q2 is neutral in the
+one-pass L1 gate (`3.09 s` default and `3.09 s` `cache-large`). This argues
+against more reuse-policy tuning right now. Keep `cache-large` as focused
+allocator evidence and move back to remaining generic allocation paths,
+constructor/field-store/no-zero proof work, traversal/capsule simplification,
+and retained-object benchmark search.
 
 Latest proof-gated no-zero checkpoint:
 Child implementation commit: `1ee5bf491`

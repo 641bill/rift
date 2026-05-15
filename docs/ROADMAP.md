@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-15 17:36 CEST
+Last updated: 2026-05-15 20:26 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -33,6 +33,11 @@ RSS and matching checksum). The first StreamFlexDesign 1M L1/L2 smoke is
 neutral after rerun, so this is not yet a broad application win. Next policy
 work should run selected application gates and only promote a throughput policy
 if at least two representative L1 rows improve without correctness changes.
+The first selected application follow-up is now recorded in
+`evidence/REGION_REUSE_POLICY_MATRIX.md`: Dataflow AGGREGATE and generated
+Common Crawl-shaped q2 are neutral under the canonical policies, so the policy
+track should pause unless a future workload specifically exposes slab reuse as
+the bottleneck. Keep `cache-large` as a focused allocator control.
 
 Latest handle-backed allocation checkpoint:
 - child implementation commit: `1a1c45c75` (`Promote handle-backed checked allocation`)

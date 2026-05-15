@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-15 17:36 CEST
+Last updated: 2026-05-15 20:26 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -189,6 +189,12 @@ L2 also ties (`373.053 -> 372.851 ms`). Treat `cache-large` as a promising
 throughput-biased focused allocator policy, not a broad application default
 until at least two representative L1 rows improve. These rows are
 throughput/RSS tradeoff evidence, not lower-memory claims.
+The selected follow-up policy gates are now recorded in
+`evidence/REGION_REUSE_POLICY_MATRIX.md`: Dataflow AGGREGATE is too short and
+neutral (`0.08-0.20 s` across policies), and generated Common Crawl-shaped q2
+is also neutral in a one-pass L1 gate (`3.09 s` default and `3.09 s`
+`cache-large`, same checksum/output). Therefore `cache-large` remains a
+focused allocator policy candidate, not a broad optimized application mode.
 
 Latest handle-backed allocation promotion:
 the default checked epoch/page-token rows now use handle-backed Rift allocation
