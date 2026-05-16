@@ -347,16 +347,16 @@ TOPOLOGY_CARDS = [
     {
         "title": "Natural heap",
         "label": "baseline",
-        "shape": "Objects flow into the Scala Native Immix heap. The collector later discovers which objects are dead.",
-        "strategy": "No annotations; temporary stream objects are mixed with durable state.",
+        "shape": "Objects flow into the Scala Native Immix heap; GC later discovers which are dead.",
+        "strategy": "No annotations; temporary stream objects share the heap with durable state.",
         "claim": "Practical default baseline",
         "tone": "neutral",
     },
     {
         "title": "Retained epoch",
         "label": "memory-management test",
-        "shape": "Heap and region both materialize ordinary records and retain them until an epoch boundary.",
-        "strategy": "Heap drops an anchor and waits for GC; Rift bulk-closes the epoch.",
+        "shape": "Heap and region both materialize records and retain them until an epoch boundary.",
+        "strategy": "Heap drops an anchor; Rift bulk-closes the epoch.",
         "claim": "Cleanest GC-vs-region reclaim comparison",
         "tone": "win",
     },
@@ -371,16 +371,16 @@ TOPOLOGY_CARDS = [
     {
         "title": "Page / window token",
         "label": "stream buckets",
-        "shape": "One page, event group, or time window owns many short-lived records such as tokens, parsed rows, or outputs.",
-        "strategy": "Operator-owned bucket lookup and close enable hot-path check removal.",
+        "shape": "A page, event group, or time window owns many short-lived records.",
+        "strategy": "Operator-owned bucket lookup/close removes hot-path checks.",
         "claim": "Generated stream-object pressure win",
         "tone": "method",
     },
     {
         "title": "Stable / transient / capsule",
         "label": "StreamFlex design",
-        "shape": "Durable filter state remains on heap; each period owns transient stream objects; a bounded capsule exports primitive values or safe handles.",
-        "strategy": "Use checked epochs for transient periods; capsules mark transfer boundaries.",
+        "shape": "Durable filter state stays on heap; each period owns transient stream objects.",
+        "strategy": "Checked epochs hold transient data; capsules mark transfer boundaries.",
         "claim": "Throughput and tail-latency evidence",
         "tone": "win",
     },
@@ -674,8 +674,8 @@ def render_topology_story() -> str:
     <circle cx="218" cy="146" r="13" fill="#1f78b4"></circle><text x="214" y="151" class="node-text">r</text>
     <circle cx="270" cy="100" r="13" fill="#7e57c2"></circle><text x="266" y="105" class="node-text">T</text>
     <path d="M65 184 C118 217, 236 217, 292 184" fill="none" stroke="#475569" stroke-width="3" stroke-dasharray="7 6" marker-end="url(#heapScanArrow)"></path>
-    <text x="72" y="232" class="svg-legend">temporary records and durable tables share one heap</text>
-    <text x="72" y="248" class="svg-legend">GC later traces to discover dead records</text>
+    <text x="72" y="232" class="svg-legend">temporary and durable objects share one heap</text>
+    <text x="72" y="248" class="svg-legend">GC later traces dead records</text>
   </svg>
   <p>This is the baseline: durable control objects and short-lived records are mixed. The collector finds dead temporary objects later.</p>
 </article>'''
@@ -690,7 +690,7 @@ def render_topology_story() -> str:
       </marker>
     </defs>
     <rect x="22" y="24" width="316" height="54" rx="16" fill="#f1f5f9" stroke="#cbd5e1"></rect>
-    <text x="64" y="57" class="svg-title">heap: vertex tables / counters / durable state</text>
+    <text x="64" y="57" class="svg-title">heap: durable tables and counters</text>
     <rect x="30" y="116" width="84" height="68" rx="16" fill="#e8f5ec" stroke="#8fc49c" stroke-width="2"></rect>
     <rect x="138" y="116" width="84" height="68" rx="16" fill="#e8f5ec" stroke="#8fc49c" stroke-width="2"></rect>
     <rect x="246" y="116" width="84" height="68" rx="16" fill="#e8f5ec" stroke="#8fc49c" stroke-width="2"></rect>
@@ -702,8 +702,8 @@ def render_topology_story() -> str:
     <circle cx="273" cy="166" r="7" fill="#1f78b4"></circle><circle cx="291" cy="166" r="7" fill="#1f78b4"></circle><circle cx="309" cy="166" r="7" fill="#1f78b4"></circle>
     <path d="M114 150 L137 150" stroke="#238443" stroke-width="4" marker-end="url(#epochArrow)"></path>
     <path d="M222 150 L245 150" stroke="#238443" stroke-width="4" marker-end="url(#epochArrow)"></path>
-    <text x="47" y="222" class="svg-legend">open epoch → allocate records → update heap/control metadata → close epoch</text>
-    <text x="47" y="240" class="svg-legend">used by Yak graph replay, Dataflow, StreamFlex, Stancu/SPECjbb port</text>
+    <text x="47" y="222" class="svg-legend">open → allocate → update durable state → close</text>
+    <text x="47" y="240" class="svg-legend">graph, dataflow, stream, and transaction rows</text>
   </svg>
   <p>Each batch or transaction gets one checked region. Durable state remains on heap; temporary records die when the epoch closes.</p>
 </article>'''
@@ -718,17 +718,17 @@ def render_topology_story() -> str:
       </marker>
     </defs>
     <rect x="24" y="24" width="312" height="50" rx="15" fill="#f1f5f9" stroke="#cbd5e1"></rect>
-    <text x="68" y="55" class="svg-title">heap stable state: thresholds / counters / tables</text>
+    <text x="68" y="55" class="svg-title">heap stable state</text>
     <rect x="32" y="111" width="154" height="76" rx="18" fill="#e8f5ec" stroke="#8fc49c" stroke-width="2"></rect>
-    <text x="58" y="139" class="svg-title">transient period region</text>
+    <text x="58" y="139" class="svg-title">transient region</text>
     <circle cx="62" cy="164" r="7" fill="#1f78b4"></circle><circle cx="84" cy="164" r="7" fill="#1f78b4"></circle><circle cx="106" cy="164" r="7" fill="#1f78b4"></circle><circle cx="128" cy="164" r="7" fill="#1f78b4"></circle><circle cx="150" cy="164" r="7" fill="#1f78b4"></circle>
     <rect x="228" y="117" width="94" height="64" rx="16" fill="#dbeafe" stroke="#93b4e8" stroke-width="2"></rect>
     <text x="246" y="143" class="svg-title">capsule</text>
     <text x="241" y="163" class="svg-legend">bounded export</text>
     <path d="M186 150 L227 150" stroke="#238443" stroke-width="4" marker-end="url(#capsuleArrow)"></path>
     <path d="M275 117 C275 88, 216 76, 180 75" fill="none" stroke="#238443" stroke-width="3" marker-end="url(#capsuleArrow)"></path>
-    <text x="38" y="218" class="svg-legend">materialize packet → feature → decision → alert objects inside period</text>
-    <text x="38" y="236" class="svg-legend">export only capsule values, then close transient region</text>
+    <text x="38" y="218" class="svg-legend">packet → feature → decision objects live in period</text>
+    <text x="38" y="236" class="svg-legend">export capsule values, then close region</text>
   </svg>
   <p>This is the new StreamFlex-design row: stable state is durable, transient objects die by period, and capsules make transfer explicit.</p>
 </article>'''
@@ -743,7 +743,7 @@ def render_topology_story() -> str:
       </marker>
     </defs>
     <rect x="28" y="36" width="304" height="50" rx="14" fill="#f1f5f9" stroke="#cbd5e1"></rect>
-    <text x="90" y="67" class="svg-title">bucket anchor: head / tail / count</text>
+    <text x="90" y="67" class="svg-title">bucket anchor</text>
     <circle cx="72" cy="142" r="15" fill="#1f78b4"></circle><text x="68" y="148" class="node-text">r</text>
     <circle cx="126" cy="142" r="15" fill="#1f78b4"></circle><text x="122" y="148" class="node-text">r</text>
     <circle cx="180" cy="142" r="15" fill="#1f78b4"></circle><text x="176" y="148" class="node-text">r</text>
@@ -754,8 +754,8 @@ def render_topology_story() -> str:
     <path d="M180 86 L180 122" stroke="#238443" stroke-width="4" marker-end="url(#dropArrow)"></path>
     <rect x="268" y="122" width="54" height="40" rx="10" fill="#e8f5ec" stroke="#8fc49c"></rect>
     <text x="282" y="147" class="svg-title">close</text>
-    <text x="43" y="208" class="svg-legend">heap retained: drop anchor, GC reclaims later</text>
-    <text x="43" y="228" class="svg-legend">region retained: clear anchor, close region now; no record traversal</text>
+    <text x="43" y="208" class="svg-legend">heap: drop anchor, GC reclaims later</text>
+    <text x="43" y="228" class="svg-legend">region: clear anchor, close now; no scan</text>
   </svg>
   <p>This is the fair memory-management test: both sides retain ordinary objects until close; only reclaim differs.</p>
 </article>'''
@@ -770,7 +770,7 @@ def render_topology_story() -> str:
       </marker>
     </defs>
     <rect x="24" y="26" width="312" height="58" rx="16" fill="#f1f5f9" stroke="#cbd5e1"></rect>
-    <text x="66" y="61" class="svg-title">parent stream: bucket table + current token</text>
+    <text x="66" y="61" class="svg-title">parent bucket table</text>
     <rect x="32" y="124" width="82" height="68" rx="16" fill="#e8f5ec" stroke="#8fc49c" stroke-width="2"></rect>
     <rect x="139" y="124" width="82" height="68" rx="16" fill="#e8f5ec" stroke="#8fc49c" stroke-width="2"></rect>
     <rect x="246" y="124" width="82" height="68" rx="16" fill="#e8f5ec" stroke="#8fc49c" stroke-width="2"></rect>
@@ -782,8 +782,8 @@ def render_topology_story() -> str:
     <circle cx="273" cy="171" r="6" fill="#1f78b4"></circle><circle cx="291" cy="171" r="6" fill="#1f78b4"></circle><circle cx="309" cy="171" r="6" fill="#1f78b4"></circle>
     <path d="M180 84 L180 123" stroke="#238443" stroke-width="4" marker-end="url(#tokenArrow)"></path>
     <path d="M73 124 C68 104, 92 91, 132 84" fill="none" stroke="#238443" stroke-width="3" stroke-dasharray="6 5" marker-end="url(#tokenArrow)"></path>
-    <text x="44" y="220" class="svg-legend">token caches child region; hot append skips stale/open checks</text>
-    <text x="44" y="238" class="svg-legend">close expired bucket regions independently</text>
+    <text x="44" y="220" class="svg-legend">token caches child region for hot append</text>
+    <text x="44" y="238" class="svg-legend">close expired buckets independently</text>
   </svg>
   <p>This is the Common Crawl/log-style shape: parent metadata lives longer; each page/window bucket owns many records.</p>
 </article>'''
@@ -809,7 +809,7 @@ def render_topology_story() -> str:
     <path d="M74 91 L138 143" stroke="#238443" stroke-width="4" marker-end="url(#sumArrow)"></path>
     <path d="M188 91 L188 143" stroke="#238443" stroke-width="4" marker-end="url(#sumArrow)"></path>
     <path d="M288 91 L232 143" stroke="#238443" stroke-width="4" marker-end="url(#sumArrow)"></path>
-    <text x="42" y="230" class="svg-legend">fast for heap and regions; not a retained-object reclaim claim</text>
+    <text x="42" y="230" class="svg-legend">fast for heap and regions; not a reclaim claim</text>
   </svg>
   <p>Records do not survive to the close boundary. This can be the right processing topology, but it is not evidence that region reclaim beat GC.</p>
 </article>'''
@@ -833,8 +833,8 @@ def render_topology_story() -> str:
     <text x="230" y="171" class="svg-legend">Rift backend</text>
     <path d="M136 75 L96 121" stroke="#238443" stroke-width="4" marker-end="url(#backendArrow)"></path>
     <path d="M224 75 L264 121" stroke="#238443" stroke-width="4" marker-end="url(#backendArrow)"></path>
-    <text x="42" y="226" class="svg-legend">same topology, different allocator/root/reset mechanics</text>
-    <text x="42" y="244" class="svg-legend">unsafe/rootless rows remain lower bounds, not public safety claims</text>
+    <text x="42" y="226" class="svg-legend">same topology, different backend mechanics</text>
+    <text x="42" y="244" class="svg-legend">rootless rows are lower-bound controls</text>
   </svg>
   <p>The topology is what the program expresses. The backend is how that topology is implemented and optimized.</p>
 </article>'''
@@ -1586,6 +1586,8 @@ figure {
   align-items: stretch;
   margin-top: 22px;
   min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 .topology-lane {
   display: grid;
@@ -1652,10 +1654,12 @@ figure {
 }
 .topology-card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
   gap: 14px;
   margin-top: 16px;
   min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 .topology-card {
   display: grid;
@@ -1665,6 +1669,8 @@ figure {
   border-radius: 18px;
   background: white;
   min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
   overflow-wrap: anywhere;
   word-break: normal;
 }
@@ -1676,6 +1682,13 @@ figure {
 }
 .topology-card p strong {
   color: var(--ink);
+}
+.topology-card code,
+.paper-figure code,
+.topology-lane code {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 .topology-label {
   color: var(--muted);
@@ -1693,9 +1706,12 @@ figure {
 .topology-control { background: linear-gradient(180deg, #f1f5f9, white); }
 .paper-figure-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
   gap: 16px;
   margin-top: 22px;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 .paper-figure {
   display: grid;
@@ -1705,6 +1721,8 @@ figure {
   border-radius: 18px;
   background: #fff;
   min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 .paper-figure h3 {
   margin-bottom: 2px;
@@ -1717,6 +1735,7 @@ figure {
   border: 1px solid #dbe2ea;
   border-radius: 14px;
   background: #fbfdff;
+  overflow: hidden;
 }
 .paper-figure p {
   font-size: 0.95rem;
@@ -1921,7 +1940,7 @@ pre code {
   .paper-figure-grid,
   .topology-card-grid,
   .evidence-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
   }
   .topology-board {
     grid-template-columns: 1fr;
