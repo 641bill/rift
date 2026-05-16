@@ -238,6 +238,35 @@ run_selected_prior() {
   run_logged selected-specjbb2005 "$FORK" env SPECJBB_WAREHOUSES="$specjbb_warehouses" SPECJBB_ITERATIONS_PER_WAREHOUSE="$specjbb_iterations" SPECJBB_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" SPECJBB_WARMUPS=0 SPECJBB_MODES="gc-heap region-scoped-rooted checked-epoch-stream checked-epoch-scoped" SPECJBB_OUTPUT_DIR="$SUMMARY_DIR/specjbb2005-port" zsh sandbox/run_specjbb2005_port_matrix.sh
 }
 
+run_selected_streams() {
+  local stream_events stream_runs
+  local common_page_token_modes gh_modes loghub_modes loghub_top_modes dspbench_modes
+  local theodolite_modes nexmark_modes
+
+  stream_events="$RIFT_EVAL_EVENTS"
+  stream_runs="$RIFT_EVAL_RUNS"
+
+  common_page_token_modes="$(selected_modes "heap-immix safezone-improved-32k rift-checked-page-token rift-checked-safezone-page-token" "safezone-rootless-32k rift-trusted-streaming rift-checked-rift rift-checked-safezone-improved-32k")"
+  gh_modes="$(selected_modes "heap-immix safezone-improved-32k rift-checked-page-token rift-checked-safezone-page-token" "safezone-rootless-32k rift-trusted-streaming")"
+  loghub_modes="$(selected_modes "heap-immix safezone-improved-32k rift-checked-safezone-page-token checked-epoch-stream checked-epoch-scoped" "safezone-rootless-32k rift-trusted-streaming heap-direct-summary-only heap-epoch-retained-no-traverse checked-epoch-retained-no-traverse checked-scoped-epoch-retained-no-traverse")"
+  loghub_top_modes="$(selected_modes "heap-natural checked-epoch-topk-retained-no-traverse checked-scoped-epoch-topk-retained-no-traverse" "heap-retained-drop-anchor checked-epoch-retained-no-traverse checked-scoped-epoch-retained-no-traverse heap-summary-only")"
+  dspbench_modes="$(selected_modes "heap-immix safezone-improved-32k rift-checked-page-token rift-checked-safezone-page-token" "safezone-rootless-32k rift-trusted-streaming")"
+  theodolite_modes="$(selected_modes "heap-immix region-scoped-rooted checked-epoch-stream checked-epoch-scoped" "region-stream-rootless checked-epoch-stream-legacy checked-epoch-stream-open-handle")"
+  nexmark_modes="$(selected_modes "heap safezone-improved rift-checked" "safezone-current unsafezone-hp rift-hp rift-streaming")"
+
+  run_logged selected-common-crawl-page-token "$FORK" env COMMON_CRAWL_WET_PAGES="$stream_events" COMMON_CRAWL_WET_BENCHMARK_RUNS="$stream_runs" COMMON_CRAWL_WET_WARMUPS=0 COMMON_CRAWL_WET_QUERIES="q1-tokenize q2-domain-window" COMMON_CRAWL_WET_MODES="$common_page_token_modes" COMMON_CRAWL_WET_OUTPUT_DIR="$SUMMARY_DIR/common-crawl-page-token" zsh sandbox/run_common_crawl_wet_matrix.sh
+  run_logged selected-nexmark "$FORK" env NEXMARK_EVENTS="$stream_events" NEXMARK_BENCHMARK_RUNS="$stream_runs" NEXMARK_WARMUPS=0 NEXMARK_QUERIES="q3 q8 q9 q11" NEXMARK_MODES="$nexmark_modes" NEXMARK_OUTPUT_DIR="$SUMMARY_DIR/nexmark" zsh sandbox/run_nexmark_region_matrix.sh
+  run_logged selected-github-archive "$FORK" env GITHUB_ARCHIVE_EVENTS="$stream_events" GITHUB_ARCHIVE_BENCHMARK_RUNS="$stream_runs" GITHUB_ARCHIVE_WARMUPS=0 GITHUB_ARCHIVE_QUERIES="q1-fields q2-repo-window" GITHUB_ARCHIVE_MODES="$gh_modes" GITHUB_ARCHIVE_OUTPUT_DIR="$SUMMARY_DIR/github-archive" zsh sandbox/run_github_archive_region_matrix.sh
+  run_logged selected-loghub-region "$FORK" env LOGHUB_LINES="$stream_events" LOGHUB_BENCHMARK_RUNS="$stream_runs" LOGHUB_WARMUPS=0 LOGHUB_QUERIES="q2-window-counts q3-template-session" LOGHUB_MODES="$loghub_modes" LOGHUB_OUTPUT_DIR="$SUMMARY_DIR/loghub-region" zsh sandbox/run_loghub_region_matrix.sh
+  run_logged selected-loghub-top-templates "$FORK" env LOGHUB_TOP_LINES="$stream_events" LOGHUB_TOP_BENCHMARK_RUNS="$stream_runs" LOGHUB_TOP_WARMUPS=0 LOGHUB_TOP_MODES="$loghub_top_modes" LOGHUB_TOP_OUTPUT_DIR="$SUMMARY_DIR/loghub-top-templates" zsh sandbox/run_loghub_top_templates_matrix.sh
+  if [[ -n "${THEODOLITE_POWER_INPUT:-}" ]]; then
+    run_logged selected-theodolite-power "$FORK" env THEODOLITE_POWER_RECORDS="$stream_events" THEODOLITE_POWER_BENCHMARK_RUNS="$stream_runs" THEODOLITE_POWER_WARMUPS=0 THEODOLITE_POWER_QUERIES="q2-hierarchical" THEODOLITE_POWER_MODES="$theodolite_modes" THEODOLITE_POWER_OUTPUT_DIR="$SUMMARY_DIR/theodolite-power" zsh sandbox/run_theodolite_power_region_matrix.sh
+  else
+    log "skipping selected-theodolite-power; set THEODOLITE_POWER_INPUT to household_power_consumption.txt"
+  fi
+  run_logged selected-dspbench "$FORK" env DSPBENCH_EVENTS="$stream_events" DSPBENCH_BENCHMARK_RUNS="$stream_runs" DSPBENCH_WARMUPS=0 DSPBENCH_QUERIES="fraud-q2-alert-window log-q2-window" DSPBENCH_MODES="$dspbench_modes" DSPBENCH_OUTPUT_DIR="$SUMMARY_DIR/dspbench" zsh sandbox/run_dspbench_region_matrix.sh
+}
+
 run_checked() {
   run_logged object-allocation-lowering "$FORK" env OBJECT_ALLOC_OBJECTS="$RIFT_EVAL_EVENTS" OBJECT_ALLOC_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" OBJECT_ALLOC_OUTPUT_DIR="$SUMMARY_DIR/object-allocation-lowering" zsh sandbox/run_object_allocation_lowering_matrix.sh
   run_logged checked-region-buffer "$FORK" env CHECKED_BUFFER_EPOCHS="$RIFT_EVAL_CHECKED_EPOCHS" CHECKED_BUFFER_RECORDS_PER_EPOCH="$RIFT_EVAL_CHECKED_RECORDS_PER_EPOCH" CHECKED_BUFFER_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" zsh sandbox/run_checked_region_buffer_matrix.sh
@@ -304,6 +333,9 @@ main() {
   fi
   if suite_enabled selected-prior; then
     run_selected_prior
+  fi
+  if suite_enabled selected-streams; then
+    run_selected_streams
   fi
   if suite_enabled checked; then
     run_checked

@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-16 13:11 CEST
+Last updated: 2026-05-16 13:23 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -31,6 +31,19 @@ The clean headline run is now recorded in
 older parent `prior` suite for presentation-facing generated/local methodology
 rows. Next sweep target: apply the same normalized selected-runner discipline
 to streams and real-input rows.
+That selected stream path is now implemented as
+`RIFT_EVAL_SUITES=selected-streams`, covering Common Crawl page-token q1/q2,
+NEXMark q3/q8/q9/q11, GH Archive q1/q2, LogHub q2/q3 and top-template rows,
+and DSPBench Fraud/Log q2. Theodolite power q2 is opt-in because the matrix
+requires the real `household_power_consumption.txt` trace through
+`THEODOLITE_POWER_INPUT`. The suite uses natural heap, best safe backend, and
+checked Rift topology rows by default; controls remain behind
+`RIFT_EVAL_INCLUDE_CONTROLS=1`. Dirty-runner smoke passed at
+`/private/tmp/rift-eval-selected-streams-smoke2-20260516` with no failed rows
+across Common Crawl, NEXMark, GH Archive, LogHub, and DSPBench; Theodolite was
+skipped as intended because the real trace path was unset. Next: commit the
+runner and run a clean headline selected-streams sweep for presentation
+evidence.
 
 Latest all-optimizations selected sweep:
 `evidence/ALL_OPTIMIZATIONS_SELECTED_SWEEP.md` records the 2026-05-16 compact

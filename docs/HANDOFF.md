@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-16 13:11 CEST
+Last updated: 2026-05-16 13:23 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -50,6 +50,23 @@ headline-scale `selected-prior` sweep from parent `14038d3` and child
 checksum mismatches were found. This is now the presentation-facing
 generated/local methodology sweep for Broom, Dataflow, StreamFlexDesign, Yak
 local direct epoch, and SPECjbb2005-port rows.
+
+Latest selected stream-runner checkpoint:
+`scripts/run-performance-evaluation.sh` now has a `selected-streams` suite for
+the presentation-facing stream/application rows: Common Crawl page-token q1/q2,
+NEXMark q3/q8/q9/q11, GH Archive q1/q2, LogHub q2/q3, LogHub top templates,
+and DSPBench Fraud/Log q2. Theodolite power q2 is included only when
+`THEODOLITE_POWER_INPUT` points to the real household-power trace. This suite
+is intentionally smaller than the broad `streams` suite and uses the canonical
+safe checked topologies plus best safe backend rows; legacy/rootless/summary
+controls are only included when `RIFT_EVAL_INCLUDE_CONTROLS=1`. Next action is
+a clean headline selected-streams sweep from a committed tree.
+
+The dirty-runner smoke passed at
+`/private/tmp/rift-eval-selected-streams-smoke2-20260516`: Common Crawl,
+NEXMark, GH Archive, LogHub region, LogHub top templates, and DSPBench all
+completed with matching checksums/output counts and no failed rows. Theodolite
+was skipped as intended because `THEODOLITE_POWER_INPUT` was not set.
 
 Latest all-optimizations selected sweep:
 `evidence/ALL_OPTIMIZATIONS_SELECTED_SWEEP.md` records the 2026-05-16 compact
