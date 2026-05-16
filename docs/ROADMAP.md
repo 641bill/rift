@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-16 04:05 CEST
+Last updated: 2026-05-16 12:01 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -15,6 +15,8 @@ wrapping/responsiveness. Future report edits should
 update the Markdown source, regenerate HTML, and keep same-shape retained,
 legacy checked, unsafe/rootless, and summary-only rows in appendix/control
 sections unless they are the explicit object of a mechanism claim.
+The parent evaluation runner now includes Broom retained dataflow in the
+`prior` suite and as a standalone `broom` suite.
 
 Latest all-optimizations selected sweep:
 `evidence/ALL_OPTIMIZATIONS_SELECTED_SWEEP.md` records the 2026-05-16 compact

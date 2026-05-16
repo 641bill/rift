@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-16 04:05 CEST
+Last updated: 2026-05-16 12:01 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -18,6 +18,10 @@ table to the Markdown source and generated HTML report, and fixes
 topology-atlas wrapping with responsive cards/tables/SVG containers. Do not
 hand-edit `docs/report.html`; rerun
 `python3 scripts/generate-report-html.py` after report-source changes.
+`scripts/run-performance-evaluation.sh` now includes the Broom retained
+dataflow matrix in the `prior` suite and exposes it as a separate `broom`
+suite, so selected sweeps no longer miss the new Broom/Naiad-style headline
+row.
 
 Latest all-optimizations selected sweep:
 `evidence/ALL_OPTIMIZATIONS_SELECTED_SWEEP.md` records the 2026-05-16 compact

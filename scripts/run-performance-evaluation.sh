@@ -168,10 +168,17 @@ run_prior_work() {
   yak_modes="$(selected_modes "heap improved-safezone yak-runtime" "current-safezone unsafezone-hp rift-hp rift-streaming heap-promotion yak-runtime-promotion")"
   stancu_modes="$(selected_modes "heap improved-safezone" "current-safezone unsafezone-hp rift-hp rift-streaming")"
 
+  run_broom
   run_logged dataflow "$FORK" env DATAFLOW_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" DATAFLOW_MODES="$dataflow_modes" zsh sandbox/run_dataflow_region_matrix.sh
   run_logged streamflex "$FORK" env STREAMFLEX_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" STREAMFLEX_MODES="$streamflex_modes" STREAMFLEX_OUTPUT_DIR="$SUMMARY_DIR/streamflex" zsh sandbox/run_streamflex_region_instrumented_matrix.sh
   run_logged yak "$FORK" env YAK_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" YAK_MODES="$yak_modes" YAK_OUTPUT_DIR="$SUMMARY_DIR/yak" zsh sandbox/run_yak_region_instrumented_matrix.sh
   run_logged stancu "$FORK" env STANCU_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" STANCU_MODES="$stancu_modes" STANCU_OUTPUT_DIR="$SUMMARY_DIR/stancu" zsh sandbox/run_stancu_region_instrumented_matrix.sh
+}
+
+run_broom() {
+  local broom_modes
+  broom_modes="$(selected_modes "heap-gc checked-rift checked-region-scoped" "")"
+  run_logged broom-retained-dataflow "$FORK" env BROOM_RECORDS="$RIFT_EVAL_EVENTS" BROOM_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" BROOM_WARMUPS=0 BROOM_MODES="$broom_modes" BROOM_OUTPUT_DIR="$SUMMARY_DIR/broom-retained-dataflow" zsh sandbox/run_broom_retained_dataflow_matrix.sh
 }
 
 run_checked() {
@@ -234,6 +241,9 @@ main() {
   fi
   if suite_enabled prior; then
     run_prior_work
+  fi
+  if suite_enabled broom; then
+    run_broom
   fi
   if suite_enabled checked; then
     run_checked
