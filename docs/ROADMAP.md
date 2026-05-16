@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-16 12:01 CEST
+Last updated: 2026-05-16 12:38 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -17,6 +17,10 @@ legacy checked, unsafe/rootless, and summary-only rows in appendix/control
 sections unless they are the explicit object of a mechanism claim.
 The parent evaluation runner now includes Broom retained dataflow in the
 `prior` suite and as a standalone `broom` suite.
+`evidence/PRIOR_WORK_HEADLINE_SWEEP_2026_05_16.md` records the first clean
+headline-scale parent `prior` run after that integration. Treat it as L2
+runner/interpretation evidence. The next final sweep should move to normalized
+selected matrices instead of relying only on the older `prior` suite.
 
 Latest all-optimizations selected sweep:
 `evidence/ALL_OPTIMIZATIONS_SELECTED_SWEEP.md` records the 2026-05-16 compact

@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-16 04:05 CEST
+Last updated: 2026-05-16 12:38 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -85,6 +85,19 @@ heap completes at `256M` but fails at `128M` and `64M`, while checked Rift
 completes with matching checksum/output and about `53-56 MB` total RSS.
 Same-shape/drop-anchor controls remain appendix/mechanism evidence; this row's
 paper-facing comparison is natural heap/GC versus checked Rift.
+
+Latest clean prior-work runner sweep:
+`evidence/PRIOR_WORK_HEADLINE_SWEEP_2026_05_16.md` records a committed-tree
+headline-scale run of the parent `prior` suite. It confirms the runner health
+and prior-work metric axes after Broom integration: Broom aggregate 1M is
+checked Rift `67.364 ms` versus heap `99.115 ms`, with checked scoped
+`79.022 ms`; Broom join is checked Rift `78.615 ms`, checked scoped
+`77.058 ms`, and heap `86.547 ms`. Dataflow SELECT/AGGREGATE/JOIN checked
+Rift rows beat heap and remove timed GC. The same sweep also shows why the
+next presentation-grade sweep should use the normalized selected matrices:
+the older StreamFlex/Yak/Stancu runners are useful L2 interpretation evidence,
+but the final checked Rift story should use `StreamFlexDesignMatrix`, real
+Yak LiveJournal/AskUbuntu rows, and the SPECjbb2005 workload port.
 
 Latest classified evidence summary:
 `evidence/EVALUATION_CLASSIFIED_SUMMARY.md`. This is the first table to use

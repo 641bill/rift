@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-16 12:01 CEST
+Last updated: 2026-05-16 12:38 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -22,6 +22,15 @@ hand-edit `docs/report.html`; rerun
 dataflow matrix in the `prior` suite and exposes it as a separate `broom`
 suite, so selected sweeps no longer miss the new Broom/Naiad-style headline
 row.
+
+Latest prior-work runner sweep:
+`evidence/PRIOR_WORK_HEADLINE_SWEEP_2026_05_16.md` records the clean
+committed-tree parent `prior` suite at headline scale
+(`/private/tmp/rift-eval-prior-headline-20260516`). It is L2 standard-stats
+evidence, not final L1 presentation timing. It confirms Broom/Dataflow runner
+health and shows that the older StreamFlex/Yak/Stancu runners should be
+superseded in the final presentation sweep by `StreamFlexDesignMatrix`, real
+Yak LiveJournal/AskUbuntu rows, and the SPECjbb2005 workload port.
 
 Latest all-optimizations selected sweep:
 `evidence/ALL_OPTIMIZATIONS_SELECTED_SWEEP.md` records the 2026-05-16 compact
