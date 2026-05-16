@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-16 13:04 CEST
+Last updated: 2026-05-16 13:11 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -26,6 +26,11 @@ The dirty-patch smoke at `/private/tmp/rift-eval-selected-prior-smoke-20260516`
 passed across Broom, Dataflow, StreamFlexDesign, Yak local direct-epoch rows,
 and SPECjbb2005 port. The next step is a clean headline-scale
 `selected-prior` run.
+The clean headline run is now recorded in
+`evidence/SELECTED_PRIOR_WORK_SWEEP_2026_05_16.md`; it should supersede the
+older parent `prior` suite for presentation-facing generated/local methodology
+rows. Next sweep target: apply the same normalized selected-runner discipline
+to streams and real-input rows.
 
 Latest all-optimizations selected sweep:
 `evidence/ALL_OPTIMIZATIONS_SELECTED_SWEEP.md` records the 2026-05-16 compact

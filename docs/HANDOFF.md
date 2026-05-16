@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-16 13:04 CEST
+Last updated: 2026-05-16 13:11 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -41,6 +41,15 @@ at `/private/tmp/rift-eval-selected-prior-smoke-20260516`; no failures or
 checksum mismatches were found. Next step is to run this same suite from a
 clean committed tree at headline scale, then record it as selected
 presentation evidence.
+
+Latest normalized selected prior-work sweep:
+`evidence/SELECTED_PRIOR_WORK_SWEEP_2026_05_16.md` records the clean
+headline-scale `selected-prior` sweep from parent `14038d3` and child
+`15c4c39ac`, with output under
+`/private/tmp/rift-eval-selected-prior-headline-20260516`. No failures or
+checksum mismatches were found. This is now the presentation-facing
+generated/local methodology sweep for Broom, Dataflow, StreamFlexDesign, Yak
+local direct epoch, and SPECjbb2005-port rows.
 
 Latest all-optimizations selected sweep:
 `evidence/ALL_OPTIMIZATIONS_SELECTED_SWEEP.md` records the 2026-05-16 compact

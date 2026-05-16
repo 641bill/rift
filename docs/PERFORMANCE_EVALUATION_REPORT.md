@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-16 12:38 CEST
+Last updated: 2026-05-16 13:11 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -98,6 +98,19 @@ next presentation-grade sweep should use the normalized selected matrices:
 the older StreamFlex/Yak/Stancu runners are useful L2 interpretation evidence,
 but the final checked Rift story should use `StreamFlexDesignMatrix`, real
 Yak LiveJournal/AskUbuntu rows, and the SPECjbb2005 workload port.
+
+Latest normalized selected prior-work sweep:
+`evidence/SELECTED_PRIOR_WORK_SWEEP_2026_05_16.md` is the current
+presentation-facing generated/local methodology sweep. It runs Broom retained
+dataflow, Dataflow direct epoch/page-token, StreamFlexDesign, Yak local
+direct-epoch workloads, and the SPECjbb2005 workload port from clean commits.
+Highlights: Broom aggregate checked Rift `65.106 ms` versus heap `97.000 ms`;
+Dataflow checked epoch stream `16.573/33.436/16.778 ms` for
+SELECT/AGGREGATE/JOIN versus heap `27.954/49.965/31.935 ms`; StreamFlexDesign
+checked epoch stream throughput `363.792 ms` versus heap `503.013 ms`, with
+latency deadline misses `0` versus heap `14`; Yak checked epoch scoped wins
+all five local workloads; SPECjbb2005-port checked epoch stream is
+`119.916 ms` versus heap `162.939 ms`.
 
 Latest classified evidence summary:
 `evidence/EVALUATION_CLASSIFIED_SUMMARY.md`. This is the first table to use

@@ -1,7 +1,7 @@
 # Evaluation Classified Summary
 
 Date: 2026-05-09
-Last updated: 2026-05-16 03:56 CEST
+Last updated: 2026-05-16 13:11 CEST
 
 Status: thesis-facing classified summary built from committed evidence.
 Baseline commits for clean rows: parent `1cc3b2c`, child `13a3df1c7`.
@@ -50,6 +50,13 @@ prior-work-style headline row and keeps same-shape/drop-anchor rows in the
 mechanism appendix unless they are explicitly being used for causality.
 The latest Broom rerun adds `checked-region-scoped` as a best-safe-region
 comparison row for the 20M aggregate/join scale point.
+The latest normalized selected prior-work sweep is
+`evidence/SELECTED_PRIOR_WORK_SWEEP_2026_05_16.md`, run from parent
+`14038d3` and child `15c4c39ac`. It should be used as the current
+presentation-facing generated/local methodology sweep for Broom, Dataflow,
+StreamFlexDesign, Yak local direct-epoch workloads, and the SPECjbb2005
+workload port. The older parent `prior` sweep remains L2 interpretation
+evidence for legacy runners.
 
 ## How To Read This Table
 
