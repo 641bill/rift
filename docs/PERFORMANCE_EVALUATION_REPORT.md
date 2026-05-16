@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-16 15:20 CEST
+Last updated: 2026-05-16 16:30 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -538,7 +538,13 @@ epoch is `222.544/1837.885 ms`, checked scoped direct epoch is
 `222.620/1869.150 ms`, and heap is `542.854/2161.937 ms` with
 `143.713/140.570 ms` median timed GC. This is a positive generated
 allocation-lowering transfer (`13.5%` on q2, `2.4%` on q3 versus legacy), with
-matching checksums and output counts.
+matching checksums and output counts. The same audit tried an explicit
+`rift-checked-page-token-open-handle` row for LogHub page-token q2/q3, but it
+is not promoted as the LogHub default: at 1M it is only `1.7%/2.0%` faster
+than `rift-checked-page-token-legacy` (`548.894/2310.891 ms` versus
+`558.582/2357.261 ms`), checked SafeZone page-token still wins q2 narrowly
+(`543.155 ms`), and direct epoch is the better generated/indexable topology.
+Keep this as an appendix/control row.
 
 Latest operator-gate status:
 `evidence/OPERATOR_GATE_STATUS.md`. This keeps rank/top-k/median/hash/join work

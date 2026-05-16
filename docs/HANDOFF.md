@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-16 15:20 CEST
+Last updated: 2026-05-16 16:30 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -409,6 +409,22 @@ q3 reports heap `2161.937 ms` with `140.570 ms` GC, optimized checked
 `1794.369 ms`, legacy checked `1837.885 ms`, and checked scoped
 `1869.150 ms`. Treat this as generated allocation-lowering transfer evidence,
 not a new real-input headline row.
+
+Latest LogHub page-token open-handle control:
+Child implementation commit: `308867063`
+(`Add LogHub page-token allocation control`). `LogHubRegionMatrix` now accepts
+`rift-checked-page-token-open-handle` as an explicit Rift-backed page-token
+allocation control and `rift-checked-page-token-legacy` as an alias for the
+generic page-token path. The default `rift-checked-page-token` remains
+generic/legacy in this matrix because the 1M gate is only a small mechanism
+win and not a topology/backend win. At 1M generated q2, heap is `518.300 ms`
+with `126.070 ms` GC, default page-token is `566.360 ms`, open-handle is
+`548.894 ms`, legacy is `558.582 ms`, and checked SafeZone page-token is
+`543.155 ms`. At q3, heap is `2229.223 ms` with `160.218 ms` GC, default
+page-token is `2407.616 ms`, open-handle is `2310.891 ms`, legacy is
+`2357.261 ms`, and checked SafeZone page-token is `2448.068 ms`. Checksums
+and output counts matched. Keep this as appendix/control evidence; direct
+epoch remains the better generated/indexable q2/q3 topology.
 
 Latest all-optimizations checkpoint:
 The child working tree adds a focused

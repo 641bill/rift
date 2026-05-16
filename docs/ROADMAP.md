@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-16 15:20 CEST
+Last updated: 2026-05-16 16:30 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -149,6 +149,12 @@ generic checked path. The 200k transaction gate improves checked direct epoch
 median timed GC; checked SafeZone direct epoch remains fastest at `26.405 ms`.
 Keep this as allocation-lowering transfer evidence and continue using the
 SPECjbb2005-workload port for the report-facing Stancu/SPECjbb row.
+Child `308867063` adds the same open-handle control to LogHub page-token rows,
+but does not promote it to the default. At 1M generated q2/q3,
+`rift-checked-page-token-open-handle` is only modestly faster than legacy
+(`548.894/2310.891 ms` versus `558.582/2357.261 ms`), and the better
+generated/indexable topology is still direct epoch. Keep this as an
+appendix/control row unless a future page-token workload shows a larger win.
 
 Latest handle-backed allocation checkpoint:
 - child implementation commit: `1a1c45c75` (`Promote handle-backed checked allocation`)
