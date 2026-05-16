@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-16 17:05 CEST
+Last updated: 2026-05-16 17:45 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -91,6 +91,18 @@ heap completes at `256M` but fails at `128M` and `64M`, while checked Rift
 completes with matching checksum/output and about `53-56 MB` total RSS.
 Same-shape/drop-anchor controls remain appendix/mechanism evidence; this row's
 paper-facing comparison is natural heap/GC versus checked Rift.
+
+Latest real streaming retained-object follow-up:
+`evidence/LOGHUB_TOP_TEMPLATES_MATRIX.md` and
+`evidence/REAL_STREAMING_INPUT_MATRIX.md` now include LogHub Windows top
+templates over the local `Windows.log` file (`114,608,388` lines). At 1M
+streamed lines, natural heap and retained heap are both `12.68 s` with about
+`147 MB` RSS, while checked scoped retained and reusable checked scoped top-k
+are `12.64 s` with about `14.5 MB` RSS. L2 shows heap GC is visible but tiny
+relative to the streaming parse/query loop (`26-31 ms` inside about `4.24 s`);
+checked rows report zero timed GC. Heap completes at a `64M` cap, so this is a
+real-streaming-input RSS/fixed-memory near-tie, not a GC-heavy throughput
+flagship.
 
 Latest clean prior-work runner sweep:
 `evidence/PRIOR_WORK_HEADLINE_SWEEP_2026_05_16.md` records a committed-tree

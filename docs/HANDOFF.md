@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-16 17:05 CEST
+Last updated: 2026-05-16 17:45 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -284,6 +284,16 @@ comparison. The 5M L1 rows are aggregate heap `1.60 s`, checked Rift
 (`104.789 ms` aggregate and `54.116 ms` join), while checked rows report zero
 timed GC and about `13 MB` RSS. This fills the safe-backend scale curve for
 the Broom/Naiad-style retained-object case study.
+
+Next real-input step:
+LogHub Windows top templates now has a true `streaming-file` 1M row over the
+local `Windows.log` file (`114,608,388` lines total). L1: heap-natural
+`12.68 s`, retained heap `12.68 s`, checked scoped retained `12.64 s`, and
+checked scoped `EpochTopKByKey` `12.64 s`. L1 RSS drops from about `147 MB`
+heap to about `14.5 MB` checked. L2 heap GC is only `26-31 ms` inside about
+`4.24 s`, so this is real-streaming-input RSS/fixed-memory evidence rather
+than a GC-heavy flagship. Heap completes at a `64M` cap, but remains slower
+and around `71 MB` RSS versus checked top-k around `14.5 MB`.
 
 Latest unsafe no-zero lower-bound checkpoint:
 Child implementation commit: `c5fb808a7`

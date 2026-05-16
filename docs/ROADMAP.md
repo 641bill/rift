@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-16 17:05 CEST
+Last updated: 2026-05-16 17:45 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -230,6 +230,15 @@ first prior-work-style retained-object GC-heavy dataflow case study. The next
 evaluation step should move from generated/local methodology to real retained
 stream/data-processing inputs, starting with richer LogHub sessions/templates
 or StackExchange/StackOverflow text epochs.
+
+Real streaming follow-up:
+the first post-Broom real retained-input step used the much larger local
+LogHub Windows file in `streaming-file` mode. At 1M streamed lines, checked
+scoped retained/top-k rows tie elapsed with heap and cut RSS about `90%`, but
+heap GC remains below `1%` of L2 measured work and heap completes at a `64M`
+cap. This strengthens the RSS/fixed-memory stream story but does not change
+the search direction: the next real candidate still needs more retained state
+per input unit, such as sessions, joins, or larger text/graph epochs.
 
 Latest unsafe no-zero lower-bound update:
 Child implementation commit: `c5fb808a7`

@@ -1,7 +1,7 @@
 # Real Streaming Input Matrix
 
 Date: 2026-05-11
-Last updated: 2026-05-14 13:17 CEST
+Last updated: 2026-05-16 17:45 CEST
 
 Status: started. This matrix records only rows that satisfy the
 `real-streaming-input` protocol: no full-input preload, incremental source
@@ -113,6 +113,54 @@ ceiling/control evidence, not the missing GC-heavy stream flagship.
 RSS caveat: this sandboxed run did not collect `/usr/bin/time -l` RSS because
 the platform `time` command hit a sandboxed `sysctl kern.clockrate` failure.
 Rerun L1 outside the sandbox before using the 5M row as a presentation table.
+
+### LogHub Windows Top Templates, Streaming-File
+
+Implementation:
+
+- Matrix: `/Users/siyaoliu/rift/scala-native-rift/sandbox/src/main/scala-next/LogHubTopTemplatesMatrix.scala`
+- Mode: `LOGHUB_TOP_INPUT_MODE=streaming-file`
+- Source: `/Users/siyaoliu/rift/cache/benchmark-data/loghub/Windows/Windows.log`
+- Query: retained template-token records per epoch, top template buckets per
+  epoch, no close-time record traversal in retained/drop-anchor modes.
+- API/topology: natural heap, retained heap/drop-anchor, checked retained
+  scoped epoch, and checked scoped `EpochTopKByKey`.
+
+The local Windows file has `114,608,388` lines, so it gives a larger
+same-machine real streaming source than HDFS without fetching new data.
+
+1M candidate row:
+
+| Mode | L1 external s | L1 RSS bytes | L2 median ms | Median GC ms | Max GC ms | Runs with GC | Records | Bytes read | Checksum | Output |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `heap-natural` | `12.68` | `147046400` | `4240.088` | `26.020` | `28.598` | `3/3` | `1000000` | `242221056` | `-164656507663075219` | `1280` |
+| `heap-retained-drop-anchor` | `12.68` | `147013632` | `4255.379` | `30.532` | `55.161` | `3/3` | `1000000` | `242221056` | `-164656507663075219` | `1280` |
+| `checked-scoped-epoch-retained-no-traverse` | `12.64` | `14499840` | `4235.391` | `0.000` | `0.000` | `0/3` | `1000000` | `242221056` | `-164656507663075219` | `1280` |
+| `checked-scoped-epoch-topk-retained-no-traverse` | `12.64` | `14483456` | `4226.219` | `0.000` | `0.000` | `0/3` | `1000000` | `242221056` | `-164656507663075219` | `1280` |
+
+Heap-cap follow-up:
+
+| Mode | Heap cap | Status | L1 external s | RSS bytes | Checksum | Output |
+|---|---:|---|---:|---:|---:|---:|
+| `heap-natural` | `128M` | completed | `13.29` | `138133504` | `-164656507663075219` | `1280` |
+| `heap-natural` | `64M` | completed | `13.20` | `71106560` | `-164656507663075219` | `1280` |
+| `heap-retained-drop-anchor` | `64M` | completed | `13.20` | `71122944` | `-164656507663075219` | `1280` |
+| `checked-scoped-epoch-topk-retained-no-traverse` | uncapped | completed | `12.73` | `14499840` | `-164656507663075219` | `1280` |
+
+Interpretation:
+
+- This is true real-streaming-input evidence over a much larger local LogHub
+  source. It does not preload parsed rows.
+- Checked scoped retained/top-k rows are near ties on elapsed and cut L1 RSS
+  about `90%` versus uncapped heap.
+- Heap completes at a `64M` cap, so this is not a heap-failure row. The cap
+  still leaves heap around `71 MB` RSS and slightly slower than the checked
+  top-k row at about `14.5 MB`.
+- Heap GC remains below `1%` of measured L2 work. This is RSS/fixed-memory
+  streaming evidence, not the missing GC-heavy stream flagship.
+- Use L1 RSS for presentation. The L2 harness computes a heap baseline for
+  checksum validation in the same process before checked modes, which can
+  inflate external RSS for checked L2 rows.
 
 ### LogHub HDFS q3 Template/Session, Streaming-File
 
