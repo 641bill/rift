@@ -520,8 +520,8 @@ RESULT_ROWS = [
         "Selected stream sweep",
         "NEXMark q3/q8/q9/q11, GH Archive, LogHub, and DSPBench selected rows.",
         "NEXMark checked wins/ties; LogHub q2/q3 checked epoch: `2.46 / 10.32s`.",
-        "LogHub heap: `3.63 / 11.22s`; DSPBench real rows are modest/control.",
-        "Current presentation-facing stream/application sweep; Theodolite q2 is opt-in on the real power trace.",
+        "LogHub heap: `3.63 / 11.22s`; Theodolite q2 checked stream: `4.58s` vs heap `5.13s`.",
+        "Current presentation-facing stream/application sweep; DSPBench remains modest/control, and Theodolite is throughput/GC-positive but not an RSS win in the selected addendum.",
     ],
     [
         "Real log top-k",

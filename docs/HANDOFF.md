@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-16 13:44 CEST
+Last updated: 2026-05-16 14:42 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -78,6 +78,13 @@ page-token `16.04/16.36 s` versus heap `22.55/21.41 s`; LogHub generated q2/q3
 checked scoped epoch `2.46/10.32 s` versus heap `3.63/11.22 s`; LogHub top
 templates checked scoped top-k `1.39 s` versus heap `2.03 s`; DSPBench real
 file-backed rows remain modest/control evidence.
+The missing selected Theodolite q2 row has now been filled as an addendum from
+the local real UCI household-power trace:
+`/private/tmp/rift-eval-theodolite-selected-headline-20260516/summary.tsv`.
+At 1M streaming records x3, `checked-epoch-stream` is `4.58 s` versus heap
+`5.13 s` and removes `19.465 ms` median timed heap GC, but RSS is slightly
+higher (`78.5 MB` versus heap `75.3 MB`). Treat this as selected-runner
+real-streaming throughput/GC evidence, not an RSS win.
 
 Latest all-optimizations selected sweep:
 `evidence/ALL_OPTIMIZATIONS_SELECTED_SWEEP.md` records the 2026-05-16 compact

@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-16 13:44 CEST
+Last updated: 2026-05-16 14:42 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -117,14 +117,17 @@ Latest normalized selected stream sweep:
 presentation-facing stream/application sweep from parent `46c4ea8` and child
 `15c4c39ac`. It covers Common Crawl page-token q1/q2, NEXMark q3/q8/q9/q11,
 GH Archive q1/q2, LogHub q2/q3, LogHub top templates, and real DSPBench
-Fraud/Log q2; Theodolite q2 was skipped because the real household-power trace
-was not configured. Highlights: generated Common Crawl q1/q2 checked
+Fraud/Log q2. Theodolite q2 was filled by a separate selected-row addendum
+over the local real UCI household-power trace. Highlights: generated Common Crawl q1/q2 checked
 page-token is `16.04/16.36 s` versus heap `22.55/21.41 s`; NEXMark checked
 Rift is best or tied-best on q3/q8/q9/q11; LogHub generated q2/q3 direct
 checked epoch is `2.46/10.32 s` versus heap `3.63/11.22 s`; LogHub top
 templates checked scoped top-k is `1.39 s` versus heap `2.03 s`; DSPBench real
 file-backed rows remain modest/control evidence rather than GC-heavy flagship
-proof.
+proof. Theodolite q2 checked epoch stream is `4.58 s` versus heap `5.13 s` and
+removes `19.465 ms` median timed heap GC, but RSS is slightly higher than heap
+in this selected rerun, so report it as a real-streaming throughput/GC win
+rather than an RSS win.
 
 Latest classified evidence summary:
 `evidence/EVALUATION_CLASSIFIED_SUMMARY.md`. This is the first table to use

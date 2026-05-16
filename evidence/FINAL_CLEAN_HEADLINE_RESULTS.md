@@ -1,7 +1,7 @@
 # Final-Clean Headline Results
 
 Date: 2026-05-09
-Last updated: 2026-05-16 13:44 CEST
+Last updated: 2026-05-16 14:42 CEST
 
 Status: L1 runner support exists for the first representative binaries. One
 focused retained-epoch L1 row has been collected from clean child commit
@@ -99,8 +99,11 @@ stream/application sweep from parent `46c4ea8` and child `15c4c39ac`.
 Use that evidence file as the current L1/L2 source for Common Crawl
 page-token q1/q2, NEXMark q3/q8/q9/q11, GH Archive q1/q2, generated LogHub
 q2/q3, generated LogHub top templates, and real DSPBench Fraud/Log q2.
-Theodolite q2 remains a separate real-trace row and is skipped by the selected
-stream runner unless `THEODOLITE_POWER_INPUT` is set.
+Theodolite q2 is skipped by the selected stream runner unless
+`THEODOLITE_POWER_INPUT` is set, but the evidence file now includes an
+explicit selected-row addendum over the local real UCI household-power trace.
+That addendum reports checked epoch stream `4.58 s` versus heap `5.13 s`,
+removing `19.465 ms` median timed heap GC with slightly higher RSS.
 
 ## Definition
 
@@ -155,7 +158,7 @@ avoid internal timed-section stats.
 | StreamFlex | throughput and latency rows | prior-work latency/throughput axis |
 | StreamFlex design | stable/transient/capsule throughput and paced-latency rows | Rift-native reproduction of the StreamFlex design axes |
 | Broom retained dataflow | timestamped aggregate/join, including high-active-timestamp variant | prior-work-style retained-object dataflow with natural heap/GC versus checked Rift |
-| selected streams/applications | Common Crawl page-token q1/q2; NEXMark q3/q8/q9/q11; GH Archive q1/q2; LogHub q2/q3 and top templates; DSPBench Fraud/Log q2 | presentation-facing stream/application sweep; Theodolite q2 remains opt-in on a real trace |
+| selected streams/applications | Common Crawl page-token q1/q2; NEXMark q3/q8/q9/q11; GH Archive q1/q2; LogHub q2/q3 and top templates; DSPBench Fraud/Log q2; Theodolite q2 addendum | presentation-facing stream/application sweep; Theodolite q2 remains opt-in in the runner but now has a selected-row real-trace addendum |
 | StreamIt controls | BeamFormer and FilterBank primitive DSP rows | StreamFlex/StreamIt methodology controls, not memory-management wins |
 | Stancu/SPECjbb-style | transaction rows | transaction-boundary region axis |
 | retained top-k API | LogHub HDFS top templates; Yak topword | reusable `EpochTopKByKey` evidence |
@@ -170,7 +173,7 @@ avoid internal timed-section stats.
 | direct epoch | Yak LiveJournal, Dataflow, StreamFlex, Stancu, SPECjbb-style rows have L1 rows | L2 rows exist in per-matrix docs/report | complete for current report |
 | page/window token | Common Crawl-shaped, LogHub HDFS q2, DSPBench Fraud/Log q2, GH Archive q1/q2 have L1 rows | L2 rows exist for GC/RSS interpretation | complete for current report |
 | generated methodology | NEXMark q3/q8/q9/q11 have L1 rows | L2 rows remain the GC source | complete for selected rows |
-| selected stream/application sweep | Common Crawl page-token, NEXMark, GH Archive, LogHub, LogHub top-template, and DSPBench selected rows refreshed at 1M/3-run scale | L2 standard stats are in the same selected sweep summaries | complete for current generated/default stream presentation rows; Theodolite remains opt-in on real trace |
+| selected stream/application sweep | Common Crawl page-token, NEXMark, GH Archive, LogHub, LogHub top-template, and DSPBench selected rows refreshed at 1M/3-run scale; Theodolite q2 selected-row addendum complete over local real trace | L2 standard stats are in the same selected sweep/addendum summaries | complete for current generated/default stream presentation rows plus Theodolite addendum |
 | StreamIt controls | BeamFormer/FilterBank have a 3-run L1 control matrix | 3-run L2 rows exist for GC/latency interpretation | complete as primitive StreamFlex-axis controls |
 | ReML/MLKit ports | Tier 1 and first Tier 2 local ports have L1 rows | L2 rows exist for Tier 1 and first Tier 2 interpretation | exact artifact rerun still blocked |
 | real-input top-k/text/control | LogHub HDFS 1M x20 and 5M x5 have L1 rows; AskUbuntu `topwordreal` 10M/20M x5 has L1 rows; Theodolite power q2 has L1 rows | HDFS 5M, AskUbuntu 10M/20M, and Theodolite q2 L2 rows added for GC interpretation | continue larger real-input search after report update |
@@ -753,6 +756,20 @@ RETAINED_EPOCH_MODES="heap-epoch-retained-no-traverse checked-scoped-epoch-retai
 RETAINED_EPOCH_OUTPUT_DIR=/tmp/rift-final-clean-retained-smoke \
 zsh sandbox/run_retained_epoch_reclaim_matrix.sh
 ```
+
+## Selected Streams Theodolite Addendum, 2026-05-16
+
+This row fills the opt-in Theodolite q2 slot from the clean
+`selected-streams` sweep. It uses the local real UCI household-power trace and
+the same child implementation commit as the selected stream sweep
+(`15c4c39ac`).
+
+| Benchmark | Input type | API/topology | Mode | L1 external real | L2 median ms | L2 GC ms | RSS bytes | Checksum/output | Allowed claim |
+|---|---|---|---|---:|---:|---:|---:|---|---|
+| Theodolite power q2 streaming-file 1M x3 selected addendum | real-streaming-input power trace | natural heap baseline | `heap-immix` | `5.13 s` | `989.733` | `19.465` | `75268096` | checksum `7683095093045065342`, output `40960` | Selected-runner heap baseline. |
+| Theodolite power q2 streaming-file 1M x3 selected addendum | real-streaming-input power trace | rooted scoped baseline | `region-scoped-rooted` | `4.73 s` | `963.378` | `0.000` | `78528512` | checksum `7683095093045065342`, output `40960` | Safe rooted baseline; throughput-positive but higher RSS than heap. |
+| Theodolite power q2 streaming-file 1M x3 selected addendum | real-streaming-input power trace | checked epoch stream | `checked-epoch-stream` | `4.58 s` | `929.243` | `0.000` | `78479360` | checksum `7683095093045065342`, output `40960` | Selected-runner real-streaming throughput/GC win; not an RSS win. |
+| Theodolite power q2 streaming-file 1M x3 selected addendum | real-streaming-input power trace | checked epoch scoped | `checked-epoch-scoped` | `4.63 s` | `941.877` | `0.000` | `78512128` | checksum `7683095093045065342`, output `40960` | Safe checked scoped comparison row; not an RSS win in this rerun. |
 
 ## All-Optimizations Follow-Up, 2026-05-14
 

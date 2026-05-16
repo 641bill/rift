@@ -1,7 +1,7 @@
 # Evaluation Classified Summary
 
 Date: 2026-05-09
-Last updated: 2026-05-16 13:44 CEST
+Last updated: 2026-05-16 14:42 CEST
 
 Status: thesis-facing classified summary built from committed evidence.
 Baseline commits for clean rows: parent `1cc3b2c`, child `13a3df1c7`.
@@ -62,8 +62,10 @@ The latest normalized selected stream sweep is
 and child `15c4c39ac`. It should be used as the current presentation-facing
 stream/application sweep for Common Crawl page-token, NEXMark, GH Archive,
 LogHub, LogHub top-template, and DSPBench real bundled rows. Theodolite q2 is
-explicitly skipped unless `THEODOLITE_POWER_INPUT` points to the real
-household-power trace.
+opt-in in the runner because it requires `THEODOLITE_POWER_INPUT`, but the
+current evidence file now includes a selected-row addendum from the local real
+UCI household-power trace: checked epoch stream `4.58 s` versus heap `5.13 s`,
+with timed heap GC removed and slightly higher RSS.
 
 ## How To Read This Table
 
@@ -119,7 +121,7 @@ not presentation requirements.
 | NEXMark q3/q8/q9/q11 | complete, refreshed in selected stream sweep | L2 remains interpretation source | generated Beam-default-style methodology | keep; not exact Beam runner evidence |
 | LogHub HDFS top templates | complete at 1M and 5M | complete | real retained top-k API row | keep as strongest real retained top-k row |
 | LogHub HDFS streaming-file top templates | complete for first 1M candidate | complete | real-streaming-input retained top-k API row | keep as first true streaming-input row; not yet flagship GC-heavy evidence |
-| LogHub q2/q3, LogHub top templates, DSPBench Fraud/Log q2, GH Archive q1/q2, Theodolite power q2 | selected-streams clean sweep complete for generated/default rows; Theodolite requires explicit real trace input; Spark q3 older L1 elapsed not promoted because `/usr/bin/time` real field was anomalous | complete where used | generated, real-input, and real-streaming-input page/window/epoch/top-k modest/RSS/control rows | use selected-streams for current generated/default presentation rows; keep real HDFS/GH/Theodolite file-backed rows as separate real-input evidence |
+| LogHub q2/q3, LogHub top templates, DSPBench Fraud/Log q2, GH Archive q1/q2, Theodolite power q2 | selected-streams clean sweep complete for generated/default rows; Theodolite selected-row addendum complete over the local real trace; Spark q3 older L1 elapsed not promoted because `/usr/bin/time` real field was anomalous | complete where used | generated, real-input, and real-streaming-input page/window/epoch/top-k modest/RSS/control rows | use selected-streams for current generated/default presentation rows; keep real HDFS/GH/Theodolite file-backed rows as separate real-input evidence |
 | ReML/MLKit Tier 1 and first Tier 2 ports | complete for local ports | complete for local ports | local Scala Native port evidence | keep same-axes table; no raw ReML-vs-Rift wall-clock claim |
 | Summary-only/direct-aggregate rows | complete for selected symmetric rows | complete where needed | topology lower bound | keep only with heap and checked counterparts; never claim reclaim win |
 

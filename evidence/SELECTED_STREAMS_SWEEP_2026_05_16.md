@@ -1,6 +1,6 @@
 # Selected Streams Sweep, 2026-05-16
 
-Last updated: 2026-05-16 13:44 CEST
+Last updated: 2026-05-16 14:42 CEST
 
 Status: clean selected stream/application sweep for presentation-facing rows.
 
@@ -26,12 +26,35 @@ bash scripts/run-performance-evaluation.sh
   - `summaries/loghub-region/summary.tsv`
   - `summaries/loghub-top-templates/summary.tsv`
   - `summaries/dspbench/summary.tsv`
-- Theodolite power q2 was skipped because `THEODOLITE_POWER_INPUT` was not
-  set. The selected runner now requires the real `household_power_consumption`
-  trace for that row.
+- Theodolite power q2 was skipped in the full selected-streams run because
+  `THEODOLITE_POWER_INPUT` was not set. It was filled by the addendum run
+  below after locating the local UCI household-power trace.
 
 No failed rows, exceptions, checksum mismatches, or output-count mismatches
 were found in the selected rows.
+
+## Theodolite Addendum
+
+The missing Theodolite row was filled with the local real UCI household-power
+trace:
+
+- Parent commit at addendum run: `0a6776e`
+- Child commit at addendum run: `15c4c39ac`
+
+```bash
+THEODOLITE_POWER_INPUT_MODE=streaming-file \
+THEODOLITE_POWER_INPUT=/Users/siyaoliu/rift/cache/benchmark-data/theodolite/real-power/household_power_consumption.txt \
+THEODOLITE_POWER_RECORDS=1000000 \
+THEODOLITE_POWER_BENCHMARK_RUNS=3 \
+THEODOLITE_POWER_WARMUPS=0 \
+THEODOLITE_POWER_QUERIES=q2-hierarchical \
+THEODOLITE_POWER_MODES="heap-immix region-scoped-rooted checked-epoch-stream checked-epoch-scoped" \
+THEODOLITE_POWER_OUTPUT_DIR=/private/tmp/rift-eval-theodolite-selected-headline-20260516 \
+zsh sandbox/run_theodolite_power_region_matrix.sh
+```
+
+Output: `/private/tmp/rift-eval-theodolite-selected-headline-20260516/summary.tsv`.
+No failures or checksum mismatches were found.
 
 ## Headline Rows
 
@@ -161,12 +184,32 @@ SafeZone is fastest for Fraud q2 and checked page-token is essentially tied on
 Log q2. Checked page-token reduces L2 timed GC but does not produce a strong
 RSS win in this selected run.
 
+### Theodolite Power q2
+
+Input type: real UCI household-power trace, streaming-file replay. Claim class:
+real-streaming-input direct epoch throughput/GC win, not an RSS win in this
+selected rerun.
+
+| Query | Mode | L1 real s | L2 median ms | L2 GC ms | Runs with GC | Output | RSS bytes |
+|---|---|---:|---:|---:|---:|---:|---:|
+| q2-hierarchical | heap-immix | 5.13 | 989.733 | 19.465 | 3 | 40960 | 75268096 |
+| q2-hierarchical | region-scoped-rooted | 4.73 | 963.378 | 0.000 | 0 | 40960 | 78528512 |
+| q2-hierarchical | checked-epoch-stream | 4.58 | 929.243 | 0.000 | 0 | 40960 | 78479360 |
+| q2-hierarchical | checked-epoch-scoped | 4.63 | 941.877 | 0.000 | 0 | 40960 | 78512128 |
+
+Interpretation: checked epoch stream is `10.7%` faster than heap and removes
+`19.465 ms` median timed heap GC. RSS is slightly higher than heap in this
+selected rerun, so the row is a real-streaming throughput/GC win rather than
+an RSS win.
+
 ## Overall Interpretation
 
 - The clean selected stream sweep strengthens the generated stream-object
   pressure story: Common Crawl page-token and LogHub direct epoch/top-k rows
   are clear checked wins.
-- Real bundled/file-like rows remain more modest: DSPBench and GH Archive are
-  useful controls, but not flagship GC-heavy evidence.
+- Real bundled/file-like rows remain more modest: DSPBench, GH Archive, and
+  Theodolite are useful controls, but not flagship GC-heavy evidence.
 - NEXMark remains generated methodology evidence with modest checked wins.
-- Theodolite must be rerun only when the real power trace is available.
+- Theodolite's selected row is now filled from the real power trace; continue
+  treating it as modest real-streaming evidence unless a retained-window
+  variant creates stronger heap GC/RSS pressure.

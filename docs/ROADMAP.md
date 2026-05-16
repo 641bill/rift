@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-16 13:44 CEST
+Last updated: 2026-05-16 14:42 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -46,8 +46,11 @@ runner and run a clean headline selected-streams sweep for presentation
 evidence. That clean selected-streams sweep is now recorded in
 `evidence/SELECTED_STREAMS_SWEEP_2026_05_16.md` from parent `46c4ea8` and child
 `15c4c39ac`, with no failed rows. It should be the current generated/default
-stream/application presentation source; Theodolite q2 remains the opt-in
-real-trace follow-up.
+stream/application presentation source. The opt-in Theodolite q2 row has now
+been filled as a selected-row addendum over the local real UCI household-power
+trace: `checked-epoch-stream` is `4.58 s` versus heap `5.13 s`, removes
+`19.465 ms` median timed heap GC, and has slightly higher RSS, so it is a
+real-streaming throughput/GC control rather than an RSS win.
 
 Latest all-optimizations selected sweep:
 `evidence/ALL_OPTIMIZATIONS_SELECTED_SWEEP.md` records the 2026-05-16 compact
