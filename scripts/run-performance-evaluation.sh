@@ -181,6 +181,63 @@ run_broom() {
   run_logged broom-retained-dataflow "$FORK" env BROOM_RECORDS="$RIFT_EVAL_EVENTS" BROOM_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" BROOM_WARMUPS=0 BROOM_MODES="$broom_modes" BROOM_OUTPUT_DIR="$SUMMARY_DIR/broom-retained-dataflow" zsh sandbox/run_broom_retained_dataflow_matrix.sh
 }
 
+run_selected_prior() {
+  local df_epochs df_docs_per_epoch
+  local streamflex_latency_events streamflex_pressure_events
+  local specjbb_warehouses specjbb_iterations
+  local yak_epochs yak_records_per_epoch yak_sort_records_per_epoch
+  local yak_graphchi_edges_per_subinterval yak_workload
+
+  df_epochs=10
+  if (( RIFT_EVAL_EVENTS < 100000 )); then
+    df_epochs=2
+  fi
+  df_docs_per_epoch=$(( RIFT_EVAL_EVENTS / df_epochs ))
+  if (( df_docs_per_epoch < 1000 )); then
+    df_docs_per_epoch=1000
+  fi
+
+  streamflex_latency_events=$(( RIFT_EVAL_EVENTS / 20 ))
+  if (( streamflex_latency_events < 1000 )); then
+    streamflex_latency_events=1000
+  fi
+  streamflex_pressure_events=$(( RIFT_EVAL_EVENTS / 10 ))
+  if (( streamflex_pressure_events < 5000 )); then
+    streamflex_pressure_events=5000
+  fi
+
+  specjbb_warehouses=4
+  specjbb_iterations=$(( RIFT_EVAL_EVENTS / specjbb_warehouses ))
+  if (( specjbb_iterations < 1000 )); then
+    specjbb_iterations=1000
+  fi
+
+  yak_epochs=10
+  if (( RIFT_EVAL_EVENTS < 100000 )); then
+    yak_epochs=2
+  fi
+  yak_records_per_epoch=$(( RIFT_EVAL_EVENTS / yak_epochs ))
+  if (( yak_records_per_epoch < 1000 )); then
+    yak_records_per_epoch=1000
+  fi
+  yak_sort_records_per_epoch=$(( yak_records_per_epoch / 5 ))
+  if (( yak_sort_records_per_epoch < 1000 )); then
+    yak_sort_records_per_epoch=1000
+  fi
+  yak_graphchi_edges_per_subinterval=$(( yak_records_per_epoch / 20 ))
+  if (( yak_graphchi_edges_per_subinterval < 1000 )); then
+    yak_graphchi_edges_per_subinterval=1000
+  fi
+
+  run_broom
+  run_logged selected-dataflow "$FORK" env DATAFLOW_EPOCHS="$df_epochs" DATAFLOW_DOCS_PER_EPOCH="$df_docs_per_epoch" DATAFLOW_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" DATAFLOW_MODES="gc-heap region-scoped-rooted checked-epoch-stream checked-epoch-scoped checked-page-token checked-page-token-scoped" zsh sandbox/run_dataflow_region_matrix.sh
+  run_logged selected-streamflex-design "$FORK" env STREAMFLEX_DESIGN_EVENTS="$RIFT_EVAL_EVENTS" STREAMFLEX_DESIGN_LATENCY_EVENTS="$streamflex_latency_events" STREAMFLEX_DESIGN_PRESSURE_LATENCY_EVENTS="$streamflex_pressure_events" STREAMFLEX_DESIGN_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" STREAMFLEX_DESIGN_WARMUPS=0 STREAMFLEX_DESIGN_MODES="gc-heap region-scoped-rooted checked-epoch-scoped checked-epoch-stream" STREAMFLEX_DESIGN_OUTPUT_DIR="$SUMMARY_DIR/streamflex-design" zsh sandbox/run_streamflex_design_matrix.sh
+  for yak_workload in wordcount graphstep topword graphchi sort; do
+    run_logged "selected-yak-${yak_workload}" "$FORK" env YAK_WORKLOAD="$yak_workload" YAK_EPOCHS="$yak_epochs" YAK_RECORDS_PER_EPOCH="$yak_records_per_epoch" YAK_MESSAGES_PER_EPOCH="$yak_records_per_epoch" YAK_SORT_RECORDS_PER_EPOCH="$yak_sort_records_per_epoch" YAK_GRAPHCHI_EDGES_PER_SUBINTERVAL="$yak_graphchi_edges_per_subinterval" YAK_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" YAK_WARMUPS=0 YAK_MODES="heap region-scoped-rooted checked-epoch-stream checked-epoch-scoped" YAK_OUTPUT_DIR="$SUMMARY_DIR/yak-${yak_workload}" zsh sandbox/run_yak_region_instrumented_matrix.sh
+  done
+  run_logged selected-specjbb2005 "$FORK" env SPECJBB_WAREHOUSES="$specjbb_warehouses" SPECJBB_ITERATIONS_PER_WAREHOUSE="$specjbb_iterations" SPECJBB_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" SPECJBB_WARMUPS=0 SPECJBB_MODES="gc-heap region-scoped-rooted checked-epoch-stream checked-epoch-scoped" SPECJBB_OUTPUT_DIR="$SUMMARY_DIR/specjbb2005-port" zsh sandbox/run_specjbb2005_port_matrix.sh
+}
+
 run_checked() {
   run_logged object-allocation-lowering "$FORK" env OBJECT_ALLOC_OBJECTS="$RIFT_EVAL_EVENTS" OBJECT_ALLOC_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" OBJECT_ALLOC_OUTPUT_DIR="$SUMMARY_DIR/object-allocation-lowering" zsh sandbox/run_object_allocation_lowering_matrix.sh
   run_logged checked-region-buffer "$FORK" env CHECKED_BUFFER_EPOCHS="$RIFT_EVAL_CHECKED_EPOCHS" CHECKED_BUFFER_RECORDS_PER_EPOCH="$RIFT_EVAL_CHECKED_RECORDS_PER_EPOCH" CHECKED_BUFFER_BENCHMARK_RUNS="$RIFT_EVAL_RUNS" zsh sandbox/run_checked_region_buffer_matrix.sh
@@ -244,6 +301,9 @@ main() {
   fi
   if suite_enabled broom; then
     run_broom
+  fi
+  if suite_enabled selected-prior; then
+    run_selected_prior
   fi
   if suite_enabled checked; then
     run_checked

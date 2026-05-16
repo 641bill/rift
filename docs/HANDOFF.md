@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-16 12:38 CEST
+Last updated: 2026-05-16 13:04 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -31,6 +31,16 @@ evidence, not final L1 presentation timing. It confirms Broom/Dataflow runner
 health and shows that the older StreamFlex/Yak/Stancu runners should be
 superseded in the final presentation sweep by `StreamFlexDesignMatrix`, real
 Yak LiveJournal/AskUbuntu rows, and the SPECjbb2005 workload port.
+
+Latest normalized selected-runner checkpoint:
+`scripts/run-performance-evaluation.sh` now has a `selected-prior` suite for
+the presentation-facing matrices: Broom retained dataflow, Dataflow direct
+epoch/page-token, StreamFlexDesign, Yak local direct-epoch workloads, and the
+SPECjbb2005 workload port. Smoke validation passed from the dirty runner patch
+at `/private/tmp/rift-eval-selected-prior-smoke-20260516`; no failures or
+checksum mismatches were found. Next step is to run this same suite from a
+clean committed tree at headline scale, then record it as selected
+presentation evidence.
 
 Latest all-optimizations selected sweep:
 `evidence/ALL_OPTIMIZATIONS_SELECTED_SWEEP.md` records the 2026-05-16 compact

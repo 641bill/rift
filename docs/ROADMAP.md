@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-16 12:38 CEST
+Last updated: 2026-05-16 13:04 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -21,6 +21,11 @@ The parent evaluation runner now includes Broom retained dataflow in the
 headline-scale parent `prior` run after that integration. Treat it as L2
 runner/interpretation evidence. The next final sweep should move to normalized
 selected matrices instead of relying only on the older `prior` suite.
+That selected path is now implemented as `RIFT_EVAL_SUITES=selected-prior`.
+The dirty-patch smoke at `/private/tmp/rift-eval-selected-prior-smoke-20260516`
+passed across Broom, Dataflow, StreamFlexDesign, Yak local direct-epoch rows,
+and SPECjbb2005 port. The next step is a clean headline-scale
+`selected-prior` run.
 
 Latest all-optimizations selected sweep:
 `evidence/ALL_OPTIMIZATIONS_SELECTED_SWEEP.md` records the 2026-05-16 compact
