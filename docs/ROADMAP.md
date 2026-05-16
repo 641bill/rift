@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-16 16:30 CEST
+Last updated: 2026-05-16 16:45 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -208,6 +208,20 @@ Common Crawl remains generated and not an RSS win, and Theodolite remains
 parser/query dominated. Next optimization should target remaining non-zeroing
 costs: constructor/field-store lowering, query/traversal/capsule CPU, and
 root-free scoped checks only after mixed-reference probes pass.
+
+Five-optimization closure status, 2026-05-16:
+the current evidence-driven optimization pass is closed as follows. Safe
+backend-known allocation and proof-gated no-zero are implemented for
+Rift-backed open-handle paths where the lowerer proves definite
+initialization; a fresh reference-record gate reports normal checked
+open-handle `67.109 ms`, unsafe no-zero `69.435 ms`, checked SafeZone-backed
+`72.053 ms`, and heap `311.085 ms`, with all checked open-handle objects
+zero-skipped and matching checksum. Constructor and field semantics remain
+intact; arrays, `this` escape, subclassable/module classes, impure operations,
+and unproven control flow keep the normal zeroing path. Cursor/capsule
+simplification and same-shape summaries are done only inside reusable
+operator/topology APIs. Root-free checked scoped remains future work until
+mixed-reference rejection and a real benchmark row both exist.
 
 Latest unsafe no-zero lower-bound update:
 Child implementation commit: `c5fb808a7`

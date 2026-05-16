@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-16 16:30 CEST
+Last updated: 2026-05-16 16:45 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -259,6 +259,21 @@ not an RSS win. Theodolite real streaming q2 keeps optimized
 `988.976 ms`) and legacy (`963.018 ms`) while removing heap's `19.292 ms`
 median timed GC; parser/source/query CPU dominates, so this is modest
 throughput/GC evidence rather than a new flagship GC-heavy case.
+
+Five-optimization closure pass, 2026-05-16:
+the current optimization list is now explicit instead of open-ended.
+Constructor/field-store lowering is complete only as semantics-preserving
+proof-gated no-zero for record-like open-handle allocations; constructors and
+field stores are not elided. Proof-gated no-zero is complete for primitive
+records and definitely initialized reference-field records allocated through
+`RiftOpenStreamingHandle`; the closure rerun is heap `311.085 ms`, normal
+checked open-handle `67.109 ms`, unsafe no-zero `69.435 ms`, and checked
+SafeZone-backed `72.053 ms`, with all `5,000,001` checked open-handle objects
+zero-skipped and matching checksum. The correct validation suites pass:
+`RiftRegionCheckedCompilerTest` `141/141` and `RiftRegionCheckedTest`
+`65/65`. Traversal/cursor/capsule simplification remains limited to
+operator-owned paths with probes, summary-on-append remains topology/operator
+evidence, and root-free checked scoped remains gated rather than a safe claim.
 
 Latest unsafe no-zero lower-bound checkpoint:
 Child implementation commit: `c5fb808a7`

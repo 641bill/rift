@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-16 16:30 CEST
+Last updated: 2026-05-16 16:45 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -273,6 +273,21 @@ RSS; Theodolite real streaming q2 `checked-epoch-stream` is `952.664 ms`
 versus heap `988.976 ms` and legacy `963.018 ms`, removing heap's `19.292 ms`
 median timed GC. These are L2 interpretation/transfer rows, not new L1
 headline rows.
+
+Five-optimization closure status:
+the current pass closes the evidence-driven optimization list as follows.
+Backend-known checked allocation and proof-gated no-zero are implemented for
+Rift-backed open-handle epoch/page/window paths where the backend and
+initialization proof are known. The 2026-05-16 reference-record rerun keeps
+normal checked open-handle allocation at the unsafe no-zero ceiling
+(`67.109 ms`, `0` zeroed objects, `5,000,001` zero-skipped objects, matching
+checksum), and the safety suites pass (`141/141` compiler, `65/65` runtime).
+Traversal/cursor/capsule simplification is complete only inside operator-owned
+paths with stale-token/close probes; further traversal work is operator/query
+CPU, not removable memory-safety bookkeeping. Same-shape summary-on-append
+operators remain topology/operator evidence. Root-free checked scoped remains
+gated and must not be reported as safe until mixed-reference rejection and a
+benchmark row exist.
 
 Latest reusable-slab zeroing experiment:
 `RIFT_ZERO_REUSED_SLABS=1` is a gated runtime policy that bulk-zeros dead
