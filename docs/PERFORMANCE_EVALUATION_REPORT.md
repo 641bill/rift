@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-16 16:45 CEST
+Last updated: 2026-05-16 17:05 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -80,6 +80,12 @@ RSS `12.8 MB`, and checked scoped `4.52 s`, RSS `13.0 MB`, with matching
 checksums. L2 shows material heap GC: aggregate heap spends `410.002 ms`
 median timed GC (`24%` of elapsed) and join spends `267.636 ms` (`16%`),
 while checked rows report `0 ms` timed GC.
+The 2026-05-16 scoped-backend completion pass fills the 1M and 5M curve:
+at 5M, aggregate is heap `1.60 s`, checked Rift `1.18 s`, and checked scoped
+`1.31 s`; join is heap `1.46 s`, checked Rift `1.21 s`, and checked scoped
+`1.18 s`. L2 confirms heap GC remains material at 5M (`104.789 ms` aggregate,
+`54.116 ms` join), while checked Rift/scoped rows report zero timed GC and
+about `13 MB` RSS.
 The 1M high-active-timestamp follow-up also gives fixed-memory evidence:
 heap completes at `256M` but fails at `128M` and `64M`, while checked Rift
 completes with matching checksum/output and about `53-56 MB` total RSS.

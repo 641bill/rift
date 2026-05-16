@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-16 16:45 CEST
+Last updated: 2026-05-16 17:05 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -222,6 +222,14 @@ and unproven control flow keep the normal zeroing path. Cursor/capsule
 simplification and same-shape summaries are done only inside reusable
 operator/topology APIs. Root-free checked scoped remains future work until
 mixed-reference rejection and a real benchmark row both exist.
+
+Next evaluation checkpoint:
+the Broom/Naiad-style retained dataflow matrix now has checked scoped backend
+rows at 1M, 5M, and 20M. This completes the safe-backend scale curve for the
+first prior-work-style retained-object GC-heavy dataflow case study. The next
+evaluation step should move from generated/local methodology to real retained
+stream/data-processing inputs, starting with richer LogHub sessions/templates
+or StackExchange/StackOverflow text epochs.
 
 Latest unsafe no-zero lower-bound update:
 Child implementation commit: `c5fb808a7`

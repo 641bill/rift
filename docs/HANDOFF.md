@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-16 16:45 CEST
+Last updated: 2026-05-16 17:05 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -274,6 +274,16 @@ zero-skipped and matching checksum. The correct validation suites pass:
 `65/65`. Traversal/cursor/capsule simplification remains limited to
 operator-owned paths with probes, summary-on-append remains topology/operator
 evidence, and root-free checked scoped remains gated rather than a safe claim.
+
+Next evaluation step completed:
+`BROOM_RETAINED_DATAFLOW_MATRIX.md` now includes 1M and 5M
+`checked-region-scoped` rows in addition to the existing 20M backend
+comparison. The 5M L1 rows are aggregate heap `1.60 s`, checked Rift
+`1.18 s`, checked scoped `1.31 s`; join heap `1.46 s`, checked Rift
+`1.21 s`, checked scoped `1.18 s`. L2 shows heap GC remains material
+(`104.789 ms` aggregate and `54.116 ms` join), while checked rows report zero
+timed GC and about `13 MB` RSS. This fills the safe-backend scale curve for
+the Broom/Naiad-style retained-object case study.
 
 Latest unsafe no-zero lower-bound checkpoint:
 Child implementation commit: `c5fb808a7`

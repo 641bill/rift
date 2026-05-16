@@ -1,7 +1,7 @@
 # Evaluation Classified Summary
 
 Date: 2026-05-09
-Last updated: 2026-05-16 16:30 CEST
+Last updated: 2026-05-16 17:05 CEST
 
 Status: thesis-facing classified summary built from committed evidence.
 Baseline commits for clean rows: parent `1cc3b2c`, child `13a3df1c7`.
@@ -54,7 +54,7 @@ The 2026-05-16 presentation normalization keeps this row as a first-class
 prior-work-style headline row and keeps same-shape/drop-anchor rows in the
 mechanism appendix unless they are explicitly being used for causality.
 The latest Broom rerun adds `checked-region-scoped` as a best-safe-region
-comparison row for the 20M aggregate/join scale point.
+comparison row for the 1M, 5M, and 20M aggregate/join scale points.
 The latest normalized selected prior-work sweep is
 `evidence/SELECTED_PRIOR_WORK_SWEEP_2026_05_16.md`, run from parent
 `14038d3` and child `15c4c39ac`. It should be used as the current
@@ -111,7 +111,7 @@ not presentation requirements.
 | Presentation group | L1 elapsed/RSS | L2 GC/region interpretation | Metadata/classification | Current action |
 |---|---|---|---|---|
 | Focused retained epoch | complete | complete | retained-object memory-management | keep as cleanest memory-management row |
-| Broom retained timestamped aggregate/join | complete, including 20M checked scoped backend comparison | complete, including 20M checked scoped backend interpretation | prior-work-style natural heap vs checked Rift retained dataflow | keep as the first Broom/Naiad-like GC-heavy dataflow row; same-shape controls are appendix-only and checked scoped is the safe backend comparison |
+| Broom retained timestamped aggregate/join | complete, including 1M/5M/20M checked scoped backend comparison | complete, including 1M/5M/20M checked scoped backend interpretation | prior-work-style natural heap vs checked Rift retained dataflow | keep as the first Broom/Naiad-like GC-heavy dataflow row; same-shape controls are appendix-only and checked scoped is the safe backend comparison |
 | GH Archive-shaped retained q2 | complete | complete | generated/preloaded retained-object row | keep; label generated/preloaded, not real-input proof |
 | LogHub retained q2/q3 | complete | complete | generated/indexable retained rows | keep q2 as strong retained row; mark q3 checked-stream as modest/RSS row |
 | DSPBench Fraud retained q2 | complete | complete | generated/indexable retained row | keep as modest retained win |
