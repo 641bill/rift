@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-16 14:42 CEST
+Last updated: 2026-05-16 14:55 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -376,6 +376,22 @@ open-handle alias `0.27 s`, checked scoped epoch `0.31 s`, and rooted scoped
 heap `67.378 ms` with `7.635 ms` GC, legacy `56.371 ms`, optimized default
 `51.168 ms`, explicit alias `49.977 ms`, checked scoped `54.146 ms`, and
 rooted scoped `60.347 ms`.
+
+Latest local Stancu handle-backed epoch checkpoint:
+Child implementation commit: `3aa045af4`
+(`Promote Stancu checked epoch allocation`). `StancuRegionMatrix`
+`rift-checked-direct-epoch` now uses `RiftRegion.streamingOpenHandle` plus
+`RiftAllocator.allocateOpenHandle`; the previous generic
+`RiftRegion.epoch`/`allocOpen` path remains available as
+`rift-checked-direct-epoch-legacy`. Validation: `sandbox3_next/compile`
+passed. A 20k gate matched checksums across heap, optimized checked, legacy
+checked, and checked SafeZone direct epoch. The 200k gate reports heap
+`44.144 ms` with `4.837 ms` GC, optimized checked `28.554 ms`, legacy checked
+`29.687 ms`, and checked SafeZone direct epoch `26.405 ms`, all with checksum
+`-1953196317317355226`. Treat this as a general allocation-lowering transfer
+gate; checked SafeZone remains the fastest local Stancu backend in this small
+probe, and the SPECjbb2005-workload port remains the cleaner report-facing
+Stancu/SPECjbb row.
 
 Latest all-optimizations checkpoint:
 The child working tree adds a focused

@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-16 14:42 CEST
+Last updated: 2026-05-16 14:55 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -525,6 +525,12 @@ checked scoped `3.83 s`, rooted scoped `3.90 s`, and heap `4.33 s`; L2 is
 optimized `993.191 ms`, legacy `1006.176 ms`, checked scoped `995.167 ms`,
 rooted scoped `1009.541 ms`, and heap `1054.432 ms` with `19.906 ms` GC. These
 are positive handle-backed allocation results, not zeroing/root-free claims.
+The older local `StancuRegionMatrix` direct-epoch probe now has the same
+default/legacy split: at 200k transactions, optimized
+`rift-checked-direct-epoch` is `28.554 ms` versus legacy `29.687 ms` and heap
+`44.144 ms` with `4.837 ms` GC. Checked SafeZone direct epoch is still fastest
+there (`26.405 ms`), so this is allocation-lowering transfer evidence rather
+than a new headline replacement for the SPECjbb2005-workload port.
 
 Latest operator-gate status:
 `evidence/OPERATOR_GATE_STATUS.md`. This keeps rank/top-k/median/hash/join work

@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-16 14:42 CEST
+Last updated: 2026-05-16 14:55 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -141,6 +141,14 @@ control. Generated/preloaded 1M improves `291.519 -> 269.309 ms`; a real HDFS
 streaming-file 100k sanity row is neutral (`273.834 -> 275.054 ms`), so this is
 transfer evidence rather than a new real-input headline. Leave reusable
 `EpochTopKByKey` scoped rows as the report-facing LogHub API result.
+Child `3aa045af4` extends the same audit to the local Stancu transaction
+matrix. The default `rift-checked-direct-epoch` now uses backend-known
+open-handle allocation, while `rift-checked-direct-epoch-legacy` keeps the old
+generic checked path. The 200k transaction gate improves checked direct epoch
+`29.687 -> 28.554 ms` with matching checksum and removes heap's `4.837 ms`
+median timed GC; checked SafeZone direct epoch remains fastest at `26.405 ms`.
+Keep this as allocation-lowering transfer evidence and continue using the
+SPECjbb2005-workload port for the report-facing Stancu/SPECjbb row.
 
 Latest handle-backed allocation checkpoint:
 - child implementation commit: `1a1c45c75` (`Promote handle-backed checked allocation`)

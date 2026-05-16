@@ -1,7 +1,7 @@
 # Evaluation Classified Summary
 
 Date: 2026-05-09
-Last updated: 2026-05-16 14:42 CEST
+Last updated: 2026-05-16 14:55 CEST
 
 Status: thesis-facing classified summary built from committed evidence.
 Baseline commits for clean rows: parent `1cc3b2c`, child `13a3df1c7`.
@@ -41,6 +41,11 @@ StreamFlexDesign 1M optimized checked stream is `0.88 s` versus legacy
 versus legacy `1.07 s`; GH Archive-shaped q2 1M optimized page-token is
 `0.80 s` versus legacy `0.85 s`; LogHub retained top-template 1M optimized
 checked epoch is `0.69 s` versus legacy `0.75 s`.
+The follow-up local Stancu transaction probe extends that default/legacy audit:
+optimized `rift-checked-direct-epoch` is `28.554 ms` versus legacy
+`29.687 ms`, with matching checksum and heap at `44.144 ms` / `4.837 ms` GC;
+checked SafeZone direct epoch remains fastest at `26.405 ms`, so this is
+allocation-lowering transfer evidence rather than a new headline row.
 The latest retained-object prior-work row is
 `evidence/BROOM_RETAINED_DATAFLOW_MATRIX.md`: a Broom/Naiad-style timestamped
 aggregate/join matrix that headlines natural heap/GC versus checked Rift,
