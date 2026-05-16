@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-16 13:11 CEST
+Last updated: 2026-05-16 13:44 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -111,6 +111,20 @@ checked epoch stream throughput `363.792 ms` versus heap `503.013 ms`, with
 latency deadline misses `0` versus heap `14`; Yak checked epoch scoped wins
 all five local workloads; SPECjbb2005-port checked epoch stream is
 `119.916 ms` versus heap `162.939 ms`.
+
+Latest normalized selected stream sweep:
+`evidence/SELECTED_STREAMS_SWEEP_2026_05_16.md` records the clean
+presentation-facing stream/application sweep from parent `46c4ea8` and child
+`15c4c39ac`. It covers Common Crawl page-token q1/q2, NEXMark q3/q8/q9/q11,
+GH Archive q1/q2, LogHub q2/q3, LogHub top templates, and real DSPBench
+Fraud/Log q2; Theodolite q2 was skipped because the real household-power trace
+was not configured. Highlights: generated Common Crawl q1/q2 checked
+page-token is `16.04/16.36 s` versus heap `22.55/21.41 s`; NEXMark checked
+Rift is best or tied-best on q3/q8/q9/q11; LogHub generated q2/q3 direct
+checked epoch is `2.46/10.32 s` versus heap `3.63/11.22 s`; LogHub top
+templates checked scoped top-k is `1.39 s` versus heap `2.03 s`; DSPBench real
+file-backed rows remain modest/control evidence rather than GC-heavy flagship
+proof.
 
 Latest classified evidence summary:
 `evidence/EVALUATION_CLASSIFIED_SUMMARY.md`. This is the first table to use

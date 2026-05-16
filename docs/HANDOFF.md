@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-16 13:23 CEST
+Last updated: 2026-05-16 13:44 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -67,6 +67,17 @@ The dirty-runner smoke passed at
 NEXMark, GH Archive, LogHub region, LogHub top templates, and DSPBench all
 completed with matching checksums/output counts and no failed rows. Theodolite
 was skipped as intended because `THEODOLITE_POWER_INPUT` was not set.
+
+Clean selected stream sweep:
+`evidence/SELECTED_STREAMS_SWEEP_2026_05_16.md` records the clean
+headline-scale `selected-streams` run from parent `46c4ea8` and child
+`15c4c39ac`, with output under
+`/private/tmp/rift-eval-selected-streams-headline-20260516`. No failures or
+checksum mismatches were found. Highlights: Common Crawl q1/q2 checked
+page-token `16.04/16.36 s` versus heap `22.55/21.41 s`; LogHub generated q2/q3
+checked scoped epoch `2.46/10.32 s` versus heap `3.63/11.22 s`; LogHub top
+templates checked scoped top-k `1.39 s` versus heap `2.03 s`; DSPBench real
+file-backed rows remain modest/control evidence.
 
 Latest all-optimizations selected sweep:
 `evidence/ALL_OPTIMIZATIONS_SELECTED_SWEEP.md` records the 2026-05-16 compact

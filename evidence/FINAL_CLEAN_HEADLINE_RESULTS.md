@@ -1,7 +1,7 @@
 # Final-Clean Headline Results
 
 Date: 2026-05-09
-Last updated: 2026-05-16 03:56 CEST
+Last updated: 2026-05-16 13:44 CEST
 
 Status: L1 runner support exists for the first representative binaries. One
 focused retained-epoch L1 row has been collected from clean child commit
@@ -94,6 +94,13 @@ headline row: natural heap/GC versus checked Rift on timestamped aggregate and
 join workloads that retain ordinary records until notification/close. The
 latest 20M rerun also adds `checked-region-scoped` as the best-safe-region
 comparison row for Broom.
+`evidence/SELECTED_STREAMS_SWEEP_2026_05_16.md` now records the clean selected
+stream/application sweep from parent `46c4ea8` and child `15c4c39ac`.
+Use that evidence file as the current L1/L2 source for Common Crawl
+page-token q1/q2, NEXMark q3/q8/q9/q11, GH Archive q1/q2, generated LogHub
+q2/q3, generated LogHub top templates, and real DSPBench Fraud/Log q2.
+Theodolite q2 remains a separate real-trace row and is skipped by the selected
+stream runner unless `THEODOLITE_POWER_INPUT` is set.
 
 ## Definition
 
@@ -148,6 +155,7 @@ avoid internal timed-section stats.
 | StreamFlex | throughput and latency rows | prior-work latency/throughput axis |
 | StreamFlex design | stable/transient/capsule throughput and paced-latency rows | Rift-native reproduction of the StreamFlex design axes |
 | Broom retained dataflow | timestamped aggregate/join, including high-active-timestamp variant | prior-work-style retained-object dataflow with natural heap/GC versus checked Rift |
+| selected streams/applications | Common Crawl page-token q1/q2; NEXMark q3/q8/q9/q11; GH Archive q1/q2; LogHub q2/q3 and top templates; DSPBench Fraud/Log q2 | presentation-facing stream/application sweep; Theodolite q2 remains opt-in on a real trace |
 | StreamIt controls | BeamFormer and FilterBank primitive DSP rows | StreamFlex/StreamIt methodology controls, not memory-management wins |
 | Stancu/SPECjbb-style | transaction rows | transaction-boundary region axis |
 | retained top-k API | LogHub HDFS top templates; Yak topword | reusable `EpochTopKByKey` evidence |
@@ -162,6 +170,7 @@ avoid internal timed-section stats.
 | direct epoch | Yak LiveJournal, Dataflow, StreamFlex, Stancu, SPECjbb-style rows have L1 rows | L2 rows exist in per-matrix docs/report | complete for current report |
 | page/window token | Common Crawl-shaped, LogHub HDFS q2, DSPBench Fraud/Log q2, GH Archive q1/q2 have L1 rows | L2 rows exist for GC/RSS interpretation | complete for current report |
 | generated methodology | NEXMark q3/q8/q9/q11 have L1 rows | L2 rows remain the GC source | complete for selected rows |
+| selected stream/application sweep | Common Crawl page-token, NEXMark, GH Archive, LogHub, LogHub top-template, and DSPBench selected rows refreshed at 1M/3-run scale | L2 standard stats are in the same selected sweep summaries | complete for current generated/default stream presentation rows; Theodolite remains opt-in on real trace |
 | StreamIt controls | BeamFormer/FilterBank have a 3-run L1 control matrix | 3-run L2 rows exist for GC/latency interpretation | complete as primitive StreamFlex-axis controls |
 | ReML/MLKit ports | Tier 1 and first Tier 2 local ports have L1 rows | L2 rows exist for Tier 1 and first Tier 2 interpretation | exact artifact rerun still blocked |
 | real-input top-k/text/control | LogHub HDFS 1M x20 and 5M x5 have L1 rows; AskUbuntu `topwordreal` 10M/20M x5 has L1 rows; Theodolite power q2 has L1 rows | HDFS 5M, AskUbuntu 10M/20M, and Theodolite q2 L2 rows added for GC interpretation | continue larger real-input search after report update |

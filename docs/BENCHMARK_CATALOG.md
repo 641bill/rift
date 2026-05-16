@@ -1,7 +1,7 @@
 # Rift Benchmark Catalog
 
 Date: 2026-05-05
-Last updated: 2026-05-16 03:56 CEST
+Last updated: 2026-05-16 13:44 CEST
 
 Status: working benchmark guide. Use this document to understand what each
 benchmark is meant to test before reading the detailed result files in
@@ -56,6 +56,13 @@ The latest GC-heavy benchmark-search note is
 streaming or data-processing rows: larger input alone is not enough; the next
 candidate should naturally retain ordinary objects in joins, sessions,
 windows, graph epochs, transactions, or high-cardinality keyed state.
+
+The current presentation-facing stream/application sweep is
+`evidence/SELECTED_STREAMS_SWEEP_2026_05_16.md`, produced by
+`RIFT_EVAL_SUITES=selected-streams`. It covers Common Crawl page-token,
+NEXMark, GH Archive, LogHub q2/q3, LogHub top templates, and DSPBench
+Fraud/Log q2. Theodolite q2 remains opt-in and requires
+`THEODOLITE_POWER_INPUT` to point to the real household-power trace.
 
 ## 1.1 Outcome Labels
 

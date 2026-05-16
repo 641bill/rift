@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-16 13:23 CEST
+Last updated: 2026-05-16 13:44 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -43,7 +43,11 @@ checked Rift topology rows by default; controls remain behind
 across Common Crawl, NEXMark, GH Archive, LogHub, and DSPBench; Theodolite was
 skipped as intended because the real trace path was unset. Next: commit the
 runner and run a clean headline selected-streams sweep for presentation
-evidence.
+evidence. That clean selected-streams sweep is now recorded in
+`evidence/SELECTED_STREAMS_SWEEP_2026_05_16.md` from parent `46c4ea8` and child
+`15c4c39ac`, with no failed rows. It should be the current generated/default
+stream/application presentation source; Theodolite q2 remains the opt-in
+real-trace follow-up.
 
 Latest all-optimizations selected sweep:
 `evidence/ALL_OPTIMIZATIONS_SELECTED_SWEEP.md` records the 2026-05-16 compact

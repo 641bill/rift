@@ -772,7 +772,7 @@ pre code {
         </div>
       </div>
       <aside class="hero-panel" aria-label="Report metadata">
-        <div class="panel-row"><span>Generated</span><strong>2026-05-16 13:12 CEST</strong></div>
+        <div class="panel-row"><span>Generated</span><strong>2026-05-16 13:46 CEST</strong></div>
         <div class="panel-row"><span>Source</span><strong>docs/PERFORMANCE_EVALUATION_REPORT.md</strong></div>
         <div class="panel-row"><span>Audience</span><strong>External systems / PL reader</strong></div>
         <div class="panel-row"><span>Headline rule</span><strong>Clean total time and RSS first</strong></div>
@@ -1421,9 +1421,9 @@ pre code {
 <tr>
 <td>Generated object-pressure stream</td>
 <td>Common Crawl WET-shaped generated q1/q2, 1M pages.</td>
-<td>Checked page-token stream: <code>4.02 / 4.16s</code>.</td>
-<td>GC heap: <code>5.68 / 5.53s</code>.</td>
-<td>Shows the intended high-allocation stream regime, but it is generated, not a real-data proof.</td>
+<td>Checked page-token stream: <code>16.04 / 16.36s</code>.</td>
+<td>GC heap: <code>22.55 / 21.41s</code>.</td>
+<td>Clean selected-streams sweep: strong checked page/window win with about 1.6s heap GC removed in L2, but generated, not real-data proof.</td>
 </tr>
 <tr>
 <td>StreamFlex design reproduction</td>
@@ -1431,6 +1431,13 @@ pre code {
 <td>Checked epoch scoped: <code>1.27s</code>, RSS about <code>7.9 MB</code>.</td>
 <td>Heap same-shape: <code>1.52s</code>, RSS about <code>12.4 MB</code>.</td>
 <td>Rift-native StreamFlex design row: throughput win, GC reduction in L2, and pressure-latency tail/deadline wins.</td>
+</tr>
+<tr>
+<td>Selected stream sweep</td>
+<td>NEXMark q3/q8/q9/q11, GH Archive, LogHub, and DSPBench selected rows.</td>
+<td>NEXMark checked wins/ties; LogHub q2/q3 checked epoch: <code>2.46 / 10.32s</code>.</td>
+<td>LogHub heap: <code>3.63 / 11.22s</code>; DSPBench real rows are modest/control.</td>
+<td>Current presentation-facing stream/application sweep; Theodolite q2 is opt-in on the real power trace.</td>
 </tr>
 <tr>
 <td>Real log top-k</td>
@@ -1504,6 +1511,12 @@ pre code {
 <td>Real NDJSON events</td>
 <td>Small time/RSS wins; parser CPU dominates</td>
 <td>Useful but not GC-heavy enough yet.</td>
+</tr>
+<tr>
+<td>DSPBench Fraud/Log q2</td>
+<td>Real bundled DSPBench files</td>
+<td>Modest/control rows; checked page-token reduces L2 GC</td>
+<td>Not a flagship GC-heavy stream row.</td>
 </tr>
 <tr>
 <td>Common Crawl WET/WAT</td>

@@ -505,9 +505,9 @@ RESULT_ROWS = [
     [
         "Generated object-pressure stream",
         "Common Crawl WET-shaped generated q1/q2, 1M pages.",
-        "Checked page-token stream: `4.02 / 4.16s`.",
-        "GC heap: `5.68 / 5.53s`.",
-        "Shows the intended high-allocation stream regime, but it is generated, not a real-data proof.",
+        "Checked page-token stream: `16.04 / 16.36s`.",
+        "GC heap: `22.55 / 21.41s`.",
+        "Clean selected-streams sweep: strong checked page/window win with about 1.6s heap GC removed in L2, but generated, not real-data proof.",
     ],
     [
         "StreamFlex design reproduction",
@@ -515,6 +515,13 @@ RESULT_ROWS = [
         "Checked epoch scoped: `1.27s`, RSS about `7.9 MB`.",
         "Heap same-shape: `1.52s`, RSS about `12.4 MB`.",
         "Rift-native StreamFlex design row: throughput win, GC reduction in L2, and pressure-latency tail/deadline wins.",
+    ],
+    [
+        "Selected stream sweep",
+        "NEXMark q3/q8/q9/q11, GH Archive, LogHub, and DSPBench selected rows.",
+        "NEXMark checked wins/ties; LogHub q2/q3 checked epoch: `2.46 / 10.32s`.",
+        "LogHub heap: `3.63 / 11.22s`; DSPBench real rows are modest/control.",
+        "Current presentation-facing stream/application sweep; Theodolite q2 is opt-in on the real power trace.",
     ],
     [
         "Real log top-k",
@@ -540,6 +547,7 @@ REAL_INPUT_ROWS = [
     ["LogHub HDFS q3 streaming", "Real streaming HDFS logs", "Large RSS reduction, slower elapsed", "Template/session control row; parser/query CPU dominates."],
     ["LogHub HDFS q2", "Real LogHub HDFS logs", "Elapsed tie, strong RSS reduction", "Useful page/window control."],
     ["GH Archive", "Real NDJSON events", "Small time/RSS wins; parser CPU dominates", "Useful but not GC-heavy enough yet."],
+    ["DSPBench Fraud/Log q2", "Real bundled DSPBench files", "Modest/control rows; checked page-token reduces L2 GC", "Not a flagship GC-heavy stream row."],
     ["Common Crawl WET/WAT", "Real archive shards", "Current real rows are GC-light", "Ceiling/control, not a flagship result."],
 ]
 

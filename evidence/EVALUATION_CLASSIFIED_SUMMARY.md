@@ -1,7 +1,7 @@
 # Evaluation Classified Summary
 
 Date: 2026-05-09
-Last updated: 2026-05-16 13:11 CEST
+Last updated: 2026-05-16 13:44 CEST
 
 Status: thesis-facing classified summary built from committed evidence.
 Baseline commits for clean rows: parent `1cc3b2c`, child `13a3df1c7`.
@@ -57,6 +57,13 @@ presentation-facing generated/local methodology sweep for Broom, Dataflow,
 StreamFlexDesign, Yak local direct-epoch workloads, and the SPECjbb2005
 workload port. The older parent `prior` sweep remains L2 interpretation
 evidence for legacy runners.
+The latest normalized selected stream sweep is
+`evidence/SELECTED_STREAMS_SWEEP_2026_05_16.md`, run from parent `46c4ea8`
+and child `15c4c39ac`. It should be used as the current presentation-facing
+stream/application sweep for Common Crawl page-token, NEXMark, GH Archive,
+LogHub, LogHub top-template, and DSPBench real bundled rows. Theodolite q2 is
+explicitly skipped unless `THEODOLITE_POWER_INPUT` points to the real
+household-power trace.
 
 ## How To Read This Table
 
@@ -108,11 +115,11 @@ not presentation requirements.
 | StreamFlex design stable/transient/capsule | complete for first 1M throughput and latency candidates | complete | StreamFlex-design generated methodology, checked framework API, latency/deadline axes | keep as Rift-native StreamFlex design reproduction; not exact Ovm artifact evidence |
 | StreamIt BeamFormer/FilterBank ports | 3-run L1 complete | 3-run L2 complete | StreamFlex/StreamIt-style primitive DSP controls | keep as methodology/control rows; not GC-heavy memory-management wins |
 | Stancu and SPECjbb2005 workload port | complete | complete | transaction/epoch topology | keep; label SPECjbb row as clean-room port, not official SPEC |
-| Common Crawl WET-shaped q1/q2 | complete | complete | generated stream stressor, checked page-token | keep as generated high-object-pressure row only |
-| NEXMark q3/q8/q9/q11 | complete | L2 remains interpretation source | generated Beam-default-style methodology | keep; not exact Beam runner evidence |
+| Common Crawl WET-shaped q1/q2 | complete, refreshed in selected stream sweep | complete | generated stream stressor, checked page-token | keep as generated high-object-pressure row only |
+| NEXMark q3/q8/q9/q11 | complete, refreshed in selected stream sweep | L2 remains interpretation source | generated Beam-default-style methodology | keep; not exact Beam runner evidence |
 | LogHub HDFS top templates | complete at 1M and 5M | complete | real retained top-k API row | keep as strongest real retained top-k row |
 | LogHub HDFS streaming-file top templates | complete for first 1M candidate | complete | real-streaming-input retained top-k API row | keep as first true streaming-input row; not yet flagship GC-heavy evidence |
-| LogHub HDFS q2/q3 streaming, Spark/Windows q3, DSPBench Log q2, GH Archive q1/q2, Theodolite power q2 | complete where used; Spark q3 L1 elapsed not promoted because `/usr/bin/time` real field was anomalous | complete | real-input and real-streaming-input page/window/epoch modest/RSS/control rows | keep as real-input modest/control evidence; HDFS q3 streaming is an RSS/fixed-memory control, not a throughput win |
+| LogHub q2/q3, LogHub top templates, DSPBench Fraud/Log q2, GH Archive q1/q2, Theodolite power q2 | selected-streams clean sweep complete for generated/default rows; Theodolite requires explicit real trace input; Spark q3 older L1 elapsed not promoted because `/usr/bin/time` real field was anomalous | complete where used | generated, real-input, and real-streaming-input page/window/epoch/top-k modest/RSS/control rows | use selected-streams for current generated/default presentation rows; keep real HDFS/GH/Theodolite file-backed rows as separate real-input evidence |
 | ReML/MLKit Tier 1 and first Tier 2 ports | complete for local ports | complete for local ports | local Scala Native port evidence | keep same-axes table; no raw ReML-vs-Rift wall-clock claim |
 | Summary-only/direct-aggregate rows | complete for selected symmetric rows | complete where needed | topology lower bound | keep only with heap and checked counterparts; never claim reclaim win |
 
