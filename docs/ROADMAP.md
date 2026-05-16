@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-16 01:55 CEST
+Last updated: 2026-05-16 02:35 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -15,6 +15,25 @@ matched. Next optimization work should audit any remaining generic allocation
 paths and then move to constructor/field-store and traversal/capsule
 simplification; do not spend more time on region reuse policies unless a row
 specifically exposes slab reuse as the bottleneck.
+
+Latest Broom retained-dataflow update:
+Child implementation commit: `9ec2fa95d`
+(`Add Broom retained dataflow benchmark`).
+`evidence/BROOM_RETAINED_DATAFLOW_MATRIX.md` adds a local Broom/Naiad-style
+timestamped dataflow benchmark that follows the prior-work headline style:
+natural heap/GC versus checked Rift. Aggregate and join retain ordinary
+records in per-timestamp dictionaries until notification/close, so this is not
+a summary-only loop. The 20M aggregate row is heap `6.66 s`, RSS `75.8 MB`,
+L2 GC `499.423 ms`, versus checked Rift `4.14 s`, RSS `13.5 MB`, GC `0 ms`;
+20M join is heap `5.72 s`, RSS `74.6 MB`, L2 GC `288.525 ms`, versus checked
+Rift `5.12 s`, RSS `12.8 MB`, GC `0 ms`. The 1M active-16 variant confirms
+the high-live-state direction: heap RSS `232-239 MB`, checked RSS `53-56 MB`,
+and checked Rift is `24-33%` faster. The high-active heap-cap follow-up
+completes at `256M` but fails at `128M` and `64M`, while checked Rift
+completes with matching checksum/output at about `53-56 MB` total RSS. This
+should become the first Broom-style GC-heavy dataflow case study. Next:
+optionally add a safe/rooted backend row; keep retained heap/drop-anchor
+controls in appendix for causality, not as the headline comparison.
 
 Latest GC-heavy benchmark investigation:
 `evidence/GC_HEAVY_BENCHMARK_INVESTIGATION.md` records the 2026-05-15
@@ -775,8 +794,10 @@ that structure before turning a result into a thesis claim.
 Fair-evaluation and measurement checkpoint:
 `docs/FAIR_EVALUATION_PROTOCOL.md` now defines the reviewer-facing comparison
 contract. Headline rows must use framework APIs or be labeled controls, and
-memory-management claims must compare retained heap/drop-anchor against
-retained checked regions. `evidence/MEASUREMENT_OVERHEAD_PROTOCOL.md` defines
+memory-management causality claims should compare retained heap/drop-anchor
+against retained checked regions, while prior-work-style headline tables should
+show natural heap/GC versus checked Rift first.
+`evidence/MEASUREMENT_OVERHEAD_PROTOCOL.md` defines
 L1 final-clean, L2 standard stats, L3 diagnostics, and L4 external profiles.
 Initial L1 final-clean support now exists for retained epoch, Yak, Dataflow,
 Common Crawl WET-shaped, ReML Tier 1, StreamFlex, Stancu,

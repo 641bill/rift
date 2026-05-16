@@ -1,7 +1,7 @@
 # Rift Benchmark Catalog
 
 Date: 2026-05-05
-Last updated: 2026-05-15 17:36 CEST
+Last updated: 2026-05-16 02:35 CEST
 
 Status: working benchmark guide. Use this document to understand what each
 benchmark is meant to test before reading the detailed result files in
@@ -16,7 +16,7 @@ should not be collapsed into a single "Rift is faster/slower" statement.
 |---|---|---|
 | Runtime-only | Is the allocator/reclaim path competitive before safety/operator overhead? | GCBench, ListOfLists, Dataflow trusted modes |
 | Topology/layout | Does the object graph shape fit region reclaim? | ListOfLists linked/flat/chunked/topology, direct-epoch q2 summaries |
-| Prior-work methodology | Does Rift behave well on Broom/Yak/StreamFlex/Stancu-shaped workloads? | Dataflow, StreamFlex, Yak, Stancu |
+| Prior-work methodology | Does Rift behave well on Broom/Yak/StreamFlex/Stancu-shaped workloads? | Broom retained dataflow, Dataflow, StreamFlex, Yak, Stancu |
 | MLKit/ReML lineage | Does Rift address classic safe region+GC workloads with higher-order and polymorphic code? | ReML paper table, `ReMLRegionMatrix` Tier 1 ports |
 | Checked operator | Is a reusable safe API cheap enough for application use? | ObjectAllocationLowering, CheckedRegionBuffer, PageToken, AppendWindow, WindowFold, TableRank |
 | Generated stream stressor | Does a realistic stream shape create enough heap pressure to show a memory-management win? | Common Crawl WET-shaped, NEXMark Beam-default |
@@ -100,6 +100,12 @@ objects are reclaimed by closing/resetting the allocation area. This is why the
 retained comparison isolates memory management better than comparing checked
 regions against a summary-only heap row.
 
+For prior-work-style headline rows, however, show the natural heap/GC program
+against the region-enabled checked program first. Same-shape retained
+heap/drop-anchor rows are appendix/mechanism controls for causality, not the
+only paper-facing comparison. `BroomRetainedDataflowMatrix` is the first row
+added under this rule.
+
 Summary-only topology tables must be symmetric. If a result reports
 `heap-direct-summary-only`, it should also report the checked/region
 direct-summary counterpart when that framework topology exists. The point is to
@@ -137,6 +143,7 @@ so it is layout evidence, not a pure allocator comparison.
 | Benchmark | Comparator anchor | What it does | Main interpretation |
 |---|---|---|---|
 | Dataflow SELECT/AGGREGATE/JOIN | Broom-style dataflow | Stream operators with short-lived tuples and operator-local lifetimes. | Good prior-work-shaped runtime evidence; SafeZone-family rows are often strong. |
+| Broom retained dataflow | Broom/Naiad-style timestamped dataflow | Timestamped aggregate and join retain ordinary event/value objects in per-timestamp dictionaries until notify/close. | Prior-work-style headline row: natural heap/GC versus checked Rift. At 20M records, aggregate checked Rift is `4.14 s` vs heap `6.66 s`, and join is `5.12 s` vs heap `5.72 s`, with large RSS and GC reductions. Evidence is in `evidence/BROOM_RETAINED_DATAFLOW_MATRIX.md`. |
 | StreamFlex matrix | StreamFlex-style memory pressure/latency | Windowed stream pressure and latency-style measurements. | Methodology evidence, not exact artifact reproduction. |
 | StreamFlex design matrix | StreamFlex stable/transient/capsule system design | Four-stage object pipeline with heap stable state, transient per-period objects, bounded primitive capsules, saturated throughput, paced latency, pressure latency, RSS, GC, and deadline metrics. | Rift-native StreamFlex design reproduction. First 1M L1 throughput row: checked epoch scoped `1.27 s` / `7.9 MB` RSS vs heap `1.52 s` / `12.4 MB`; pressure-latency L2: checked epoch scoped is fastest while checked epoch stream eliminates misses. Gap analysis is in `evidence/STREAMFLEX_GAP_ANALYSIS.md`: current speedup is close to the heap-GC-removal bound, so larger StreamFlex-style gains require reducing non-GC runtime costs and/or reproducing stronger scheduler/capsule pressure. |
 | StreamIt kernel matrix | StreamFlex / StreamIt BeamFormer and FilterBank names | Local ports of FilterBank and BeamFormer from public StreamIt sources, with throughput, p50/p95/p99/p999/max latency, deadline misses, RSS, and GC metrics. | StreamFlex-axis control, not a GC-heavy Rift win. The 3-run L1 control matrix is complete; faithful primitive DSP shape is compute/array dominated. Evidence is in `evidence/STREAMIT_KERNEL_MATRIX.md`. |

@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-15 00:37 CEST
+Last updated: 2026-05-16 02:35 CEST
 
 Status: markdown slide deck outline. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report,
@@ -34,6 +34,7 @@ Representative numbers to keep on slides:
 
 | Evidence class | Best current row | Interpretation |
 |---|---|---|
+| Prior-work-style retained dataflow | Broom retained timestamped aggregate 20M: checked Rift `4.14 s`, `13.5 MB` RSS, `0 ms` GC vs natural heap `6.66 s`, `75.8 MB`, L2 GC `499.423 ms`; timestamped join 20M: checked Rift `5.12 s`, `12.8 MB` vs heap `5.72 s`, `74.6 MB`, L2 GC `288.525 ms`. | This is the Broom/Naiad-style headline comparison: natural heap/GC versus checked Rift on ordinary objects retained until notification/close. |
 | Retained-object memory management | Focused 1M retained: checked scoped `24.274 ms`, `0 ms` GC, `4.9 MB` RSS vs retained heap `36.233 ms`, `10.109 ms` GC, `21.3 MB` RSS. | Fair region-reclaim win: both sides retain ordinary objects until epoch close. |
 | Retained generated/preloaded stressor | GH Archive-shaped retained q2 L1: checked scoped `3.44 s`, `16 MB` RSS vs retained heap `4.62 s`, `147 MB` RSS for 20 x 1M iterations; L2 checked scoped `186.868 ms` vs retained heap `257.377 ms`, `77.208 ms` GC. | Strong retained memory/RSS win, but not real-input proof. |
 | Direct-summary lower bound | GH Archive-shaped q2 L1: heap direct-summary `1.36 s`; checked stream/scoped direct-summary `1.45/1.45 s`. DSPBench Fraud/Log q2 and LogHub q2/q3 now also have checked direct-summary counterparts within about `1-4%` of heap direct-summary, except LogHub q3's CPU-heavy row at about `2-3%`. | Symmetric topology lower bound: direct-summary is fast for heap and checked regions, but it is not a reclaim claim. |
@@ -80,7 +81,8 @@ placement and lifetime policy should differ.
 | Topic | Rule |
 |---|---|
 | headline system evidence | must use reusable checked framework APIs, not benchmark-local manual arrays |
-| memory-management claim | must compare retained heap/drop-anchor against retained checked regions |
+| memory-management causality claim | must compare retained heap/drop-anchor against retained checked regions |
+| prior-work-style headline claim | compare natural heap/GC against checked Rift first, then use controls in appendix |
 | topology lower bound | summary-only/direct-aggregate rows are useful, but not pure GC/reclaim wins |
 | final timing | L1 final-clean uses external `/usr/bin/time -l` only |
 | interpretation | L2 stats provide GC/RSS/region counters; L3/L4 diagnostics and profiles explain bottlenecks |

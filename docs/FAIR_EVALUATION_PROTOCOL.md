@@ -1,7 +1,7 @@
 # Fair Evaluation Protocol
 
 Date: 2026-05-09
-Last updated: 2026-05-12 01:03 CEST
+Last updated: 2026-05-16 02:35 CEST
 
 Status: active evaluation contract for report, slides, and future benchmark
 runs. This document is the reviewer-facing rulebook for deciding what a Rift
@@ -50,9 +50,14 @@ Every headline or summary row must state:
 | unsafe/trusted lower bound | rootless or trusted modes without final checked user guarantee | backend potential only |
 | ceiling/control | heap GC is not material or heap/baseline remains best | negative or boundary evidence |
 
-Memory-management claims require retained heap/drop-anchor versus retained
-checked-region rows. Summary-only rows must be described as topology/operator
-evidence, even if they are much faster than natural heap.
+Prior-work-style headline tables should first compare the natural heap/GC
+program against the checked region-enabled program, because that is how Broom,
+Yak, StreamFlex, Stancu-style systems, and MLKit/ReML generally present the
+main result. Same-shape retained heap/drop-anchor rows remain mechanism and
+causality controls: use them when explaining why a result is from reclaim/GC
+rather than a benchmark-local rewrite, but do not make them the only headline
+comparison. Summary-only rows must be described as topology/operator evidence,
+even if they are much faster than natural heap.
 
 `real-streaming-input` is stricter than `real-file-backed`: records must be
 consumed incrementally from a source cursor/visitor, no parsed array/list may
@@ -148,7 +153,10 @@ A row can become a representative public result only if:
 - it beats heap and the best safe baseline by about 10%, or materially lowers
   GC/RSS/tail latency with no more than 5% elapsed overhead;
 - retained-object memory-management claims compare retained heap/drop-anchor
-  against retained checked regions;
+  against retained checked regions when making a causality/mechanism claim;
+  prior-work-style headline rows may compare natural heap/GC against the
+  checked region-enabled program, provided the retained object lifetime is
+  natural to the workload and stated explicitly;
 - no diagnostic/profiling/tracing/attribution elapsed is used as headline
   timing.
 

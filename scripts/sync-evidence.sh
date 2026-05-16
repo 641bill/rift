@@ -16,6 +16,7 @@ cp -f "$FORK/sandbox/PIPELINE_PARCOLL_COMPARISON.md" "$DEST/" 2>/dev/null || tru
 cp -f "$FORK/sandbox/DATAFLOW_REGION_MATRIX.md" "$DEST/" 2>/dev/null || true
 cp -f "$FORK/sandbox/STREAMFLEX_REGION_MATRIX.md" "$DEST/" 2>/dev/null || true
 cp -f "$FORK/sandbox/STREAMFLEX_DESIGN_MATRIX.md" "$DEST/" 2>/dev/null || true
+cp -f "$FORK/sandbox/BROOM_RETAINED_DATAFLOW_MATRIX.md" "$DEST/" 2>/dev/null || true
 cp -f "$FORK/sandbox/YAK_REGION_MATRIX.md" "$DEST/" 2>/dev/null || true
 cp -f "$FORK/sandbox/STANCU_REGION_MATRIX.md" "$DEST/" 2>/dev/null || true
 cp -f "$FORK/sandbox/CHECKED_REGION_BUFFER_MATRIX.md" "$DEST/" 2>/dev/null || true

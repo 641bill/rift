@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-16 01:55 CEST
+Last updated: 2026-05-16 02:35 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -23,6 +23,23 @@ legacy `1.07 s` and heap `2.06 s`; GH Archive-shaped q2 optimized page-token
 optimized checked epoch `0.69 s` versus legacy `0.75 s` and retained heap
 `1.74 s`. L2 rows in the same file are interpretation-only.
 
+Latest prior-work-style retained dataflow row:
+`evidence/BROOM_RETAINED_DATAFLOW_MATRIX.md`. This is the first Broom/Naiad-like
+timestamped dataflow benchmark that deliberately returns the headline
+comparison to the prior-work style: natural heap/GC program versus checked
+Rift program. Aggregate and join retain ordinary event/value records in
+per-timestamp dictionaries until notification/close. At 20M records, aggregate
+is heap `6.66 s`, RSS `75.8 MB`, versus checked Rift `4.14 s`, RSS `13.5 MB`;
+join is heap `5.72 s`, RSS `74.6 MB`, versus checked Rift `5.12 s`,
+RSS `12.8 MB`, with matching checksums. L2 shows material heap GC:
+aggregate heap spends `499.423 ms` median timed GC (`24%` of elapsed) and join
+spends `288.525 ms` (`15%`), while checked Rift reports `0 ms` timed GC.
+The 1M high-active-timestamp follow-up also gives fixed-memory evidence:
+heap completes at `256M` but fails at `128M` and `64M`, while checked Rift
+completes with matching checksum/output and about `53-56 MB` total RSS.
+Same-shape/drop-anchor controls remain appendix/mechanism evidence; this row's
+paper-facing comparison is natural heap/GC versus checked Rift.
+
 Latest classified evidence summary:
 `evidence/EVALUATION_CLASSIFIED_SUMMARY.md`. This is the first table to use
 when deciding whether a row is topology evidence, retained-object
@@ -34,8 +51,10 @@ benchmark-local, and gated-operator rows.
 Latest fair-evaluation contract:
 `docs/FAIR_EVALUATION_PROTOCOL.md`. This is now the reviewer-facing rulebook:
 headline rows must use reusable checked framework APIs or be clearly labeled as
-controls; memory-management claims require retained-object heap controls; and
-manual summary/count-array rows remain topology/operator lower bounds.
+controls; prior-work-style headline rows compare natural heap/GC against the
+checked region-enabled program, while retained-object heap controls stay as
+causality/mechanism evidence; and manual summary/count-array rows remain
+topology/operator lower bounds.
 
 Latest prior-work interpretation:
 `docs/PRIOR_WORK_MEMORY_MANAGEMENT_INTERPRETATION.md`. This is the zoomed-out

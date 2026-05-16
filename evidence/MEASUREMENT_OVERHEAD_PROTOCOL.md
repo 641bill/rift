@@ -1,7 +1,7 @@
 # Measurement Overhead Protocol
 
 Date: 2026-05-09
-Last updated: 2026-05-11 14:48 CEST
+Last updated: 2026-05-16 02:35 CEST
 
 Status: active protocol. Initial L1 final-clean support is implemented for the
 first representative benchmark binaries. The first clean focused retained L1
@@ -25,6 +25,9 @@ tie / RSS win. `DSPBenchRegionMatrix` has the same support from child
 Beam-default-style q3/q8/q9/q11 rows are also recorded there.
 `GithubArchiveRegionMatrix` has the same support from child `54bf38c45`; the
 two-hour real file-backed byte-slice q1/q2 rows are also recorded there.
+`BroomRetainedDataflowMatrix` now has L1 final-clean rows for timestamped
+aggregate/join retained dataflow; these are the current prior-work-style
+natural heap/GC versus checked Rift retained-object rows.
 
 ## Why This Exists
 
