@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-16 14:55 CEST
+Last updated: 2026-05-16 15:20 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -392,6 +392,23 @@ checked, and checked SafeZone direct epoch. The 200k gate reports heap
 gate; checked SafeZone remains the fastest local Stancu backend in this small
 probe, and the SPECjbb2005-workload port remains the cleaner report-facing
 Stancu/SPECjbb row.
+
+Latest LogHub generated direct-epoch allocation checkpoint:
+Child implementation commit: `342410e9d`
+(`Promote LogHub checked epoch allocation`). `LogHubRegionMatrix`
+`rift-checked-direct-epoch` now uses the active handle-backed checked Rift path
+for generated/indexable q2/q3, while `rift-checked-direct-epoch-legacy`
+preserves the old generic `RiftRegion.epoch`/`allocOpen` lowering and
+`rift-checked-direct-epoch-open-handle` is an explicit provenance alias.
+Validation: `sandbox3_next/compile` passed, the 200k gate matched checksums,
+and the 1M q2/q3 gate matched checksums/output counts across heap, optimized
+checked, legacy checked, and checked scoped direct epoch. At 1M generated
+lines, q2 reports heap `542.854 ms` with `143.713 ms` GC, optimized checked
+`192.452 ms`, legacy checked `222.544 ms`, and checked scoped `222.620 ms`.
+q3 reports heap `2161.937 ms` with `140.570 ms` GC, optimized checked
+`1794.369 ms`, legacy checked `1837.885 ms`, and checked scoped
+`1869.150 ms`. Treat this as generated allocation-lowering transfer evidence,
+not a new real-input headline row.
 
 Latest all-optimizations checkpoint:
 The child working tree adds a focused

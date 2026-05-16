@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-16 14:55 CEST
+Last updated: 2026-05-16 15:20 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -301,6 +301,17 @@ scoped `1009.541 ms`, and heap `1054.432 ms` with `19.906 ms` GC. Treat this
 as a modest positive remaining-path audit result and continue the audit on
 Yak/NEXMark only where profiles show generic checked allocation is still
 material.
+
+Latest generated LogHub allocation-lowering update:
+`LogHubRegionMatrix` direct-epoch q2/q3 now has the same handle-backed checked
+Rift lowering, with `rift-checked-direct-epoch-legacy` retained as the generic
+allocator control. At 1M generated/indexable log lines, optimized checked
+direct epoch is `192.452 ms` on q2 and `1794.369 ms` on q3. Legacy checked
+direct epoch is `222.544/1837.885 ms`, checked scoped direct epoch is
+`222.620/1869.150 ms`, and heap is `542.854/2161.937 ms` with
+`143.713/140.570 ms` timed GC. This is positive transfer evidence for the
+general allocation-lowering audit, but it remains generated/indexable evidence
+rather than real streaming-input proof.
 
 Latest zeroing attribution update:
 The object-initialization/zeroing target now has a diagnostic counter instead

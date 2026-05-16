@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-16 14:55 CEST
+Last updated: 2026-05-16 15:20 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -530,7 +530,15 @@ default/legacy split: at 200k transactions, optimized
 `rift-checked-direct-epoch` is `28.554 ms` versus legacy `29.687 ms` and heap
 `44.144 ms` with `4.837 ms` GC. Checked SafeZone direct epoch is still fastest
 there (`26.405 ms`), so this is allocation-lowering transfer evidence rather
-than a new headline replacement for the SPECjbb2005-workload port.
+than a new headline replacement for the SPECjbb2005-workload port. The
+remaining-path audit now also covers generated/indexable `LogHubRegionMatrix`
+direct-epoch q2/q3. At 1M generated lines, optimized
+`rift-checked-direct-epoch` is `192.452/1794.369 ms`, legacy checked direct
+epoch is `222.544/1837.885 ms`, checked scoped direct epoch is
+`222.620/1869.150 ms`, and heap is `542.854/2161.937 ms` with
+`143.713/140.570 ms` median timed GC. This is a positive generated
+allocation-lowering transfer (`13.5%` on q2, `2.4%` on q3 versus legacy), with
+matching checksums and output counts.
 
 Latest operator-gate status:
 `evidence/OPERATOR_GATE_STATUS.md`. This keeps rank/top-k/median/hash/join work
