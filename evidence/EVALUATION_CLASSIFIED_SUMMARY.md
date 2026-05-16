@@ -1,7 +1,7 @@
 # Evaluation Classified Summary
 
 Date: 2026-05-09
-Last updated: 2026-05-16 02:35 CEST
+Last updated: 2026-05-16 03:56 CEST
 
 Status: thesis-facing classified summary built from committed evidence.
 Baseline commits for clean rows: parent `1cc3b2c`, child `13a3df1c7`.
@@ -45,6 +45,11 @@ The latest retained-object prior-work row is
 `evidence/BROOM_RETAINED_DATAFLOW_MATRIX.md`: a Broom/Naiad-style timestamped
 aggregate/join matrix that headlines natural heap/GC versus checked Rift,
 with ordinary event/value objects retained until timestamp notification.
+The 2026-05-16 presentation normalization keeps this row as a first-class
+prior-work-style headline row and keeps same-shape/drop-anchor rows in the
+mechanism appendix unless they are explicitly being used for causality.
+The latest Broom rerun adds `checked-region-scoped` as a best-safe-region
+comparison row for the 20M aggregate/join scale point.
 
 ## How To Read This Table
 
@@ -85,7 +90,7 @@ not presentation requirements.
 | Presentation group | L1 elapsed/RSS | L2 GC/region interpretation | Metadata/classification | Current action |
 |---|---|---|---|---|
 | Focused retained epoch | complete | complete | retained-object memory-management | keep as cleanest memory-management row |
-| Broom retained timestamped aggregate/join | complete | complete | prior-work-style natural heap vs checked Rift retained dataflow | keep as the first Broom/Naiad-like GC-heavy dataflow row; same-shape controls are appendix-only |
+| Broom retained timestamped aggregate/join | complete, including 20M checked scoped backend comparison | complete, including 20M checked scoped backend interpretation | prior-work-style natural heap vs checked Rift retained dataflow | keep as the first Broom/Naiad-like GC-heavy dataflow row; same-shape controls are appendix-only and checked scoped is the safe backend comparison |
 | GH Archive-shaped retained q2 | complete | complete | generated/preloaded retained-object row | keep; label generated/preloaded, not real-input proof |
 | LogHub retained q2/q3 | complete | complete | generated/indexable retained rows | keep q2 as strong retained row; mark q3 checked-stream as modest/RSS row |
 | DSPBench Fraud retained q2 | complete | complete | generated/indexable retained row | keep as modest retained win |
@@ -108,8 +113,8 @@ not presentation requirements.
 
 | Benchmark / row | Input type | Comparison class | Heap/control row | Best safe checked row | Elapsed delta | GC delta | RSS delta | Allowed claim |
 |---|---|---|---|---|---:|---:|---:|---|
-| Broom retained timestamped aggregate 20M | generated Broom/Naiad-style timestamped dataflow | natural heap baseline / prior-work-style retained dataflow | natural heap `6.66 s` L1, RSS `75.8 MB`; L2 `2060.553 ms`, GC `499.423 ms` | checked Rift `4.14 s` L1, RSS `13.5 MB`; L2 `1593.740 ms`, GC `0 ms` | L1 `37.8%` faster; L2 `22.7%` faster | L2 `-499.423 ms` | L1 about `-82%` | Strong Broom-style retained-object GC/RSS/throughput win. Headline comparison is natural heap/GC versus checked Rift; same-shape/drop-anchor controls are appendix/mechanism evidence only. |
-| Broom retained timestamped join 20M | generated Broom/Naiad-style timestamped dataflow | natural heap baseline / prior-work-style retained dataflow | natural heap `5.72 s` L1, RSS `74.6 MB`; L2 `1988.478 ms`, GC `288.525 ms` | checked Rift `5.12 s` L1, RSS `12.8 MB`; L2 `1743.787 ms`, GC `0 ms` | L1 `10.5%` faster; L2 `12.3%` faster | L2 `-288.525 ms` | L1 about `-83%` | Broom-style retained join win with material heap GC and large RSS reduction. |
+| Broom retained timestamped aggregate 20M | generated Broom/Naiad-style timestamped dataflow | natural heap baseline / prior-work-style retained dataflow | natural heap `5.27 s` L1, RSS `75.8 MB`; L2 `1728.037 ms`, GC `410.002 ms` | checked Rift `3.59 s` L1, RSS `13.6 MB`; L2 `1248.788 ms`, GC `0 ms`; checked scoped `4.55 s`, RSS `13.7 MB` | L1 `31.9%` faster; L2 `27.7%` faster | L2 `-410.002 ms` | L1 about `-82%` | Strong Broom-style retained-object GC/RSS/throughput win. Headline comparison is natural heap/GC versus checked Rift; same-shape/drop-anchor controls are appendix/mechanism evidence only. Checked scoped is now available as the safe backend comparison row. |
+| Broom retained timestamped join 20M | generated Broom/Naiad-style timestamped dataflow | natural heap baseline / prior-work-style retained dataflow | natural heap `5.00 s` L1, RSS `74.7 MB`; L2 `1686.550 ms`, GC `267.636 ms` | checked Rift `4.26 s` L1, RSS `12.8 MB`; L2 `1465.638 ms`, GC `0 ms`; checked scoped `4.52 s`, RSS `13.0 MB` | L1 `14.8%` faster; L2 `13.1%` faster | L2 `-267.636 ms` | L1 about `-83%` | Broom-style retained join win with material heap GC and large RSS reduction. Checked scoped is also faster than heap and remains a backend comparison row. |
 | Broom retained high-active aggregate/join 1M | generated Broom/Naiad-style high-live-state dataflow | natural heap baseline / prior-work-style retained dataflow / fixed-memory | aggregate heap `0.67 s`, RSS `232 MB`; join heap `0.63 s`, RSS `239 MB`; heap completes at `256M` but OOMs at `128M`/`64M` | aggregate checked Rift `0.51 s`, RSS `53 MB`; join checked Rift `0.42-0.45 s`, RSS `56 MB` | aggregate `23.9%` faster; join `29-33%` faster | L2 removes `53.115/28.080 ms` heap GC | about `-76%` to `-77%` | High-cardinality/multiple-active-timestamp variant confirms live-state RSS, GC pressure, and fixed-memory behavior. |
 | Focused retained epoch 1M | synthetic focused matrix | retained-object drop-anchor | `heap-retained-drop-anchor` `36.233 ms`, GC `10.109 ms`, RSS `21.3 MB` | `checked-scoped-epoch-retained-no-traverse` `24.274 ms`, GC `0 ms`, RSS `4.9 MB` | `33.0%` faster | `-10.109 ms` | `-77%` | Clean retained-object memory-management win. |
 | GH Archive-shaped retained q2 | generated/preloaded stressor | retained-object drop-anchor / L1 final-clean | L1 retained heap `4.62 s`, RSS `147 MB`; L2 retained heap `257.377 ms`, GC `77.208 ms` | L1 checked scoped retained `3.44 s`, RSS `16 MB`; L2 checked scoped retained `186.868 ms`, GC `0 ms` | L1 `25.5%` faster; L2 `27.4%` faster | L2 `-77.208 ms` | L1 about `-89%` | Strong retained memory-management and RSS win; generated/preloaded, not real-input proof. Summary-only L1 lower bound is `1.28 s`. |

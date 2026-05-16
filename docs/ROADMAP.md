@@ -1,9 +1,20 @@
 # Rift Roadmap
 
-Last updated: 2026-05-16 02:35 CEST
+Last updated: 2026-05-16 04:05 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
+
+Latest report/HTML normalization:
+`docs/PERFORMANCE_EVALUATION_REPORT.md` is the normalized narrative source for
+presentation and `docs/report.html` is generated from it. The current report
+now foregrounds natural heap/GC versus checked Rift, separates best safe
+backend rows from mechanism controls, includes a prior-work metric-axis table
+in the Markdown source and generated HTML, and fixes topology-atlas
+wrapping/responsiveness. Future report edits should
+update the Markdown source, regenerate HTML, and keep same-shape retained,
+legacy checked, unsafe/rootless, and summary-only rows in appendix/control
+sections unless they are the explicit object of a mechanism claim.
 
 Latest all-optimizations selected sweep:
 `evidence/ALL_OPTIMIZATIONS_SELECTED_SWEEP.md` records the 2026-05-16 compact
@@ -17,23 +28,28 @@ simplification; do not spend more time on region reuse policies unless a row
 specifically exposes slab reuse as the bottleneck.
 
 Latest Broom retained-dataflow update:
-Child implementation commit: `9ec2fa95d`
+Child implementation commit: `15c4c39ac`
+(`Add Broom scoped backend comparison`), building on `9ec2fa95d`
 (`Add Broom retained dataflow benchmark`).
 `evidence/BROOM_RETAINED_DATAFLOW_MATRIX.md` adds a local Broom/Naiad-style
 timestamped dataflow benchmark that follows the prior-work headline style:
 natural heap/GC versus checked Rift. Aggregate and join retain ordinary
 records in per-timestamp dictionaries until notification/close, so this is not
-a summary-only loop. The 20M aggregate row is heap `6.66 s`, RSS `75.8 MB`,
-L2 GC `499.423 ms`, versus checked Rift `4.14 s`, RSS `13.5 MB`, GC `0 ms`;
-20M join is heap `5.72 s`, RSS `74.6 MB`, L2 GC `288.525 ms`, versus checked
-Rift `5.12 s`, RSS `12.8 MB`, GC `0 ms`. The 1M active-16 variant confirms
+a summary-only loop. The latest 20M rerun adds `checked-region-scoped` as the
+best-safe-region/backend comparison row. The 20M aggregate row is heap
+`5.27 s`, RSS `75.8 MB`, L2 GC `410.002 ms`, versus checked Rift `3.59 s`,
+RSS `13.6 MB`, GC `0 ms`, and checked scoped `4.55 s`, RSS `13.7 MB`; 20M
+join is heap `5.00 s`, RSS `74.7 MB`, L2 GC `267.636 ms`, versus checked
+Rift `4.26 s`, RSS `12.8 MB`, GC `0 ms`, and checked scoped `4.52 s`,
+RSS `13.0 MB`. The 1M active-16 variant confirms
 the high-live-state direction: heap RSS `232-239 MB`, checked RSS `53-56 MB`,
 and checked Rift is `24-33%` faster. The high-active heap-cap follow-up
 completes at `256M` but fails at `128M` and `64M`, while checked Rift
 completes with matching checksum/output at about `53-56 MB` total RSS. This
 should become the first Broom-style GC-heavy dataflow case study. Next:
-optionally add a safe/rooted backend row; keep retained heap/drop-anchor
-controls in appendix for causality, not as the headline comparison.
+add 1M/5M checked scoped rows only if the presentation needs the full safe
+backend scale curve; keep retained heap/drop-anchor controls in appendix for
+causality, not as the headline comparison.
 
 Latest GC-heavy benchmark investigation:
 `evidence/GC_HEAVY_BENCHMARK_INVESTIGATION.md` records the 2026-05-15

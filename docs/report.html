@@ -98,6 +98,7 @@ main {
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.92);
   box-shadow: var(--shadow);
+  min-width: 0;
 }
 .hero-copy {
   min-height: 420px;
@@ -216,12 +217,15 @@ figure {
 }
 .figure-block {
   margin-top: 24px;
+  min-width: 0;
 }
 .figure-block > figcaption {
   margin-bottom: 12px;
   color: #334155;
   font-size: 0.9rem;
   font-weight: 800;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 .so-what {
   margin-top: 12px;
@@ -246,6 +250,8 @@ figure {
   border-radius: 18px;
   background: var(--paper-soft);
   min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 .metric-win { background: linear-gradient(180deg, var(--green-soft), white); }
 .metric-method { background: linear-gradient(180deg, var(--blue-soft), white); }
@@ -271,6 +277,9 @@ figure {
   color: var(--muted);
   font-size: 0.78rem;
   font-weight: 800;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 .tag-win { border-color: #b8dec6; background: var(--green-soft); color: var(--green); }
 .tag-method { border-color: #c4d5f4; background: var(--blue-soft); color: var(--blue); }
@@ -354,6 +363,7 @@ figure {
   gap: 14px;
   align-items: stretch;
   margin-top: 22px;
+  min-width: 0;
 }
 .topology-lane {
   display: grid;
@@ -363,6 +373,9 @@ figure {
   border: 1px solid var(--line);
   border-radius: 20px;
   background: var(--paper-soft);
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 .topology-heap {
   background: linear-gradient(180deg, #fff7e6, white);
@@ -390,6 +403,9 @@ figure {
   border: 1px solid rgba(51, 65, 85, 0.16);
   border-radius: 12px;
   font-weight: 750;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 .memory-cell.durable,
 .heap-box {
@@ -414,9 +430,10 @@ figure {
 }
 .topology-card-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr));
   gap: 14px;
   margin-top: 16px;
+  min-width: 0;
 }
 .topology-card {
   display: grid;
@@ -425,9 +442,15 @@ figure {
   border: 1px solid var(--line);
   border-radius: 18px;
   background: white;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 .topology-card p {
   font-size: 0.95rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 .topology-card p strong {
   color: var(--ink);
@@ -438,6 +461,9 @@ figure {
   font-weight: 850;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 .topology-win { border-color: #b8dec6; background: linear-gradient(180deg, var(--green-soft), white); }
 .topology-method { border-color: #c4d5f4; background: linear-gradient(180deg, var(--blue-soft), white); }
@@ -445,7 +471,7 @@ figure {
 .topology-control { background: linear-gradient(180deg, #f1f5f9, white); }
 .paper-figure-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
   gap: 16px;
   margin-top: 22px;
 }
@@ -463,13 +489,18 @@ figure {
 }
 .paper-figure svg {
   width: 100%;
+  max-width: 100%;
   height: auto;
+  aspect-ratio: 360 / 260;
   border: 1px solid #dbe2ea;
   border-radius: 14px;
   background: #fbfdff;
 }
 .paper-figure p {
   font-size: 0.95rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 .svg-title {
   fill: #243244;
@@ -741,7 +772,7 @@ pre code {
         </div>
       </div>
       <aside class="hero-panel" aria-label="Report metadata">
-        <div class="panel-row"><span>Generated</span><strong>2026-05-16 03:17 CEST</strong></div>
+        <div class="panel-row"><span>Generated</span><strong>2026-05-16 04:05 CEST</strong></div>
         <div class="panel-row"><span>Source</span><strong>docs/PERFORMANCE_EVALUATION_REPORT.md</strong></div>
         <div class="panel-row"><span>Audience</span><strong>External systems / PL reader</strong></div>
         <div class="panel-row"><span>Headline rule</span><strong>Clean total time and RSS first</strong></div>
@@ -775,16 +806,16 @@ pre code {
   <div><span class="tag tag-method">Static safety plus region allocation</span></div>
 </article>
 <article class="metric-card metric-win">
+  <div class="metric-label">Prior-work-style result</div>
+  <div class="metric-value">3.59s vs 5.27s</div>
+  <p>Broom/Naiad-style timestamped aggregate: natural heap/GC versus checked Rift, with retained ordinary objects and bulk epoch close.</p>
+  <div><span class="tag tag-win">Throughput + GC + RSS win</span></div>
+</article>
+<article class="metric-card metric-win">
   <div class="metric-label">Best real-input result</div>
   <div class="metric-value">16.12s vs 18.79s</div>
   <p>Yak LiveJournal graph replay: checked epoch scoped beats the garbage-collected heap and cuts resident memory.</p>
   <div><span class="tag tag-win">Real-input throughput + RSS win</span></div>
-</article>
-<article class="metric-card metric-win">
-  <div class="metric-label">Most controlled reclaim test</div>
-  <div class="metric-value">0.47s vs 0.70s</div>
-  <p>Both heap and regions retain ordinary objects until close; checked regions bulk-close them faster.</p>
-  <div><span class="tag tag-win">Memory-management evidence</span></div>
 </article>
 </div>
   <p class="so-what"><strong>So what?</strong> The project has a clear systems question, a checked-region prototype, and two kinds of current wins: real-input epoch wins and controlled memory-management wins.</p>
@@ -1110,49 +1141,49 @@ pre code {
   <div class="topology-label">baseline</div>
   <h3>Natural heap</h3>
   <p>Objects flow into the Scala Native Immix heap. The collector later discovers which objects are dead.</p>
-  <p><strong>Strategy:</strong> No lifetime annotations. Best ergonomics, but temporary stream objects are mixed with durable control state.</p>
+  <p><strong>Strategy:</strong> No annotations; temporary stream objects are mixed with durable state.</p>
   <div><span class="tag tag-neutral">Practical default baseline</span></div>
 </article>
 <article class="topology-card topology-win">
   <div class="topology-label">memory-management test</div>
   <h3>Retained epoch</h3>
   <p>Heap and region both materialize ordinary records and retain them until an epoch boundary.</p>
-  <p><strong>Strategy:</strong> Heap drops the anchor and waits for GC. Rift closes the epoch region in bulk, without traversing records at close.</p>
+  <p><strong>Strategy:</strong> Heap drops an anchor and waits for GC; Rift bulk-closes the epoch.</p>
   <div><span class="tag tag-win">Cleanest GC-vs-region reclaim comparison</span></div>
 </article>
 <article class="topology-card topology-win">
   <div class="topology-label">batch / graph / transaction</div>
   <h3>Direct epoch</h3>
   <p>A batch, graph step, dataflow epoch, or transaction owns temporary records and scratch objects.</p>
-  <p><strong>Strategy:</strong> Use <code>RiftRegion.epoch { ... }</code>; keep durable counters/tables on heap, then close the epoch as one lifetime domain.</p>
+  <p><strong>Strategy:</strong> Use <code>RiftRegion.epoch { ... }</code>; keep durable tables on heap.</p>
   <div><span class="tag tag-win">Best current general Rift topology</span></div>
 </article>
 <article class="topology-card topology-method">
   <div class="topology-label">stream buckets</div>
   <h3>Page / window token</h3>
   <p>One page, event group, or time window owns many short-lived records such as tokens, parsed rows, or outputs.</p>
-  <p><strong>Strategy:</strong> The operator owns bucket lookup, child-region caching, append, and close, so static safety removes stale-token checks in the hot path.</p>
+  <p><strong>Strategy:</strong> Operator-owned bucket lookup and close enable hot-path check removal.</p>
   <div><span class="tag tag-method">Generated stream-object pressure win</span></div>
 </article>
 <article class="topology-card topology-win">
   <div class="topology-label">StreamFlex design</div>
   <h3>Stable / transient / capsule</h3>
   <p>Durable filter state remains on heap; each period owns transient stream objects; a bounded capsule exports primitive values or safe handles.</p>
-  <p><strong>Strategy:</strong> Use checked epochs for the transient period and treat capsule export as the explicit ownership boundary between filters.</p>
+  <p><strong>Strategy:</strong> Use checked epochs for transient periods; capsules mark transfer boundaries.</p>
   <div><span class="tag tag-win">Throughput and tail-latency evidence</span></div>
 </article>
 <article class="topology-card topology-warn">
   <div class="topology-label">topology lower bound</div>
   <h3>Summary-only</h3>
   <p>Records update primitive summaries on append and do not survive to close.</p>
-  <p><strong>Strategy:</strong> Run both heap and checked counterparts when implemented. This shows a good processing topology, not a pure memory-management win.</p>
+  <p><strong>Strategy:</strong> Run heap and checked counterparts; classify as operator/topology evidence.</p>
   <div><span class="tag tag-warn">Not a reclaim claim</span></div>
 </article>
 <article class="topology-card topology-control">
   <div class="topology-label">backend potential</div>
   <h3>Unsafe / trusted lower bound</h3>
   <p>Rootless or trusted region modes remove safety/root bookkeeping that the final user-facing system must justify statically.</p>
-  <p><strong>Strategy:</strong> Use only as an internal control to guide backend work. Do not present as the safe final Rift system.</p>
+  <p><strong>Strategy:</strong> Use only as an internal control, never as the safe final system.</p>
   <div><span class="tag tag-control">Optimization lower bound</span></div>
 </article>
 </div>
@@ -1249,6 +1280,42 @@ pre code {
         reported separately as interpretation evidence.
       </p>
       <figure class="figure-block">
+  <figcaption>Table 2a. Prior-work metric axes used for normalized reporting.</figcaption>
+  <div class="table-scroll"><table class="data-table">
+<thead><tr>
+<th>Prior system axis</th>
+<th>Metrics to report</th>
+<th>Rift row family</th>
+</tr></thead><tbody>
+<tr>
+<td>Broom / Dataflow</td>
+<td>Real time, throughput, GC share/count, RSS, operator lifetime boundary.</td>
+<td>Retained timestamped aggregate/join and SELECT/AGGREGATE/JOIN rows.</td>
+</tr>
+<tr>
+<td>StreamFlex</td>
+<td>Throughput, p50/p95/p99/p999/max latency, deadline misses, GC max/count, RSS.</td>
+<td>StreamFlexDesign stable/transient/capsule throughput and pressure-latency rows.</td>
+</tr>
+<tr>
+<td>Yak</td>
+<td>App time, GC time/count, epoch topology, peak RSS.</td>
+<td>LiveJournal graph replay and AskUbuntu/topword epoch rows.</td>
+</tr>
+<tr>
+<td>Stancu / SPECjbb-style</td>
+<td>Real time, GC time/count, RSS, region-freed object/byte proxy, max live region payload, API/annotation burden.</td>
+<td>Stancu transactions and clean-room SPECjbb2005 workload port.</td>
+</tr>
+<tr>
+<td>ReML / MLKit</td>
+<td>Program, LOC/source status, real time, RSS, GC count, region-vs-heap ratios.</td>
+<td>Same-axes PLDI-style table with local Scala Native ports where available.</td>
+</tr>
+</tbody></table></div>
+  <p class="so-what"><strong>So what?</strong> Each benchmark family keeps the metrics its predecessor literature cared about, while Rift also records standardized L1/L2 evidence.</p>
+</figure>
+      <figure class="figure-block">
   <figcaption>Table 2. Evaluation setup and baselines.</figcaption>
   <div class="table-scroll"><table class="data-table">
 <thead><tr>
@@ -1307,7 +1374,7 @@ pre code {
         top-k workload.
       </p>
       <figure class="figure-block">
-  <figcaption>Table 3. Six results to remember.</figcaption>
+  <figcaption>Table 3. Representative results under the normalized comparison rules.</figcaption>
   <div class="table-scroll"><table class="data-table">
 <thead><tr>
 <th>Result</th>
@@ -1316,6 +1383,13 @@ pre code {
 <th>Baseline/control</th>
 <th>Interpretation</th>
 </tr></thead><tbody>
+<tr>
+<td>Broom-style retained dataflow</td>
+<td>Timestamped aggregate/join with ordinary records retained until notify/close.</td>
+<td>Checked Rift aggregate/join: <code>3.59 / 4.26s</code>.</td>
+<td>Natural heap/GC: <code>5.27 / 5.00s</code>.</td>
+<td>Prior-work-style headline: natural heap versus checked Rift, with material GC removal, about 82-83% lower RSS, and a checked scoped backend comparison row.</td>
+</tr>
 <tr>
 <td>Real graph replay</td>
 <td>Yak LiveJournal, real SNAP graph input, 50M replayed edges.</td>
@@ -1331,11 +1405,11 @@ pre code {
 <td>First real text/top-word row: direct checked epoch wins; reusable top-k is lower-RSS but still slower than direct epoch.</td>
 </tr>
 <tr>
-<td>Controlled retained-object reclaim</td>
+<td>Mechanism reclaim control</td>
 <td>Focused retained-epoch matrix, 1M ordinary records x20.</td>
 <td>Checked scoped retained/drop-anchor: <code>0.47s</code>.</td>
 <td>Heap retained/drop-anchor: <code>0.70s</code>.</td>
-<td>This is the cleanest memory-management comparison because both sides retain objects until close.</td>
+<td>Appendix/control evidence: both sides retain objects until close, isolating the reclaim mechanism.</td>
 </tr>
 <tr>
 <td>Prior-work-shaped dataflow</td>
@@ -1373,7 +1447,7 @@ pre code {
 <td>A useful streaming RSS/fixed-memory control, but not a throughput win: parser/template/session CPU dominates.</td>
 </tr>
 </tbody></table></div>
-  <p class="so-what"><strong>So what?</strong> The current story is strongest for epochal graph/dataflow/transaction shapes and controlled retained-object reclaim; generated stream pressure is promising but not yet real-input proof.</p>
+  <p class="so-what"><strong>So what?</strong> The current story is strongest for retained timestamped dataflow, epochal graph/dataflow/transaction shapes, and generated page/window pressure; real streaming rows are currently more often RSS/control evidence than flagship GC-heavy throughput proof.</p>
 </figure>
     </section>
 

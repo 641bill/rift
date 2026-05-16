@@ -1,7 +1,7 @@
 # Final-Clean Headline Results
 
 Date: 2026-05-09
-Last updated: 2026-05-16 02:35 CEST
+Last updated: 2026-05-16 03:56 CEST
 
 Status: L1 runner support exists for the first representative binaries. One
 focused retained-epoch L1 row has been collected from clean child commit
@@ -91,7 +91,9 @@ x3 optimized checked retained epoch is `0.69 s` versus legacy `0.75 s` and
 retained heap `1.74 s`.
 `BroomRetainedDataflowMatrix` now adds a prior-work-style retained dataflow
 headline row: natural heap/GC versus checked Rift on timestamped aggregate and
-join workloads that retain ordinary records until notification/close.
+join workloads that retain ordinary records until notification/close. The
+latest 20M rerun also adds `checked-region-scoped` as the best-safe-region
+comparison row for Broom.
 
 ## Definition
 
@@ -156,7 +158,7 @@ avoid internal timed-section stats.
 | Representative group | L1 headline status | L2 interpretation status | Action |
 |---|---|---|---|
 | retained-object reclaim | focused, GH Archive-shaped q2, DSPBench Fraud q2, and LogHub q2/q3 now have L1 rows | L2 rows exist in retained matrix docs | complete for current report |
-| Broom retained timestamped dataflow | aggregate/join 1M, 5M, 20M, and 1M active-16 have L1 rows | L2 rows exist for the same representative rows | complete as prior-work-style natural heap vs checked Rift evidence |
+| Broom retained timestamped dataflow | aggregate/join 1M, 5M, 20M, and 1M active-16 have L1 rows; 20M also has checked scoped backend comparison | L2 rows exist for the same representative rows; 20M also has checked scoped L2 | complete as prior-work-style natural heap vs checked Rift evidence plus best-safe-region comparison |
 | direct epoch | Yak LiveJournal, Dataflow, StreamFlex, Stancu, SPECjbb-style rows have L1 rows | L2 rows exist in per-matrix docs/report | complete for current report |
 | page/window token | Common Crawl-shaped, LogHub HDFS q2, DSPBench Fraud/Log q2, GH Archive q1/q2 have L1 rows | L2 rows exist for GC/RSS interpretation | complete for current report |
 | generated methodology | NEXMark q3/q8/q9/q11 have L1 rows | L2 rows remain the GC source | complete for selected rows |
@@ -179,10 +181,12 @@ for those 20 iterations.
 
 | Benchmark | Input type | API/topology | Comparison class | Mode | Runs | Median real time | Min real time | Max real time | Max RSS | Checksum/output | Claim |
 |---|---|---|---|---|---:|---:|---:|---:|---:|---|---|
-| Broom retained aggregate 20M | generated Broom/Naiad-style timestamped dataflow | timestamp/epoch region | natural heap baseline | `heap-gc` | 3 measured runs in one final-clean process | `6.66 s` | `6.66 s` | `6.66 s` | `75759616 bytes` | checksum `-6213795708380666256`, output `14180644` | Natural heap/GC retained aggregate baseline |
-| Broom retained aggregate 20M | generated Broom/Naiad-style timestamped dataflow | checked timestamp/epoch region | prior-work-style checked region win | `checked-rift` | 3 measured runs in one final-clean process | `4.14 s` | `4.14 s` | `4.14 s` | `13549568 bytes` | checksum `-6213795708380666256`, output `14180644` | Checked Rift is about `37.8%` faster and `82%` lower RSS |
-| Broom retained join 20M | generated Broom/Naiad-style timestamped dataflow | timestamp/epoch region | natural heap baseline | `heap-gc` | 3 measured runs in one final-clean process | `5.72 s` | `5.72 s` | `5.72 s` | `74629120 bytes` | checksum `2961953091326998353`, output `13612832` | Natural heap/GC retained join baseline |
-| Broom retained join 20M | generated Broom/Naiad-style timestamped dataflow | checked timestamp/epoch region | prior-work-style checked region win | `checked-rift` | 3 measured runs in one final-clean process | `5.12 s` | `5.12 s` | `5.12 s` | `12795904 bytes` | checksum `2961953091326998353`, output `13612832` | Checked Rift is about `10.5%` faster and `83%` lower RSS |
+| Broom retained aggregate 20M | generated Broom/Naiad-style timestamped dataflow | timestamp/epoch region | natural heap baseline | `heap-gc` | 3 measured runs in one final-clean process | `5.27 s` | `5.27 s` | `5.27 s` | `75792384 bytes` | checksum `-6213795708380666256`, output `14180644` | Natural heap/GC retained aggregate baseline |
+| Broom retained aggregate 20M | generated Broom/Naiad-style timestamped dataflow | checked timestamp/epoch region | prior-work-style checked region win | `checked-rift` | 3 measured runs in one final-clean process | `3.59 s` | `3.59 s` | `3.59 s` | `13565952 bytes` | checksum `-6213795708380666256`, output `14180644` | Checked Rift is about `31.9%` faster and `82%` lower RSS |
+| Broom retained aggregate 20M | generated Broom/Naiad-style timestamped dataflow | checked scoped timestamp/epoch region | best safe backend comparison | `checked-region-scoped` | 3 measured runs in one final-clean process | `4.55 s` | `4.55 s` | `4.55 s` | `13729792 bytes` | checksum `-6213795708380666256`, output `14180644` | Checked scoped backend is faster than heap with comparable RSS to checked Rift, but slower than checked Rift on aggregate |
+| Broom retained join 20M | generated Broom/Naiad-style timestamped dataflow | timestamp/epoch region | natural heap baseline | `heap-gc` | 3 measured runs in one final-clean process | `5.00 s` | `5.00 s` | `5.00 s` | `74661888 bytes` | checksum `2961953091326998353`, output `13612832` | Natural heap/GC retained join baseline |
+| Broom retained join 20M | generated Broom/Naiad-style timestamped dataflow | checked timestamp/epoch region | prior-work-style checked region win | `checked-rift` | 3 measured runs in one final-clean process | `4.26 s` | `4.26 s` | `4.26 s` | `12812288 bytes` | checksum `2961953091326998353`, output `13612832` | Checked Rift is about `14.8%` faster and `83%` lower RSS |
+| Broom retained join 20M | generated Broom/Naiad-style timestamped dataflow | checked scoped timestamp/epoch region | best safe backend comparison | `checked-region-scoped` | 3 measured runs in one final-clean process | `4.52 s` | `4.52 s` | `4.52 s` | `12992512 bytes` | checksum `2961953091326998353`, output `13612832` | Checked scoped backend is faster than heap with comparable RSS to checked Rift |
 | Broom retained aggregate active-16 1M | generated Broom/Naiad-style high-live-state dataflow | timestamp/epoch region | natural heap baseline | `heap-gc` | 3 measured runs in one final-clean process | `0.67 s` | `0.67 s` | `0.67 s` | `232341504 bytes` | checksum `8854638383809110735`, output `839789` | Heap baseline with 16 active timestamp states |
 | Broom retained aggregate active-16 1M | generated Broom/Naiad-style high-live-state dataflow | checked timestamp/epoch region | prior-work-style checked region win | `checked-rift` | 3 measured runs in one final-clean process | `0.51 s` | `0.51 s` | `0.51 s` | `53149696 bytes` | checksum `8854638383809110735`, output `839789` | Checked Rift is about `23.9%` faster and `77%` lower RSS |
 | Broom retained join active-16 1M | generated Broom/Naiad-style high-live-state dataflow | timestamp/epoch region | natural heap baseline | `heap-gc` | 3 measured runs in one final-clean process | `0.63 s` | `0.63 s` | `0.63 s` | `239403008 bytes` | checksum `3791171928160505090`, output `591580` | Heap baseline with 16 active timestamp states |

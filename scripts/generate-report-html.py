@@ -236,17 +236,17 @@ SUMMARY_CARDS = [
         "tone": "method",
     },
     {
+        "label": "Prior-work-style result",
+        "value": "3.59s vs 5.27s",
+        "detail": "Broom/Naiad-style timestamped aggregate: natural heap/GC versus checked Rift, with retained ordinary objects and bulk epoch close.",
+        "claim": "Throughput + GC + RSS win",
+        "tone": "win",
+    },
+    {
         "label": "Best real-input result",
         "value": "16.12s vs 18.79s",
         "detail": "Yak LiveJournal graph replay: checked epoch scoped beats the garbage-collected heap and cuts resident memory.",
         "claim": "Real-input throughput + RSS win",
-        "tone": "win",
-    },
-    {
-        "label": "Most controlled reclaim test",
-        "value": "0.47s vs 0.70s",
-        "detail": "Both heap and regions retain ordinary objects until close; checked regions bulk-close them faster.",
-        "claim": "Memory-management evidence",
         "tone": "win",
     },
 ]
@@ -269,6 +269,35 @@ CONTEXT_BOXES = [
         "RSS",
         "Resident set size: the operating-system memory footprint of the process. Lower RSS can matter even when elapsed time is tied.",
     ),
+]
+
+
+PRIOR_WORK_METRIC_ROWS = [
+    [
+        "Broom / Dataflow",
+        "Real time, throughput, GC share/count, RSS, operator lifetime boundary.",
+        "Retained timestamped aggregate/join and SELECT/AGGREGATE/JOIN rows.",
+    ],
+    [
+        "StreamFlex",
+        "Throughput, p50/p95/p99/p999/max latency, deadline misses, GC max/count, RSS.",
+        "StreamFlexDesign stable/transient/capsule throughput and pressure-latency rows.",
+    ],
+    [
+        "Yak",
+        "App time, GC time/count, epoch topology, peak RSS.",
+        "LiveJournal graph replay and AskUbuntu/topword epoch rows.",
+    ],
+    [
+        "Stancu / SPECjbb-style",
+        "Real time, GC time/count, RSS, region-freed object/byte proxy, max live region payload, API/annotation burden.",
+        "Stancu transactions and clean-room SPECjbb2005 workload port.",
+    ],
+    [
+        "ReML / MLKit",
+        "Program, LOC/source status, real time, RSS, GC count, region-vs-heap ratios.",
+        "Same-axes PLDI-style table with local Scala Native ports where available.",
+    ],
 ]
 
 
@@ -319,7 +348,7 @@ TOPOLOGY_CARDS = [
         "title": "Natural heap",
         "label": "baseline",
         "shape": "Objects flow into the Scala Native Immix heap. The collector later discovers which objects are dead.",
-        "strategy": "No lifetime annotations. Best ergonomics, but temporary stream objects are mixed with durable control state.",
+        "strategy": "No annotations; temporary stream objects are mixed with durable state.",
         "claim": "Practical default baseline",
         "tone": "neutral",
     },
@@ -327,7 +356,7 @@ TOPOLOGY_CARDS = [
         "title": "Retained epoch",
         "label": "memory-management test",
         "shape": "Heap and region both materialize ordinary records and retain them until an epoch boundary.",
-        "strategy": "Heap drops the anchor and waits for GC. Rift closes the epoch region in bulk, without traversing records at close.",
+        "strategy": "Heap drops an anchor and waits for GC; Rift bulk-closes the epoch.",
         "claim": "Cleanest GC-vs-region reclaim comparison",
         "tone": "win",
     },
@@ -335,7 +364,7 @@ TOPOLOGY_CARDS = [
         "title": "Direct epoch",
         "label": "batch / graph / transaction",
         "shape": "A batch, graph step, dataflow epoch, or transaction owns temporary records and scratch objects.",
-        "strategy": "Use `RiftRegion.epoch { ... }`; keep durable counters/tables on heap, then close the epoch as one lifetime domain.",
+        "strategy": "Use `RiftRegion.epoch { ... }`; keep durable tables on heap.",
         "claim": "Best current general Rift topology",
         "tone": "win",
     },
@@ -343,7 +372,7 @@ TOPOLOGY_CARDS = [
         "title": "Page / window token",
         "label": "stream buckets",
         "shape": "One page, event group, or time window owns many short-lived records such as tokens, parsed rows, or outputs.",
-        "strategy": "The operator owns bucket lookup, child-region caching, append, and close, so static safety removes stale-token checks in the hot path.",
+        "strategy": "Operator-owned bucket lookup and close enable hot-path check removal.",
         "claim": "Generated stream-object pressure win",
         "tone": "method",
     },
@@ -351,7 +380,7 @@ TOPOLOGY_CARDS = [
         "title": "Stable / transient / capsule",
         "label": "StreamFlex design",
         "shape": "Durable filter state remains on heap; each period owns transient stream objects; a bounded capsule exports primitive values or safe handles.",
-        "strategy": "Use checked epochs for the transient period and treat capsule export as the explicit ownership boundary between filters.",
+        "strategy": "Use checked epochs for transient periods; capsules mark transfer boundaries.",
         "claim": "Throughput and tail-latency evidence",
         "tone": "win",
     },
@@ -359,7 +388,7 @@ TOPOLOGY_CARDS = [
         "title": "Summary-only",
         "label": "topology lower bound",
         "shape": "Records update primitive summaries on append and do not survive to close.",
-        "strategy": "Run both heap and checked counterparts when implemented. This shows a good processing topology, not a pure memory-management win.",
+        "strategy": "Run heap and checked counterparts; classify as operator/topology evidence.",
         "claim": "Not a reclaim claim",
         "tone": "warn",
     },
@@ -367,7 +396,7 @@ TOPOLOGY_CARDS = [
         "title": "Unsafe / trusted lower bound",
         "label": "backend potential",
         "shape": "Rootless or trusted region modes remove safety/root bookkeeping that the final user-facing system must justify statically.",
-        "strategy": "Use only as an internal control to guide backend work. Do not present as the safe final Rift system.",
+        "strategy": "Use only as an internal control, never as the safe final system.",
         "claim": "Optimization lower bound",
         "tone": "control",
     },
@@ -439,6 +468,13 @@ ENFORCED_ROWS = [
 
 RESULT_ROWS = [
     [
+        "Broom-style retained dataflow",
+        "Timestamped aggregate/join with ordinary records retained until notify/close.",
+        "Checked Rift aggregate/join: `3.59 / 4.26s`.",
+        "Natural heap/GC: `5.27 / 5.00s`.",
+        "Prior-work-style headline: natural heap versus checked Rift, with material GC removal, about 82-83% lower RSS, and a checked scoped backend comparison row.",
+    ],
+    [
         "Real graph replay",
         "Yak LiveJournal, real SNAP graph input, 50M replayed edges.",
         "Checked epoch scoped: `16.12s`, RSS about `612 MB`.",
@@ -453,11 +489,11 @@ RESULT_ROWS = [
         "First real text/top-word row: direct checked epoch wins; reusable top-k is lower-RSS but still slower than direct epoch.",
     ],
     [
-        "Controlled retained-object reclaim",
+        "Mechanism reclaim control",
         "Focused retained-epoch matrix, 1M ordinary records x20.",
         "Checked scoped retained/drop-anchor: `0.47s`.",
         "Heap retained/drop-anchor: `0.70s`.",
-        "This is the cleanest memory-management comparison because both sides retain objects until close.",
+        "Appendix/control evidence: both sides retain objects until close, isolating the reclaim mechanism.",
     ],
     [
         "Prior-work-shaped dataflow",
@@ -879,6 +915,16 @@ def render_evaluation_table() -> str:
     )
 
 
+def render_prior_work_metrics_table() -> str:
+    rows = [[esc(a), esc(b), esc(c)] for a, b, c in PRIOR_WORK_METRIC_ROWS]
+    return render_table_block(
+        ["Prior system axis", "Metrics to report", "Rift row family"],
+        rows,
+        "Table 2a. Prior-work metric axes used for normalized reporting.",
+        "Each benchmark family keeps the metrics its predecessor literature cared about, while Rift also records standardized L1/L2 evidence.",
+    )
+
+
 def render_enforced_table() -> str:
     rows = [[esc(a), inline_markdown(b), esc(c)] for a, b, c in ENFORCED_ROWS]
     return render_table_block(
@@ -897,8 +943,8 @@ def render_results_table() -> str:
     return render_table_block(
         ["Result", "Workload", "Best checked row", "Baseline/control", "Interpretation"],
         rows,
-        "Table 3. Six results to remember.",
-        "The current story is strongest for epochal graph/dataflow/transaction shapes and controlled retained-object reclaim; generated stream pressure is promising but not yet real-input proof.",
+        "Table 3. Representative results under the normalized comparison rules.",
+        "The current story is strongest for retained timestamped dataflow, epochal graph/dataflow/transaction shapes, and generated page/window pressure; real streaming rows are currently more often RSS/control evidence than flagship GC-heavy throughput proof.",
     )
 
 
@@ -1099,6 +1145,7 @@ def build_html(source: Path, markdown: str, title: str) -> str:
         timers in the timed section. Garbage collection and region counters are
         reported separately as interpretation evidence.
       </p>
+      {render_prior_work_metrics_table()}
       {render_evaluation_table()}
     </section>
 
@@ -1265,6 +1312,7 @@ main {
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.92);
   box-shadow: var(--shadow);
+  min-width: 0;
 }
 .hero-copy {
   min-height: 420px;
@@ -1383,12 +1431,15 @@ figure {
 }
 .figure-block {
   margin-top: 24px;
+  min-width: 0;
 }
 .figure-block > figcaption {
   margin-bottom: 12px;
   color: #334155;
   font-size: 0.9rem;
   font-weight: 800;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 .so-what {
   margin-top: 12px;
@@ -1413,6 +1464,8 @@ figure {
   border-radius: 18px;
   background: var(--paper-soft);
   min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 .metric-win { background: linear-gradient(180deg, var(--green-soft), white); }
 .metric-method { background: linear-gradient(180deg, var(--blue-soft), white); }
@@ -1438,6 +1491,9 @@ figure {
   color: var(--muted);
   font-size: 0.78rem;
   font-weight: 800;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 .tag-win { border-color: #b8dec6; background: var(--green-soft); color: var(--green); }
 .tag-method { border-color: #c4d5f4; background: var(--blue-soft); color: var(--blue); }
@@ -1521,6 +1577,7 @@ figure {
   gap: 14px;
   align-items: stretch;
   margin-top: 22px;
+  min-width: 0;
 }
 .topology-lane {
   display: grid;
@@ -1530,6 +1587,9 @@ figure {
   border: 1px solid var(--line);
   border-radius: 20px;
   background: var(--paper-soft);
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 .topology-heap {
   background: linear-gradient(180deg, #fff7e6, white);
@@ -1557,6 +1617,9 @@ figure {
   border: 1px solid rgba(51, 65, 85, 0.16);
   border-radius: 12px;
   font-weight: 750;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 .memory-cell.durable,
 .heap-box {
@@ -1581,9 +1644,10 @@ figure {
 }
 .topology-card-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr));
   gap: 14px;
   margin-top: 16px;
+  min-width: 0;
 }
 .topology-card {
   display: grid;
@@ -1592,9 +1656,15 @@ figure {
   border: 1px solid var(--line);
   border-radius: 18px;
   background: white;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 .topology-card p {
   font-size: 0.95rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 .topology-card p strong {
   color: var(--ink);
@@ -1605,6 +1675,9 @@ figure {
   font-weight: 850;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 .topology-win { border-color: #b8dec6; background: linear-gradient(180deg, var(--green-soft), white); }
 .topology-method { border-color: #c4d5f4; background: linear-gradient(180deg, var(--blue-soft), white); }
@@ -1612,7 +1685,7 @@ figure {
 .topology-control { background: linear-gradient(180deg, #f1f5f9, white); }
 .paper-figure-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
   gap: 16px;
   margin-top: 22px;
 }
@@ -1630,13 +1703,18 @@ figure {
 }
 .paper-figure svg {
   width: 100%;
+  max-width: 100%;
   height: auto;
+  aspect-ratio: 360 / 260;
   border: 1px solid #dbe2ea;
   border-radius: 14px;
   background: #fbfdff;
 }
 .paper-figure p {
   font-size: 0.95rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 .svg-title {
   fill: #243244;

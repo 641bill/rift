@@ -1,13 +1,56 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-16 02:35 CEST
+Last updated: 2026-05-16 04:05 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
 step. It summarizes the design, implementation status, benchmark evidence,
 runtime-overhead story, wins, losses, and open work. Individual evidence files
 remain the source of detailed command provenance.
+
+Presentation source rule: this Markdown file is the narrative source for
+`docs/report.html`; regenerate the HTML with
+`python3 scripts/generate-report-html.py` after changing presentation text.
+Do not hand-edit `docs/report.html`.
+
+Normalized presentation structure:
+
+1. Thesis and design target: checked lifetime topologies for region memory
+   management versus natural heap/GC.
+2. Topology/API versus backend: epoch, retained epoch, page/window token, and
+   StreamFlex stable/transient/capsule are program shapes; checked-stream,
+   checked-scoped, rooted scoped, and rootless/trusted rows are backend or
+   control choices.
+3. Prior-work metric axes: Broom/Dataflow reports real time, throughput, GC
+   share/count, RSS, and operator lifetime boundary; StreamFlex reports
+   throughput, latency tails/deadline misses, GC pauses, and RSS; Yak reports
+   app time, GC time/count, epoch topology, and peak RSS; Stancu/SPECjbb-style
+   rows report real time, GC time/count, RSS, region-freed proxy, live region
+   payload, and API/annotation burden; ReML/MLKit rows report program/status,
+   real time, RSS, GC count, and local region-vs-heap ratios.
+4. Headline comparison: natural heap/GC versus checked Rift first, with the
+   best safe region/backend as a comparison row where available.
+5. Mechanism appendix: same-shape retained/drop-anchor, legacy checked,
+   unsafe/rootless, and summary-only lower-bound rows are causality or
+   optimization controls, not the primary paper-facing comparison.
+6. Real-input search status and remaining optimizations stay separate from
+   validated headline evidence.
+
+Prior-work metric axes used in presentation tables:
+
+| Lineage | Headline axes | Rift standardized interpretation |
+|---|---|---|
+| Broom / Naiad-style dataflow | real time, throughput, GC share/count, RSS, operator lifetime boundary | L1 elapsed/RSS; L2 GC time/count, region object count, region open/close/reset totals, checksum/output |
+| StreamFlex | throughput, p50/p95/p99/p999/max latency, deadline misses, GC pauses, RSS | L1 throughput/RSS; L2 latency tails, deadline misses, GC max/count, region op time |
+| Yak | app time, GC time/count, epoch topology, peak memory | L1 elapsed/RSS; L2 GC time/count, epoch open/reset counts, topology label, checksum |
+| Stancu / SPECjbb-style | real time, GC time/count, RSS, region-freed object/byte proxy, max live region payload, API/annotation burden | L1 elapsed/RSS; L2 region-freed proxy, live payload proxy, API boundary counts, checksum |
+| ReML / MLKit | program/status, real time, RSS, GC count, region-vs-heap ratios | local Scala Native port status, L1/L2 heap-vs-checked ratios, no raw cross-language wall-clock claim without exact rerun |
+
+Headline tables compare the natural heap/GC program against checked Rift first.
+Best safe region/backend rows are comparison rows. Same-shape retained/drop
+anchor, legacy checked, unsafe/rootless, and summary-only rows are mechanism
+appendix rows unless a table explicitly says otherwise.
 
 Latest clean final-selection headline sweep:
 `evidence/FINAL_SELECTION_HEADLINE_2026_05_06.md`.
@@ -28,12 +71,15 @@ Latest prior-work-style retained dataflow row:
 timestamped dataflow benchmark that deliberately returns the headline
 comparison to the prior-work style: natural heap/GC program versus checked
 Rift program. Aggregate and join retain ordinary event/value records in
-per-timestamp dictionaries until notification/close. At 20M records, aggregate
-is heap `6.66 s`, RSS `75.8 MB`, versus checked Rift `4.14 s`, RSS `13.5 MB`;
-join is heap `5.72 s`, RSS `74.6 MB`, versus checked Rift `5.12 s`,
-RSS `12.8 MB`, with matching checksums. L2 shows material heap GC:
-aggregate heap spends `499.423 ms` median timed GC (`24%` of elapsed) and join
-spends `288.525 ms` (`15%`), while checked Rift reports `0 ms` timed GC.
+per-timestamp dictionaries until notification/close. The latest 20M rerun also
+adds `checked-region-scoped` as the best-safe-region/backend comparison row.
+At 20M records, aggregate is heap `5.27 s`, RSS `75.8 MB`, versus checked
+Rift `3.59 s`, RSS `13.6 MB`, and checked scoped `4.55 s`, RSS `13.7 MB`;
+join is heap `5.00 s`, RSS `74.7 MB`, versus checked Rift `4.26 s`,
+RSS `12.8 MB`, and checked scoped `4.52 s`, RSS `13.0 MB`, with matching
+checksums. L2 shows material heap GC: aggregate heap spends `410.002 ms`
+median timed GC (`24%` of elapsed) and join spends `267.636 ms` (`16%`),
+while checked rows report `0 ms` timed GC.
 The 1M high-active-timestamp follow-up also gives fixed-memory evidence:
 heap completes at `256M` but fails at `128M` and `64M`, while checked Rift
 completes with matching checksum/output and about `53-56 MB` total RSS.

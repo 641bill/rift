@@ -1,7 +1,7 @@
 # Rift Benchmark Catalog
 
 Date: 2026-05-05
-Last updated: 2026-05-16 02:35 CEST
+Last updated: 2026-05-16 03:56 CEST
 
 Status: working benchmark guide. Use this document to understand what each
 benchmark is meant to test before reading the detailed result files in
@@ -143,7 +143,7 @@ so it is layout evidence, not a pure allocator comparison.
 | Benchmark | Comparator anchor | What it does | Main interpretation |
 |---|---|---|---|
 | Dataflow SELECT/AGGREGATE/JOIN | Broom-style dataflow | Stream operators with short-lived tuples and operator-local lifetimes. | Good prior-work-shaped runtime evidence; SafeZone-family rows are often strong. |
-| Broom retained dataflow | Broom/Naiad-style timestamped dataflow | Timestamped aggregate and join retain ordinary event/value objects in per-timestamp dictionaries until notify/close. | Prior-work-style headline row: natural heap/GC versus checked Rift. At 20M records, aggregate checked Rift is `4.14 s` vs heap `6.66 s`, and join is `5.12 s` vs heap `5.72 s`, with large RSS and GC reductions. Evidence is in `evidence/BROOM_RETAINED_DATAFLOW_MATRIX.md`. |
+| Broom retained dataflow | Broom/Naiad-style timestamped dataflow | Timestamped aggregate and join retain ordinary event/value objects in per-timestamp dictionaries until notify/close. | Prior-work-style headline row: natural heap/GC versus checked Rift, with checked scoped as the best-safe-region comparison row. At 20M records, aggregate checked Rift is `3.59 s` vs heap `5.27 s` and checked scoped `4.55 s`; join checked Rift is `4.26 s` vs heap `5.00 s` and checked scoped `4.52 s`, with large RSS and GC reductions. Evidence is in `evidence/BROOM_RETAINED_DATAFLOW_MATRIX.md`. |
 | StreamFlex matrix | StreamFlex-style memory pressure/latency | Windowed stream pressure and latency-style measurements. | Methodology evidence, not exact artifact reproduction. |
 | StreamFlex design matrix | StreamFlex stable/transient/capsule system design | Four-stage object pipeline with heap stable state, transient per-period objects, bounded primitive capsules, saturated throughput, paced latency, pressure latency, RSS, GC, and deadline metrics. | Rift-native StreamFlex design reproduction. First 1M L1 throughput row: checked epoch scoped `1.27 s` / `7.9 MB` RSS vs heap `1.52 s` / `12.4 MB`; pressure-latency L2: checked epoch scoped is fastest while checked epoch stream eliminates misses. Gap analysis is in `evidence/STREAMFLEX_GAP_ANALYSIS.md`: current speedup is close to the heap-GC-removal bound, so larger StreamFlex-style gains require reducing non-GC runtime costs and/or reproducing stronger scheduler/capsule pressure. |
 | StreamIt kernel matrix | StreamFlex / StreamIt BeamFormer and FilterBank names | Local ports of FilterBank and BeamFormer from public StreamIt sources, with throughput, p50/p95/p99/p999/max latency, deadline misses, RSS, and GC metrics. | StreamFlex-axis control, not a GC-heavy Rift win. The 3-run L1 control matrix is complete; faithful primitive DSP shape is compute/array dominated. Evidence is in `evidence/STREAMIT_KERNEL_MATRIX.md`. |

@@ -1,13 +1,23 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-16 02:35 CEST
+Last updated: 2026-05-16 04:05 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
 
 Active implementation branch for this update:
 `feature/rift`
+
+Latest report/HTML normalization:
+`docs/PERFORMANCE_EVALUATION_REPORT.md` remains the presentation source and
+`docs/report.html` is generated from it. The 2026-05-16 normalization pass
+adds an explicit presentation structure, moves the Broom retained-dataflow row
+into the visible prior-work-style result story, adds the prior-work metric-axis
+table to the Markdown source and generated HTML report, and fixes
+topology-atlas wrapping with responsive cards/tables/SVG containers. Do not
+hand-edit `docs/report.html`; rerun
+`python3 scripts/generate-report-html.py` after report-source changes.
 
 Latest all-optimizations selected sweep:
 `evidence/ALL_OPTIMIZATIONS_SELECTED_SWEEP.md` records the 2026-05-16 compact
@@ -24,7 +34,8 @@ the heap/checked ordering while still showing optimized checked improves over
 legacy and cuts RSS/GC.
 
 Latest Broom-style retained dataflow checkpoint:
-Child implementation commit: `9ec2fa95d`
+Child implementation commit: `15c4c39ac`
+(`Add Broom scoped backend comparison`), building on `9ec2fa95d`
 (`Add Broom retained dataflow benchmark`).
 `BroomRetainedDataflowMatrix` and
 `sandbox/run_broom_retained_dataflow_matrix.sh` are now in the child repo, with
@@ -33,16 +44,19 @@ This is the new prior-work-style headline row: natural heap/GC versus checked
 Rift, not same-shape/drop-anchor as the primary comparison. The benchmark
 retains ordinary event/value records in timestamped aggregate and join
 dictionaries until notification/close. Clean L1/L2 rows show material Scala
-Native heap GC and large checked Rift wins. At 20M records, aggregate is heap
-`6.66 s`, RSS `75.8 MB`, L2 GC `499.423 ms`, versus checked Rift `4.14 s`,
-RSS `13.5 MB`, GC `0 ms`; join is heap `5.72 s`, RSS `74.6 MB`,
-L2 GC `288.525 ms`, versus checked Rift `5.12 s`, RSS `12.8 MB`, GC `0 ms`.
+Native heap GC and large checked Rift wins. The latest rerun also adds
+`checked-region-scoped` as the best-safe-region/backend comparison row. At 20M
+records, aggregate is heap `5.27 s`, RSS `75.8 MB`, L2 GC `410.002 ms`,
+versus checked Rift `3.59 s`, RSS `13.6 MB`, GC `0 ms`, and checked scoped
+`4.55 s`, RSS `13.7 MB`; join is heap `5.00 s`, RSS `74.7 MB`,
+L2 GC `267.636 ms`, versus checked Rift `4.26 s`, RSS `12.8 MB`, GC `0 ms`,
+and checked scoped `4.52 s`, RSS `13.0 MB`.
 The high-active-timestamp 1M variant raises heap RSS to `232-239 MB` while
 checked Rift stays near `53-56 MB` and is `24-33%` faster. Heap-cap follow-up:
 the high-active row completes at `256M` but fails at `128M` and `64M`; checked
 Rift completes with matching checksum/output at about `53-56 MB` total RSS.
-Next useful follow-up: add a safe/rooted baseline mode if backend comparison is
-needed.
+Next useful follow-up: add 1M/5M checked scoped rows only if the presentation
+needs the full scale curve for the safe backend comparison.
 
 Latest GC-heavy benchmark investigation:
 `evidence/GC_HEAVY_BENCHMARK_INVESTIGATION.md` now records the 2026-05-15
