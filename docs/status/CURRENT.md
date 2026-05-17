@@ -1,6 +1,6 @@
 # Current Rift Status
 
-Last updated: 2026-05-18 00:22 CEST
+Last updated: 2026-05-18 00:44 CEST
 
 Status: hot status file. Update this file for routine turn-by-turn progress
 instead of editing `docs/HANDOFF.md`, `docs/ROADMAP.md`,
@@ -12,7 +12,7 @@ instead of editing `docs/HANDOFF.md`, `docs/ROADMAP.md`,
 |---|---|---|
 | Native backend | `scala-native-rift/nativelib/**`, `nscplugin/**`, `unit-tests/native/**`, `sandbox/**` | Scala Native remains the only validated performance backend. Native sandbox compile passed after portable prototype extraction. |
 | Backend portability | parent branch `backend-portability` | JVM/HotSpot/Scala.js/Wasm portability docs, prototype evidence, and `experimental/**` patch exports are isolated on `backend-portability` at `065b521`. Keep `main` focused on Scala Native evidence unless backend results are intentionally promoted to presentation context. |
-| Benchmark search | parent `evidence/**` plus child sandbox result files | Broom q17 retained join/aggregate and Broom shopper are complete generated methodology rows. SPECjbb/Stancu-style 8M transaction scaling is recorded as generated clean-room methodology evidence, not real-input proof. LogHub Spark archive-wide retained session is now the strongest LogHub real-streaming RSS/fixed-memory row, AskUbuntu compressed streaming scales to 5M, and Yak LiveJournal now has a 20M compressed-source graph streaming row with RSS/fixed-memory, heap-cap, and throughput gains but low GC-time share. Real-input search remains focused on retained-object workloads because Immix keeps many parser/filter/count real streams low-GC. |
+| Benchmark search | parent `evidence/**` plus child sandbox result files | Broom q17 retained join/aggregate and Broom shopper are complete generated methodology rows. SPECjbb/Stancu-style 8M transaction scaling is recorded as generated clean-room methodology evidence, not real-input proof. LogHub Spark archive-wide retained session, Yak LiveJournal streaming graph, AskUbuntu streaming text, and the new Wikimedia retained clickstream triage row are all recorded as compressed real-streaming evidence. The strongest real-streaming GC-time row remains Theodolite retained UC4; Wikimedia adds a useful RSS/fixed-memory row but is still below the 5% heap-GC flagship gate. |
 | Presentation report | `docs/PERFORMANCE_EVALUATION_REPORT.md` and generated `docs/report.html` | Do not edit/regenerate unless presentation claims or tables change. |
 
 ## Latest Validation
@@ -60,6 +60,14 @@ instead of editing `docs/HANDOFF.md`, `docs/ROADMAP.md`,
   real-streaming graph RSS/fixed-memory and throughput evidence, but heap GC is
   still only about `2.6%` of L2 elapsed. One-run cap probes: heap passes
   `128M` and fails `64M`; checked epoch stream/scoped pass `64M` and `32M`.
+- Wikimedia enwiki retained line-session, 1M rows over compressed
+  `/Users/siyaoliu/rift/cache/benchmark-data/wikimedia/clickstream-enwiki-2026-03.tsv.gz`:
+  L1 checked Rift `14.15 s`, RSS `136 MB`, versus heap `15.54 s`,
+  RSS `864 MB`; L2 heap `4826.234 ms`, GC `166.100 ms`, while checked Rift
+  is `5058.376 ms`, GC `11.537 ms`, region op `3.121 ms`. Heap caps pass at
+  `512M` and fail at `256M`/`128M`; checked rows pass at `128M` and `64M`.
+  Use this as real-streaming retained-state RSS/fixed-memory evidence, not a
+  GC-time flagship.
 - Previous checked suites also passed:
   `RiftRegionCheckedCompilerTest` `141/141`,
   `RiftRegionCheckedTest` `65/65`.
@@ -68,12 +76,10 @@ instead of editing `docs/HANDOFF.md`, `docs/ROADMAP.md`,
 
 1. If continuing backend portability, switch to `backend-portability` first;
    do not mix HotSpot/JVM prototype churn into `main`.
-2. If continuing Native evidence, move from completed q17/shopper/SPECjbb,
-   Spark retained-session, AskUbuntu compressed-streaming, and Yak LiveJournal
-   compressed graph streaming rows to a disk/time preflight for larger
-   SNAP/Twitter graph streaming or a provenance-clean larger
-   StackOverflow/StackExchange compressed dump. Park the current LogHub,
-   AskUbuntu, and LiveJournal variants unless the next query retains more state
-   than parser/hash/XML/edge scanning work.
+2. If continuing Native evidence, the current local compressed real-streaming
+   ladder is mostly classified. The next useful step is either a
+   provenance/disk preflight for truly larger StackOverflow/Twitter-2010 data
+   or a named retained operator over Wikimedia/LogHub rather than another
+   generic line-session triage row.
 3. If preparing presentation, update `PERFORMANCE_EVALUATION_REPORT.md` and
    regenerate `report.html`; otherwise leave them alone.

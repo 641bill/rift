@@ -1,7 +1,7 @@
 # GC-Heavy Data Processing Benchmark Investigation
 
 Date: 2026-05-15
-Last updated: 2026-05-18 00:22 CEST
+Last updated: 2026-05-18 00:44 CEST
 
 Status: literature and online-investigation note. This is not a benchmark
 result pack. It records where GC pressure is expected in stream/data-processing
@@ -91,6 +91,15 @@ dominate the rest.
 The same row does produce fixed-memory evidence: heap completes down to a
 `128M` cap but fails at `64M`, while checked epoch stream/scoped rows complete
 under both `64M` and `32M` caps with matching checksums.
+
+2026-05-18 retained clickstream follow-up: using the retained line-session
+harness over compressed Wikimedia enwiki clickstream gives a stronger
+fixed-memory/RSS real-streaming row than the older primitive/preloaded
+Wikimedia matrix. At 1M streamed rows, L1 checked Rift is `14.15 s`, RSS
+`136 MB`, versus heap `15.54 s`, RSS `864 MB`; heap fails at `256M` and
+`128M`, while checked rows complete under `128M` and `64M`. Heap L2 GC is
+`166.100 ms` inside `4826.234 ms`, about `3.4%`, so the row is useful but
+still below the GC-time flagship threshold.
 
 2026-05-16 18:39 second search pass: a fresh prior-work/official-source pass
 confirms the same direction. Spark's tuning guide says GC cost becomes a
@@ -264,6 +273,7 @@ summarized away before the lifetime boundary.
 | StreamFlex retained event correlation / transaction tracking | StreamFlex design axis | generated in-process initially | stable state plus transient retained event/capsule objects | period/window/capsule close | expected in paced latency tails | planned | implement after real-input triage if latency story needs another generated row |
 | Theodolite UC4 retained hierarchy windows | Theodolite UC4 plus real UCI household-power trace | compressed archive-member input: `zip:/Users/siyaoliu/rift/cache/benchmark-data/theodolite/real-power/household_power_consumption.zip!household_power_consumption.txt` | one measurement plus twelve hierarchy contribution objects retained per usable record | epoch/window close | high enough to create material heap GC, RSS, and heap-cap sensitivity | complete first real-streaming retained hierarchy case | keep as current strongest real-streaming GC-heavy row; next real-streaming target should be LogHub/session or another retained keyed-state workload |
 | LogHub high-cardinality session/template join | LogHub HDFS/Spark/Windows archives | `tar.gzcat:/archive` for archive-wide Spark; `tar.gz:/archive!member` for selected members | log events, template tokens, sessions, join candidates | session/window close | medium for RSS/fixed-memory, still uncertain for GC-time share | Spark archive-wide retained session complete; HDFS/Windows retained rows are controls | keep Spark retained session as real-streaming RSS/fixed-memory evidence; still search for a stronger high-cardinality GC-time row |
+| Wikimedia retained clickstream session | Wikimedia enwiki clickstream dump | compressed `.tsv.gz` stream | retained line/session events plus per-key aggregate entries | epoch/session close | medium; useful RSS/fixed-memory, below GC-time flagship at 1M | 1M retained line-session triage complete | keep as real-streaming retained-state RSS/fixed-memory evidence; a final Wikimedia operator would need a named query rather than generic line-session |
 | Alibaba machine-usage / DSPBench Machine Outlier | Alibaba Cluster Trace 2018 `machine_usage` slice | compressed `machine_usage.tar.gz` only | machine usage records, feature/window outlier objects | time window close | plausible, but data fetch is large | gated | disk/provenance preflight before download |
 | SPECjbb/Stancu transaction scaling | clean-room SPECjbb2005-style port | generated in-process, no data file | transaction request/order/line/accounting objects | transaction/batch close | high for transaction-local allocation | current 8M scale row complete | keep as generated methodology evidence, not real-input proof; next non-streaming search should prefer real retained graph/text/transaction inputs |
 | StackExchange / StackOverflow text epochs | Stack Exchange dumps | existing `.7z` first; larger dumps only after disk preflight | post/token/top-word candidate objects | token epoch close | medium; AskUbuntu direct epoch is useful but GC is modest | gated | use compressed `.7z` and scale only if disk/time allow |

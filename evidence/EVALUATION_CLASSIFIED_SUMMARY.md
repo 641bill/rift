@@ -1,7 +1,7 @@
 # Evaluation Classified Summary
 
 Date: 2026-05-09
-Last updated: 2026-05-18 00:22 CEST
+Last updated: 2026-05-18 00:44 CEST
 
 Status: thesis-facing classified summary built from committed evidence.
 Baseline commits for clean rows: parent `1cc3b2c`, child `13a3df1c7`.
@@ -102,6 +102,13 @@ session records, L1 heap is `27.62 s` and `391 MB` RSS, checked Rift is
 fails below a `128M` cap, while checked rows complete around `73 MB`. This is
 real-streaming retained-object RSS/fixed-memory evidence, not a GC-time
 flagship: heap median timed GC is about `2.1%` of the L2 loop.
+The same retained line-session harness was also tried on the large compressed
+Wikimedia enwiki clickstream file. At 1M streamed rows, L1 checked Rift is
+`14.15 s`, RSS `136 MB`, versus heap `15.54 s`, RSS `864 MB`. Heap fails at
+`256M` and `128M` caps, while checked rows complete under `128M` and `64M`.
+This is another real-streaming retained-state RSS/fixed-memory row; heap L2
+GC is `166.100 ms` inside `4826.234 ms`, about `3.4%`, so it remains below
+the GC-time flagship threshold.
 The latest Yak graph follow-up adds a true compressed-source
 `YAK_GRAPH_INPUT_MODE=streaming-file` path for SNAP LiveJournal. At 20M
 streamed edges, L1 checked epoch scoped is `17.15 s`, RSS `102 MB`, versus
@@ -246,6 +253,7 @@ not presentation requirements.
 | LogHub HDFS q3 template/session streaming-file | real-streaming-input HDFS log replay | checked page/window token / L1 final-clean plus L2 standard stats | L1 heap `26.88 s`, RSS `862 MB`; L2 heap `8546.791 ms`, GC `97.322 ms`, max GC `131.533 ms` | L1 checked scoped page-token `30.29 s`, RSS `130 MB`; L2 checked `8763.838 ms`, GC `44.517 ms`, max GC `58.455 ms` | L1 `12.7%` slower | L2 median `-52.805 ms`, max `-73.078 ms` | L1 about `-85%` | Real-streaming-input RSS/fixed-memory and GC-tail control. The richer q3/session query streams the HDFS file without preloading, but parser/template/session CPU dominates and checked page-token is not a throughput win. |
 | LogHub HDFS retained session/join streaming-file 1M active-16 | real-streaming-input HDFS log replay | retained session/join control | session heap `6595.172 ms`, GC `82.341 ms`; join heap `6837.810 ms`, GC `9.474 ms` | session checked Rift `6578.258 ms`, GC `5.572 ms`; join checked scoped `6681.557 ms` fastest but still reports nonzero GC from setup/runtime | session essentially tied; join checked scoped `2.3%` faster | session reduces timed GC by `76.769 ms`; join heap GC too small | 1M RSS not collected in sandboxed L2 run | Parked real-streaming retained-object control. It validates the retained session/join harness, but parser/hash/query CPU dominates and heap GC remains below the serious-case-study threshold. |
 | LogHub Spark retained session archive-wide streaming 1M active-16 | real-streaming-input Spark logs from compressed `tar.gzcat` archive stream | retained session / fixed-memory evidence | L1 heap `27.62 s`, RSS `390.6 MB`; L2 heap `6642.276 ms`, GC `140.639 ms`, max GC `169.764 ms`; heap cap passes `256M` and fails `128M` | L1 checked Rift `20.30 s`, RSS `72.9 MB`; L2 checked Rift `6396.869 ms`, GC `14.407 ms`, region op `1.121 ms`; checked scoped L1 `19.85 s`, RSS `73.0 MB` | L1 checked scoped `28.1%` faster; L2 checked Rift `3.7%` faster | checked Rift L2 median `-126.232 ms`; heap GC is about `2.1%` of L2 | L1 about `-81%` | Strongest LogHub retained-session real-streaming fixed-memory/RSS row so far. Use as RSS/fixed-memory and modest checked-Rift throughput evidence; not a GC-time flagship because archive/parser/hash/query work dominates. |
+| Wikimedia enwiki clickstream retained line-session 1M | real-streaming-input Wikimedia clickstream gzip stream | retained session / fixed-memory evidence | L1 heap `15.54 s`, RSS `864 MB`; L2 heap `4826.234 ms`, GC `166.100 ms`, max GC `217.036 ms`; heap cap passes `512M` and fails `256M`/`128M` | L1 checked Rift `14.15 s`, RSS `136 MB`; L2 checked Rift `5058.376 ms`, GC `11.537 ms`, region op `3.121 ms`; checked rows pass `128M` and `64M` caps | L1 checked Rift `8.9%` faster; L2 checked Rift `4.8%` slower | L2 median `-154.563 ms`; heap GC is about `3.4%` of L2 | L1 about `-84%` | Real compressed-stream retained-state RSS/fixed-memory row over Wikimedia enwiki clickstream. Use L1 for headline elapsed/RSS and L2 for GC interpretation; not a GC-time flagship and not a final named Wikimedia operator yet. |
 | LogHub Spark q3 template/session | real file-backed Spark logs, 61-file application subset | ceiling/control / L2 standard stats plus L1 RSS | L2 heap `7602.328 ms`, GC `140.934 ms`; L1 RSS `408 MB` | L2 checked scoped page-token `7534.013 ms`, GC `31.147 ms`; L1 RSS `56 MB` | L2 `0.9%` faster | L2 median `-109.787 ms` | L1 about `-86%` | Real-input modest/control row. Richer Spark template/session materialization cuts RSS and timed GC, but heap timed GC is still only about `1.9%` of elapsed and the row is parser/query dominated. Do not use the anomalous L1 elapsed from this run. |
 | DSPBench Fraud q2 | real DSPBench credit-card replay | best checked topology / L1 final-clean | L1 heap `4.39 s`, RSS `358 MB`; L2 heap `801.790 ms`, GC `69.686 ms` | L1 checked scoped page-token `4.44 s`, RSS `59.5 MB`; L2 checked scoped `822.846 ms`, GC `15.554 ms` | L1 `1.1%` slower | L2 median `-54.132 ms` | L1 about `-83%` | Real-input checked RSS win but not elapsed win; trusted Streaming lower bound is fastest (`4.18 s`). |
 | DSPBench Log q2 | real DSPBench bundled common-log input | best checked topology / L1 final-clean | L1 heap `8.89 s`, RSS `308 MB`; L2 heap `1750.291 ms`, GC `44.992 ms`, max GC `88.210 ms` | L1 checked scoped page-token `8.79 s`, RSS `47.6 MB`; L2 checked scoped `1733.654 ms`, GC `18.402 ms`, max GC `18.584 ms` | L1 `1.1%` faster | L2 median `-26.590 ms`; max `-69.626 ms` | L1 about `-85%` | Modest real-input elapsed/RSS/GC-tail win; still not flagship GC-heavy evidence. |
@@ -287,7 +295,9 @@ not presentation requirements.
   pass the retained gate. The same matrix now has the first
   `real-streaming-input` candidate row over HDFS `streaming-file`: checked
   scoped reusable top-k is a near-tie/slight throughput win and large RSS win while
-  removing timed heap GC. Yak generated topword provides a second generated
+  removing timed heap GC. Wikimedia enwiki clickstream adds a large compressed
+  retained-session row with an L1 checked-Rift throughput/RSS win and heap-cap
+  failure below `256M`, but still only `3.4%` heap L2 GC. Yak generated topword provides a second generated
   methodology top-k confirmation, while GH Archive byte-slice q1/q2, LogHub
   HDFS q2, and DSPBench Log q2 remain modest page/window rows.
 - **Non-claim:** summary-only/direct-aggregate rows are topology/operator lower

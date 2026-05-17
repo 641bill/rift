@@ -1,7 +1,7 @@
 # Real-Input GC-Heavy Stream Benchmark Search
 
 Date: 2026-05-07
-Last updated: 2026-05-18 00:22 CEST
+Last updated: 2026-05-18 00:44 CEST
 
 Status: active Phase 6 search ledger. This file tracks public real-input
 stream/dataflow candidates before implementation work. It is deliberately a
@@ -23,6 +23,13 @@ real-streaming graph RSS/fixed-memory and throughput evidence, not the
 GC-time flagship. A one-run cap probe adds fixed-memory evidence: heap passes
 at `128M` but fails at `64M`, while checked epoch rows complete under `64M`
 and `32M` caps with matching checksums.
+The newest retained-state triage row uses the local compressed Wikimedia
+enwiki clickstream as a generic retained line-session stream. At 1M streamed
+rows, L1 checked Rift is `14.15 s`, RSS `136 MB`, versus heap `15.54 s`, RSS
+`864 MB`; heap fails at `256M`/`128M`, while checked rows complete under
+`128M` and `64M`. Heap L2 GC is `166.100 ms`, about `3.4%`, so this is a
+useful real-streaming RSS/fixed-memory row but still below the GC-time
+flagship gate.
 
 ## Goal
 

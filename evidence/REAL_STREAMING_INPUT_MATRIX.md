@@ -1,7 +1,7 @@
 # Real Streaming Input Matrix
 
 Date: 2026-05-11
-Last updated: 2026-05-18 00:22 CEST
+Last updated: 2026-05-18 00:44 CEST
 
 Status: started. This matrix records only rows that satisfy the
 `real-streaming-input` protocol: no full-input preload, incremental source
@@ -124,6 +124,61 @@ Interpretation:
   Classify as
   modest real-streaming-input RSS/fixed-memory evidence, not as the flagship
   GC-heavy stream case study.
+
+### Wikimedia Enwiki Clickstream Retained Line-Session, Streaming-File
+
+Implementation:
+
+- Matrix: `/Users/siyaoliu/rift/scala-native-rift/sandbox/src/main/scala-next/LogHubRetainedSessionMatrix.scala`
+- Source:
+  `/Users/siyaoliu/rift/cache/benchmark-data/wikimedia/clickstream-enwiki-2026-03.tsv.gz`
+- Query: generic retained line-session over real clickstream TSV lines using
+  `LogHubRetainedSessionMatrix` as the retained-state harness. This is not a
+  final named Wikimedia operator; it is a triage row for retained ordinary
+  objects over a large compressed real stream.
+- Configuration: `records=1000000`, `records_per_epoch=25000`,
+  `active_epochs=16`, `key_space=262144`, workload `session`.
+
+20k smoke:
+
+| Mode | L2 median ms | Median GC ms | RSS bytes | Checksum | Output |
+|---|---:|---:|---:|---:|---:|
+| `heap-gc` | `117.290` | `0.254` | `21807104` | `-6891630890320843875` | `19623` |
+| `checked-rift` | `110.601` | `0.266` | `19824640` | `-6891630890320843875` | `19623` |
+| `checked-region-scoped` | `98.366` | `2.348` | `20021248` | `-6891630890320843875` | `19623` |
+
+1M rows:
+
+| Mode | L1 external s | L1 RSS bytes | L2 median ms | Median GC ms | Max GC ms | Region op ms | Checksum | Output |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `heap-gc` | `15.54` | `864436224` | `4826.234` | `166.100` | `217.036` | `0.000` | `-6192260257488813902` | `953730` |
+| `checked-rift` | `14.15` | `136462336` | `5058.376` | `11.537` | `21.435` | `3.121` | `-6192260257488813902` | `953730` |
+| `checked-region-scoped` | `14.98` | `136642560` | `5216.981` | `197.466` | `215.615` | `0.000` | `-6192260257488813902` | `953730` |
+
+Heap-cap probes:
+
+| Mode | Heap cap | Status | L1 external s | RSS bytes | Notes |
+|---|---:|---|---:|---:|---|
+| `heap-gc` | `512M` | pass | `5.21` | `437026816` | checksum/output matched |
+| `heap-gc` | `256M` | fail | `2.22` | `201654272` | OOM in heap array allocation |
+| `heap-gc` | `128M` | fail | `0.00` | `5619712` | OOM at startup/allocation |
+| `checked-rift` | `128M` | pass | `5.04` | `136331264` | cap inherited through `GC_MAXIMUM_HEAP_SIZE` |
+| `checked-region-scoped` | `128M` | pass | `5.22` | `136626176` | cap inherited through `GC_MAXIMUM_HEAP_SIZE` |
+| `checked-rift` | `64M` | pass | `4.96` | `136331264` | cap inherited through `GC_MAXIMUM_HEAP_SIZE` |
+| `checked-region-scoped` | `64M` | pass | `5.64` | `136511488` | cap inherited through `GC_MAXIMUM_HEAP_SIZE` |
+
+Interpretation:
+
+- This is useful real-streaming retained-state RSS/fixed-memory evidence. The
+  input remains compressed and is consumed as a stream; no preloaded
+  clickstream row array is used.
+- L1 checked Rift is `14.15 s` versus heap `15.54 s`, and RSS drops from
+  `864 MB` to `136 MB`.
+- Heap fails at `256M` and below, while checked rows complete under `128M` and
+  `64M`.
+- It is not a GC-time flagship: heap L2 GC is `166.100 ms` inside
+  `4826.234 ms`, about `3.4%`. The L2 checked row is slower than heap, so use
+  L1 for headline elapsed and L2 only for GC/RSS/region interpretation.
 
 ### Yak LiveJournal Graphreal, Streaming-File
 
