@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-17 02:54 CEST
+Last updated: 2026-05-17 03:21 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -97,9 +97,16 @@ natural heap is `14.45 s`, RSS `231.7 MB`, with `1370.380 ms` median timed GC
 inside `4781.079 ms` L2; checked Rift is `9.67 s`, RSS `49.9 MB`, and zero
 timed GC; checked scoped is `13.02 s`, RSS `50.3 MB`, and zero timed GC. Heap
 caps down to `256M` complete, so q17 is throughput/GC/RSS evidence rather than
-fixed-memory failure evidence. Mark the TPC-H-Q17-like slice complete; keep
-shopper JOIN-SELECT-JOIN as a separate future Broom/Naiad candidate only if
-another retained dataflow shape is needed.
+fixed-memory failure evidence. The q17 matrix now also has a DBGEN/TPC-H
+file-backed mode from child `4d0d8d5e6`
+(`BROOM_Q17_INPUT_MODE=tpch-file`) that reads `part.tbl` and `lineitem.tbl`
+incrementally. A tiny fixture smoke passed with matching checksum/output
+across heap, checked Rift, and checked scoped; full DBGEN scale rows are
+pending because no local `part.tbl`/`lineitem.tbl` files are currently present
+under the Rift workspace. Mark the TPC-H-Q17-like generated slice complete;
+keep exact DBGEN-backed scale as pending input-provenance work, and
+keep shopper JOIN-SELECT-JOIN as a separate future Broom/Naiad candidate only
+if another retained dataflow shape is needed.
 
 Latest LogHub retained session/join triage:
 `evidence/LOGHUB_RETAINED_SESSION_MATRIX.md` adds a true HDFS streaming-file

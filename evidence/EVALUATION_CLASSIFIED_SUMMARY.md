@@ -1,7 +1,7 @@
 # Evaluation Classified Summary
 
 Date: 2026-05-09
-Last updated: 2026-05-17 02:54 CEST
+Last updated: 2026-05-17 03:21 CEST
 
 Status: thesis-facing classified summary built from committed evidence.
 Baseline commits for clean rows: parent `1cc3b2c`, child `13a3df1c7`.
@@ -68,6 +68,10 @@ heap is `14.45 s`, RSS `232 MB`, with `1370.380 ms` median timed GC inside
 `4781.079 ms` L2, versus checked Rift `9.67 s`, RSS `50 MB`, and zero timed
 GC. Heap caps down to `256M` complete, so q17 is a throughput/GC/RSS result
 rather than a fixed-memory failure result.
+An optional DBGEN/TPC-H file-backed q17 mode is now implemented and smoke
+validated with matching checksum/output across heap, checked Rift, and checked
+scoped. It remains scale-pending because no local DBGEN `part.tbl`/`lineitem.tbl`
+files are present in the Rift workspace.
 The new `evidence/LOGHUB_RETAINED_SESSION_MATRIX.md` row is the opposite
 lesson: it is a true real-streaming retained session/join row over HDFS, but
 heap GC remains too small to headline.
@@ -134,7 +138,7 @@ not presentation requirements.
 |---|---|---|---|---|
 | Focused retained epoch | complete | complete | retained-object memory-management | keep as cleanest memory-management row |
 | Broom retained timestamped aggregate/join | complete, including 1M/5M/20M checked scoped backend comparison | complete, including 1M/5M/20M checked scoped backend interpretation | prior-work-style natural heap vs checked Rift retained dataflow | keep as the first Broom/Naiad-like GC-heavy dataflow row; same-shape controls are appendix-only and checked scoped is the safe backend comparison |
-| Broom q17 retained join/aggregate | complete through 1M/5M/20M active-4 and 5M/20M active-16 | complete through the same scale points | prior-work-style generated TPC-H-Q17-like retained dataflow | keep as the next Broom/Naiad-like GC-heavy dataflow row; classify as deterministic generated methodology, not exact TPC-H or real-input proof |
+| Broom q17 retained join/aggregate | complete through 1M/5M/20M active-4 and 5M/20M active-16; DBGEN file-backed smoke complete | complete through the same generated scale points; DBGEN scale pending local `part.tbl`/`lineitem.tbl` | prior-work-style generated TPC-H-Q17-like retained dataflow; optional DBGEN/TPC-H file-backed input mode | keep as the next Broom/Naiad-like GC-heavy dataflow row; classify generated rows as deterministic methodology, and DBGEN rows as standardized generated TPC-H input rather than real-world input |
 | GH Archive-shaped retained q2 | complete | complete | generated/preloaded retained-object row | keep; label generated/preloaded, not real-input proof |
 | LogHub retained q2/q3 | complete | complete | generated/indexable retained rows | keep q2 as strong retained row; mark q3 checked-stream as modest/RSS row |
 | DSPBench Fraud retained q2 | complete | complete | generated/indexable retained row | keep as modest retained win |

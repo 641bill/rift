@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-17 02:54 CEST
+Last updated: 2026-05-17 03:21 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -130,6 +130,9 @@ Rift `8.09 s`, RSS `57 MB`, GC `0 ms`. Heap completes at `512M` but fails at
 current strongest Broom/Naiad-style retained-object row.
 
 Latest Broom q17 retained dataflow update:
+Child implementation commit: `4d0d8d5e6`
+(`Add TPC-H file-backed q17 mode`), building on generated q17 commit
+`ed7e6f57a`.
 `BroomRetainedDataflowMatrix` now also supports `q17`, `tpch-q17`, and
 `q17-retained`. This is a deterministic generated TPC-H-Q17-like methodology
 row, not exact TPC-H artifact reproduction. The benchmark retains
@@ -143,8 +146,16 @@ RSS `49.9 MB`, and L2 GC `0 ms` versus heap `14.45 s`, RSS `231.7 MB`, and
 `1370.380 ms` median timed GC inside `4781.079 ms`. Checked scoped is
 `13.02 s`, RSS `50.3 MB`, and zero timed GC at 20M active-16. Heap caps at
 `512M`, `384M`, and `256M` all complete, so q17 is a throughput/GC/RSS case,
-not fixed-memory failure evidence. Shopper JOIN-SELECT-JOIN remains a separate
-future Broom/Naiad shape if another retained dataflow row is needed.
+not fixed-memory failure evidence. The 2026-05-17 follow-up adds an optional
+DBGEN/TPC-H file-backed input mode:
+`BROOM_Q17_INPUT_MODE=tpch-file`,
+`BROOM_TPCH_PART_INPUT=/path/to/part.tbl`, and
+`BROOM_TPCH_LINEITEM_INPUT=/path/to/lineitem.tbl`. A tiny `/private/tmp`
+fixture smoke matched checksum/output across heap, checked Rift, and checked
+scoped with checksum `-3582489220934111213` and output count `1`. No full
+DBGEN `part.tbl`/`lineitem.tbl` is currently present under the Rift workspace,
+so scale rows are pending local DBGEN files. Shopper JOIN-SELECT-JOIN remains
+a separate future Broom/Naiad shape if another retained dataflow row is needed.
 
 Latest LogHub retained session/join triage:
 `LogHubRetainedSessionMatrix` and

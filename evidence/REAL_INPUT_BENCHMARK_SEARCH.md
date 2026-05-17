@@ -1,7 +1,7 @@
 # Real-Input GC-Heavy Stream Benchmark Search
 
 Date: 2026-05-07
-Last updated: 2026-05-17 02:54 CEST
+Last updated: 2026-05-17 03:21 CEST
 
 Status: active Phase 6 search ledger. This file tracks public real-input
 stream/dataflow candidates before implementation work. It is deliberately a
@@ -88,7 +88,9 @@ cuts L1 elapsed from `14.45 s` to `9.67 s` while reducing RSS from about
 `232 MB` to `50 MB`. The real-input search should now look for public data
 that naturally behaves like this: retained joins, high-cardinality sessions,
 graph/text epochs, or transaction-local object batches. Do not treat q17 as a
-real-data substitute.
+real-data substitute. The DBGEN/TPC-H file-backed q17 mode is now implemented
+and smoke validated, but it is still standardized generated input rather than
+real-world input; scale rows are pending local `part.tbl`/`lineitem.tbl` files.
 
 2026-05-16 18:39 second search pass: the next real-input search should be more
 selective. Official/prior-work sources point to retained heap objects in

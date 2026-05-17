@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-17 02:54 CEST
+Last updated: 2026-05-17 03:21 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -136,6 +136,12 @@ median timed GC inside `4781.079 ms` L2. Checked Rift is `9.67 s`,
 RSS `49.9 MB`, and zero timed GC; checked scoped is `13.02 s`, RSS `50.3 MB`,
 and zero timed GC. Heap caps down to `256M` complete, so the q17 claim is
 throughput, GC, and RSS rather than fixed-memory failure.
+The q17 matrix now also supports DBGEN/TPC-H file-backed input through
+`BROOM_Q17_INPUT_MODE=tpch-file`, `BROOM_TPCH_PART_INPUT`, and
+`BROOM_TPCH_LINEITEM_INPUT`. A tiny fixture smoke passed with matching
+checksum/output across heap, checked Rift, and checked scoped. Full DBGEN
+scale rows are pending local `part.tbl`/`lineitem.tbl` files, and DBGEN remains
+standardized generated benchmark input rather than real-world production data.
 Same-shape/drop-anchor controls remain appendix/mechanism evidence; this row's
 paper-facing comparison is natural heap/GC versus checked Rift.
 

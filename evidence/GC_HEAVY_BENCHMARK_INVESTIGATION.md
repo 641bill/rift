@@ -1,7 +1,7 @@
 # GC-Heavy Data Processing Benchmark Investigation
 
 Date: 2026-05-15
-Last updated: 2026-05-17 02:54 CEST
+Last updated: 2026-05-17 03:21 CEST
 
 Status: literature and online-investigation note. This is not a benchmark
 result pack. It records where GC pressure is expected in stream/data-processing
@@ -119,6 +119,17 @@ Checked scoped is `13.02 s`, RSS `50.3 MB`, and zero timed GC. Heap caps at
 case, not a fixed-memory failure case. This validates the top-ranked Broom-like
 candidate enough that shopper JOIN-SELECT-JOIN can remain a separate optional
 next shape instead of being bundled into the q17 slice.
+
+2026-05-17 DBGEN input follow-up: `BroomRetainedDataflowMatrix` now supports
+`BROOM_Q17_INPUT_MODE=tpch-file` with `BROOM_TPCH_PART_INPUT` and
+`BROOM_TPCH_LINEITEM_INPUT`. The parser uses DBGEN/TPC-H `part.tbl` fields
+`p_partkey`, `p_brand`, `p_container` and `lineitem.tbl` fields `l_partkey`,
+`l_quantity`, and `l_extendedprice`, with the default Q17 filter
+`Brand#23` / `MED BOX`. A tiny fixture smoke passed across heap, checked Rift,
+and checked scoped with matching checksum/output. This closes the code path for
+standardized DBGEN input, but not the evidence row: no full local
+`part.tbl`/`lineitem.tbl` was found under the Rift workspace, so scale
+benchmarking remains pending input provenance.
 
 2026-05-16 19:31 backend implication: it is plausible that many public
 real-input rows will not become strongly GC-heavy under Scala Native Immix.
