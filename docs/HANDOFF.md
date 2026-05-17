@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-17 16:43 CEST
+Last updated: 2026-05-17 17:45 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -67,6 +67,25 @@ purposes by the pinned source archive
 and Log Processing `http-server.log`. Archive-backed smokes passed for Spike,
 Fraud, and Log q0; a post-delete Fraud q0 smoke also passed. The old expanded
 checkout was removed, leaving only the `380M` source ZIP.
+
+Latest real-streaming retained-object update:
+`TheodolitePowerRegionMatrix` now has `q3-retained-uc4`, a real-streaming
+UCI household-power row that reads the compressed archive member directly and
+retains one measurement plus twelve UC4-style hierarchy contribution objects
+per usable record. Full local L1 processes `2049280` usable records:
+natural heap is `16.85 s`, RSS `207 MB`; checked Rift stream epoch is
+`14.06 s`, RSS `26.6 MB`; checked scoped is `14.88 s`, RSS `26.7 MB`.
+Full local L2 reports heap `4504.438 ms`, median GC `335.309 ms`, max GC
+`482.380 ms`; checked Rift stream is `3769.962 ms`, median GC `31.570 ms`,
+with `26640640` region objects and `3.175 ms` Rift op time. Heap completes
+at `128M` but slows to `17.90 s`, fails at `64M`, while checked Rift completes
+under `64M` at `14.27 s`. Sources:
+`/private/tmp/rift-theodolite-uc4-full-l1-20260517`,
+`/private/tmp/rift-theodolite-uc4-full-l2-20260517`, and heap-cap dirs under
+`/private/tmp/rift-theodolite-uc4-full-l1-*20260517`. This is now the strongest
+current real-streaming retained time-series row, but it is still a local
+Theodolite-style kernel paired with real input, not exact Theodolite artifact
+reproduction.
 
 Latest report/HTML normalization:
 `docs/PERFORMANCE_EVALUATION_REPORT.md` remains the presentation source and
