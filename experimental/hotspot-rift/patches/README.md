@@ -1,16 +1,17 @@
 # HotSpot Patch Roadmap
 
-Last updated: 2026-05-17 23:50 CEST
+Last updated: 2026-05-18 00:05 CEST
 
 This directory holds patch notes and exported patches for the HotSpot
-ordinary-object Rift backend. Patch 1-10 are now exported. Patch 4 is a narrow
+ordinary-object Rift backend. Patch 1-11 are now exported. Patch 4 is a narrow
 interpreter-only object-allocation prototype; Patch 5 adds the first
 interpreter store guard; Patch 6 extends store checks to Unsafe/JNI paths used
 by reflection; Patch 7 adds an explicit live-object verifier for API-boundary
 stale-use checks; Patch 8 adds a conservative C1 allocation route for eligible
 `new` bytecodes; Patch 9 adds conservative C1 compiled store guards; Patch 10
-gates unsupported C2/JVMCI compilation while Rift regions are enabled. This is
-still not a complete safe JVM Rift backend.
+gates unsupported C2/JVMCI compilation while Rift regions are enabled; Patch
+11 adds a first Serial GC root-handling prototype for live primitive-field
+region objects. This is still not a complete safe JVM Rift backend.
 
 ## Patch 0: Build Baseline
 
@@ -329,3 +330,48 @@ Implementation note:
 - Patch 10 does not implement C2 region allocation or C2 store barriers. It is
   a conservative safety gate so the prototype cannot silently run unsupported
   C2/JVMCI paths under `UseRiftRegions`.
+
+## Patch 11: Serial GC Region Roots
+
+Patch file:
+
+`09-serial-gc-region-roots.patch`
+
+Implemented:
+
+- Serial Full GC root marking, marking-stack work, and root pointer adjustment
+  recognize uncompressed Rift region oops while `-XX:+UseRiftRegions` is
+  enabled;
+- the current prototype skips marking/relocating those roots because supported
+  region objects are primitive-field-only and live in non-GC-managed Rift
+  region memory;
+- added validation through `run_safepoint_probe.sh`, which now confirms both a
+  plain safepoint and explicit `System.gc()` with a live region object pass.
+
+Validation:
+
+- patched fastdebug OpenJDK image builds;
+- safepoint/GC probe passes at
+  `/private/tmp/rift-hotspot-safepoint-probe-patch11-20260518` with
+  `safepoint-probe-ok`, `system-gc-probe-ok`, and
+  `system-gc-probe-status=passed`;
+- C2-gate smoke still passes at
+  `/private/tmp/rift-hotspot-c2-gate-smoke-patch11-20260518`;
+- C1 store-guard smoke still passes at
+  `/private/tmp/rift-hotspot-c1-store-guard-smoke-patch11-20260518`;
+- C1 allocation smoke still passes at
+  `/private/tmp/rift-hotspot-c1-region-smoke-patch11-20260518`;
+- interpreter object-region smoke still passes at
+  `/private/tmp/rift-hotspot-object-region-smoke-patch11-20260518`;
+- region lifecycle smoke still passes at
+  `/private/tmp/rift-hotspot-region-smoke-patch11-20260518`;
+- flag-off baseline smoke still passes at
+  `/private/tmp/rift-hotspot-smoke-patch11-20260518`.
+
+Implementation note:
+
+- Patch 11 is deliberately Serial-GC-only and primitive-field-only. It does
+  not scan references inside region objects, does not support region object
+  arrays, does not support compressed oops, and does not make other collectors
+  aware of region memory. It proves the first active-region root handling path,
+  not broad JVM GC integration.

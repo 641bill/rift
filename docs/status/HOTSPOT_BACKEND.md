@@ -1,6 +1,6 @@
 # HotSpot Backend Status
 
-Last updated: 2026-05-17 23:57 CEST
+Last updated: 2026-05-18 00:05 CEST
 
 Status: hot status file for the custom HotSpot VM-fork track. This is separate
 from the portable JVM library prototype.
@@ -90,19 +90,24 @@ Detailed HotSpot progress belongs here and in
   `-XX:+UseRiftRegions` is enabled, `CompileBroker` rejects C2 and JVMCI
   compilation requests so unsupported compiled allocation/store paths cannot
   bypass the C1/interpreter safety subset.
+- Patch 11 Serial-GC region root handling is implemented and exported as
+  `experimental/hotspot-rift/patches/09-serial-gc-region-roots.patch`. Serial
+  Full GC root mark/adjust paths now recognize active uncompressed Rift region
+  oops and skip marking/relocating them in the current primitive-field-only
+  subset.
 - The first safepoint/GC probe is implemented in
-  `experimental/hotspot-rift/scripts/run_safepoint_probe.sh`. Safepoint-only
-  live region object use passes in the narrow interpreter subset, but
-  `System.gc()` with a live region object aborts in fastdebug at
-  `compressedOops.inline.hpp:87` with `object not in heap`. This makes
-  GC/safepoint integration the next correctness blocker before broader JVM
-  region claims.
+  `experimental/hotspot-rift/scripts/run_safepoint_probe.sh`. The Patch 10
+  characterization showed safepoint-only live region object use passing while
+  `System.gc()` aborted in fastdebug. Patch 11 changes that result: both the
+  safepoint-only case and explicit `System.gc()` now pass for the narrow
+  primitive-field region-object subset.
 - `autoconf` was installed with Homebrew and preflight now passes for `git`,
   `bash`, `make`, `autoconf`, `clang`, Java `25.0.1`, and Homebrew.
 - OpenJDK was cloned into `/Users/siyaoliu/rift/cache/openjdk-rift`.
 - The worktree is on local branch `rift-jdk25` from `origin/jdk25`. The Rift
-  patch stack is currently OpenJDK commit `37f9d24dd561` (`Gate C2 under Rift
-  regions`), with the Patch 9 base at `f5bcc3f9629` (`Add C1 Rift store
+  patch stack is currently OpenJDK commit `8984cdb1241f` (`Skip Rift roots in
+  Serial GC`), with the Patch 10 base at `37f9d24dd561` (`Gate C2 under Rift
+  regions`), the Patch 9 base at `f5bcc3f9629` (`Add C1 Rift store
   guards`), the Patch 8 base at `8cd8da1a443` (`Add C1 Rift region
   allocation path`), the Patch 7 base at `c455daa9cef` (`Add Rift verifyLive
   VM hook`), and the Patch 1-6 base at `94e2a36f7b9` (`Prototype Rift region
@@ -248,18 +253,32 @@ Detailed HotSpot progress belongs here and in
   case exits with status `134` after fastdebug abort:
   `compressedOops.inline.hpp:87`, `assert(Universe::is_in_heap(v)) failed:
   object not in heap`.
+- Patch 11 safepoint/GC probe passed at
+  `/private/tmp/rift-hotspot-safepoint-probe-patch11-20260518` with
+  `safepoint-probe-ok`, `system-gc-probe-ok`, and
+  `system-gc-probe-status=passed`.
+- Patch 11 regression smokes passed:
+  `/private/tmp/rift-hotspot-c2-gate-smoke-patch11-20260518`,
+  `/private/tmp/rift-hotspot-c1-store-guard-smoke-patch11-20260518`,
+  `/private/tmp/rift-hotspot-c1-region-smoke-patch11-20260518`,
+  `/private/tmp/rift-hotspot-object-region-smoke-patch11-20260518`,
+  `/private/tmp/rift-hotspot-region-smoke-patch11-20260518`, and
+  `/private/tmp/rift-hotspot-smoke-patch11-20260518`.
+- Flag-off built-JDK baseline smoke after Patch 11 recorded checksum
+  `7351360`, output `1000000`, internal elapsed `12.555 ms`, external
+  `0.10 s` real, max RSS `88702976` bytes.
 - Stock-JDK retained-object baseline smoke passed at
   `/private/tmp/rift-hotspot-smoke-20260517`.
 
 ## Next Step
 
-Make GC/safepoint integration the next VM design slice. The first probe shows
-that live region objects can pass a plain safepoint in the current narrow
-interpreter subset, but explicit GC still treats the region object as an
-ordinary root oop that must live in the Java heap. True C2 support should wait
-until this root/scanning story is decided. After that, cover native stores
-outside the guarded Unsafe/JNI entrypoints and explicit JVM bridge/root rules
-before allowing reference fields. Automatic stale post-close use remains open:
-Patch 7 gives an explicit verifier that Rift lowering can call, not a general
-object-use barrier. Performance claims remain out of scope until GC/safepoint
-integration is designed.
+Generalize the GC/safepoint story beyond the current Serial-GC,
+uncompressed-oop, primitive-field-only root-skip prototype. The next design
+slice should decide whether active region roots are collector-specific
+non-heap roots, a VM-known auxiliary heap space, or a rejected mode for
+collectors that cannot tolerate them. True C2 support should still wait.
+After that, cover native stores outside the guarded Unsafe/JNI entrypoints and
+explicit JVM bridge/root rules before allowing reference fields. Automatic
+stale post-close use remains open: Patch 7 gives an explicit verifier that
+Rift lowering can call, not a general object-use barrier. Performance claims
+remain out of scope until GC integration covers more than this narrow subset.

@@ -1,8 +1,8 @@
 # HotSpot Rift Experiment
 
-Last updated: 2026-05-17 23:57 CEST
+Last updated: 2026-05-18 00:05 CEST
 
-Status: scaffold and exported Patch 1-10 artifacts for the custom HotSpot
+Status: scaffold and exported Patch 1-11 artifacts for the custom HotSpot
 VM-fork backend. This directory does not contain an OpenJDK checkout. It
 contains the scripts, patch notes, exported patches, and smoke tests used to
 create and validate one.
@@ -157,11 +157,10 @@ and Patch 8 adds conservative C1 allocation through the runtime stub for
 eligible records. Patch 9 adds conservative C1 compiled store guards for
 reference stores. Patch 10 gates C2/JVMCI compilation while
 `-XX:+UseRiftRegions` is enabled, so unsupported compiled paths cannot silently
-bypass the C1/interpreter region allocation and store-guard subset. GC
-scanning remains the next hard blocker: the safepoint probe shows plain
-safepoint-only live region object use works in the narrow interpreter subset,
-but `System.gc()` with a live region object aborts fastdebug verification at
-`compressedOops.inline.hpp:87` because the VM still assumes root oops are in
-the Java heap. True C2 allocation/stores, native stores outside guarded
-entrypoints, reference fields, arrays as region allocations, bridge/root rules,
-and automatic arbitrary stale-use barriers remain open.
+bypass the C1/interpreter region allocation and store-guard subset. Patch 11
+adds a first Serial-GC-only root handling path for active uncompressed Rift
+region oops: the safepoint probe now passes both plain safepoint and explicit
+`System.gc()` cases for primitive-field region objects. This is still narrow:
+true C2 allocation/stores, other collectors, compressed oops, native stores
+outside guarded entrypoints, reference fields, arrays as region allocations,
+bridge/root rules, and automatic arbitrary stale-use barriers remain open.
