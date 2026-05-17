@@ -1,7 +1,7 @@
 # Benchmark Data Sources
 
 Date: 2026-05-01
-Last updated: 2026-05-11 21:28 CEST
+Last updated: 2026-05-17 13:05 CEST
 
 Local data root:
 `/Users/siyaoliu/rift/cache/benchmark-data`
@@ -10,6 +10,18 @@ This directory is under `cache/`, which is ignored by git. The reproducible
 fetch script is tracked at `/Users/siyaoliu/rift/scripts/fetch-benchmark-data.sh`.
 The ignored per-download manifest is
 `/Users/siyaoliu/rift/cache/benchmark-data/MANIFEST.md`.
+
+Space-saving update: `scripts/fetch-benchmark-data.sh` now keeps large archive
+downloads compressed by default. Set `RIFT_EXTRACT_BENCHMARK_DATA=1` only when
+an extracted copy is explicitly needed. Benchmark inputs using
+`BenchmarkInputSupport` can now stream plain `.gz` files directly and can read
+archive members with:
+
+- `tar.gz:/absolute/path/archive.tar.gz!member/path`;
+- `zip:/absolute/path/archive.zip!member/path`.
+
+The current disk inventory and cleanup plan is in
+`evidence/DATA_FOOTPRINT_AND_STREAMING_PLAN.md`.
 
 ## Downloaded Sources
 

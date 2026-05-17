@@ -24,6 +24,10 @@ fetch() {
   fi
 }
 
+extract_benchmark_data_enabled() {
+  [[ "${RIFT_EXTRACT_BENCHMARK_DATA:-0}" == "1" ]]
+}
+
 bytes() {
   if [[ -d "$1" ]]; then
     printf 'directory'
@@ -71,7 +75,11 @@ fetch_common_crawl() {
     if [[ -n "$wet_path" ]]; then
       local wet_gz="$dir/$(basename "$wet_path")"
       fetch "https://data.commoncrawl.org/$wet_path" "$wet_gz"
-      gzip -dc "$wet_gz" > "${wet_gz%.gz}"
+      if extract_benchmark_data_enabled; then
+        gzip -dc "$wet_gz" > "${wet_gz%.gz}"
+      else
+        echo "archive  $wet_gz; set RIFT_EXTRACT_BENCHMARK_DATA=1 to decompress"
+      fi
     fi
   else
     echo "skip     Common Crawl WET sample; set RIFT_FETCH_COMMON_CRAWL_SAMPLE=1 to fetch it"
@@ -83,7 +91,11 @@ fetch_common_crawl() {
     if [[ -n "$wat_path" ]]; then
       local wat_gz="$dir/$(basename "$wat_path")"
       fetch "https://data.commoncrawl.org/$wat_path" "$wat_gz"
-      gzip -dc "$wat_gz" > "${wat_gz%.gz}"
+      if extract_benchmark_data_enabled; then
+        gzip -dc "$wat_gz" > "${wat_gz%.gz}"
+      else
+        echo "archive  $wat_gz; set RIFT_EXTRACT_BENCHMARK_DATA=1 to decompress"
+      fi
     fi
   else
     echo "skip     Common Crawl WAT sample; set RIFT_FETCH_COMMON_CRAWL_WAT_SAMPLE=1 to fetch it"
@@ -97,8 +109,12 @@ fetch_linear_road() {
   fetch "https://www.cs.brandeis.edu/~linearroad/files/datadriver-src.tar.gz" "$dir/datadriver-src.tar.gz"
   fetch "https://www.cs.brandeis.edu/~linearroad/files/datadriverTestData.tar.gz" "$dir/datadriverTestData.tar.gz"
   fetch "https://www.cs.brandeis.edu/~linearroad/files/validator.tar.gz" "$dir/validator.tar.gz"
-  mkdir -p "$dir/test-data"
-  tar -xzf "$dir/datadriverTestData.tar.gz" -C "$dir/test-data"
+  if extract_benchmark_data_enabled; then
+    mkdir -p "$dir/test-data"
+    tar -xzf "$dir/datadriverTestData.tar.gz" -C "$dir/test-data"
+  else
+    echo "archive  $dir/datadriverTestData.tar.gz; set RIFT_EXTRACT_BENCHMARK_DATA=1 to extract"
+  fi
 }
 
 fetch_beam_nexmark() {
@@ -143,38 +159,50 @@ fetch_loghub() {
       HDFS)
         fetch "https://zenodo.org/records/1147681/files/HDFS.tar.gz?download=1" \
           "$dir/HDFS.tar.gz"
-        mkdir -p "$dir/HDFS"
-        tar -xzf "$dir/HDFS.tar.gz" -C "$dir/HDFS"
+        if extract_benchmark_data_enabled; then
+          mkdir -p "$dir/HDFS"
+          tar -xzf "$dir/HDFS.tar.gz" -C "$dir/HDFS"
+        fi
         ;;
       HDFS_1)
         fetch "https://zenodo.org/records/3227177/files/HDFS_1.tar.gz?download=1" \
           "$dir/HDFS_1.tar.gz"
-        mkdir -p "$dir/HDFS_1"
-        tar -xzf "$dir/HDFS_1.tar.gz" -C "$dir/HDFS_1"
+        if extract_benchmark_data_enabled; then
+          mkdir -p "$dir/HDFS_1"
+          tar -xzf "$dir/HDFS_1.tar.gz" -C "$dir/HDFS_1"
+        fi
         ;;
       BGL)
         fetch "https://zenodo.org/records/1147681/files/BGL.tar.gz?download=1" \
           "$dir/BGL.tar.gz"
-        mkdir -p "$dir/BGL"
-        tar -xzf "$dir/BGL.tar.gz" -C "$dir/BGL"
+        if extract_benchmark_data_enabled; then
+          mkdir -p "$dir/BGL"
+          tar -xzf "$dir/BGL.tar.gz" -C "$dir/BGL"
+        fi
         ;;
       Spark)
         fetch "https://zenodo.org/records/8196385/files/Spark.tar.gz?download=1" \
           "$dir/Spark.tar.gz"
-        mkdir -p "$dir/Spark"
-        tar -xzf "$dir/Spark.tar.gz" -C "$dir/Spark"
+        if extract_benchmark_data_enabled; then
+          mkdir -p "$dir/Spark"
+          tar -xzf "$dir/Spark.tar.gz" -C "$dir/Spark"
+        fi
         ;;
       Windows)
         fetch "https://zenodo.org/records/8196385/files/Windows.tar.gz?download=1" \
           "$dir/Windows.tar.gz"
-        mkdir -p "$dir/Windows"
-        tar -xzf "$dir/Windows.tar.gz" -C "$dir/Windows"
+        if extract_benchmark_data_enabled; then
+          mkdir -p "$dir/Windows"
+          tar -xzf "$dir/Windows.tar.gz" -C "$dir/Windows"
+        fi
         ;;
       Thunderbird)
         fetch "https://zenodo.org/records/8196385/files/Thunderbird.tar.gz?download=1" \
           "$dir/Thunderbird.tar.gz"
-        mkdir -p "$dir/Thunderbird"
-        tar -xzf "$dir/Thunderbird.tar.gz" -C "$dir/Thunderbird"
+        if extract_benchmark_data_enabled; then
+          mkdir -p "$dir/Thunderbird"
+          tar -xzf "$dir/Thunderbird.tar.gz" -C "$dir/Thunderbird"
+        fi
         ;;
       *)
         echo "unknown LogHub dataset '$dataset'; expected HDFS, HDFS_1, BGL, Spark, Windows, or Thunderbird" >&2
@@ -265,8 +293,12 @@ fetch_riotbench() {
     local mhealth_dir="$dir/mhealth"
     fetch "https://archive.ics.uci.edu/static/public/319/mhealth+dataset.zip" \
       "$mhealth_dir/mhealth_dataset.zip"
-    mkdir -p "$mhealth_dir"
-    unzip -q -o "$mhealth_dir/mhealth_dataset.zip" -d "$mhealth_dir"
+    if extract_benchmark_data_enabled; then
+      mkdir -p "$mhealth_dir"
+      unzip -q -o "$mhealth_dir/mhealth_dataset.zip" -d "$mhealth_dir"
+    else
+      echo "archive  $mhealth_dir/mhealth_dataset.zip; set RIFT_EXTRACT_BENCHMARK_DATA=1 to extract"
+    fi
   else
     echo "skip     UCI MHEALTH dataset; set RIFT_FETCH_MHEALTH=1 to fetch it"
   fi

@@ -1,13 +1,28 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-17 12:22 CEST
+Last updated: 2026-05-17 13:05 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
 
 Active implementation branch for this update:
 `feature/rift`
+
+Latest data-footprint cleanup:
+`evidence/DATA_FOOTPRINT_AND_STREAMING_PLAN.md` records the local benchmark
+data inventory. The largest space users are extracted LogHub Windows
+(`26G`), DEBS/NYC taxi directories (`45G` total), extracted LogHub HDFS
+(`1.5G`), extracted AskUbuntu `Posts.xml` (`1.3G`), DBGEN SF1 (`759M`), and
+other extracted real-data duplicates. `BenchmarkInputSupport` now supports
+plain `.gz`, `tar.gz:/archive!member`, and `zip:/archive!member` inputs, so
+LogHub, Common Crawl, Linear Road, and Theodolite-style rows can run from
+compressed local sources without keeping extracted copies. New helper scripts:
+`scripts/benchmark-data-footprint.sh` lists large local inputs, and
+`scripts/cleanup-benchmark-data.sh` dry-runs deletion of extracted duplicates;
+set `RIFT_CLEAN_DATA=1` only when intentionally deleting. The taxi directories
+are not backed by compressed local archives, so they require explicit
+`RIFT_CLEAN_TAXI=1`.
 
 Latest report/HTML normalization:
 `docs/PERFORMANCE_EVALUATION_REPORT.md` remains the presentation source and
