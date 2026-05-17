@@ -1,7 +1,7 @@
 # Real-Input GC-Heavy Stream Benchmark Search
 
 Date: 2026-05-07
-Last updated: 2026-05-17 17:45 CEST
+Last updated: 2026-05-17 22:20 CEST
 
 Status: active Phase 6 search ledger. This file tracks public real-input
 stream/dataflow candidates before implementation work. It is deliberately a
@@ -78,6 +78,14 @@ session heap GC is `82.341 ms` inside `6595.172 ms`, and join heap GC is only
 `9.474 ms` inside `6837.810 ms`. Park it as real-streaming retained-object
 control evidence and keep searching for higher-cardinality retained state or
 transaction/graph/text epochs.
+The same retained-session harness was then tried on the much larger Windows
+archive member (`tar.gz:/.../Windows.tar.gz!Windows.log`). The 20k smoke
+matched checksums, but the join emitted zero matches, so the 1M follow-up
+scaled only `session`. It remains parser/archive/hash dominated: heap is
+`17059.969 ms` with `125.783 ms` median GC and `318 MB` RSS; checked Rift is
+`17808.808 ms` with `14.753 ms` GC and `63 MB` RSS; checked scoped is an
+external near-tie (`51.58 s` vs heap `51.90 s`) with `64 MB` RSS. Park Windows
+retained session as RSS/control evidence, not the missing GC-heavy row.
 
 The new Broom q17 retained join/aggregate row is useful for the search, but it
 does not change the real-input ledger: it is deterministic generated
