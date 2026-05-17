@@ -1,14 +1,15 @@
 # HotSpot Patch Roadmap
 
-Last updated: 2026-05-17 23:18 CEST
+Last updated: 2026-05-17 23:33 CEST
 
 This directory holds patch notes and exported patches for the HotSpot
-ordinary-object Rift backend. Patch 1-8 are now exported. Patch 4 is a narrow
+ordinary-object Rift backend. Patch 1-9 are now exported. Patch 4 is a narrow
 interpreter-only object-allocation prototype; Patch 5 adds the first
 interpreter store guard; Patch 6 extends store checks to Unsafe/JNI paths used
 by reflection; Patch 7 adds an explicit live-object verifier for API-boundary
 stale-use checks; Patch 8 adds a conservative C1 allocation route for eligible
-`new` bytecodes. This is still not a complete safe JVM Rift backend.
+`new` bytecodes; Patch 9 adds conservative C1 compiled store guards. This is
+still not a complete safe JVM Rift backend.
 
 ## Patch 0: Build Baseline
 
@@ -249,3 +250,43 @@ Implementation note:
 - Patch 8 is correctness-first and intentionally disables C1 fast allocation
   under `UseRiftRegions`. It does not yet add C1/C2 compiled store barriers or
   C2 allocation support.
+
+## Patch 9: C1 Store Guards
+
+Patch file:
+
+`07-c1-store-guards.patch`
+
+Implemented:
+
+- C1 reference stores call a Rift runtime stub before `putstatic`,
+  `putfield`, and object-array stores;
+- the stub passes the stored value and destination base object to
+  `RiftRegionRuntime::verify_oop_store_to_base`;
+- the verifier rejects a live or closed Rift region object when the destination
+  base is ordinary heap state, while allowing stores whose destination base is
+  itself a live Rift region object;
+- added `RiftHotSpotC1StoreGuardSmoke` and
+  `run_c1_store_guard_smoke.sh`.
+
+Validation:
+
+- patched fastdebug OpenJDK image builds;
+- C1 store-guard smoke passes at
+  `/private/tmp/rift-hotspot-c1-store-guard-smoke-patch9c-20260517` with
+  `c1-store-guard-ok`;
+- C1 allocation smoke still passes at
+  `/private/tmp/rift-hotspot-c1-region-smoke-patch9-20260517`;
+- interpreter object-region smoke still passes at
+  `/private/tmp/rift-hotspot-object-region-smoke-patch9-20260517`;
+- region lifecycle smoke still passes at
+  `/private/tmp/rift-hotspot-region-smoke-patch9-20260517`;
+- flag-off built-JDK baseline smoke still passes at
+  `/private/tmp/rift-hotspot-smoke-patch9-20260517`.
+
+Implementation note:
+
+- Patch 9 covers C1-generated reference stores only. C2 allocation/stores,
+  native stores outside the guarded Unsafe/JNI entrypoints, reference fields in
+  supported region objects, arrays as region allocations, and GC/safepoint
+  integration remain future work.

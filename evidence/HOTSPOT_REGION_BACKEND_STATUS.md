@@ -1,9 +1,9 @@
 # HotSpot Region Backend Status
 
 Date: 2026-05-17
-Last updated: 2026-05-17 23:18 CEST
+Last updated: 2026-05-17 23:33 CEST
 
-Status: VM-fork Patch 1-8 evidence. Patch 4 proves a narrow
+Status: VM-fork Patch 1-9 evidence. Patch 4 proves a narrow
 interpreter-only ordinary-object allocation prototype for explicitly
 registered final primitive-field classes. Patch 5 adds an interpreter oop-store
 guard that rejects heap retention of live region objects for static fields,
@@ -12,10 +12,11 @@ guards to Unsafe/JNI object-store entrypoints used by reflection and low-level
 libraries. Patch 7 adds an explicit `verifyLive` VM hook for API-boundary
 stale-use checks and teaches store guards to reject closed region objects.
 Patch 8 adds conservative C1 allocation through the runtime allocation stub.
+Patch 9 adds conservative C1 compiled store guards for reference stores.
 This is still not a performance-ready JVM Rift backend because GC integration,
-C1/C2 compiled store barriers, C2 allocation, arrays as region allocations,
-reference fields inside region objects, and automatic broad post-close
-stale-use handling are not implemented.
+C2 allocation/stores, arrays as region allocations, reference fields inside
+region objects, and automatic broad post-close stale-use handling are not
+implemented.
 
 ## Scaffold
 
@@ -125,6 +126,12 @@ Current branch and commit:
 
 ```text
 rift-jdk25
+f5bcc3f9629 Add C1 Rift store guards
+```
+
+Patch 8 base commit:
+
+```text
 8cd8da1a443 Add C1 Rift region allocation path
 ```
 
@@ -747,12 +754,89 @@ Patch 8 limitations:
 - GC/safepoint integration remains absent, so no JVM performance claim should
   be made from this patch.
 
+## Patch 9: C1 Compiled Store Guards
+
+Patch file:
+
+`experimental/hotspot-rift/patches/07-c1-store-guards.patch`
+
+Implementation:
+
+- C1 `StoreField` and object `StoreIndexed` generation inserts a runtime-stub
+  call before the actual reference store while `-XX:+UseRiftRegions` is
+  enabled;
+- the stub receives the stored value and destination base object;
+- `RiftRegionRuntime::verify_oop_store_to_base` rejects storing a live or
+  closed Rift region object into an ordinary heap base;
+- stores into a live Rift region base are allowed by this local check, although
+  reference fields remain outside the supported region-object subset;
+- added `RiftHotSpotC1StoreGuardSmoke` and
+  `experimental/hotspot-rift/scripts/run_c1_store_guard_smoke.sh`.
+
+False start:
+
+- The first implementation called the C++ runtime function directly from C1
+  LIR. Fastdebug asserted because the call did not use the expected C1
+  runtime-stub JavaThread convention. The accepted implementation adds a real
+  C1 stub id and AArch64 stub entry before calling the VM runtime function.
+
+Validation commands:
+
+```text
+HOTSPOT_RIFT_DEVKIT=/Users/siyaoliu/rift/cache/openjdk-rift/build/devkit/Xcode26.5-MacOSX26 \
+  experimental/hotspot-rift/scripts/build_openjdk.sh
+
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-c1-store-guard-smoke-patch9c-20260517 \
+  experimental/hotspot-rift/scripts/run_c1_store_guard_smoke.sh
+
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-c1-region-smoke-patch9-20260517 \
+  experimental/hotspot-rift/scripts/run_c1_object_region_smoke.sh
+
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-object-region-smoke-patch9-20260517 \
+  experimental/hotspot-rift/scripts/run_object_region_smoke.sh
+
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-region-smoke-patch9-20260517 \
+  experimental/hotspot-rift/scripts/run_region_smoke.sh
+
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-smoke-patch9-20260517 \
+  experimental/hotspot-rift/scripts/run_baseline_smoke.sh
+```
+
+Validation results:
+
+| Smoke | Output | Result |
+|---|---|---|
+| C1 compiled store guard | `/private/tmp/rift-hotspot-c1-store-guard-smoke-patch9c-20260517` | `c1-store-guard-ok` |
+| C1 region allocation | `/private/tmp/rift-hotspot-c1-region-smoke-patch9-20260517` | `c1-allocation-ok` |
+| Interpreter object allocation + safety subset | `/private/tmp/rift-hotspot-object-region-smoke-patch9-20260517` | `object-enabled-ok` |
+| Region lifecycle | `/private/tmp/rift-hotspot-region-smoke-patch9-20260517` | `disabled-ok`, `enabled-ok` |
+| Flag-off baseline | `/private/tmp/rift-hotspot-smoke-patch9-20260517` | checksum `7351360`, output `1000000`, internal elapsed `12.467 ms`, external `0.11 s`, max RSS `88670208` bytes |
+
+Patch 9 smoke coverage:
+
+- C1-compiled `putstatic` rejects storing a live region object into static
+  heap state;
+- C1-compiled `putfield` rejects storing a live region object into a heap
+  holder object;
+- C1-compiled `aastore` rejects storing a live region object into a heap object
+  array;
+- the test deliberately avoids closure/lambda capture of the region object so
+  the compiled store paths are the operation being tested.
+
+Patch 9 limitations:
+
+- C2 allocation and C2 compiled stores are not covered;
+- native stores outside the current Unsafe/JNI entrypoints are not covered;
+- region object reference fields and region arrays are not supported;
+- GC/safepoint integration is still absent, so no JVM performance claim should
+  be made from this patch.
+
 ## Next Required Step
 
-1. Extend Patch 8 safety beyond the interpreter plus C1 allocation plus
-   Unsafe/JNI plus explicit verifier subset: C1/C2 compiled stores, C2
-   allocation, native stores outside guarded entrypoints, and automatic stale
-   post-close use where required.
+1. Extend Patch 9 safety beyond the interpreter plus C1 allocation/store guards
+   plus Unsafe/JNI plus explicit verifier subset: C2 allocation/stores, native
+   stores outside guarded entrypoints, and automatic stale post-close use where
+   required.
 2. Decide the first supported bridge/root rule for JVM region-to-heap
    references before allowing reference fields.
 3. Add GC/safepoint integration before any region object may survive a

@@ -1,0 +1,162 @@
+diff --git a/src/hotspot/cpu/aarch64/c1_Runtime1_aarch64.cpp b/src/hotspot/cpu/aarch64/c1_Runtime1_aarch64.cpp
+index a6aab24349a..a4ae3524baa 100644
+--- a/src/hotspot/cpu/aarch64/c1_Runtime1_aarch64.cpp
++++ b/src/hotspot/cpu/aarch64/c1_Runtime1_aarch64.cpp
+@@ -1061,6 +1061,21 @@ OopMapSet* Runtime1::generate_code_for(C1StubId id, StubAssembler* sasm) {
+       }
+       break;
+
++    case C1StubId::rift_oop_store_base_id:
++      {
++        __ set_info("rift_oop_store_base", dont_gc_arguments);
++
++        __ enter();
++        OopMap* map = save_live_registers(sasm);
++        int call_offset = __ call_RT(noreg, noreg, CAST_FROM_FN_PTR(address, rift_oop_store_base), c_rarg0, c_rarg1);
++        oop_maps = new OopMapSet();
++        oop_maps->add_gc_map(call_offset, map);
++        restore_live_registers(sasm);
++        __ leave();
++        __ ret(lr);
++      }
++      break;
++
+     case C1StubId::predicate_failed_trap_id:
+       {
+         StubFrame f(sasm, "predicate_failed_trap", dont_gc_arguments, does_not_return);
+diff --git a/src/hotspot/share/c1/c1_LIRGenerator.cpp b/src/hotspot/share/c1/c1_LIRGenerator.cpp
+index cd99203bd9d..5f828791764 100644
+--- a/src/hotspot/share/c1/c1_LIRGenerator.cpp
++++ b/src/hotspot/share/c1/c1_LIRGenerator.cpp
+@@ -1600,6 +1600,19 @@ void LIRGenerator::do_StoreField(StoreField* x) {
+     decorators |= C1_NEEDS_PATCHING;
+   }
+
++  if (UseRiftRegions && is_reference_type(field_type)) {
++    BasicTypeList signature;
++    signature.append(T_OBJECT); // value
++    signature.append(T_OBJECT); // destination base object or class mirror
++    LIR_OprList* args = new LIR_OprList();
++    args->append(value.result());
++    args->append(object.result());
++    CodeEmitInfo* rift_store_info = info != nullptr ? new CodeEmitInfo(info) : state_for(x);
++    call_runtime(&signature, args,
++                 CAST_FROM_FN_PTR(address, Runtime1::entry_for(C1StubId::rift_oop_store_base_id)),
++                 voidType, rift_store_info);
++  }
++
+   access_store_at(decorators, field_type, object, LIR_OprFact::intConst(x->offset()),
+                   value.result(), info != nullptr ? new CodeEmitInfo(info) : nullptr, info);
+ }
+@@ -1659,6 +1672,18 @@ void LIRGenerator::do_StoreIndexed(StoreIndexed* x) {
+     array_store_check(value.result(), array.result(), store_check_info, x->profiled_method(), x->profiled_bci());
+   }
+
++  if (UseRiftRegions && obj_store) {
++    BasicTypeList signature;
++    signature.append(T_OBJECT); // value
++    signature.append(T_OBJECT); // array base
++    LIR_OprList* args = new LIR_OprList();
++    args->append(value.result());
++    args->append(array.result());
++    call_runtime(&signature, args,
++                 CAST_FROM_FN_PTR(address, Runtime1::entry_for(C1StubId::rift_oop_store_base_id)),
++                 voidType, new CodeEmitInfo(range_check_info));
++  }
++
+   DecoratorSet decorators = IN_HEAP | IS_ARRAY;
+   if (x->check_boolean()) {
+     decorators |= C1_MASK_BOOLEAN;
+diff --git a/src/hotspot/share/c1/c1_Runtime1.cpp b/src/hotspot/share/c1/c1_Runtime1.cpp
+index 040363c124f..ef33e29628b 100644
+--- a/src/hotspot/share/c1/c1_Runtime1.cpp
++++ b/src/hotspot/share/c1/c1_Runtime1.cpp
+@@ -350,6 +350,7 @@ const char* Runtime1::name_for_address(address entry) {
+   FUNCTION_CASE(entry, SharedRuntime::lrem);
+   FUNCTION_CASE(entry, SharedRuntime::dtrace_method_entry);
+   FUNCTION_CASE(entry, SharedRuntime::dtrace_method_exit);
++  FUNCTION_CASE(entry, Runtime1::rift_oop_store_base);
+   FUNCTION_CASE(entry, is_instance_of);
+   FUNCTION_CASE(entry, trace_block_entry);
+ #ifdef JFR_HAVE_INTRINSICS
+@@ -398,6 +399,12 @@ JRT_ENTRY(void, Runtime1::new_instance(JavaThread* current, Klass* klass))
+   current->set_vm_result_oop(obj);
+ JRT_END
+
++JRT_ENTRY(void, Runtime1::rift_oop_store_base(JavaThread* current, oopDesc* value, oopDesc* base))
++  if (UseRiftRegions) {
++    RiftRegionRuntime::verify_oop_store_to_base(cast_to_oop(value), cast_to_oop(base), CHECK);
++  }
++JRT_END
++
+
+ JRT_ENTRY(void, Runtime1::new_type_array(JavaThread* current, Klass* klass, jint length))
+ #ifndef PRODUCT
+diff --git a/src/hotspot/share/c1/c1_Runtime1.hpp b/src/hotspot/share/c1/c1_Runtime1.hpp
+index 9912b6b515e..b2e1cb68076 100644
+--- a/src/hotspot/share/c1/c1_Runtime1.hpp
++++ b/src/hotspot/share/c1/c1_Runtime1.hpp
+@@ -146,6 +146,8 @@ class Runtime1: public AllStatic {
+   // platform might add runtime names.
+   static const char* pd_name_for_address(address entry);
+
++  static void rift_oop_store_base(JavaThread* current, oopDesc* value, oopDesc* base);
++
+   // method tracing
+   static void trace_block_entry(jint block_id);
+
+diff --git a/src/hotspot/share/runtime/riftRegionRuntime.cpp b/src/hotspot/share/runtime/riftRegionRuntime.cpp
+index 51937f7eaf8..6c53cee1439 100644
+--- a/src/hotspot/share/runtime/riftRegionRuntime.cpp
++++ b/src/hotspot/share/runtime/riftRegionRuntime.cpp
+@@ -423,6 +423,26 @@ void RiftRegionRuntime::verify_oop_store(oop value, address dst, TRAPS) {
+             "heap object retains an object allocated in a Rift region");
+ }
+
++void RiftRegionRuntime::verify_oop_store_to_base(oop value, oop base, TRAPS) {
++  if (value == nullptr || !UseRiftRegions) {
++    return;
++  }
++  RegionState* value_state = find_region_oop_state(value, true);
++  if (value_state == nullptr) {
++    return;
++  }
++  RegionState* base_state = find_region_oop_state(base, false);
++  if (base_state != nullptr) {
++    return;
++  }
++  if (value_state->_closed) {
++    THROW_MSG(vmSymbols::java_lang_IllegalStateException(),
++              "Rift region object is closed");
++  }
++  THROW_MSG(vmSymbols::java_lang_IllegalStateException(),
++            "heap object retains an object allocated in a Rift region");
++}
++
+ void RiftRegionRuntime::verify_live_oop(oop value, TRAPS) {
+   if (value == nullptr || !UseRiftRegions) {
+     return;
+diff --git a/src/hotspot/share/runtime/riftRegionRuntime.hpp b/src/hotspot/share/runtime/riftRegionRuntime.hpp
+index 5ee1f6f8266..c13be78fa0d 100644
+--- a/src/hotspot/share/runtime/riftRegionRuntime.hpp
++++ b/src/hotspot/share/runtime/riftRegionRuntime.hpp
+@@ -39,6 +39,7 @@ class RiftRegionRuntime : public AllStatic {
+   static oop allocate_instance(JavaThread* current, InstanceKlass* klass, TRAPS);
+   static void verify_live_oop(oop value, TRAPS);
+   static void verify_oop_store(oop value, address dst, TRAPS);
++  static void verify_oop_store_to_base(oop value, oop base, TRAPS);
+   static void stats(JavaThread* current, jlong handle, jlong* out, int len, TRAPS);
+ };
+
+diff --git a/src/hotspot/share/runtime/stubDeclarations.hpp b/src/hotspot/share/runtime/stubDeclarations.hpp
+index 5dc7d293662..05d0f45a85d 100644
+--- a/src/hotspot/share/runtime/stubDeclarations.hpp
++++ b/src/hotspot/share/runtime/stubDeclarations.hpp
+@@ -97,6 +97,7 @@
+   do_blob(handle_exception)                                            \
+   do_blob(handle_exception_from_callee)                                \
+   do_blob(throw_array_store_exception)                                 \
++  do_blob(rift_oop_store_base)                                         \
+   do_blob(throw_class_cast_exception)                                  \
+   do_blob(throw_incompatible_class_change_error)                       \
+   do_blob(slow_subtype_check)                                          \
