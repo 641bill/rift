@@ -1,7 +1,7 @@
 # Real Streaming Input Matrix
 
 Date: 2026-05-11
-Last updated: 2026-05-17 17:45 CEST
+Last updated: 2026-05-17 23:38 CEST
 
 Status: started. This matrix records only rows that satisfy the
 `real-streaming-input` protocol: no full-input preload, incremental source
@@ -329,6 +329,82 @@ Interpretation:
   Either add a retained session/join shape where region live payload is bounded
   more tightly, or move to Broom/StreamFlex-style retained joins and event
   correlation.
+
+### LogHub Spark Retained Session, Archive-Wide Streaming
+
+Implementation:
+
+- Matrix: `/Users/siyaoliu/rift/scala-native-rift/sandbox/src/main/scala-next/LogHubRetainedSessionMatrix.scala`
+- Mode: direct archive-wide streaming input through `LOGHUB_SESSION_INPUT`
+- Source:
+  `tar.gzcat:/Users/siyaoliu/rift/cache/benchmark-data/loghub/Spark.tar.gz`
+- Query: concatenate regular file contents from the compressed Spark archive,
+  stream log lines, allocate retained session objects, and close epoch/session
+  state after the active-epoch boundary.
+- API/topology: natural heap, checked direct Rift epoch/streaming region, and
+  checked scoped backend.
+
+Archive-source note: the first `tar.gzdir:/archive!prefix` attempt was
+functionally correct but too slow for the Spark archive because it expanded to
+thousands of per-member `tar.gz:/archive!member` scans. The retained-session
+row now uses `tar.gzcat:` so the compressed archive is decompressed once and
+streamed as one concatenated archive source.
+
+20k smoke:
+
+| Workload | Mode | L2 median ms | Median GC ms | RSS bytes | Records | Checksum | Output |
+|---|---|---:|---:|---:|---:|---:|---:|
+| session | `heap-gc` | `206.572` | `4.140` | `21544960` | `20000` | `-435595809917860422` | `17689` |
+| session | `checked-rift` | `219.635` | `0.397` | `14843904` | `20000` | `-435595809917860422` | `17689` |
+| session | `checked-region-scoped` | `204.379` | `1.276` | `14974976` | `20000` | `-435595809917860422` | `17689` |
+| join | `heap-gc` | n/a | n/a | n/a | `20000` | matched | `0` |
+| join | `checked-rift` | n/a | n/a | n/a | `20000` | matched | `0` |
+| join | `checked-region-scoped` | n/a | n/a | n/a | `20000` | matched | `0` |
+
+The join workload emits zero matches on this Spark stream, so the scale-up
+uses `session` only.
+
+1M active-16 L1 final-clean row:
+
+| Mode | L1 external s | User s | Sys s | RSS bytes | Records | Checksum | Output | Retained proxy | Max live |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `heap-gc` | `27.62` | `21.94` | `0.28` | `390561792` | `1000000` | `-1938898183938054371` | `770310` | `1770310` | `714833` |
+| `checked-rift` | `20.30` | `19.76` | `0.10` | `72908800` | `1000000` | `-1938898183938054371` | `770310` | `1770310` | `714836` |
+| `checked-region-scoped` | `19.85` | `19.86` | `0.06` | `73023488` | `1000000` | `-1938898183938054371` | `770310` | `1770310` | `714836` |
+
+1M active-16 L2 standard-stats row:
+
+| Mode | L2 median ms | Min ms | Max ms | Records/sec | Median GC ms | Max GC ms | Runs with GC | Region op ms | Region objects | RSS bytes |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `heap-gc` | `6642.276` | `6550.577` | `6643.644` | `150550.807` | `140.639` | `169.764` | `3/3` | `0.000` | `0` | `508149760` |
+| `checked-rift` | `6396.869` | `6385.812` | `6434.709` | `156326.469` | `14.407` | `14.889` | `3/3` | `1.121` | `1770319` | `72941568` |
+| `checked-region-scoped` | `6615.206` | `6575.994` | `6670.608` | `151166.857` | `196.520` | `199.531` | `3/3` | `0.000` | `1770319` | `73138176` |
+
+Heap-cap follow-up:
+
+| Mode | Heap cap | Status | L1 external s | RSS bytes | Checksum | Output |
+|---|---:|---|---:|---:|---:|---:|
+| `heap-gc` | uncapped | completed | `27.62` | `390561792` | `-1938898183938054371` | `770310` |
+| `heap-gc` | `384M` | completed | `19.91` | `344850432` | `-1938898183938054371` | `770310` |
+| `heap-gc` | `256M` | completed | `19.85` | `277676032` | `-1938898183938054371` | `770310` |
+| `heap-gc` | `128M` | failed | `3.05` | `143409152` | n/a | n/a |
+| `heap-gc` | `96M` | failed | `2.16` | `107020288` | n/a | n/a |
+| `heap-gc` | `64M` | failed | `1.23` | `72761344` | n/a | n/a |
+
+Interpretation:
+
+- This is the strongest LogHub retained-session real-streaming row so far. It
+  streams the compressed Spark archive without a permanent extracted copy.
+- The result is a strong RSS/fixed-memory row: checked rows complete around
+  `73 MB` RSS, while heap uses `278-391 MB` in successful L1 rows and fails
+  below a `128M` heap cap.
+- It is still not a pure GC-time flagship. Heap median timed GC is
+  `140.639 ms` inside `6642.276 ms`, about `2.1%` of the measured L2 loop.
+  The row is therefore real-streaming retained-object RSS/fixed-memory
+  evidence, with a modest checked-Rift L2 throughput win.
+- The scoped row is fastest in the L1 process table, but its L2 row still
+  reports runtime/setup heap GC. Do not claim that checked scoped removes all
+  GC on this row; use it as a best-safe-backend comparison.
 
 ### GH Archive Byte-Slice q1/q2, Streaming-File
 

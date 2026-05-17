@@ -1,7 +1,7 @@
 # Evaluation Classified Summary
 
 Date: 2026-05-09
-Last updated: 2026-05-17 22:35 CEST
+Last updated: 2026-05-17 23:38 CEST
 
 Status: thesis-facing classified summary built from committed evidence.
 Baseline commits for clean rows: parent `1cc3b2c`, child `13a3df1c7`.
@@ -93,9 +93,15 @@ generated methodology row. At 20M records, natural heap is `10.41 s`, RSS
 RSS `20.3 MB`, and zero timed GC; checked scoped is `8.56 s`, RSS `20.6 MB`,
 and zero timed GC. Heap completes at `128M` but fails at `64M`/`32M`, while
 checked Rift completes around `20 MB`.
-The new `evidence/LOGHUB_RETAINED_SESSION_MATRIX.md` row is the opposite
-lesson: it is a true real-streaming retained session/join row over HDFS, but
-heap GC remains too small to headline.
+The new `evidence/LOGHUB_RETAINED_SESSION_MATRIX.md` rows are the opposite
+lesson: the HDFS retained session/join row is true real-streaming retained
+state, but heap GC remains too small to headline; the Spark archive-wide
+retained session follow-up is stronger fixed-memory evidence. At 1M active-16
+session records, L1 heap is `27.62 s` and `391 MB` RSS, checked Rift is
+`20.30 s` and `73 MB`, and checked scoped is `19.85 s` and `73 MB`. Heap
+fails below a `128M` cap, while checked rows complete around `73 MB`. This is
+real-streaming retained-object RSS/fixed-memory evidence, not a GC-time
+flagship: heap median timed GC is about `2.1%` of the L2 loop.
 The backend classification has also been clarified: every measured row in this
 file is Scala Native evidence unless it is explicitly marked paper-reported or
 planned. JVM, Scala.js, Wasm, and analysis-only Rift are now tracked as future
@@ -175,7 +181,7 @@ not presentation requirements.
 | NEXMark q3/q8/q9/q11 | complete, refreshed in selected stream sweep | L2 remains interpretation source | generated Beam-default-style methodology | keep; not exact Beam runner evidence |
 | LogHub HDFS top templates | complete at 1M and 5M | complete | real retained top-k API row | keep as strongest real retained top-k row |
 | LogHub HDFS streaming-file top templates | complete for first 1M candidate | complete | real-streaming-input retained top-k API row | keep as first true streaming-input row; not yet flagship GC-heavy evidence |
-| LogHub q2/q3, LogHub top templates, DSPBench Fraud/Log q2, GH Archive q1/q2, Theodolite power q2 | selected-streams clean sweep complete for generated/default rows; Theodolite selected-row addendum complete over the local real trace; Spark q3 older L1 elapsed not promoted because `/usr/bin/time` real field was anomalous | complete where used | generated, real-input, and real-streaming-input page/window/epoch/top-k modest/RSS/control rows | use selected-streams for current generated/default presentation rows; keep real HDFS/GH/Theodolite file-backed rows as separate real-input evidence |
+| LogHub q2/q3, LogHub top templates, LogHub retained session, DSPBench Fraud/Log q2, GH Archive q1/q2, Theodolite power q2 | selected-streams clean sweep complete for generated/default rows; Theodolite selected-row addendum complete over the local real trace; Spark q3 older L1 elapsed not promoted because `/usr/bin/time` real field was anomalous; Spark retained session archive-wide row complete | complete where used | generated, real-input, and real-streaming-input page/window/epoch/top-k/session modest/RSS/fixed-memory/control rows | use selected-streams for current generated/default presentation rows; keep real HDFS/GH/Theodolite/LogHub retained rows as separate real-input evidence |
 | ReML/MLKit Tier 1 and first Tier 2 ports | complete for local ports | complete for local ports | local Scala Native port evidence | keep same-axes table; no raw ReML-vs-Rift wall-clock claim |
 | Summary-only/direct-aggregate rows | complete for selected symmetric rows | complete where needed | topology lower bound | keep only with heap and checked counterparts; never claim reclaim win |
 
@@ -222,6 +228,7 @@ not presentation requirements.
 | LogHub HDFS v1 q2 | real file-backed Hadoop log | best checked topology / L1 final-clean | L2 heap `8227.369 ms`, GC `92.659 ms`, RSS `409 MB`; L1 heap `25.60 s`, RSS `409 MB` for 3 q2 iterations | L2 checked scoped page-token `7871.856 ms`, GC `0 ms`, RSS `395 MB`; L1 checked scoped page-token `25.56 s`, RSS `79 MB` | L1 elapsed tie; L2 `4.3%` faster | L2 `-92.659 ms` | L1 about `-81%` | L1 real-input RSS win with elapsed tie; L2 standard stats remain a modest throughput/GC win. Heap GC is only about 1-2% elapsed, so this is not flagship GC-heavy proof. |
 | LogHub HDFS q3 template/session streaming-file | real-streaming-input HDFS log replay | checked page/window token / L1 final-clean plus L2 standard stats | L1 heap `26.88 s`, RSS `862 MB`; L2 heap `8546.791 ms`, GC `97.322 ms`, max GC `131.533 ms` | L1 checked scoped page-token `30.29 s`, RSS `130 MB`; L2 checked `8763.838 ms`, GC `44.517 ms`, max GC `58.455 ms` | L1 `12.7%` slower | L2 median `-52.805 ms`, max `-73.078 ms` | L1 about `-85%` | Real-streaming-input RSS/fixed-memory and GC-tail control. The richer q3/session query streams the HDFS file without preloading, but parser/template/session CPU dominates and checked page-token is not a throughput win. |
 | LogHub HDFS retained session/join streaming-file 1M active-16 | real-streaming-input HDFS log replay | retained session/join control | session heap `6595.172 ms`, GC `82.341 ms`; join heap `6837.810 ms`, GC `9.474 ms` | session checked Rift `6578.258 ms`, GC `5.572 ms`; join checked scoped `6681.557 ms` fastest but still reports nonzero GC from setup/runtime | session essentially tied; join checked scoped `2.3%` faster | session reduces timed GC by `76.769 ms`; join heap GC too small | 1M RSS not collected in sandboxed L2 run | Parked real-streaming retained-object control. It validates the retained session/join harness, but parser/hash/query CPU dominates and heap GC remains below the serious-case-study threshold. |
+| LogHub Spark retained session archive-wide streaming 1M active-16 | real-streaming-input Spark logs from compressed `tar.gzcat` archive stream | retained session / fixed-memory evidence | L1 heap `27.62 s`, RSS `390.6 MB`; L2 heap `6642.276 ms`, GC `140.639 ms`, max GC `169.764 ms`; heap cap passes `256M` and fails `128M` | L1 checked Rift `20.30 s`, RSS `72.9 MB`; L2 checked Rift `6396.869 ms`, GC `14.407 ms`, region op `1.121 ms`; checked scoped L1 `19.85 s`, RSS `73.0 MB` | L1 checked scoped `28.1%` faster; L2 checked Rift `3.7%` faster | checked Rift L2 median `-126.232 ms`; heap GC is about `2.1%` of L2 | L1 about `-81%` | Strongest LogHub retained-session real-streaming fixed-memory/RSS row so far. Use as RSS/fixed-memory and modest checked-Rift throughput evidence; not a GC-time flagship because archive/parser/hash/query work dominates. |
 | LogHub Spark q3 template/session | real file-backed Spark logs, 61-file application subset | ceiling/control / L2 standard stats plus L1 RSS | L2 heap `7602.328 ms`, GC `140.934 ms`; L1 RSS `408 MB` | L2 checked scoped page-token `7534.013 ms`, GC `31.147 ms`; L1 RSS `56 MB` | L2 `0.9%` faster | L2 median `-109.787 ms` | L1 about `-86%` | Real-input modest/control row. Richer Spark template/session materialization cuts RSS and timed GC, but heap timed GC is still only about `1.9%` of elapsed and the row is parser/query dominated. Do not use the anomalous L1 elapsed from this run. |
 | DSPBench Fraud q2 | real DSPBench credit-card replay | best checked topology / L1 final-clean | L1 heap `4.39 s`, RSS `358 MB`; L2 heap `801.790 ms`, GC `69.686 ms` | L1 checked scoped page-token `4.44 s`, RSS `59.5 MB`; L2 checked scoped `822.846 ms`, GC `15.554 ms` | L1 `1.1%` slower | L2 median `-54.132 ms` | L1 about `-83%` | Real-input checked RSS win but not elapsed win; trusted Streaming lower bound is fastest (`4.18 s`). |
 | DSPBench Log q2 | real DSPBench bundled common-log input | best checked topology / L1 final-clean | L1 heap `8.89 s`, RSS `308 MB`; L2 heap `1750.291 ms`, GC `44.992 ms`, max GC `88.210 ms` | L1 checked scoped page-token `8.79 s`, RSS `47.6 MB`; L2 checked scoped `1733.654 ms`, GC `18.402 ms`, max GC `18.584 ms` | L1 `1.1%` faster | L2 median `-26.590 ms`; max `-69.626 ms` | L1 about `-85%` | Modest real-input elapsed/RSS/GC-tail win; still not flagship GC-heavy evidence. |

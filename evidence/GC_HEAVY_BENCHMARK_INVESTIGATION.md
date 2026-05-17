@@ -1,7 +1,7 @@
 # GC-Heavy Data Processing Benchmark Investigation
 
 Date: 2026-05-15
-Last updated: 2026-05-17 17:45 CEST
+Last updated: 2026-05-17 23:38 CEST
 
 Status: literature and online-investigation note. This is not a benchmark
 result pack. It records where GC pressure is expected in stream/data-processing
@@ -64,6 +64,19 @@ parser/hash dominated: session heap GC is only `82.341 ms` inside
 Therefore, larger retained real log rows are not automatically sufficient; the
 best next real candidates need Broom-like high-cardinality retained state or
 transaction/graph epochs where object management is a larger share of work.
+
+2026-05-17 late follow-up: the LogHub retained-session harness was retried on
+the full local Spark archive using `tar.gzcat:` so compressed archive contents
+stream in one pass instead of re-scanning thousands of tar members. This is
+the strongest LogHub retained-session result so far: at 1M active-16 session
+records, heap L1 is `27.62 s` and `391 MB` RSS, checked Rift is `20.30 s` and
+`73 MB`, and checked scoped is `19.85 s` and `73 MB`. Heap completes at a
+`256M` cap but fails at `128M`, while checked rows complete around `73 MB`.
+However, heap median timed GC is `140.639 ms` inside `6642.276 ms`, about
+`2.1%`. The lesson is consistent with the rest of the investigation:
+retained real log objects can produce strong RSS/fixed-memory wins under
+Scala Native Immix, but not necessarily a large GC-time fraction when archive
+streaming, parsing, hashing, and query work dominate.
 
 2026-05-16 18:39 second search pass: a fresh prior-work/official-source pass
 confirms the same direction. Spark's tuning guide says GC cost becomes a
@@ -236,7 +249,7 @@ summarized away before the lifetime boundary.
 | Broom shopper JOIN-SELECT-JOIN | Broom/Naiad shopper-inspired local methodology | generated in-process, no data file | view/cart/purchase records plus selected candidate objects | timestamp notify/close | high; 20M heap GC material and heap fails at `64M` | complete | keep as second generated methodology case study |
 | StreamFlex retained event correlation / transaction tracking | StreamFlex design axis | generated in-process initially | stable state plus transient retained event/capsule objects | period/window/capsule close | expected in paced latency tails | planned | implement after real-input triage if latency story needs another generated row |
 | Theodolite UC4 retained hierarchy windows | Theodolite UC4 plus real UCI household-power trace | compressed archive-member input: `zip:/Users/siyaoliu/rift/cache/benchmark-data/theodolite/real-power/household_power_consumption.zip!household_power_consumption.txt` | one measurement plus twelve hierarchy contribution objects retained per usable record | epoch/window close | high enough to create material heap GC, RSS, and heap-cap sensitivity | complete first real-streaming retained hierarchy case | keep as current strongest real-streaming GC-heavy row; next real-streaming target should be LogHub/session or another retained keyed-state workload |
-| LogHub high-cardinality session/template join | LogHub HDFS/Spark/Windows archives | `tar.gz:/archive!member` | log events, template tokens, sessions, join candidates | session/window close | uncertain; previous HDFS retained session was parser/hash dominated | planned | retry only with higher-cardinality retained join/session shape |
+| LogHub high-cardinality session/template join | LogHub HDFS/Spark/Windows archives | `tar.gzcat:/archive` for archive-wide Spark; `tar.gz:/archive!member` for selected members | log events, template tokens, sessions, join candidates | session/window close | medium for RSS/fixed-memory, still uncertain for GC-time share | Spark archive-wide retained session complete; HDFS/Windows retained rows are controls | keep Spark retained session as real-streaming RSS/fixed-memory evidence; still search for a stronger high-cardinality GC-time row |
 | Alibaba machine-usage / DSPBench Machine Outlier | Alibaba Cluster Trace 2018 `machine_usage` slice | compressed `machine_usage.tar.gz` only | machine usage records, feature/window outlier objects | time window close | plausible, but data fetch is large | gated | disk/provenance preflight before download |
 | SPECjbb/Stancu transaction scaling | clean-room SPECjbb2005-style port | generated in-process, no data file | transaction request/order/line/accounting objects | transaction/batch close | high for transaction-local allocation | current 8M scale row complete | keep as generated methodology evidence, not real-input proof; next non-streaming search should prefer real retained graph/text/transaction inputs |
 | StackExchange / StackOverflow text epochs | Stack Exchange dumps | existing `.7z` first; larger dumps only after disk preflight | post/token/top-word candidate objects | token epoch close | medium; AskUbuntu direct epoch is useful but GC is modest | gated | use compressed `.7z` and scale only if disk/time allow |
