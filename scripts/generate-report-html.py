@@ -475,6 +475,13 @@ RESULT_ROWS = [
         "Prior-work-style headline: natural heap versus checked Rift, with material GC removal, about 82-83% lower RSS, and a checked scoped backend comparison row.",
     ],
     [
+        "DBGEN Q17 retained dataflow",
+        "TPC-H DBGEN SF1 `part.tbl` and `lineitem.tbl`; all lineitems are retained until timestamp close, then Q17 filters run.",
+        "Checked Rift: `51.47s`, RSS about `49 MB`; checked scoped: `53.35s`, RSS about `49 MB`.",
+        "Natural heap/GC: `55.44s`, RSS about `433 MB`; heap fails at `128M`.",
+        "Standardized generated TPC-H input evidence: modest throughput win, large RSS/fixed-memory win, not official audited TPC-H or real-world input.",
+    ],
+    [
         "Real graph replay",
         "Yak LiveJournal, real SNAP graph input, 50M replayed edges.",
         "Checked epoch scoped: `16.12s`, RSS about `612 MB`.",

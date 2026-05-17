@@ -791,7 +791,7 @@ pre code {
         </div>
       </div>
       <aside class="hero-panel" aria-label="Report metadata">
-        <div class="panel-row"><span>Generated</span><strong>2026-05-17 12:30 CEST</strong></div>
+        <div class="panel-row"><span>Generated</span><strong>2026-05-17 12:35 CEST</strong></div>
         <div class="panel-row"><span>Source</span><strong>docs/PERFORMANCE_EVALUATION_REPORT.md</strong></div>
         <div class="panel-row"><span>Audience</span><strong>External systems / PL reader</strong></div>
         <div class="panel-row"><span>Headline rule</span><strong>Clean total time and RSS first</strong></div>
@@ -1408,6 +1408,13 @@ pre code {
 <td>Checked Rift aggregate/join: <code>3.59 / 4.26s</code>.</td>
 <td>Natural heap/GC: <code>5.27 / 5.00s</code>.</td>
 <td>Prior-work-style headline: natural heap versus checked Rift, with material GC removal, about 82-83% lower RSS, and a checked scoped backend comparison row.</td>
+</tr>
+<tr>
+<td>DBGEN Q17 retained dataflow</td>
+<td>TPC-H DBGEN SF1 <code>part.tbl</code> and <code>lineitem.tbl</code>; all lineitems are retained until timestamp close, then Q17 filters run.</td>
+<td>Checked Rift: <code>51.47s</code>, RSS about <code>49 MB</code>; checked scoped: <code>53.35s</code>, RSS about <code>49 MB</code>.</td>
+<td>Natural heap/GC: <code>55.44s</code>, RSS about <code>433 MB</code>; heap fails at <code>128M</code>.</td>
+<td>Standardized generated TPC-H input evidence: modest throughput win, large RSS/fixed-memory win, not official audited TPC-H or real-world input.</td>
 </tr>
 <tr>
 <td>Real graph replay</td>
