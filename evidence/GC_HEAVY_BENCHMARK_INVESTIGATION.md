@@ -1,7 +1,7 @@
 # GC-Heavy Data Processing Benchmark Investigation
 
 Date: 2026-05-15
-Last updated: 2026-05-17 12:22 CEST
+Last updated: 2026-05-17 16:43 CEST
 
 Status: literature and online-investigation note. This is not a benchmark
 result pack. It records where GC pressure is expected in stream/data-processing
@@ -145,6 +145,18 @@ the same logical query around `49-53 MB` RSS. This completes the planned SF1
 DBGEN Q17 scale step as standardized generated TPC-H input evidence, not
 official audited TPC-H or real-world input.
 
+2026-05-17 shopper follow-up: the Broom/Naiad-style shopper
+JOIN-SELECT-JOIN slice is now implemented as a separate generated methodology
+row in `BroomRetainedDataflowMatrix`. It retains view/cart/purchase objects
+and selected intermediate candidate objects until timestamp close. At 20M
+records, natural heap is `10.41 s`, RSS `94.3 MB`, and L2 median timed GC
+`601.284 ms` inside `3507.557 ms`; checked Rift is `8.28 s`, RSS `20.3 MB`,
+and zero timed GC; checked scoped is `8.56 s`, RSS `20.6 MB`, and zero timed
+GC. Heap completes at `128M` but fails at `64M` and `32M`, while checked Rift
+completes around `20 MB`. This confirms shopper as another strong
+prior-work-style retained-object methodology row and removes it from the
+future-candidate backlog.
+
 2026-05-16 19:31 backend implication: it is plausible that many public
 real-input rows will not become strongly GC-heavy under Scala Native Immix.
 Immix is already a fast mark-region collector with cheap allocation and good
@@ -215,6 +227,20 @@ summarized away before the lifetime boundary.
 | 6 | Heap-state versus region-state time-series windows | Flink heap-state/TTL evidence suggests retained window state can affect latency, while off-heap backends trade toward serialization/RSS. | Use Theodolite/UCI power rows only if the query retains ordinary measurement/window objects, not just primitive aggregates. |
 | 7 | HiBench / BigDataBench / Renaissance catalogue rows | They provide standard names and workload families, but opaque Spark/Flink/JVM harnesses can hide Rift's memory-management effect. | Port only the retained kernels that match Rift lifetimes: SQL join/aggregate, PageRank/graph epochs, stateful wordcount/top-k, k-means/list-heavy variants. |
 | 8 | ReML allocation/list programs | Useful same-axes region+GC safety comparison; less stream-specific. | Add optional Tier 2 ports only after real-input pass or when very cheap. |
+
+## Actionable Benchmark Decision Table
+
+| Candidate | Source / provenance | Compressed input policy | Retained object shape | Lifetime boundary | Expected GC pressure | Current status | Next action |
+|---|---|---|---|---|---|---|---|
+| Broom q17 retained join/aggregate | TPC-H/Q17-inspired local methodology; optional DBGEN generated tables | `BROOM_Q17_INPUT_MODE=tpch-dbgen` temporary tables, no persistent expanded cache | `Part`/`LineItem` records plus per-part aggregate entries | timestamp notify/close | high for active-16 and SF1 retained file mode | complete | keep as generated methodology case study |
+| Broom shopper JOIN-SELECT-JOIN | Broom/Naiad shopper-inspired local methodology | generated in-process, no data file | view/cart/purchase records plus selected candidate objects | timestamp notify/close | high; 20M heap GC material and heap fails at `64M` | complete | keep as second generated methodology case study |
+| StreamFlex retained event correlation / transaction tracking | StreamFlex design axis | generated in-process initially | stable state plus transient retained event/capsule objects | period/window/capsule close | expected in paced latency tails | planned | implement after real-input triage if latency story needs another generated row |
+| Theodolite UC4 retained hierarchy windows | Theodolite UC4 plus real power/energy trace | use compressed real power trace or archive member input | measurement/contribution objects retained per hierarchy/window | event-time window close | medium/high if contribution objects are retained | next real-streaming target | implement retained UC4 variant before larger LogHub search |
+| LogHub high-cardinality session/template join | LogHub HDFS/Spark/Windows archives | `tar.gz:/archive!member` | log events, template tokens, sessions, join candidates | session/window close | uncertain; previous HDFS retained session was parser/hash dominated | planned | retry only with higher-cardinality retained join/session shape |
+| Alibaba machine-usage / DSPBench Machine Outlier | Alibaba Cluster Trace 2018 `machine_usage` slice | compressed `machine_usage.tar.gz` only | machine usage records, feature/window outlier objects | time window close | plausible, but data fetch is large | gated | disk/provenance preflight before download |
+| SPECjbb/Stancu transaction scaling | clean-room SPECjbb2005-style port | generated in-process, no data file | transaction request/order/line/accounting objects | transaction/batch close | high for transaction-local allocation | existing, needs scale follow-up | run scaling/heap-cap rows if non-streaming evidence needs strengthening |
+| StackExchange / StackOverflow text epochs | Stack Exchange dumps | existing `.7z` first; larger dumps only after disk preflight | post/token/top-word candidate objects | token epoch close | medium; AskUbuntu direct epoch is useful but GC is modest | gated | use compressed `.7z` and scale only if disk/time allow |
+| SNAP graph edge epochs | SNAP compressed graph datasets | `.txt.gz` edge streams | edge/update/message objects | graph epoch close | high at LiveJournal scale | existing LiveJournal strong row | avoid Twitter-2010 unless disk/time allow |
 
 ## Search Gates
 

@@ -1,7 +1,7 @@
 # Evaluation Classified Summary
 
 Date: 2026-05-09
-Last updated: 2026-05-17 12:22 CEST
+Last updated: 2026-05-17 16:43 CEST
 
 Status: thesis-facing classified summary built from committed evidence.
 Baseline commits for clean rows: parent `1cc3b2c`, child `13a3df1c7`.
@@ -80,6 +80,12 @@ at `128M` but fails at `64M`. At SF1 (`6001215` lineitems), checked Rift is
 `877.190 ms` L2 median timed GC. Heap completes at `256M`/`384M` but fails at
 `128M`. SF1 is standardized generated TPC-H input evidence, not official
 audited TPC-H or real-world input.
+The Broom shopper JOIN-SELECT-JOIN follow-up is now complete as a separate
+generated methodology row. At 20M records, natural heap is `10.41 s`, RSS
+`94.3 MB`, with `601.284 ms` L2 median timed GC; checked Rift is `8.28 s`,
+RSS `20.3 MB`, and zero timed GC; checked scoped is `8.56 s`, RSS `20.6 MB`,
+and zero timed GC. Heap completes at `128M` but fails at `64M`/`32M`, while
+checked Rift completes around `20 MB`.
 The new `evidence/LOGHUB_RETAINED_SESSION_MATRIX.md` row is the opposite
 lesson: it is a true real-streaming retained session/join row over HDFS, but
 heap GC remains too small to headline.
@@ -147,6 +153,7 @@ not presentation requirements.
 | Focused retained epoch | complete | complete | retained-object memory-management | keep as cleanest memory-management row |
 | Broom retained timestamped aggregate/join | complete, including 1M/5M/20M checked scoped backend comparison | complete, including 1M/5M/20M checked scoped backend interpretation | prior-work-style natural heap vs checked Rift retained dataflow | keep as the first Broom/Naiad-like GC-heavy dataflow row; same-shape controls are appendix-only and checked scoped is the safe backend comparison |
 | Broom q17 retained join/aggregate | complete through 1M/5M/20M active-4, 5M/20M active-16, and DBGEN SF0.1/SF1 file-backed L1 | complete through the same generated scale points and DBGEN SF0.1/SF1 L2 plus heap-cap follow-ups | prior-work-style generated TPC-H-Q17-like retained dataflow; optional DBGEN/TPC-H file-backed input mode | keep as the next Broom/Naiad-like GC-heavy dataflow row; classify generated rows as deterministic methodology, and DBGEN rows as standardized generated TPC-H input rather than real-world input |
+| Broom shopper JOIN-SELECT-JOIN | complete through 20k smoke and 1M/5M/20M L1 | complete through 1M/5M/20M L2 plus 20M heap-cap follow-up | prior-work-style generated Broom/Naiad shopper-like retained dataflow | keep as the second completed Broom/Naiad retained join shape after q17; generated methodology evidence, not real-input proof |
 | GH Archive-shaped retained q2 | complete | complete | generated/preloaded retained-object row | keep; label generated/preloaded, not real-input proof |
 | LogHub retained q2/q3 | complete | complete | generated/indexable retained rows | keep q2 as strong retained row; mark q3 checked-stream as modest/RSS row |
 | DSPBench Fraud retained q2 | complete | complete | generated/indexable retained row | keep as modest retained win |
@@ -176,6 +183,7 @@ not presentation requirements.
 | Broom retained high-active aggregate/join 20M | generated Broom/Naiad-style high-live-state dataflow | natural heap baseline / prior-work-style retained dataflow / fixed-memory | aggregate heap `10.78 s`, RSS `236 MB`, L2 `4235.563 ms`, GC `953.153 ms`; join heap `9.88 s`, RSS `438 MB`, L2 `3133.932 ms`, GC `486.649 ms`; heap fails at `384M`/`256M` | aggregate checked Rift `8.48 s`, RSS `53.3 MB`, L2 `2904.092 ms`, GC `0 ms`; join checked Rift `8.09 s`, RSS `56.6 MB`, L2 `2864.439 ms`, GC `0 ms`; checked scoped aggregate/join `11.51/9.15 s`, RSS `53.7/56.9 MB` | aggregate `21.3%` faster; join `18.1%` faster | L2 removes `953.153/486.649 ms` heap GC | aggregate about `-77%`; join about `-87%` | Strongest Broom high-live-state row. It gives throughput, GC, RSS, and fixed-memory evidence under the prior-work-style natural heap/GC versus checked Rift comparison. |
 | Broom q17 retained join/aggregate active-4 20M | generated Broom/Naiad-style TPC-H-Q17-like dataflow | natural heap baseline / prior-work-style retained dataflow | q17 heap `5.89 s`, RSS `39.4 MB`, L2 `2840.837 ms`, GC `213.555 ms` | checked Rift `4.76 s`, RSS `13.2 MB`, L2 `1892.916 ms`, GC `0 ms`; checked scoped `5.91 s`, RSS `13.4 MB`, L2 `2200.976 ms` | L1 `19.2%` faster; L2 `33.4%` faster | L2 removes `213.555 ms` heap GC | L1 about `-66%` | Q17 active-4 reaches material heap GC at 20M while keeping the same logical TPC-H-Q17-like retained query across heap and checked Rift. |
 | Broom q17 retained join/aggregate active-16 20M | generated Broom/Naiad-style TPC-H-Q17-like high-live-state dataflow | natural heap baseline / prior-work-style retained dataflow | q17 heap `14.45 s`, RSS `231.7 MB`, L2 `4781.079 ms`, GC `1370.380 ms`; heap caps `512M/384M/256M` all complete | checked Rift `9.67 s`, RSS `49.9 MB`, L2 `3349.128 ms`, GC `0 ms`; checked scoped `13.02 s`, RSS `50.3 MB`, L2 `4269.248 ms` | L1 `33.1%` faster; L2 `29.9%` faster | L2 removes `1370.380 ms` heap GC | L1 about `-78%` | Strongest q17 row. It is throughput/GC/RSS evidence for retained join/aggregate state; not fixed-memory failure evidence because heap still completes down to `256M`. |
+| Broom shopper JOIN-SELECT-JOIN 20M | generated Broom/Naiad-style shopper retained dataflow | natural heap baseline / prior-work-style retained dataflow / fixed-memory | shopper heap `10.41 s`, RSS `94.3 MB`, L2 `3507.557 ms`, GC `601.284 ms`; heap completes at `128M` but fails at `64M`/`32M` | checked Rift `8.28 s`, RSS `20.3 MB`, L2 `2917.572 ms`, GC `0 ms`; checked scoped `8.56 s`, RSS `20.6 MB`, L2 `3069.260 ms`, GC `0 ms` | L1 `20.5%` faster; L2 `16.8%` faster | L2 removes `601.284 ms` heap GC | L1 about `-78%` | Second completed Broom/Naiad retained join shape. It gives throughput, GC, RSS, and fixed-memory evidence under the natural heap/GC versus checked Rift comparison. |
 | Focused retained epoch 1M | synthetic focused matrix | retained-object drop-anchor | `heap-retained-drop-anchor` `36.233 ms`, GC `10.109 ms`, RSS `21.3 MB` | `checked-scoped-epoch-retained-no-traverse` `24.274 ms`, GC `0 ms`, RSS `4.9 MB` | `33.0%` faster | `-10.109 ms` | `-77%` | Clean retained-object memory-management win. |
 | GH Archive-shaped retained q2 | generated/preloaded stressor | retained-object drop-anchor / L1 final-clean | L1 retained heap `4.62 s`, RSS `147 MB`; L2 retained heap `257.377 ms`, GC `77.208 ms` | L1 checked scoped retained `3.44 s`, RSS `16 MB`; L2 checked scoped retained `186.868 ms`, GC `0 ms` | L1 `25.5%` faster; L2 `27.4%` faster | L2 `-77.208 ms` | L1 about `-89%` | Strong retained memory-management and RSS win; generated/preloaded, not real-input proof. Summary-only L1 lower bound is `1.28 s`. |
 | LogHub-shaped retained q2 | generated/indexable log stream | retained-object drop-anchor / L1 final-clean | L1 retained heap `10.79 s`, RSS `206 MB`; L2 retained heap `469.079 ms`, GC `64.060 ms` | L1 checked scoped retained `8.12 s`, RSS `22 MB`; L2 checked scoped retained `402.821 ms`, GC `0 ms` | L1 `24.7%` faster; L2 `14.1%` faster | L2 `-64.060 ms` | L1 about `-89%` | Strong retained throughput/GC/RSS win on generated/indexable log stream. |

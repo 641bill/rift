@@ -1,26 +1,19 @@
 # Rift Roadmap
 
-Last updated: 2026-05-17 15:36 CEST
+Last updated: 2026-05-17 16:43 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
 
-Latest HotSpot backend checkpoint:
-The OpenJDK/HotSpot fork now has Patch 1-3 implemented and exported as
-`experimental/hotspot-rift/patches/01-rift-region-stubs.patch`. The macOS
-devkit is
-`/Users/siyaoliu/rift/cache/openjdk-rift/build/devkit/Xcode26.5-MacOSX26`;
-the patched fastdebug JDK is
-`/Users/siyaoliu/rift/cache/openjdk-rift/build/rift-fastdebug/jdk/bin/java`.
-The patch adds `-XX:+UseRiftRegions`, an internal
-`jdk.internal.rift.RiftRegion` test surface, `JavaThread` current-region state,
-active/closed handle checks, and a raw VM-owned bump/reset arena with stats.
-Region smoke passed at `/private/tmp/rift-hotspot-region-smoke-20260517`, and
-flag-off baseline smoke after patch passed at
-`/private/tmp/rift-hotspot-smoke-after-rift-20260517`. HotSpot work can now
-move to Patch 4: interpreter-only ordinary-object allocation for a narrow
-final/simple primitive-field class subset. This is still prototype VM backend
-work; Scala Native remains the validated performance backend.
+Backend portability branch split:
+JVM/HotSpot/Scala.js/Wasm portability work now has a dedicated parent branch,
+`backend-portability`, currently at `065b521` (`Add backend portability
+prototypes`). That branch owns `experimental/**`,
+`docs/*BACKEND*_PLAN.md`, `docs/RIFT_PORTABLE_API_CONTRACT.md`, backend status
+docs, and backend prototype evidence. `main` remains the Scala
+Native-validated evaluation/report branch. Future backend prototypes should
+land on `backend-portability` first and only be summarized on `main` when they
+become stable presentation context.
 
 Latest benchmark-data footprint update:
 Extraction-free local input support now covers AskUbuntu `7z:` member
@@ -139,9 +132,17 @@ but fails at `64M`. At SF1 (`200000` part rows and `6001215` lineitem rows),
 checked Rift is `51.47 s` and `48.7 MB` RSS versus heap `55.44 s` and
 `433.3 MB`; heap fails at `128M` while checked Rift completes around
 `49-53 MB`. Mark the TPC-H-Q17-like generated and DBGEN SF1 slices complete
-as standardized generated TPC-H input evidence; keep shopper
-JOIN-SELECT-JOIN as a separate future Broom/Naiad candidate only if another
-retained dataflow shape is needed.
+as standardized generated TPC-H input evidence.
+The 2026-05-17 shopper follow-up completes that separate Broom/Naiad
+JOIN-SELECT-JOIN shape as generated methodology evidence. At 20M, heap is
+`10.41 s`, RSS `94.3 MB`, and L2 GC `601.284 ms`; checked Rift is `8.28 s`,
+RSS `20.3 MB`, and zero timed GC; checked scoped is `8.56 s`, RSS
+`20.6 MB`, and zero timed GC. Heap completes at `128M` but fails at
+`64M`/`32M`, while checked Rift completes around `20 MB`. Use aggregate/join,
+q17, and shopper as the completed Broom/Naiad retained-object methodology
+case studies; the next benchmark-search step should move to real retained
+streaming candidates unless another generated prior-work shape is explicitly
+needed.
 
 Latest LogHub retained session/join triage:
 `evidence/LOGHUB_RETAINED_SESSION_MATRIX.md` adds a true HDFS streaming-file
@@ -172,9 +173,9 @@ text, larger SNAP/Twitter graph replay, higher-cardinality LogHub
 session/template dictionaries, and Alibaba-style machine traces. HiBench,
 BigDataBench, and Renaissance should be used as workload catalogues for local
 Rift-shaped kernels, not as opaque distributed-framework headline runs.
-The TPC-H-Q17-like slice is now complete; shopper remains optional and should
-not block the next StreamFlex-style retained event-correlation/transaction row
-or the real-input search.
+The TPC-H-Q17-like and shopper slices are now complete. They should not block
+the next StreamFlex-style retained event-correlation/transaction row or the
+real-input search.
 
 New long-term backend track:
 `docs/SCALA_LEVEL_BACKEND_PLAN.md` is now the roadmap anchor for making Rift a

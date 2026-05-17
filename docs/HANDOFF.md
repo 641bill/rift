@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-17 15:36 CEST
+Last updated: 2026-05-17 16:43 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -9,23 +9,14 @@ Active worktree for this update:
 Active implementation branch for this update:
 `feature/rift`
 
-Latest HotSpot backend checkpoint:
-Patch 1-3 of the custom HotSpot fork is implemented and exported as
-`experimental/hotspot-rift/patches/01-rift-region-stubs.patch`. The patch adds
-the guarded experimental `-XX:+UseRiftRegions` flag, internal
-`jdk.internal.rift.RiftRegion` test surface, `JavaThread` current-region state,
-active/closed region handle checks, and a VM-owned raw bump/reset arena with
-stats. The patched JDK 25 fastdebug image builds at
-`/Users/siyaoliu/rift/cache/openjdk-rift/build/rift-fastdebug/jdk/bin/java`.
-Region smoke passed at `/private/tmp/rift-hotspot-region-smoke-20260517`
-(`disabled-ok`, `enabled-ok`), and flag-off retained-object baseline smoke
-after the patch passed at `/private/tmp/rift-hotspot-smoke-after-rift-20260517`
-with checksum `7351360`, output `1000000`, internal elapsed `109.222 ms`,
-external `0.82 s` real, and max RSS `157515776` bytes. This is VM control-plane
-evidence only: no ordinary JVM `new` bytecode is redirected yet. Next HotSpot
-step is Patch 4, interpreter-only allocation for eligible final/simple
-primitive-field classes under `-Xint -XX:+UseSerialGC -XX:-UseCompressedOops
--XX:-UseCompactObjectHeaders`.
+Backend portability branch split:
+In-progress JVM/HotSpot/Scala.js/Wasm portability docs, prototype evidence, and
+experimental HotSpot patch exports now live on the parent branch
+`backend-portability` at commit `065b521` (`Add backend portability
+prototypes`). Keep `main` focused on stable project memory, thesis-facing
+Scala Native evidence, and normalized presentation reports. If backend work
+continues, switch to `backend-portability`; do not add HotSpot prototype churn
+to `main` unless it is intentionally promoted as presentation-facing context.
 
 Latest data-footprint cleanup:
 `evidence/DATA_FOOTPRINT_AND_STREAMING_PLAN.md` records the local benchmark
@@ -235,8 +226,15 @@ Rift is `51.47 s`, RSS `48.7 MB`, L2 GC `503.444 ms`, and region-op
 `256M`/`384M` but fails at `128M`, while checked Rift completes around
 `49-53 MB` RSS. Mark the DBGEN SF1 Q17 follow-up complete as standardized
 generated TPC-H input evidence, not official audited TPC-H or real-world
-input. Shopper JOIN-SELECT-JOIN remains a separate future Broom/Naiad shape if
-another retained dataflow row is needed.
+input.
+Shopper JOIN-SELECT-JOIN is now implemented as a separate Broom/Naiad
+methodology row. It retains view/cart/purchase objects and selected
+intermediate candidate objects until timestamp close. The 20k smoke matched
+checksum/output across `heap-gc`, `checked-rift`, and `checked-region-scoped`.
+At 20M, heap is `10.41 s`, RSS `94.3 MB`, and L2 GC `601.284 ms`; checked
+Rift is `8.28 s`, RSS `20.3 MB`, and zero timed GC; checked scoped is
+`8.56 s`, RSS `20.6 MB`, and zero timed GC. Heap completes at `128M` but
+fails at `64M`/`32M`, while checked Rift completes around `20 MB`.
 
 Latest LogHub retained session/join triage:
 `LogHubRetainedSessionMatrix` and
@@ -269,9 +267,9 @@ create GC pressure.
 The 2026-05-16 second search pass sharpened the next benchmark order after the
 Broom active-16 and LogHub retained-session results. Do not spend another
 iteration on simple real log parse/filter/count rows. The next GC-heavy
-candidate should be either a Broom/Naiad TPC-H-Q17/shopper-style retained
-join/dataflow row or a StreamFlex-style retained event-correlation /
-transaction-tracking latency row. For real input, prefer larger
+candidate should now be a StreamFlex-style retained event-correlation /
+transaction-tracking latency row or a real retained-state streaming row,
+because Broom q17 and shopper are complete. For real input, prefer larger
 StackExchange/StackOverflow text, larger SNAP/Twitter graph replay,
 higher-cardinality LogHub session/template dictionaries, or Alibaba-style
 machine traces if provenance is clean. HiBench, BigDataBench, and Renaissance
