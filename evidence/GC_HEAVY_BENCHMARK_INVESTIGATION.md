@@ -1,7 +1,7 @@
 # GC-Heavy Data Processing Benchmark Investigation
 
 Date: 2026-05-15
-Last updated: 2026-05-17 23:38 CEST
+Last updated: 2026-05-18 00:09 CEST
 
 Status: literature and online-investigation note. This is not a benchmark
 result pack. It records where GC pressure is expected in stream/data-processing
@@ -77,6 +77,17 @@ However, heap median timed GC is `140.639 ms` inside `6642.276 ms`, about
 retained real log objects can produce strong RSS/fixed-memory wins under
 Scala Native Immix, but not necessarily a large GC-time fraction when archive
 streaming, parsing, hashing, and query work dominate.
+
+2026-05-18 graph streaming follow-up: SNAP LiveJournal now has a true
+compressed-source `streaming-file` graph replay path. At 20M streamed edges,
+L1 checked epoch scoped is `17.15 s`, RSS `102 MB`, versus heap `18.32 s`,
+RSS `577 MB`; L2 checked epoch stream is `5530.190 ms`, GC `0 ms`, with
+`2.869 ms` region op time, versus heap `6333.745 ms` and `165.387 ms` timed
+GC. This confirms the graph-epoch shape is useful for streaming RSS,
+fixed-memory, and throughput evidence. It also confirms that even large real
+streams are not automatically GC-time-heavy on Scala Native Immix: heap GC is
+still only about `2.6%` of L2 elapsed, while parsing and graph update work
+dominate the rest.
 
 2026-05-16 18:39 second search pass: a fresh prior-work/official-source pass
 confirms the same direction. Spark's tuning guide says GC cost becomes a
@@ -253,7 +264,7 @@ summarized away before the lifetime boundary.
 | Alibaba machine-usage / DSPBench Machine Outlier | Alibaba Cluster Trace 2018 `machine_usage` slice | compressed `machine_usage.tar.gz` only | machine usage records, feature/window outlier objects | time window close | plausible, but data fetch is large | gated | disk/provenance preflight before download |
 | SPECjbb/Stancu transaction scaling | clean-room SPECjbb2005-style port | generated in-process, no data file | transaction request/order/line/accounting objects | transaction/batch close | high for transaction-local allocation | current 8M scale row complete | keep as generated methodology evidence, not real-input proof; next non-streaming search should prefer real retained graph/text/transaction inputs |
 | StackExchange / StackOverflow text epochs | Stack Exchange dumps | existing `.7z` first; larger dumps only after disk preflight | post/token/top-word candidate objects | token epoch close | medium; AskUbuntu direct epoch is useful but GC is modest | gated | use compressed `.7z` and scale only if disk/time allow |
-| SNAP graph edge epochs | SNAP compressed graph datasets | `.txt.gz` edge streams | edge/update/message objects | graph epoch close | high at LiveJournal scale | existing LiveJournal strong row | avoid Twitter-2010 unless disk/time allow |
+| SNAP graph edge epochs | SNAP compressed graph datasets | `.txt.gz` edge streams | edge/update/message objects | graph epoch close | high for RSS/fixed-memory at LiveJournal scale; moderate for timed GC under Immix | LiveJournal preloaded 50M and streaming-file 20M complete | keep LiveJournal as strongest graph row; avoid Twitter-2010 unless disk/time allow |
 
 ## Search Gates
 

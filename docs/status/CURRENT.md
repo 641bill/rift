@@ -1,6 +1,6 @@
 # Current Rift Status
 
-Last updated: 2026-05-17 23:47 CEST
+Last updated: 2026-05-18 00:09 CEST
 
 Status: hot status file. Update this file for routine turn-by-turn progress
 instead of editing `docs/HANDOFF.md`, `docs/ROADMAP.md`,
@@ -12,7 +12,7 @@ instead of editing `docs/HANDOFF.md`, `docs/ROADMAP.md`,
 |---|---|---|
 | Native backend | `scala-native-rift/nativelib/**`, `nscplugin/**`, `unit-tests/native/**`, `sandbox/**` | Scala Native remains the only validated performance backend. Native sandbox compile passed after portable prototype extraction. |
 | Backend portability | parent branch `backend-portability` | JVM/HotSpot/Scala.js/Wasm portability docs, prototype evidence, and `experimental/**` patch exports are isolated on `backend-portability` at `065b521`. Keep `main` focused on Scala Native evidence unless backend results are intentionally promoted to presentation context. |
-| Benchmark search | parent `evidence/**` plus child sandbox result files | Broom q17 retained join/aggregate and Broom shopper are complete generated methodology rows. SPECjbb/Stancu-style 8M transaction scaling is recorded as generated clean-room methodology evidence, not real-input proof. LogHub Spark archive-wide retained session is now the strongest LogHub real-streaming RSS/fixed-memory row, and AskUbuntu compressed streaming scales to 5M with modest RSS/elapsed gains but low GC-time share. Real-input search remains focused on retained-object workloads because Immix keeps many parser/filter/count real streams low-GC. |
+| Benchmark search | parent `evidence/**` plus child sandbox result files | Broom q17 retained join/aggregate and Broom shopper are complete generated methodology rows. SPECjbb/Stancu-style 8M transaction scaling is recorded as generated clean-room methodology evidence, not real-input proof. LogHub Spark archive-wide retained session is now the strongest LogHub real-streaming RSS/fixed-memory row, AskUbuntu compressed streaming scales to 5M, and Yak LiveJournal now has a 20M compressed-source graph streaming row with strong RSS/fixed-memory and throughput gains but low GC-time share. Real-input search remains focused on retained-object workloads because Immix keeps many parser/filter/count real streams low-GC. |
 | Presentation report | `docs/PERFORMANCE_EVALUATION_REPORT.md` and generated `docs/report.html` | Do not edit/regenerate unless presentation claims or tables change. |
 
 ## Latest Validation
@@ -32,6 +32,9 @@ instead of editing `docs/HANDOFF.md`, `docs/ROADMAP.md`,
 - Native sandbox compile after archive-wide LogHub input support:
   `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile`
   passed.
+- Native sandbox compile after Yak `YAK_GRAPH_INPUT_MODE=streaming-file`:
+  `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile`
+  passed.
 - Broom q17 20M active-16: checked Rift `9.67 s`, `49.9 MB`, zero timed GC
   versus heap `14.45 s`, `231.7 MB`, L2 GC `1370.380 ms`.
 - SPECjbb/Stancu-style 8M generated transaction row: L1 heap `4.89 s`
@@ -49,6 +52,13 @@ instead of editing `docs/HANDOFF.md`, `docs/ROADMAP.md`,
   L1 checked epoch scoped `6.23 s`, RSS `15 MB`, versus heap `6.74 s`,
   RSS `41 MB`; L2 heap GC is only `27.237 ms` inside `2109.524 ms`, so this
   remains modest RSS/fixed-memory text evidence rather than a GC-heavy row.
+- Yak LiveJournal true streaming graph, 20M edges over compressed
+  `/Users/siyaoliu/rift/cache/benchmark-data/yak/snap/soc-LiveJournal1.txt.gz`:
+  L1 checked epoch scoped `17.15 s`, RSS `102 MB`, versus heap `18.32 s`,
+  RSS `577 MB`; L2 checked epoch stream `5530.190 ms`, GC `0 ms`, region op
+  `2.869 ms`, versus heap `6333.745 ms`, GC `165.387 ms`. This is strong
+  real-streaming graph RSS/fixed-memory and throughput evidence, but heap GC is
+  still only about `2.6%` of L2 elapsed.
 - Previous checked suites also passed:
   `RiftRegionCheckedCompilerTest` `141/141`,
   `RiftRegionCheckedTest` `65/65`.
@@ -58,10 +68,11 @@ instead of editing `docs/HANDOFF.md`, `docs/ROADMAP.md`,
 1. If continuing backend portability, switch to `backend-portability` first;
    do not mix HotSpot/JVM prototype churn into `main`.
 2. If continuing Native evidence, move from completed q17/shopper/SPECjbb,
-   Spark retained-session, and AskUbuntu compressed-streaming rows to either a
-   disk/time preflight for larger SNAP/Twitter graph streaming or a
-   provenance-clean larger StackOverflow/StackExchange compressed dump. Park
-   the current LogHub and AskUbuntu variants unless the next query retains
-   more state than parser/hash/XML scanning work.
+   Spark retained-session, AskUbuntu compressed-streaming, and Yak LiveJournal
+   compressed graph streaming rows to either heap-cap follow-up for the 20M
+   LiveJournal streaming row, a disk/time preflight for larger SNAP/Twitter
+   graph streaming, or a provenance-clean larger StackOverflow/StackExchange
+   compressed dump. Park the current LogHub and AskUbuntu variants unless the
+   next query retains more state than parser/hash/XML scanning work.
 3. If preparing presentation, update `PERFORMANCE_EVALUATION_REPORT.md` and
    regenerate `report.html`; otherwise leave them alone.

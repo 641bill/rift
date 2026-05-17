@@ -1,7 +1,7 @@
 # Real Streaming Input Matrix
 
 Date: 2026-05-11
-Last updated: 2026-05-17 23:47 CEST
+Last updated: 2026-05-18 00:09 CEST
 
 Status: started. This matrix records only rows that satisfy the
 `real-streaming-input` protocol: no full-input preload, incremental source
@@ -124,6 +124,64 @@ Interpretation:
   Classify as
   modest real-streaming-input RSS/fixed-memory evidence, not as the flagship
   GC-heavy stream case study.
+
+### Yak LiveJournal Graphreal, Streaming-File
+
+Implementation:
+
+- Matrix: `/Users/siyaoliu/rift/scala-native-rift/sandbox/src/main/scala-next/YakRegionMatrix.scala`
+- Mode: `YAK_GRAPH_INPUT_MODE=streaming-file`
+- Source:
+  `/Users/siyaoliu/rift/cache/benchmark-data/yak/snap/soc-LiveJournal1.txt.gz`
+- Query: stream SNAP LiveJournal edges from the compressed gzip file, allocate
+  per-epoch `EdgeUpdate` objects, and apply them to durable heap vertex state.
+- API/topology: direct `RiftRegion.epoch` over retained epoch records.
+  Page-token, whole-run, and `EpochBuffer` graph controls remain preloaded-only
+  because they require indexed replay over a bounded edge array.
+
+20k smoke:
+
+All modes matched checksum `-31772606416651040`.
+
+1M compressed-streaming row:
+
+| Mode | L1 external s | L1 RSS bytes | L2 median ms | Median GC ms | Region op ms | Records | Checksum |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `gc-heap` | `0.88` | `76038144` | `287.882` | `8.190` | `0.000` | `1000000` | `3675910048719095437` |
+| `region-scoped-rooted` | `0.85` | `22347776` | `281.376` | `0.000` | `0.000` | `1000000` | `3675910048719095437` |
+| `checked-epoch-stream` | `0.81` | `22233088` | `283.582` | `0.000` | `0.116` | `1000000` | `3675910048719095437` |
+| `checked-epoch-scoped` | `0.81` | `22331392` | `276.629` | `0.000` | `0.000` | `1000000` | `3675910048719095437` |
+
+5M compressed-streaming row:
+
+| Mode | L1 external s | L1 RSS bytes | L2 median ms | Median GC ms | Region op ms | Records | Checksum |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `gc-heap` | `4.46` | `206307328` | `1416.564` | `42.500` | `0.000` | `5000000` | `978899966951504355` |
+| `region-scoped-rooted` | `4.18` | `40091648` | `1358.500` | `0.000` | `0.000` | `5000000` | `978899966951504355` |
+| `checked-epoch-stream` | `4.10` | `39911424` | `1327.994` | `0.000` | `0.440` | `5000000` | `978899966951504355` |
+| `checked-epoch-scoped` | `4.07` | `40108032` | `1337.058` | `0.000` | `0.000` | `5000000` | `978899966951504355` |
+
+20M compressed-streaming row:
+
+| Mode | L1 external s | L1 RSS bytes | L2 median ms | Median GC ms | Region op ms | Records | Checksum |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `gc-heap` | `18.32` | `577028096` | `6333.745` | `165.387` | `0.000` | `20000000` | `-5977224669223427032` |
+| `region-scoped-rooted` | `17.78` | `101924864` | `5644.025` | `0.000` | `0.000` | `20000000` | `-5977224669223427032` |
+| `checked-epoch-stream` | `17.59` | `101564416` | `5530.190` | `0.000` | `2.869` | `20000000` | `-5977224669223427032` |
+| `checked-epoch-scoped` | `17.15` | `101679104` | `5812.138` | `0.000` | `0.000` | `20000000` | `-5977224669223427032` |
+
+Interpretation:
+
+- This is true real-streaming-input graph evidence: the compressed SNAP
+  LiveJournal edge list is consumed inside the timed benchmark path and no
+  full edge replay array is retained.
+- The row gives strong RSS/fixed-memory evidence and a useful throughput win.
+  At 20M streamed edges, checked scoped L1 is `17.15 s` versus heap
+  `18.32 s`, and checked stream L2 is `5530.190 ms` versus heap `6333.745 ms`.
+- Heap timed GC is visible but still below the `5%` flagship gate:
+  `165.387 ms` inside `6333.745 ms` at 20M, about `2.6%`. Classify as
+  real-streaming graph RSS/fixed-memory and throughput evidence, not a
+  GC-time-heavy flagship.
 
 ### LogHub HDFS Top Templates, Streaming-File
 

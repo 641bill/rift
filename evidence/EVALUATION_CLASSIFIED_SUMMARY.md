@@ -1,7 +1,7 @@
 # Evaluation Classified Summary
 
 Date: 2026-05-09
-Last updated: 2026-05-17 23:47 CEST
+Last updated: 2026-05-18 00:09 CEST
 
 Status: thesis-facing classified summary built from committed evidence.
 Baseline commits for clean rows: parent `1cc3b2c`, child `13a3df1c7`.
@@ -102,6 +102,14 @@ session records, L1 heap is `27.62 s` and `391 MB` RSS, checked Rift is
 fails below a `128M` cap, while checked rows complete around `73 MB`. This is
 real-streaming retained-object RSS/fixed-memory evidence, not a GC-time
 flagship: heap median timed GC is about `2.1%` of the L2 loop.
+The latest Yak graph follow-up adds a true compressed-source
+`YAK_GRAPH_INPUT_MODE=streaming-file` path for SNAP LiveJournal. At 20M
+streamed edges, L1 checked epoch scoped is `17.15 s`, RSS `102 MB`, versus
+heap `18.32 s`, RSS `577 MB`; L2 checked epoch stream is `5530.190 ms`, GC
+`0 ms`, and region op `2.869 ms`, versus heap `6333.745 ms` with
+`165.387 ms` timed GC. This is real-streaming graph RSS/fixed-memory and
+throughput evidence, but not a GC-time flagship because heap GC is still only
+about `2.6%` of L2 elapsed.
 The backend classification has also been clarified: every measured row in this
 file is Scala Native evidence unless it is explicitly marked paper-reported or
 planned. JVM, Scala.js, Wasm, and analysis-only Rift are now tracked as future
@@ -175,7 +183,7 @@ not presentation requirements.
 | GH Archive-shaped retained q2 | complete | complete | generated/preloaded retained-object row | keep; label generated/preloaded, not real-input proof |
 | LogHub retained q2/q3 | complete | complete | generated/indexable retained rows | keep q2 as strong retained row; mark q3 checked-stream as modest/RSS row |
 | DSPBench Fraud retained q2 | complete | complete | generated/indexable retained row | keep as modest retained win |
-| Yak LiveJournal graphreal | complete | complete | real-input best checked epoch topology | keep as strongest real-input epoch row |
+| Yak LiveJournal graphreal | complete, including 50M preloaded and 1M/5M/20M streaming-file compressed-source rows | complete | real-input and real-streaming-input best checked epoch topology | keep as strongest real graph/epoch row; preloaded 50M remains the strongest pure epoch row, while 20M streaming-file is the stream-processing RSS/fixed-memory row |
 | Yak AskUbuntu topwordreal | complete at 10M and 20M preloaded plus 1M/5M streaming-file | complete | real-input and real-streaming-input best checked epoch topology | keep as first real text/top-word row; 20M preloaded strengthens direct epoch claim and 5M streaming-file confirms compressed-source RSS/fixed-memory behavior |
 | Dataflow SELECT/AGGREGATE/JOIN | complete | complete | Broom-style generated methodology, direct epoch API | keep as prior-work-shaped checked epoch row |
 | StreamFlex throughput/latency | complete | complete | StreamFlex-style generated methodology, latency/deadline axes | keep; report latency tail/deadline misses separately from throughput |
@@ -213,6 +221,7 @@ not presentation requirements.
 | LogHub-shaped direct q2 | generated/indexable log stream | summary-only topology | natural heap `526.803 ms`; L1 heap direct summary `4.23 s` x20; L2 heap direct `191.601 ms` | L1 checked stream/scoped direct summary `4.39/4.38 s` x20; L2 checked scoped direct `193.938 ms` | checked is within about `4%` of same-shape heap in L1 | heap direct has `0 ms` GC | near-tie small RSS | Symmetric direct-aggregate topology evidence. |
 | LogHub-shaped direct q3 | generated/indexable template/session stream | summary-only topology | natural heap `2225.364 ms`; L1 heap direct summary `37.01 s` x20; L2 heap direct `1779.064 ms` | L1 checked stream/scoped direct summary `37.65/38.00 s` x20; L2 checked scoped direct `1792.397 ms` | checked is within about `2-3%` of same-shape heap in L1 | heap direct has `0 ms` median GC but q3 has occasional GC in L2 | near-tie small RSS | Symmetric topology evidence; richer query remains CPU-heavy. |
 | Yak LiveJournal graphreal 50M | real SNAP LiveJournal edge list replay | best checked topology | heap `2958.659 ms`, GC `400.484 ms`, RSS `3.91 GB` | `checked-epoch-scoped` `2008.320 ms`, GC `0 ms`, RSS `2.11 GB` | `32.1%` faster | `-400.484 ms` | about `-46%` | Strongest real-input prior-work-shaped checked epoch win; local graph replay, not exact Yak/GraphChi artifact. |
+| Yak LiveJournal graphreal 20M streaming-file | real-streaming-input SNAP LiveJournal gzip edge stream | best checked topology / L1 final-clean plus L2 standard stats | L1 heap `18.32 s`, RSS `577 MB`; L2 heap `6333.745 ms`, GC `165.387 ms` | L1 `checked-epoch-scoped` `17.15 s`, RSS `102 MB`; L2 `checked-epoch-stream` `5530.190 ms`, GC `0 ms`, region op `2.869 ms`; L2 checked scoped `5812.138 ms` | L1 checked scoped `6.4%` faster; L2 checked stream `12.7%` faster | L2 removes `165.387 ms`, but heap GC is only about `2.6%` of L2 | L1 about `-82%` | True compressed-source streaming graph row. Use as real-streaming graph RSS/fixed-memory and throughput evidence; not a GC-time-heavy flagship and not exact Yak/GraphChi artifact reproduction. |
 | Yak topword reusable top-k 10M x20 | Yak-style generated methodology | retained-object drop-anchor / reusable operator gate / L1 final-clean | L1 natural heap `6.25 s`, RSS `75 MB`; same-shape heap top-k retained `5.72 s`, RSS `147 MB`; L2 heap GC `44.654/71.767 ms` | L1 `checked-epoch-topk-scoped` `4.94 s`, RSS `16 MB`; L2 checked `249.311 ms`, GC `0 ms` | L1 `21.0%` faster than natural heap; `13.6%` faster than same-shape heap top-k | L2 removes timed heap GC | L1 about `-79%` vs natural heap and `-89%` vs same-shape heap top-k | Reusable top-k API passes on a second natural top-k workload, but older `checked-epoch-scoped` close-traversal topology is still faster in L1 (`4.61 s`) for this local topword shape. |
 | Yak AskUbuntu `topwordreal` 10M x5 | real Stack Exchange AskUbuntu `Posts.xml` text replay | best checked topology / L1 final-clean | L1 natural heap `4.19 s`, RSS `428 MB`; same-shape heap top-k retained `4.40 s`, RSS `428 MB`; L2 heap `269.491 ms`, GC `23.715 ms` | L1 `checked-epoch-scoped` `3.86 s`, RSS `94 MB`; reusable top-k scoped `4.12 s`, RSS `94 MB`; L2 direct checked `207.490 ms`, GC `0 ms` | L1 direct checked `7.9%` faster than natural heap; reusable top-k `1.7%` faster than natural heap but slower than direct epoch | L2 direct checked removes `23.715 ms` heap GC | L1 about `-78%` vs natural heap | First real text/top-word Yak-style row. Direct checked epoch is the best safe topology; reusable top-k is an RSS/slight elapsed win but remains operator-cost gated. Not exact Yak/Hadoop evidence. |
 | Yak AskUbuntu `topwordreal` 20M x5 | real Stack Exchange AskUbuntu `Posts.xml` text replay | best checked topology / L1 final-clean | L1 natural heap `7.77 s`, RSS `986 MB`; same-shape heap top-k retained `8.16 s`, RSS `986 MB`; L2 heap `511.485 ms`, GC `33.471 ms` | L1 `checked-epoch-scoped` `7.16 s`, RSS `174 MB`; reusable top-k scoped `7.86 s`, RSS `174 MB`; L2 direct checked `432.824 ms`, GC `0 ms` | L1 direct checked `7.9%` faster than natural heap; reusable top-k `1.2%` slower than natural heap | L2 direct checked removes `33.471 ms` heap GC | L1 about `-82%` vs natural heap | 20M scale-up strengthens real text checked epoch/RSS claim. Direct checked epoch remains the reportable safe framework win; reusable top-k stays gated for elapsed on this input. |
@@ -265,8 +274,10 @@ not presentation requirements.
   high-GC stream-object regime where checked page-token wins decisively.
 - **Generated methodology claim:** NEXMark Beam-default-style q3/q8/q9/q11 now
   have L1 checked framework wins, but remain generated local-harness evidence.
-- **Real-input claim:** Yak LiveJournal is the strongest real-input epoch row.
-  AskUbuntu `topwordreal` adds the first real text/top-word checked epoch win,
+- **Real-input claim:** Yak LiveJournal is the strongest real-input epoch row,
+  and now also has a true compressed-source streaming-file variant with a
+  20M-edge L1 checked-scoped RSS/fixed-memory and throughput win. AskUbuntu
+  `topwordreal` adds the first real text/top-word checked epoch win,
   now with a 20M-token scale-up that keeps the same L1 speedup and increases
   the RSS reduction.
   LogHub top templates is now a real-preloaded retained top-k row at both
