@@ -1,6 +1,6 @@
 # Current Rift Status
 
-Last updated: 2026-05-18 00:44 CEST
+Last updated: 2026-05-18 00:51 CEST
 
 Status: hot status file. Update this file for routine turn-by-turn progress
 instead of editing `docs/HANDOFF.md`, `docs/ROADMAP.md`,
@@ -68,6 +68,12 @@ instead of editing `docs/HANDOFF.md`, `docs/ROADMAP.md`,
   `512M` and fail at `256M`/`128M`; checked rows pass at `128M` and `64M`.
   Use this as real-streaming retained-state RSS/fixed-memory evidence, not a
   GC-time flagship.
+- Real-streaming evidence is now consolidated in the compact representative
+  table at the top of `evidence/REAL_STREAMING_INPUT_MATRIX.md`: Theodolite
+  retained UC4, LogHub Spark retained session, Wikimedia retained clickstream,
+  Yak LiveJournal streaming graph, and AskUbuntu streaming text are classified
+  with L1 elapsed/RSS, L2 GC/region interpretation, heap-cap status,
+  checksum/output, and allowed claim.
 - Previous checked suites also passed:
   `RiftRegionCheckedCompilerTest` `141/141`,
   `RiftRegionCheckedTest` `65/65`.

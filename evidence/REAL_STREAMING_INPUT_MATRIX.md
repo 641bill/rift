@@ -1,11 +1,35 @@
 # Real Streaming Input Matrix
 
 Date: 2026-05-11
-Last updated: 2026-05-18 00:44 CEST
+Last updated: 2026-05-18 00:51 CEST
 
 Status: started. This matrix records only rows that satisfy the
 `real-streaming-input` protocol: no full-input preload, incremental source
 replay, bounded active state, and matching checksum/output counts.
+
+## Compact Representative Table
+
+This table is the current one-page real-streaming view. All rows consume
+compressed/archive inputs incrementally, avoid preloading the full dataset, and
+use L1 external elapsed/RSS for headline timing. L2 timings are interpretation
+only.
+
+| Benchmark row | Input / query | Heap L1 | Best checked L1 | Heap L2 GC / max | Best checked L2 GC / region op | Fixed-memory status | Checksum/output | Allowed claim |
+|---|---|---:|---:|---:|---:|---|---|---|
+| Theodolite retained UC4 hierarchy | UCI power trace from `zip:...!household_power_consumption.txt`, retained hierarchy-window contributions | `16.85 s`, `207 MB` | `checked-epoch-stream`: `14.06 s`, `27 MB` | `335.309 ms` / `482.380 ms` | `31.570 ms` / n/a | heap passes `128M`, fails `64M`; checked stream passes `64M` | checksum `6053646443718331766`, output `126608` | Strongest real-streaming retained-object row: throughput, RSS, GC, and fixed-memory evidence; not exact Theodolite artifact reproduction. |
+| LogHub Spark retained session | Spark logs from `tar.gzcat:.../Spark.tar.gz`, retained active sessions | `27.62 s`, `391 MB` | `checked-region-scoped`: `19.85 s`, `73 MB`; `checked-rift`: `20.30 s`, `73 MB` | `140.639 ms` / `169.764 ms` | `checked-rift`: `14.407 ms` / `1.121 ms` | heap passes `256M`, fails `128M`; checked rows complete near `73 MB` | checksum `-1938898183938054371`, output `770310` | Real-streaming retained-session RSS/fixed-memory and throughput evidence; heap GC is about `2.1%`, so not a GC-time flagship. |
+| Wikimedia enwiki retained clickstream | Clickstream TSV from `clickstream-enwiki-2026-03.tsv.gz`, generic retained line-session | `15.54 s`, `864 MB` | `checked-rift`: `14.15 s`, `136 MB` | `166.100 ms` / `217.036 ms` | `11.537 ms` / `3.121 ms` | heap passes `512M`, fails `256M`; checked rows pass `128M` and `64M` | checksum `-6192260257488813902`, output `953730` | Real-streaming retained-state RSS/fixed-memory and L1 throughput evidence; generic triage harness, not a final named Wikimedia operator. |
+| Yak LiveJournal graph replay | SNAP LiveJournal edges from `soc-LiveJournal1.txt.gz`, epoch edge updates | `18.32 s`, `577 MB` | `checked-epoch-scoped`: `17.15 s`, `102 MB` | `165.387 ms` / n/a | `checked-epoch-stream`: `0.000 ms` / `2.869 ms` | heap passes `128M`, fails `64M`; checked epoch rows pass `64M` and `32M` | checksum `-5977224669223427032` | Real-streaming graph RSS/fixed-memory and throughput evidence; heap GC is about `2.6%`, so not a GC-time flagship. |
+| AskUbuntu topword stream | Stack Exchange posts from `7z:...!Posts.xml`, epoch word records | `6.74 s`, `41 MB` | `checked-epoch-scoped`: `6.23 s`, `15 MB` | `27.237 ms` / n/a | `0.000 ms` / `0.000 ms` | heap caps not needed; low-RSS checked row already stable | checksum `-1661295494911249805`, records `5000000` | Modest real-streaming text RSS/fixed-memory and elapsed evidence; parser/token scanning dominates and heap GC is about `1.3%`. |
+
+Current ranking:
+
+- Strongest real-streaming retained-object row: Theodolite retained UC4.
+- Strongest log/session fixed-memory row: LogHub Spark retained session.
+- Strongest compressed graph-stream row: Yak LiveJournal graph replay.
+- Useful retained-state triage row needing a named operator before promotion:
+  Wikimedia clickstream line-session.
+- Useful low-pressure control: AskUbuntu text topword.
 
 ## Implemented Rows
 
