@@ -1,6 +1,6 @@
 # HotSpot Rift Experiment
 
-Last updated: 2026-05-17 23:50 CEST
+Last updated: 2026-05-17 23:57 CEST
 
 Status: scaffold and exported Patch 1-10 artifacts for the custom HotSpot
 VM-fork backend. This directory does not contain an OpenJDK checkout. It
@@ -27,11 +27,13 @@ heap fallback.
 | `scripts/run_c1_object_region_smoke.sh` | Run the conservative C1 region-allocation smoke. |
 | `scripts/run_c1_store_guard_smoke.sh` | Run the conservative C1 compiled-store guard smoke. |
 | `scripts/run_c2_gate_smoke.sh` | Run the conservative C2/JVMCI safety-gate smoke. |
+| `scripts/run_safepoint_probe.sh` | Probe safepoint-only and explicit-GC behavior for live region objects. |
 | `tests/java/RiftHotSpotBaselineSmoke.java` | Baseline retained-object workload for stock/patched JDKs. |
 | `tests/java/RiftHotSpotRegionSmoke.java` | Region lifecycle smoke. |
 | `tests/java/RiftHotSpotObjectRegionSmoke.java` | Object-region allocation and store-guard smoke. |
 | `tests/java/RiftHotSpotC1RegionAllocationSmoke.java` | C1 allocation smoke for registered primitive-field records. |
 | `tests/java/RiftHotSpotC1StoreGuardSmoke.java` | C1 `putstatic`/`putfield`/`aastore` store-guard smoke. |
+| `tests/java/RiftHotSpotSafepointProbe.java` | Safepoint/GC probe for live registered region objects. |
 | `patches/README.md` | First HotSpot patch roadmap. |
 
 ## Default Locations
@@ -136,6 +138,13 @@ HOTSPOT_RIFT_JAVA=/Users/siyaoliu/rift/cache/openjdk-rift/build/rift-fastdebug/j
   experimental/hotspot-rift/scripts/run_c2_gate_smoke.sh
 ```
 
+Run safepoint/GC probe with a built JDK:
+
+```sh
+HOTSPOT_RIFT_JAVA=/Users/siyaoliu/rift/cache/openjdk-rift/build/rift-fastdebug/jdk/bin/java \
+  experimental/hotspot-rift/scripts/run_safepoint_probe.sh
+```
+
 ## Claim Discipline
 
 The current patched HotSpot is a prototype. It proves a narrow interpreter-mode
@@ -149,6 +158,10 @@ eligible records. Patch 9 adds conservative C1 compiled store guards for
 reference stores. Patch 10 gates C2/JVMCI compilation while
 `-XX:+UseRiftRegions` is enabled, so unsupported compiled paths cannot silently
 bypass the C1/interpreter region allocation and store-guard subset. GC
-scanning, true C2 allocation/stores, native stores outside guarded entrypoints,
-reference fields, arrays as region allocations, bridge/root rules, and
-automatic arbitrary stale-use barriers remain open.
+scanning remains the next hard blocker: the safepoint probe shows plain
+safepoint-only live region object use works in the narrow interpreter subset,
+but `System.gc()` with a live region object aborts fastdebug verification at
+`compressedOops.inline.hpp:87` because the VM still assumes root oops are in
+the Java heap. True C2 allocation/stores, native stores outside guarded
+entrypoints, reference fields, arrays as region allocations, bridge/root rules,
+and automatic arbitrary stale-use barriers remain open.

@@ -1,7 +1,7 @@
 # HotSpot Ordinary-Object Region Backend Plan
 
 Date: 2026-05-17
-Last updated: 2026-05-17 23:50 CEST
+Last updated: 2026-05-17 23:57 CEST
 
 Status: long-term VM-fork roadmap with Patch 1-10 implemented through a narrow
 interpreter-only object-allocation and store-guard prototype. Ordinary
@@ -17,6 +17,13 @@ unsupported C2/JVMCI compilation while Rift regions are enabled. GC
 integration, true C2 allocation/stores, arrays as region allocations,
 reference fields inside region objects, automatic stale-use barriers, and broad
 bridge/root handling are still future work.
+
+The first GC/safepoint probe narrows the next VM blocker: a live region object
+survives a plain safepoint-only test in the current interpreter subset, but
+`System.gc()` with that live object aborts fastdebug verification because
+compressed-oop/root handling still requires the object to be in the Java heap.
+This makes GC/safepoint root handling the next correctness slice before true
+C2 support or performance claims.
 
 ## Goal
 
@@ -313,6 +320,12 @@ Observed on 2026-05-17:
   `/private/tmp/rift-hotspot-object-region-smoke-patch10-20260517`,
   `/private/tmp/rift-hotspot-region-smoke-patch10-20260517`, and
   `/private/tmp/rift-hotspot-smoke-patch10-20260517`.
+- the first safepoint/GC probe passes the safepoint-only case and fails the
+  explicit-GC case at
+  `/private/tmp/rift-hotspot-safepoint-probe-patch10-20260517`;
+- the explicit-GC failure is a fastdebug abort at
+  `compressedOops.inline.hpp:87`: `assert(Universe::is_in_heap(v)) failed:
+  object not in heap`.
 
 Patch 4 limitations:
 
@@ -350,10 +363,9 @@ Patch 5-6 accepted path:
   rejection, plus reflective, Unsafe, MethodHandle setter, and anonymous
   closure capture routes in the covered subset.
 
-Next concrete step: decide whether to broaden the prototype toward true C2
-support or first tackle GC/safepoint integration for active region objects.
-Patch 10 prevents unsupported C2/JVMCI execution under `UseRiftRegions`, but
-it is not a C2 region-allocation implementation. Native stores outside the
-guarded entrypoints, supported region-to-heap bridges, GC/safepoint behavior,
-and automatic stale-use protection still need dedicated design before making
-any JVM backend safety or performance claim.
+Next concrete step: tackle GC/safepoint integration for active region objects.
+Patch 10 prevents unsupported C2/JVMCI execution under `UseRiftRegions`, so
+true C2 support can wait. Native stores outside the guarded entrypoints,
+supported region-to-heap bridges, GC/safepoint behavior, and automatic
+stale-use protection still need dedicated design before making any JVM backend
+safety or performance claim.

@@ -1,6 +1,6 @@
 # HotSpot Backend Status
 
-Last updated: 2026-05-17 23:50 CEST
+Last updated: 2026-05-17 23:57 CEST
 
 Status: hot status file for the custom HotSpot VM-fork track. This is separate
 from the portable JVM library prototype.
@@ -90,6 +90,13 @@ Detailed HotSpot progress belongs here and in
   `-XX:+UseRiftRegions` is enabled, `CompileBroker` rejects C2 and JVMCI
   compilation requests so unsupported compiled allocation/store paths cannot
   bypass the C1/interpreter safety subset.
+- The first safepoint/GC probe is implemented in
+  `experimental/hotspot-rift/scripts/run_safepoint_probe.sh`. Safepoint-only
+  live region object use passes in the narrow interpreter subset, but
+  `System.gc()` with a live region object aborts in fastdebug at
+  `compressedOops.inline.hpp:87` with `object not in heap`. This makes
+  GC/safepoint integration the next correctness blocker before broader JVM
+  region claims.
 - `autoconf` was installed with Homebrew and preflight now passes for `git`,
   `bash`, `make`, `autoconf`, `clang`, Java `25.0.1`, and Homebrew.
 - OpenJDK was cloned into `/Users/siyaoliu/rift/cache/openjdk-rift`.
@@ -235,17 +242,24 @@ Detailed HotSpot progress belongs here and in
 - Flag-off built-JDK baseline smoke after Patch 10 recorded checksum
   `7351360`, output `1000000`, internal elapsed `11.123 ms`, external
   `0.08 s` real, max RSS `88440832` bytes.
+- Safepoint/GC probe ran at
+  `/private/tmp/rift-hotspot-safepoint-probe-patch10-20260517`. The
+  safepoint-only case prints `safepoint-probe-ok`. The explicit `System.gc`
+  case exits with status `134` after fastdebug abort:
+  `compressedOops.inline.hpp:87`, `assert(Universe::is_in_heap(v)) failed:
+  object not in heap`.
 - Stock-JDK retained-object baseline smoke passed at
   `/private/tmp/rift-hotspot-smoke-20260517`.
 
 ## Next Step
 
-Extend the safety work beyond the current Patch 10 interpreter, C1 allocation,
-C1 store-guard, Unsafe/JNI, explicit API-boundary verifier, and C2/JVMCI gate
-subset. The next work should decide between true C2 allocation/store support
-and GC/safepoint integration first, then cover native stores outside the
-guarded Unsafe/JNI entrypoints and explicit JVM bridge/root rules before
-allowing reference fields. Automatic stale post-close use remains open: Patch
-7 gives an explicit verifier that Rift lowering can call, not a general
+Make GC/safepoint integration the next VM design slice. The first probe shows
+that live region objects can pass a plain safepoint in the current narrow
+interpreter subset, but explicit GC still treats the region object as an
+ordinary root oop that must live in the Java heap. True C2 support should wait
+until this root/scanning story is decided. After that, cover native stores
+outside the guarded Unsafe/JNI entrypoints and explicit JVM bridge/root rules
+before allowing reference fields. Automatic stale post-close use remains open:
+Patch 7 gives an explicit verifier that Rift lowering can call, not a general
 object-use barrier. Performance claims remain out of scope until GC/safepoint
 integration is designed.

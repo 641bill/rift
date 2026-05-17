@@ -1,7 +1,7 @@
 # HotSpot Region Backend Status
 
 Date: 2026-05-17
-Last updated: 2026-05-17 23:50 CEST
+Last updated: 2026-05-17 23:57 CEST
 
 Status: VM-fork Patch 1-10 evidence. Patch 4 proves a narrow
 interpreter-only ordinary-object allocation prototype for explicitly
@@ -18,6 +18,11 @@ This is still not a performance-ready JVM Rift backend because GC integration,
 true C2 allocation/stores, arrays as region allocations, reference fields
 inside region objects, and automatic broad post-close stale-use handling are
 not implemented.
+
+The first safepoint/GC probe now confirms the immediate GC blocker: a live
+region object survives a plain safepoint-only check in the current interpreter
+subset, but `System.gc()` aborts fastdebug verification because compressed-oop
+root handling still requires the value to be in the Java heap.
 
 ## Scaffold
 
@@ -909,11 +914,55 @@ Patch 10 limitations:
 - no GC/safepoint integration is added by this patch;
 - performance claims remain out of scope.
 
+## Safepoint/GC Probe
+
+Probe files:
+
+- `experimental/hotspot-rift/tests/java/RiftHotSpotSafepointProbe.java`
+- `experimental/hotspot-rift/scripts/run_safepoint_probe.sh`
+
+Purpose:
+
+- separate plain safepoint behavior from explicit GC behavior for a live
+  registered primitive-field region object;
+- keep explicit-GC failure as characterization evidence instead of treating it
+  as a passing regression smoke.
+
+Command:
+
+```text
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-safepoint-probe-patch10-20260517 \
+  experimental/hotspot-rift/scripts/run_safepoint_probe.sh
+```
+
+Result:
+
+| Probe | Output | Result |
+|---|---|---|
+| Plain safepoint-only | `/private/tmp/rift-hotspot-safepoint-probe-patch10-20260517/safepoint.out` | `safepoint-probe-ok` |
+| Explicit `System.gc()` | `/private/tmp/rift-hotspot-safepoint-probe-patch10-20260517/system-gc.out` | process abort, status `134` |
+
+Observed explicit-GC failure:
+
+```text
+Internal Error (.../compressedOops.inline.hpp:87)
+assert(Universe::is_in_heap(v)) failed: object not in heap 0x0000000bb703d410
+```
+
+Interpretation:
+
+- active region objects can still be used across a simple safepoint-only path
+  in the narrow interpreter subset;
+- GC root processing/verification still assumes root oops point into the Java
+  heap, so region oops are not yet safe across explicit GC;
+- this makes GC/safepoint integration the next correctness blocker before
+  broad JVM safety, true C2 support, or performance claims.
+
 ## Next Required Step
 
-1. Decide whether the next VM milestone is true C2 allocation/store support or
-   GC/safepoint integration for active region objects. Patch 10 only gates C2;
-   it does not implement C2 support.
+1. Design and prototype GC/safepoint root handling for active region objects.
+   Patch 10 only gates C2; it does not make region oops acceptable to GC root
+   processing.
 2. Decide the first supported bridge/root rule for JVM region-to-heap
    references before allowing reference fields.
 3. Add GC/safepoint integration before any region object may survive a
