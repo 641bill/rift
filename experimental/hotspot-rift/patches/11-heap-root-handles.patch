@@ -1,0 +1,124 @@
+diff --git a/src/hotspot/share/prims/riftRegion.cpp b/src/hotspot/share/prims/riftRegion.cpp
+index e0c98127779..02044aee95c 100644
+--- a/src/hotspot/share/prims/riftRegion.cpp
++++ b/src/hotspot/share/prims/riftRegion.cpp
+@@ -67,6 +67,19 @@ RIFT_ENTRY(void, RiftRegion_VerifyLive(JNIEnv* env, jclass cls, jobject value))
+   RiftRegionRuntime::verify_live_oop(JNIHandles::resolve(value), CHECK);
+ RIFT_END
+
++RIFT_ENTRY(jlong, RiftRegion_CreateHeapRoot(JNIEnv* env, jclass cls, jobject value))
++  return RiftRegionRuntime::create_heap_root(thread, JNIHandles::resolve(value), CHECK_0);
++RIFT_END
++
++RIFT_ENTRY(jobject, RiftRegion_ResolveHeapRoot(JNIEnv* env, jclass cls, jlong handle))
++  oop value = RiftRegionRuntime::resolve_heap_root(handle, CHECK_NULL);
++  return JNIHandles::make_local(THREAD, value);
++RIFT_END
++
++RIFT_ENTRY(void, RiftRegion_ReleaseHeapRoot(JNIEnv* env, jclass cls, jlong handle))
++  RiftRegionRuntime::release_heap_root(handle, CHECK);
++RIFT_END
++
+ RIFT_ENTRY(jlongArray, RiftRegion_Stats(JNIEnv* env, jclass cls, jlong handle))
+   const int len = RiftRegionRuntime::StatsLength;
+   jlong values[len];
+@@ -87,6 +100,9 @@ static JNINativeMethod jdk_internal_rift_RiftRegion_methods[] = {
+   { const_cast<char*>("allocateRaw"), const_cast<char*>("(JJ)J"), reinterpret_cast<void*>(RiftRegion_AllocateRaw) },
+   { const_cast<char*>("registerEligible"), const_cast<char*>("(Ljava/lang/Class;)V"), reinterpret_cast<void*>(RiftRegion_RegisterEligible) },
+   { const_cast<char*>("verifyLive"), const_cast<char*>("(Ljava/lang/Object;)V"), reinterpret_cast<void*>(RiftRegion_VerifyLive) },
++  { const_cast<char*>("createHeapRoot"), const_cast<char*>("(Ljava/lang/Object;)J"), reinterpret_cast<void*>(RiftRegion_CreateHeapRoot) },
++  { const_cast<char*>("resolveHeapRoot"), const_cast<char*>("(J)Ljava/lang/Object;"), reinterpret_cast<void*>(RiftRegion_ResolveHeapRoot) },
++  { const_cast<char*>("releaseHeapRoot"), const_cast<char*>("(J)V"), reinterpret_cast<void*>(RiftRegion_ReleaseHeapRoot) },
+   { const_cast<char*>("stats"),       const_cast<char*>("(J)[J"), reinterpret_cast<void*>(RiftRegion_Stats) },
+ };
+
+diff --git a/src/hotspot/share/runtime/riftRegionRuntime.cpp b/src/hotspot/share/runtime/riftRegionRuntime.cpp
+index 09f8144b6c4..a39941e8636 100644
+--- a/src/hotspot/share/runtime/riftRegionRuntime.cpp
++++ b/src/hotspot/share/runtime/riftRegionRuntime.cpp
+@@ -18,8 +18,10 @@
+ #include "runtime/atomic.hpp"
+ #include "runtime/fieldDescriptor.inline.hpp"
+ #include "runtime/globals.hpp"
++#include "runtime/handles.inline.hpp"
+ #include "runtime/interfaceSupport.inline.hpp"
+ #include "runtime/javaThread.hpp"
++#include "runtime/jniHandles.inline.hpp"
+ #include "runtime/riftRegionRuntime.hpp"
+ #include "utilities/align.hpp"
+ #include "utilities/copy.hpp"
+@@ -468,6 +470,46 @@ void RiftRegionRuntime::verify_live_oop(oop value, TRAPS) {
+   }
+ }
+
++jlong RiftRegionRuntime::create_heap_root(JavaThread* current, oop value, TRAPS) {
++  require_enabled(CHECK_0);
++  if (value == nullptr) {
++    THROW_MSG_0(vmSymbols::java_lang_NullPointerException(), "heap root value is null");
++  }
++  if (find_region_oop_state(value, true) != nullptr) {
++    THROW_MSG_0(vmSymbols::java_lang_IllegalArgumentException(), "heap root value must not be a Rift region object");
++  }
++  Handle value_h(current, value);
++  jobject root = JNIHandles::make_global(value_h, AllocFailStrategy::RETURN_NULL);
++  if (root == nullptr) {
++    THROW_MSG_0(vmSymbols::java_lang_OutOfMemoryError(), "Rift heap root allocation failed");
++  }
++  return static_cast<jlong>(reinterpret_cast<intptr_t>(root));
++}
++
++oop RiftRegionRuntime::resolve_heap_root(jlong handle, TRAPS) {
++  require_enabled(CHECK_NULL);
++  if (handle == 0) {
++    THROW_MSG_NULL(vmSymbols::java_lang_NullPointerException(), "null Rift heap root handle");
++  }
++  jobject root = reinterpret_cast<jobject>(static_cast<intptr_t>(handle));
++  if (!JNIHandles::is_global_handle(root)) {
++    THROW_MSG_NULL(vmSymbols::java_lang_IllegalArgumentException(), "invalid Rift heap root handle");
++  }
++  return JNIHandles::resolve(root);
++}
++
++void RiftRegionRuntime::release_heap_root(jlong handle, TRAPS) {
++  require_enabled(CHECK);
++  if (handle == 0) {
++    THROW_MSG(vmSymbols::java_lang_NullPointerException(), "null Rift heap root handle");
++  }
++  jobject root = reinterpret_cast<jobject>(static_cast<intptr_t>(handle));
++  if (!JNIHandles::is_global_handle(root)) {
++    THROW_MSG(vmSymbols::java_lang_IllegalArgumentException(), "invalid Rift heap root handle");
++  }
++  JNIHandles::destroy_global(root);
++}
++
+ void RiftRegionRuntime::stats(JavaThread* current, jlong handle, jlong* out, int len, TRAPS) {
+   require_enabled(CHECK);
+   RegionState* state = require_state(handle, CHECK);
+diff --git a/src/hotspot/share/runtime/riftRegionRuntime.hpp b/src/hotspot/share/runtime/riftRegionRuntime.hpp
+index c13be78fa0d..70a86810dd3 100644
+--- a/src/hotspot/share/runtime/riftRegionRuntime.hpp
++++ b/src/hotspot/share/runtime/riftRegionRuntime.hpp
+@@ -40,6 +40,9 @@ class RiftRegionRuntime : public AllStatic {
+   static void verify_live_oop(oop value, TRAPS);
+   static void verify_oop_store(oop value, address dst, TRAPS);
+   static void verify_oop_store_to_base(oop value, oop base, TRAPS);
++  static jlong create_heap_root(JavaThread* current, oop value, TRAPS);
++  static oop resolve_heap_root(jlong handle, TRAPS);
++  static void release_heap_root(jlong handle, TRAPS);
+   static void stats(JavaThread* current, jlong handle, jlong* out, int len, TRAPS);
+ };
+
+diff --git a/src/java.base/share/classes/jdk/internal/rift/RiftRegion.java b/src/java.base/share/classes/jdk/internal/rift/RiftRegion.java
+index 4024a8f46ec..dfb27b31e8b 100644
+--- a/src/java.base/share/classes/jdk/internal/rift/RiftRegion.java
++++ b/src/java.base/share/classes/jdk/internal/rift/RiftRegion.java
+@@ -37,6 +37,9 @@ private RiftRegion() {}
+     public static native long allocateRaw(long handle, long bytes);
+     public static native void registerEligible(Class<?> cls);
+     public static native void verifyLive(Object value);
++    public static native long createHeapRoot(Object value);
++    public static native Object resolveHeapRoot(long handle);
++    public static native void releaseHeapRoot(long handle);
+     public static native long[] stats(long handle);
+
+     public static void epoch(long capacity, Runnable body) {

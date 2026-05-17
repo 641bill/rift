@@ -1,9 +1,9 @@
 # HotSpot Patch Roadmap
 
-Last updated: 2026-05-18 00:13 CEST
+Last updated: 2026-05-18 00:24 CEST
 
 This directory holds patch notes and exported patches for the HotSpot
-ordinary-object Rift backend. Patch 1-12 are now exported. Patch 4 is a narrow
+ordinary-object Rift backend. Patch 1-13 are now exported. Patch 4 is a narrow
 interpreter-only object-allocation prototype; Patch 5 adds the first
 interpreter store guard; Patch 6 extends store checks to Unsafe/JNI paths used
 by reflection; Patch 7 adds an explicit live-object verifier for API-boundary
@@ -12,7 +12,9 @@ stale-use checks; Patch 8 adds a conservative C1 allocation route for eligible
 gates unsupported C2/JVMCI compilation while Rift regions are enabled; Patch
 11 adds a first Serial GC root-handling prototype for live primitive-field
 region objects; Patch 12 rejects unsupported collector/header configurations
-up front. This is still not a complete safe JVM Rift backend.
+up front; Patch 13 adds explicit heap-root bridge handles for GC-visible heap
+metadata referenced by primitive fields. This is still not a complete safe JVM
+Rift backend.
 
 ## Patch 0: Build Baseline
 
@@ -419,3 +421,50 @@ Implementation note:
 - Patch 12 does not broaden collector support. It narrows the accepted runtime
   configuration to match the implementation that is actually covered by Patch
   11.
+
+## Patch 13: Heap-Root Bridge Handles
+
+Patch file:
+
+`11-heap-root-handles.patch`
+
+Implemented:
+
+- `RiftRegion.createHeapRoot(Object)`, `resolveHeapRoot(long)`, and
+  `releaseHeapRoot(long)` internal VM test-surface entrypoints;
+- VM-side heap roots are JNI global handles, so the ordinary heap object stays
+  visible to GC and is updated normally across collection;
+- creating a heap-root handle for a Rift region object is rejected;
+- the supported region object still has only primitive fields, so it stores
+  the bridge as a `long` handle rather than an unscanned heap `oop` field;
+- object-region smoke now validates resolving the bridge before and after
+  `System.gc()`, then closes the region and confirms the region record is
+  stale.
+
+Validation:
+
+- patched fastdebug OpenJDK image builds;
+- object-region smoke passes at
+  `/private/tmp/rift-hotspot-object-region-smoke-patch13-20260518` with
+  `object-enabled-ok`;
+- safepoint/GC probe still passes at
+  `/private/tmp/rift-hotspot-safepoint-probe-patch13-20260518`;
+- configuration-gate smoke still passes at
+  `/private/tmp/rift-hotspot-config-gate-smoke-patch13-20260518`;
+- C2-gate smoke still passes at
+  `/private/tmp/rift-hotspot-c2-gate-smoke-patch13-20260518`;
+- C1 store-guard smoke still passes at
+  `/private/tmp/rift-hotspot-c1-store-guard-smoke-patch13-20260518`;
+- C1 allocation smoke still passes at
+  `/private/tmp/rift-hotspot-c1-region-smoke-patch13-20260518`;
+- region lifecycle smoke still passes at
+  `/private/tmp/rift-hotspot-region-smoke-patch13-20260518`;
+- flag-off baseline smoke still passes at
+  `/private/tmp/rift-hotspot-smoke-patch13-20260518`.
+
+Implementation note:
+
+- Patch 13 is a bridge/root rule prototype, not reference-field support.
+  Region objects are still primitive-field-only, and arbitrary heap references
+  inside region objects remain rejected until the VM can scan/update those
+  fields or the source checker proves a safe immutable/static case.

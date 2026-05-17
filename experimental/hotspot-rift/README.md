@@ -1,8 +1,8 @@
 # HotSpot Rift Experiment
 
-Last updated: 2026-05-18 00:13 CEST
+Last updated: 2026-05-18 00:24 CEST
 
-Status: scaffold and exported Patch 1-12 artifacts for the custom HotSpot
+Status: scaffold and exported Patch 1-13 artifacts for the custom HotSpot
 VM-fork backend. This directory does not contain an OpenJDK checkout. It
 contains the scripts, patch notes, exported patches, and smoke tests used to
 create and validate one.
@@ -172,7 +172,11 @@ region oops: the safepoint probe now passes both plain safepoint and explicit
 `System.gc()` cases for primitive-field region objects. Patch 12 gates the VM
 configuration up front: the prototype now requires `-XX:+UseSerialGC`,
 `-XX:-UseCompressedOops`, and `-XX:-UseCompactObjectHeaders` whenever
-`UseRiftRegions` is used. This is still narrow: true C2 allocation/stores,
-other collectors, compressed oops, native stores outside guarded entrypoints,
-reference fields, arrays as region allocations, bridge/root rules, and
-automatic arbitrary stale-use barriers remain open.
+`UseRiftRegions` is used. Patch 13 adds an explicit heap-root bridge handle:
+region objects can store a primitive `long` handle to GC-visible heap metadata,
+while direct heap `oop` reference fields remain rejected. Heap-root handles are
+manual test-surface handles for now and must be released explicitly. This is
+still narrow: true C2 allocation/stores, other collectors, compressed oops,
+native stores outside guarded entrypoints, reference fields, arrays as region
+allocations, broad bridge/root rules, and automatic arbitrary stale-use
+barriers remain open.

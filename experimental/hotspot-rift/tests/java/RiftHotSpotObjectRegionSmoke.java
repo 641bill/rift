@@ -20,6 +20,7 @@ public final class RiftHotSpotObjectRegionSmoke {
 
     public static void main(String[] args) {
         RiftRegion.registerEligible(PrimitiveRecord.class);
+        RiftRegion.registerEligible(PrimitiveRootRecord.class);
         expectIllegalArgument(() -> RiftRegion.registerEligible(ReferenceRecord.class), "reference field eligibility");
         expectIllegalArgument(() -> RiftRegion.registerEligible(NonFinalRecord.class), "non-final eligibility");
 
@@ -50,6 +51,7 @@ public final class RiftHotSpotObjectRegionSmoke {
         checkObjectFieldRetentionRejected();
         checkGenericHeapRetentionRejected();
         checkArrayListRetentionRejected();
+        checkHeapRootBridgeHandleSurvivesGc();
         checkReflectionRetentionRejected();
         checkUnsafeRetentionRejected();
         checkMethodHandleRetentionRejected();
@@ -169,6 +171,46 @@ public final class RiftHotSpotObjectRegionSmoke {
         } finally {
             RiftRegion.leave(handle);
             RiftRegion.close(handle);
+        }
+    }
+
+    private static void checkHeapRootBridgeHandleSurvivesGc() {
+        long root = 0L;
+        PrimitiveRootRecord saved = null;
+        long handle = RiftRegion.open(4096);
+        RiftRegion.enter(handle);
+        try {
+            UnregisteredRecord metadata = new UnregisteredRecord(99);
+            root = RiftRegion.createHeapRoot(metadata);
+            PrimitiveRootRecord record = new PrimitiveRootRecord(root, 12);
+            saved = record;
+            check(RiftRegion.stats(handle)[OBJECT_ALLOCS] == 1, "heap-root bridge record should allocate in region");
+            try {
+                RiftRegion.createHeapRoot(record);
+                throw new AssertionError("region object heap-root bridge should fail");
+            } catch (IllegalArgumentException expected) {
+                // expected
+            }
+            Object before = RiftRegion.resolveHeapRoot(record.root());
+            check(before instanceof UnregisteredRecord, "resolved root type before gc");
+            check(((UnregisteredRecord) before).x == 99, "resolved root value before gc");
+            System.gc();
+            Object after = RiftRegion.resolveHeapRoot(record.root());
+            check(after instanceof UnregisteredRecord, "resolved root type after gc");
+            check(((UnregisteredRecord) after).x == 99, "resolved root value after gc");
+            check(record.tag() == 12, "bridge record constructor ran");
+        } finally {
+            RiftRegion.leave(handle);
+            RiftRegion.close(handle);
+            if (root != 0L) {
+                RiftRegion.releaseHeapRoot(root);
+            }
+        }
+        try {
+            RiftRegion.verifyLive(saved);
+            throw new AssertionError("bridge record should be closed");
+        } catch (IllegalStateException expected) {
+            // expected
         }
     }
 
@@ -344,6 +386,24 @@ public final class RiftHotSpotObjectRegionSmoke {
 
         ReferenceRecord(Object value) {
             this.value = value;
+        }
+    }
+
+    public static final class PrimitiveRootRecord {
+        private long root;
+        private int tag;
+
+        PrimitiveRootRecord(long root, int tag) {
+            this.root = root;
+            this.tag = tag;
+        }
+
+        long root() {
+            return root;
+        }
+
+        int tag() {
+            return tag;
         }
     }
 

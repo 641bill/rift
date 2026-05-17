@@ -1,6 +1,6 @@
 # HotSpot Backend Status
 
-Last updated: 2026-05-18 00:13 CEST
+Last updated: 2026-05-18 00:24 CEST
 
 Status: hot status file for the custom HotSpot VM-fork track. This is separate
 from the portable JVM library prototype.
@@ -100,6 +100,12 @@ Detailed HotSpot progress belongs here and in
   entrypoints now reject unsupported configurations unless the VM is running
   with `-XX:+UseSerialGC`, `-XX:-UseCompressedOops`, and
   `-XX:-UseCompactObjectHeaders`.
+- Patch 13 heap-root bridge handles are implemented and exported as
+  `experimental/hotspot-rift/patches/11-heap-root-handles.patch`. The internal
+  VM test surface can create, resolve, and release explicit GC-visible heap
+  roots backed by JNI global handles. Region records still have only primitive
+  fields and store the bridge as a `long`; direct heap `oop` fields in region
+  objects remain unsupported.
 - The first safepoint/GC probe is implemented in
   `experimental/hotspot-rift/scripts/run_safepoint_probe.sh`. The Patch 10
   characterization showed safepoint-only live region object use passing while
@@ -110,8 +116,9 @@ Detailed HotSpot progress belongs here and in
   `bash`, `make`, `autoconf`, `clang`, Java `25.0.1`, and Homebrew.
 - OpenJDK was cloned into `/Users/siyaoliu/rift/cache/openjdk-rift`.
 - The worktree is on local branch `rift-jdk25` from `origin/jdk25`. The Rift
-  patch stack is currently OpenJDK commit `30c3c0e49034` (`Gate unsupported
-  Rift VM configs`), with the Patch 11 base at `8984cdb1241f` (`Skip Rift
+  patch stack is currently OpenJDK commit `a4520d7c0e19` (`Add Rift heap root
+  handles`), with the Patch 12 base at `30c3c0e49034` (`Gate unsupported
+  Rift VM configs`), the Patch 11 base at `8984cdb1241f` (`Skip Rift
   roots in Serial GC`), the Patch 10 base at `37f9d24dd561` (`Gate C2 under
   Rift regions`), the Patch 9 base at `f5bcc3f9629` (`Add C1 Rift store
   guards`), the Patch 8 base at `8cd8da1a443` (`Add C1 Rift region
@@ -288,19 +295,32 @@ Detailed HotSpot progress belongs here and in
 - Flag-off built-JDK baseline smoke after Patch 12 recorded checksum
   `7351360`, output `1000000`, internal elapsed `11.585 ms`, external
   `0.09 s` real, max RSS `88588288` bytes.
+- Patch 13 object-region smoke passed at
+  `/private/tmp/rift-hotspot-object-region-smoke-patch13-20260518` with
+  `object-enabled-ok`; it resolves an explicit heap-root bridge before and
+  after `System.gc()`, rejects creating a heap-root for a region object, and
+  then confirms the bridge record is stale after close.
+- Patch 13 regression smokes passed:
+  `/private/tmp/rift-hotspot-safepoint-probe-patch13-20260518`,
+  `/private/tmp/rift-hotspot-config-gate-smoke-patch13-20260518`,
+  `/private/tmp/rift-hotspot-c2-gate-smoke-patch13-20260518`,
+  `/private/tmp/rift-hotspot-c1-store-guard-smoke-patch13-20260518`,
+  `/private/tmp/rift-hotspot-c1-region-smoke-patch13-20260518`,
+  `/private/tmp/rift-hotspot-region-smoke-patch13-20260518`, and
+  `/private/tmp/rift-hotspot-smoke-patch13-20260518`.
+- Flag-off built-JDK baseline smoke after Patch 13 recorded checksum
+  `7351360`, output `1000000`, internal elapsed `11.869 ms`, external
+  `0.09 s` real, max RSS `88408064` bytes.
 - Stock-JDK retained-object baseline smoke passed at
   `/private/tmp/rift-hotspot-smoke-20260517`.
 
 ## Next Step
 
-Generalize the GC/safepoint story beyond the current explicitly gated
-Serial-GC, uncompressed-oop, primitive-field-only root-skip prototype. The next
-design slice should decide whether active region roots are
-collector-specific non-heap roots, a VM-known auxiliary heap space, or an
-unsupported mode for collectors that cannot tolerate them. True C2 support
-should still wait. After that, cover native stores outside the guarded
-Unsafe/JNI entrypoints and explicit JVM bridge/root rules before allowing
-reference fields. Automatic stale post-close use remains open: Patch 7 gives
-an explicit verifier that Rift lowering can call, not a general object-use
-barrier. Performance claims remain out of scope until GC integration covers
-more than this narrow subset.
+Decide whether the next slice is static/immutable metadata bridges or a small
+JVM retained-dataflow evaluation. The bridge/root path now exists for explicit
+heap metadata, but the GC/safepoint story is still explicitly gated to Serial
+GC, uncompressed oops, non-compact headers, and primitive-field region
+objects. Native stores outside the guarded Unsafe/JNI entrypoints, other
+collectors, compressed oops, direct reference fields, and automatic stale
+post-close use still need dedicated design. Performance claims remain out of
+scope until the safety subset and benchmark harness are intentionally promoted.

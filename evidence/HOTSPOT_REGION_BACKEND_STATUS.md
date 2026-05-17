@@ -1,9 +1,9 @@
 # HotSpot Region Backend Status
 
 Date: 2026-05-17
-Last updated: 2026-05-18 00:13 CEST
+Last updated: 2026-05-18 00:24 CEST
 
-Status: VM-fork Patch 1-12 evidence. Patch 4 proves a narrow
+Status: VM-fork Patch 1-13 evidence. Patch 4 proves a narrow
 interpreter-only ordinary-object allocation prototype for explicitly
 registered final primitive-field classes. Patch 5 adds an interpreter oop-store
 guard that rejects heap retention of live region objects for static fields,
@@ -16,10 +16,13 @@ Patch 9 adds conservative C1 compiled store guards for reference stores. Patch
 10 gates unsupported C2/JVMCI compilation while Rift regions are enabled.
 Patch 11 adds a first Serial-GC-only root handling prototype for active
 uncompressed primitive-field region objects. Patch 12 rejects unsupported
-collector/header configurations up front. This is still not a performance-ready
-JVM Rift backend because true C2 allocation/stores, other collectors,
-compressed oops, arrays as region allocations, reference fields inside region
-objects, and automatic broad post-close stale-use handling are not implemented.
+collector/header configurations up front. Patch 13 adds explicit heap-root
+bridge handles backed by JNI global handles, so a primitive-field region
+object can carry a GC-visible heap metadata bridge as a `long` handle. This is
+still not a performance-ready JVM Rift backend because true C2
+allocation/stores, other collectors, compressed oops, arrays as region
+allocations, direct reference fields inside region objects, and automatic
+broad post-close stale-use handling are not implemented.
 
 The safepoint/GC probe first exposed the immediate GC blocker: a live region
 object survived a plain safepoint-only check, but `System.gc()` aborted
@@ -137,6 +140,12 @@ Current branch and commit:
 
 ```text
 rift-jdk25
+a4520d7c0e19 Add Rift heap root handles
+```
+
+Patch 12 base commit:
+
+```text
 30c3c0e49034 Gate unsupported Rift VM configs
 ```
 
@@ -1106,17 +1115,88 @@ Interpretation:
   allocated;
 - it does not broaden collector/header support.
 
+## Patch 13: Heap-Root Bridge Handles
+
+Patch file:
+
+`experimental/hotspot-rift/patches/11-heap-root-handles.patch`
+
+Implementation:
+
+- added `RiftRegion.createHeapRoot(Object)`, `resolveHeapRoot(long)`, and
+  `releaseHeapRoot(long)` as internal VM test-surface operations;
+- VM-side heap roots are JNI global handles, so the bridged heap object stays
+  visible to GC and can move normally;
+- creating a heap-root handle for a Rift region object is rejected;
+- supported region records remain primitive-field-only and store the bridge as
+  a `long`, not as an unscanned heap reference field.
+
+Validation commands:
+
+```text
+HOTSPOT_RIFT_DEVKIT=/Users/siyaoliu/rift/cache/openjdk-rift/build/devkit/Xcode26.5-MacOSX26 \
+  experimental/hotspot-rift/scripts/build_openjdk.sh
+
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-object-region-smoke-patch13-20260518 \
+  experimental/hotspot-rift/scripts/run_object_region_smoke.sh
+
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-safepoint-probe-patch13-20260518 \
+  experimental/hotspot-rift/scripts/run_safepoint_probe.sh
+
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-config-gate-smoke-patch13-20260518 \
+  experimental/hotspot-rift/scripts/run_config_gate_smoke.sh
+
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-c2-gate-smoke-patch13-20260518 \
+  experimental/hotspot-rift/scripts/run_c2_gate_smoke.sh
+
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-c1-store-guard-smoke-patch13-20260518 \
+  experimental/hotspot-rift/scripts/run_c1_store_guard_smoke.sh
+
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-c1-region-smoke-patch13-20260518 \
+  experimental/hotspot-rift/scripts/run_c1_object_region_smoke.sh
+
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-region-smoke-patch13-20260518 \
+  experimental/hotspot-rift/scripts/run_region_smoke.sh
+
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-smoke-patch13-20260518 \
+  experimental/hotspot-rift/scripts/run_baseline_smoke.sh
+```
+
+Validation results:
+
+| Smoke | Output | Result |
+|---|---|---|
+| Interpreter object allocation + heap-root bridge | `/private/tmp/rift-hotspot-object-region-smoke-patch13-20260518` | `object-enabled-ok` |
+| Safepoint + explicit GC probe | `/private/tmp/rift-hotspot-safepoint-probe-patch13-20260518` | `safepoint-probe-ok`, `system-gc-probe-ok`, `system-gc-probe-status=passed` |
+| Unsupported VM config gate | `/private/tmp/rift-hotspot-config-gate-smoke-patch13-20260518` | `config-gate-ok` |
+| C2/JVMCI safety gate | `/private/tmp/rift-hotspot-c2-gate-smoke-patch13-20260518` | `c2-gate-ok` |
+| C1 compiled store guard | `/private/tmp/rift-hotspot-c1-store-guard-smoke-patch13-20260518` | `c1-store-guard-ok` |
+| C1 region allocation | `/private/tmp/rift-hotspot-c1-region-smoke-patch13-20260518` | `c1-allocation-ok` |
+| Region lifecycle | `/private/tmp/rift-hotspot-region-smoke-patch13-20260518` | `disabled-ok`, `enabled-ok` |
+| Flag-off baseline | `/private/tmp/rift-hotspot-smoke-patch13-20260518` | checksum `7351360`, output `1000000`, internal elapsed `11.869 ms`, external `0.09 s`, max RSS `88408064` bytes |
+
+Interpretation:
+
+- Patch 13 is the first JVM analogue of Rift's explicit `HeapRoot` bridge
+  idea: mixed region-to-heap metadata edges are explicit and GC-visible;
+- it is not direct reference-field support, because region objects are still
+  primitive-field-only and not scanned by GC;
+- the handle lifetime is manual in this internal test surface, so future Scala
+  lowering must tie handle release to region close/reset.
+
 ## Next Required Step
 
-1. Generalize GC/safepoint handling beyond the current explicitly gated
+1. Decide whether the next bridge/root slice should cover static/immutable
+   metadata or whether to pause VM surface growth and run a small JVM
+   retained-dataflow evaluation.
+2. Generalize GC/safepoint handling beyond the current explicitly gated
    Serial-GC, uncompressed-oop, primitive-field-only root-skip prototype.
    Decide whether active region roots are collector-specific non-heap roots, a
    VM-known auxiliary heap space, or unsupported for collectors that cannot
    tolerate them.
-2. Decide the first supported bridge/root rule for JVM region-to-heap
-   references before allowing reference fields.
 3. Keep broad GC/safepoint integration explicit before any region object may
    survive arbitrary collector activity in a broader program.
-4. Keep compressed oops, compact object headers, broad C2 support, and
+4. Keep compressed oops, compact object headers, broad C2 support, direct
+   reference fields, and
    performance claims out of scope until the safety story covers more than the
    current interpreter/C1 subset.
