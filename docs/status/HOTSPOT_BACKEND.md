@@ -1,6 +1,6 @@
 # HotSpot Backend Status
 
-Last updated: 2026-05-18 00:24 CEST
+Last updated: 2026-05-18 00:48 CEST
 
 Status: hot status file for the custom HotSpot VM-fork track. This is separate
 from the portable JVM library prototype.
@@ -106,6 +106,11 @@ Detailed HotSpot progress belongs here and in
   roots backed by JNI global handles. Region records still have only primitive
   fields and store the bridge as a `long`; direct heap `oop` fields in region
   objects remain unsupported.
+- A first Scala-facing smoke wrapper exists under
+  `experimental/hotspot-rift/tests/scala/riftjvm/**`. It exposes a minimal
+  `Rift.epoch`, `Rift.register`, and `Rift.heapRoot` API over the internal VM
+  entrypoints and verifies that Scala 3 source can allocate an eligible
+  primitive-field Scala class into the active HotSpot Rift region.
 - The first safepoint/GC probe is implemented in
   `experimental/hotspot-rift/scripts/run_safepoint_probe.sh`. The Patch 10
   characterization showed safepoint-only live region object use passing while
@@ -311,16 +316,22 @@ Detailed HotSpot progress belongs here and in
 - Flag-off built-JDK baseline smoke after Patch 13 recorded checksum
   `7351360`, output `1000000`, internal elapsed `11.869 ms`, external
   `0.09 s` real, max RSS `88408064` bytes.
+- Scala-facing wrapper smoke passed at
+  `/private/tmp/rift-hotspot-scala-region-smoke-20260518` with
+  `scala-rift-ok`. It compiles Scala 3 with `scala-cli`, runs on the patched
+  fastdebug JDK, registers final primitive-field Scala classes, allocates in a
+  `Rift.epoch`, and resolves a heap-root bridge across `System.gc()`.
 - Stock-JDK retained-object baseline smoke passed at
   `/private/tmp/rift-hotspot-smoke-20260517`.
 
 ## Next Step
 
-Decide whether the next slice is static/immutable metadata bridges or a small
-JVM retained-dataflow evaluation. The bridge/root path now exists for explicit
-heap metadata, but the GC/safepoint story is still explicitly gated to Serial
-GC, uncompressed oops, non-compact headers, and primitive-field region
-objects. Native stores outside the guarded Unsafe/JNI entrypoints, other
-collectors, compressed oops, direct reference fields, and automatic stale
-post-close use still need dedicated design. Performance claims remain out of
-scope until the safety subset and benchmark harness are intentionally promoted.
+Build the first restricted Scala/JVM retained-dataflow evaluation or add one
+more Scala wrapper safety smoke for stale use. The VM mechanism is now
+reachable from Scala source, but there is still no capture-checker lowering or
+benchmark claim. The bridge/root path exists for explicit heap metadata, while
+GC/safepoint support remains gated to Serial GC, uncompressed oops,
+non-compact headers, and primitive-field region objects. Native stores outside
+the guarded Unsafe/JNI entrypoints, other collectors, compressed oops, direct
+reference fields, and automatic stale post-close use still need dedicated
+design.

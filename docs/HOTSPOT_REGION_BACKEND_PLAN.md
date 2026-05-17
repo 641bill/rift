@@ -1,7 +1,7 @@
 # HotSpot Ordinary-Object Region Backend Plan
 
 Date: 2026-05-17
-Last updated: 2026-05-18 00:24 CEST
+Last updated: 2026-05-18 00:48 CEST
 
 Status: long-term VM-fork roadmap with Patch 1-13 implemented through a narrow
 interpreter-only object-allocation and store-guard prototype. Ordinary
@@ -24,6 +24,13 @@ oops are still future work. Patch 13 adds a first bridge/root mechanism:
 region objects can store a primitive `long` handle to GC-visible heap metadata
 through explicit heap-root handles, but direct heap `oop` fields remain
 unsupported.
+
+A first Scala-facing wrapper smoke now exists under
+`experimental/hotspot-rift/tests/scala/riftjvm/**`. It proves that Scala 3
+source can call a minimal `Rift.epoch` API over the internal VM entrypoints,
+register eligible primitive-field Scala classes, allocate one in an active VM
+region, and use the heap-root bridge. It is not yet capture-checker lowering
+or performance evidence.
 
 The first GC/safepoint probe narrowed the next VM blocker: a live region object
 survived a plain safepoint-only test in the current interpreter subset, but
@@ -387,6 +394,13 @@ Observed on 2026-05-17:
   `/private/tmp/rift-hotspot-c1-region-smoke-patch13-20260518`,
   `/private/tmp/rift-hotspot-region-smoke-patch13-20260518`, and
   `/private/tmp/rift-hotspot-smoke-patch13-20260518`.
+- The first Scala-facing wrapper smoke has been added:
+  `experimental/hotspot-rift/tests/scala/riftjvm/Rift.scala`,
+  `experimental/hotspot-rift/tests/scala/riftjvm/RiftJvmScalaSmoke.scala`, and
+  `experimental/hotspot-rift/scripts/run_scala_region_smoke.sh`;
+- Scala wrapper smoke passes at
+  `/private/tmp/rift-hotspot-scala-region-smoke-20260518` with
+  `scala-rift-ok`.
 
 Patch 4 limitations:
 
@@ -424,12 +438,12 @@ Patch 5-6 accepted path:
   rejection, plus reflective, Unsafe, MethodHandle setter, and anonymous
   closure capture routes in the covered subset.
 
-Next concrete step: decide whether to broaden explicit bridge/root support for
-static/immutable metadata or pause VM surface growth and run a small JVM
-retained-dataflow evaluation. General GC/safepoint support is still explicitly
-gated to Serial GC, uncompressed oops, non-compact headers, and
-primitive-field region objects. Patch 10 prevents unsupported C2/JVMCI
-execution under `UseRiftRegions`, so true C2 support can wait. Native stores
-outside the guarded entrypoints, other collectors, compressed oops, direct
-reference fields, and automatic stale-use protection still need dedicated
-design before making any JVM backend safety or performance claim.
+Next concrete step: build the first restricted Scala/JVM retained-dataflow
+evaluation or add one more Scala wrapper safety smoke for stale use and bridge
+release discipline. General GC/safepoint support is still explicitly gated to
+Serial GC, uncompressed oops, non-compact headers, and primitive-field region
+objects. Patch 10 prevents unsupported C2/JVMCI execution under
+`UseRiftRegions`, so true C2 support can wait. Native stores outside the
+guarded entrypoints, other collectors, compressed oops, direct reference
+fields, and automatic stale-use protection still need dedicated design before
+making any JVM backend safety or performance claim.

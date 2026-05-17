@@ -12,6 +12,8 @@ Claude_output/
 .conductor/
 .metals/
 .vscode/
+.bsp/
+.scala-build/
 
 # large data
 trip_data/

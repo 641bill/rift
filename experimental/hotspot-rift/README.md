@@ -1,11 +1,12 @@
 # HotSpot Rift Experiment
 
-Last updated: 2026-05-18 00:24 CEST
+Last updated: 2026-05-18 00:48 CEST
 
 Status: scaffold and exported Patch 1-13 artifacts for the custom HotSpot
-VM-fork backend. This directory does not contain an OpenJDK checkout. It
-contains the scripts, patch notes, exported patches, and smoke tests used to
-create and validate one.
+VM-fork backend, plus a first Scala-facing smoke wrapper over the internal VM
+entrypoints. This directory does not contain an OpenJDK checkout. It contains
+the scripts, patch notes, exported patches, and smoke tests used to create and
+validate one.
 
 ## Goal
 
@@ -29,6 +30,7 @@ heap fallback.
 | `scripts/run_c2_gate_smoke.sh` | Run the conservative C2/JVMCI safety-gate smoke. |
 | `scripts/run_config_gate_smoke.sh` | Run the unsupported VM-configuration rejection smoke. |
 | `scripts/run_safepoint_probe.sh` | Probe safepoint-only and explicit-GC behavior for live region objects. |
+| `scripts/run_scala_region_smoke.sh` | Compile and run the first Scala-facing Rift wrapper smoke on the patched JDK. |
 | `tests/java/RiftHotSpotBaselineSmoke.java` | Baseline retained-object workload for stock/patched JDKs. |
 | `tests/java/RiftHotSpotConfigGateSmoke.java` | Unsupported collector/header mode rejection smoke. |
 | `tests/java/RiftHotSpotRegionSmoke.java` | Region lifecycle smoke. |
@@ -36,6 +38,8 @@ heap fallback.
 | `tests/java/RiftHotSpotC1RegionAllocationSmoke.java` | C1 allocation smoke for registered primitive-field records. |
 | `tests/java/RiftHotSpotC1StoreGuardSmoke.java` | C1 `putstatic`/`putfield`/`aastore` store-guard smoke. |
 | `tests/java/RiftHotSpotSafepointProbe.java` | Safepoint/GC probe for live registered region objects. |
+| `tests/scala/riftjvm/Rift.scala` | Minimal Scala wrapper around `jdk.internal.rift.RiftRegion`. |
+| `tests/scala/riftjvm/RiftJvmScalaSmoke.scala` | Scala source-level epoch/allocation/heap-root smoke. |
 | `patches/README.md` | First HotSpot patch roadmap. |
 
 ## Default Locations
@@ -154,6 +158,13 @@ HOTSPOT_RIFT_JAVA=/Users/siyaoliu/rift/cache/openjdk-rift/build/rift-fastdebug/j
   experimental/hotspot-rift/scripts/run_safepoint_probe.sh
 ```
 
+Run the Scala-facing wrapper smoke with a built JDK:
+
+```sh
+HOTSPOT_RIFT_JAVA=/Users/siyaoliu/rift/cache/openjdk-rift/build/rift-fastdebug/jdk/bin/java \
+  experimental/hotspot-rift/scripts/run_scala_region_smoke.sh
+```
+
 ## Claim Discipline
 
 The current patched HotSpot is a prototype. It proves a narrow interpreter-mode
@@ -179,4 +190,8 @@ manual test-surface handles for now and must be released explicitly. This is
 still narrow: true C2 allocation/stores, other collectors, compressed oops,
 native stores outside guarded entrypoints, reference fields, arrays as region
 allocations, broad bridge/root rules, and automatic arbitrary stale-use
-barriers remain open.
+barriers remain open. The Scala wrapper smoke proves only source-level
+reachability of the VM mechanism: Scala 3 code can call `Rift.epoch`, register
+eligible primitive-field Scala classes, allocate one into the active VM
+region, and use the explicit heap-root bridge. It is not yet capture-checker
+integration or a performance benchmark.

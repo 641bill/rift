@@ -1,7 +1,7 @@
 # HotSpot Region Backend Status
 
 Date: 2026-05-17
-Last updated: 2026-05-18 00:24 CEST
+Last updated: 2026-05-18 00:48 CEST
 
 Status: VM-fork Patch 1-13 evidence. Patch 4 proves a narrow
 interpreter-only ordinary-object allocation prototype for explicitly
@@ -23,6 +23,10 @@ still not a performance-ready JVM Rift backend because true C2
 allocation/stores, other collectors, compressed oops, arrays as region
 allocations, direct reference fields inside region objects, and automatic
 broad post-close stale-use handling are not implemented.
+
+The first Scala-facing smoke now exists separately from the VM patch stack. It
+does not add new HotSpot functionality; it proves that Scala 3 source can use
+a minimal `Rift.epoch` wrapper over the internal VM entrypoints.
 
 The safepoint/GC probe first exposed the immediate GC blocker: a live region
 object survived a plain safepoint-only check, but `System.gc()` aborted
@@ -1184,11 +1188,52 @@ Interpretation:
 - the handle lifetime is manual in this internal test surface, so future Scala
   lowering must tie handle release to region close/reset.
 
+## Scala-Facing Wrapper Smoke
+
+Source:
+
+- `experimental/hotspot-rift/tests/scala/riftjvm/Rift.scala`
+- `experimental/hotspot-rift/tests/scala/riftjvm/RiftJvmScalaSmoke.scala`
+- `experimental/hotspot-rift/scripts/run_scala_region_smoke.sh`
+
+Implementation:
+
+- `Rift.epoch(capacity) { scope => ... }` wraps
+  `jdk.internal.rift.RiftRegion.open/enter/close`;
+- `Rift.register[A]` registers a Scala class with the VM eligibility checker;
+- `Rift.heapRoot`, `resolve`, and `release` wrap the Patch 13 heap-root
+  handle operations;
+- the smoke registers final primitive-field Scala classes, rejects a
+  reference-field class and a non-final class, allocates a Scala record in the
+  active region, verifies live status, then resolves heap metadata through a
+  primitive bridge handle across `System.gc()`.
+
+Validation command:
+
+```text
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-scala-region-smoke-20260518 \
+  experimental/hotspot-rift/scripts/run_scala_region_smoke.sh
+```
+
+Validation result:
+
+| Smoke | Output | Result |
+|---|---|---|
+| Scala wrapper epoch/allocation/heap-root | `/private/tmp/rift-hotspot-scala-region-smoke-20260518` | `scala-rift-ok` |
+
+Interpretation:
+
+- this is the first Scala-source proof that the HotSpot Rift mechanism can be
+  reached through a Rift-shaped API;
+- it is not yet compiler capture/separation checking, automatic lowering, or
+  a performance benchmark;
+- supported Scala region classes must still compile to final JVM classes with
+  primitive instance fields only.
+
 ## Next Required Step
 
-1. Decide whether the next bridge/root slice should cover static/immutable
-   metadata or whether to pause VM surface growth and run a small JVM
-   retained-dataflow evaluation.
+1. Build the first restricted Scala/JVM retained-dataflow evaluation, or add a
+   Scala wrapper safety smoke for stale use and bridge release discipline.
 2. Generalize GC/safepoint handling beyond the current explicitly gated
    Serial-GC, uncompressed-oop, primitive-field-only root-skip prototype.
    Decide whether active region roots are collector-specific non-heap roots, a
