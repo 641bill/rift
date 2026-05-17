@@ -54,5 +54,6 @@ Examples:
 - zip:/Users/siyaoliu/rift/cache/benchmark-data/theodolite/real-power/household_power_consumption.zip!household_power_consumption.txt
 - /Users/siyaoliu/rift/cache/benchmark-data/yak/stackexchange/askubuntu-Posts.xml.gz
 - /Users/siyaoliu/rift/cache/tpch-sf1/lineitem.tbl.gz
-- /Users/siyaoliu/rift/trip_data/trip_data_1.csv.gz
+- /Users/siyaoliu/rift/cache/benchmark-data/debs2015/trip_data.7z
+- /Users/siyaoliu/rift/cache/benchmark-data/debs2015/trip_fare.7z
 EOF

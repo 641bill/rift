@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-17 13:30 CEST
+Last updated: 2026-05-17 13:45 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -14,13 +14,17 @@ Latest data-footprint cleanup:
 data inventory. The extracted LogHub, Common Crawl, Linear Road, and
 Theodolite duplicates were removed while preserving compressed local sources.
 The remaining large plain-text benchmark inputs were converted to gzip in
-place: DEBS/NYC taxi monthly CSVs, TPC-H DBGEN `part.tbl`/`lineitem.tbl`,
-AskUbuntu `Posts.xml`, and MHEALTH subject logs. Free disk moved from about
-`72G` to about `102G`. `BenchmarkInputSupport` supports plain `.gz`,
+place where useful: TPC-H DBGEN `part.tbl`/`lineitem.tbl`, AskUbuntu
+`Posts.xml`, and MHEALTH subject logs. The local DEBS/NYC taxi gzip directories
+were then removed after identifying the smaller official Internet Archive
+archives (`trip_data.7z`, `trip_fare.7z`); place them under
+`/Users/siyaoliu/rift/cache/benchmark-data/debs2015/`. Free disk moved from
+about `72G` to about `119G`. `BenchmarkInputSupport` supports plain `.gz`,
 `tar.gz:/archive!member`, and `zip:/archive!member` inputs. DEBS taxi sample
-generation now defaults to `.csv.gz` monthly files when plain `.csv` files are
-absent; Broom TPC-H file mode now opens inputs through `BenchmarkInputSupport`;
-RIoTBench MHEALTH directory scanning now accepts `.log.gz`. New helper scripts:
+generation now defaults to plain monthly `.csv`, then monthly `.csv.gz`, then
+official `.7z` archive members when present; Broom TPC-H file mode now opens
+inputs through `BenchmarkInputSupport`; RIoTBench MHEALTH directory scanning
+now accepts `.log.gz`. New helper scripts:
 `scripts/benchmark-data-footprint.sh` lists large local inputs, and
 `scripts/cleanup-benchmark-data.sh` dry-runs deletion of extracted duplicates;
 set `RIFT_CLEAN_DATA=1` only when intentionally deleting.
