@@ -1,14 +1,15 @@
 # HotSpot Patch Roadmap
 
-Last updated: 2026-05-17 23:33 CEST
+Last updated: 2026-05-17 23:50 CEST
 
 This directory holds patch notes and exported patches for the HotSpot
-ordinary-object Rift backend. Patch 1-9 are now exported. Patch 4 is a narrow
+ordinary-object Rift backend. Patch 1-10 are now exported. Patch 4 is a narrow
 interpreter-only object-allocation prototype; Patch 5 adds the first
 interpreter store guard; Patch 6 extends store checks to Unsafe/JNI paths used
 by reflection; Patch 7 adds an explicit live-object verifier for API-boundary
 stale-use checks; Patch 8 adds a conservative C1 allocation route for eligible
-`new` bytecodes; Patch 9 adds conservative C1 compiled store guards. This is
+`new` bytecodes; Patch 9 adds conservative C1 compiled store guards; Patch 10
+gates unsupported C2/JVMCI compilation while Rift regions are enabled. This is
 still not a complete safe JVM Rift backend.
 
 ## Patch 0: Build Baseline
@@ -290,3 +291,41 @@ Implementation note:
   native stores outside the guarded Unsafe/JNI entrypoints, reference fields in
   supported region objects, arrays as region allocations, and GC/safepoint
   integration remain future work.
+
+## Patch 10: C2 Safety Gate
+
+Patch file:
+
+`08-c2-safety-gate.patch`
+
+Implemented:
+
+- `CompileBroker::compile_method` rejects C2 and JVMCI compilation requests
+  while `-XX:+UseRiftRegions` is enabled;
+- C1 and interpreter execution remain available for the supported prototype
+  subset;
+- added `run_c2_gate_smoke.sh`, which forces tiered compilation up to level 4
+  and confirms the C1 allocation and C1 store-guard smokes still pass.
+
+Validation:
+
+- patched fastdebug OpenJDK image builds;
+- C2-gate smoke passes at
+  `/private/tmp/rift-hotspot-c2-gate-smoke-patch10-20260517` with
+  `c2-gate-ok`;
+- C1 store-guard smoke still passes at
+  `/private/tmp/rift-hotspot-c1-store-guard-smoke-patch10-20260517`;
+- C1 allocation smoke still passes at
+  `/private/tmp/rift-hotspot-c1-region-smoke-patch10-20260517`;
+- interpreter object-region smoke still passes at
+  `/private/tmp/rift-hotspot-object-region-smoke-patch10-20260517`;
+- region lifecycle smoke still passes at
+  `/private/tmp/rift-hotspot-region-smoke-patch10-20260517`;
+- flag-off built-JDK baseline smoke still passes at
+  `/private/tmp/rift-hotspot-smoke-patch10-20260517`.
+
+Implementation note:
+
+- Patch 10 does not implement C2 region allocation or C2 store barriers. It is
+  a conservative safety gate so the prototype cannot silently run unsupported
+  C2/JVMCI paths under `UseRiftRegions`.

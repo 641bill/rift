@@ -1,8 +1,8 @@
 # HotSpot Rift Experiment
 
-Last updated: 2026-05-17 23:33 CEST
+Last updated: 2026-05-17 23:50 CEST
 
-Status: scaffold and exported Patch 1-9 artifacts for the custom HotSpot
+Status: scaffold and exported Patch 1-10 artifacts for the custom HotSpot
 VM-fork backend. This directory does not contain an OpenJDK checkout. It
 contains the scripts, patch notes, exported patches, and smoke tests used to
 create and validate one.
@@ -26,6 +26,7 @@ heap fallback.
 | `scripts/run_object_region_smoke.sh` | Run ordinary-object allocation and heap-retention rejection smoke. |
 | `scripts/run_c1_object_region_smoke.sh` | Run the conservative C1 region-allocation smoke. |
 | `scripts/run_c1_store_guard_smoke.sh` | Run the conservative C1 compiled-store guard smoke. |
+| `scripts/run_c2_gate_smoke.sh` | Run the conservative C2/JVMCI safety-gate smoke. |
 | `tests/java/RiftHotSpotBaselineSmoke.java` | Baseline retained-object workload for stock/patched JDKs. |
 | `tests/java/RiftHotSpotRegionSmoke.java` | Region lifecycle smoke. |
 | `tests/java/RiftHotSpotObjectRegionSmoke.java` | Object-region allocation and store-guard smoke. |
@@ -128,6 +129,13 @@ HOTSPOT_RIFT_JAVA=/Users/siyaoliu/rift/cache/openjdk-rift/build/rift-fastdebug/j
   experimental/hotspot-rift/scripts/run_c1_store_guard_smoke.sh
 ```
 
+Run C2/JVMCI safety-gate smoke with a built JDK:
+
+```sh
+HOTSPOT_RIFT_JAVA=/Users/siyaoliu/rift/cache/openjdk-rift/build/rift-fastdebug/jdk/bin/java \
+  experimental/hotspot-rift/scripts/run_c2_gate_smoke.sh
+```
+
 ## Claim Discipline
 
 The current patched HotSpot is a prototype. It proves a narrow interpreter-mode
@@ -138,6 +146,9 @@ not yet prove broad JVM Rift safety or performance. Patch 7 adds an explicit
 `RiftRegion.verifyLive(Object)` test hook for API-boundary stale-use checks,
 and Patch 8 adds conservative C1 allocation through the runtime stub for
 eligible records. Patch 9 adds conservative C1 compiled store guards for
-reference stores. GC scanning, C2 allocation/stores, native stores outside
-guarded entrypoints, reference fields, arrays as region allocations,
-bridge/root rules, and automatic arbitrary stale-use barriers remain open.
+reference stores. Patch 10 gates C2/JVMCI compilation while
+`-XX:+UseRiftRegions` is enabled, so unsupported compiled paths cannot silently
+bypass the C1/interpreter region allocation and store-guard subset. GC
+scanning, true C2 allocation/stores, native stores outside guarded entrypoints,
+reference fields, arrays as region allocations, bridge/root rules, and
+automatic arbitrary stale-use barriers remain open.

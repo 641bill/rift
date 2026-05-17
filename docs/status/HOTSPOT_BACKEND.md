@@ -1,6 +1,6 @@
 # HotSpot Backend Status
 
-Last updated: 2026-05-17 23:33 CEST
+Last updated: 2026-05-17 23:50 CEST
 
 Status: hot status file for the custom HotSpot VM-fork track. This is separate
 from the portable JVM library prototype.
@@ -85,12 +85,18 @@ Detailed HotSpot progress belongs here and in
   reference stores call a Rift runtime stub before `putstatic`, `putfield`,
   and object-array stores; the runtime rejects storing live or closed Rift
   region objects into ordinary heap destinations.
+- Patch 10 conservative C2/JVMCI safety gating is implemented and exported as
+  `experimental/hotspot-rift/patches/08-c2-safety-gate.patch`. While
+  `-XX:+UseRiftRegions` is enabled, `CompileBroker` rejects C2 and JVMCI
+  compilation requests so unsupported compiled allocation/store paths cannot
+  bypass the C1/interpreter safety subset.
 - `autoconf` was installed with Homebrew and preflight now passes for `git`,
   `bash`, `make`, `autoconf`, `clang`, Java `25.0.1`, and Homebrew.
 - OpenJDK was cloned into `/Users/siyaoliu/rift/cache/openjdk-rift`.
 - The worktree is on local branch `rift-jdk25` from `origin/jdk25`. The Rift
-  patch stack is currently OpenJDK commit `f5bcc3f9629` (`Add C1 Rift store
-  guards`), with the Patch 8 base at `8cd8da1a443` (`Add C1 Rift region
+  patch stack is currently OpenJDK commit `37f9d24dd561` (`Gate C2 under Rift
+  regions`), with the Patch 9 base at `f5bcc3f9629` (`Add C1 Rift store
+  guards`), the Patch 8 base at `8cd8da1a443` (`Add C1 Rift region
   allocation path`), the Patch 7 base at `c455daa9cef` (`Add Rift verifyLive
   VM hook`), and the Patch 1-6 base at `94e2a36f7b9` (`Prototype Rift region
   backend`).
@@ -215,16 +221,31 @@ Detailed HotSpot progress belongs here and in
 - Flag-off built-JDK baseline smoke after Patch 9 recorded checksum
   `7351360`, output `1000000`, internal elapsed `12.467 ms`, external
   `0.11 s` real, max RSS `88670208` bytes.
+- Patch 10 C2-gate smoke passed at
+  `/private/tmp/rift-hotspot-c2-gate-smoke-patch10-20260517` with
+  `c2-gate-ok`. The smoke forces tiered compilation up to level 4 and verifies
+  that the C1 allocation and C1 store-guard smokes still pass when C2/JVMCI
+  requests are gated.
+- Patch 10 regression smokes passed:
+  `/private/tmp/rift-hotspot-c1-store-guard-smoke-patch10-20260517`,
+  `/private/tmp/rift-hotspot-c1-region-smoke-patch10-20260517`,
+  `/private/tmp/rift-hotspot-object-region-smoke-patch10-20260517`,
+  `/private/tmp/rift-hotspot-region-smoke-patch10-20260517`, and
+  `/private/tmp/rift-hotspot-smoke-patch10-20260517`.
+- Flag-off built-JDK baseline smoke after Patch 10 recorded checksum
+  `7351360`, output `1000000`, internal elapsed `11.123 ms`, external
+  `0.08 s` real, max RSS `88440832` bytes.
 - Stock-JDK retained-object baseline smoke passed at
   `/private/tmp/rift-hotspot-smoke-20260517`.
 
 ## Next Step
 
-Extend the safety work beyond the current Patch 9 interpreter, C1 allocation,
-C1 store-guard, Unsafe/JNI, and explicit API-boundary subset. The next work
-should cover C2 allocation/stores, native stores outside the guarded Unsafe/JNI
-entrypoints, explicit JVM bridge/root rules before allowing reference fields,
-and GC/safepoint integration. Automatic stale post-close use remains open:
-Patch 7 gives an explicit verifier that Rift lowering can call, not a general
+Extend the safety work beyond the current Patch 10 interpreter, C1 allocation,
+C1 store-guard, Unsafe/JNI, explicit API-boundary verifier, and C2/JVMCI gate
+subset. The next work should decide between true C2 allocation/store support
+and GC/safepoint integration first, then cover native stores outside the
+guarded Unsafe/JNI entrypoints and explicit JVM bridge/root rules before
+allowing reference fields. Automatic stale post-close use remains open: Patch
+7 gives an explicit verifier that Rift lowering can call, not a general
 object-use barrier. Performance claims remain out of scope until GC/safepoint
 integration is designed.

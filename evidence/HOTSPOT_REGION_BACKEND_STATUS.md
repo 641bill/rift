@@ -1,9 +1,9 @@
 # HotSpot Region Backend Status
 
 Date: 2026-05-17
-Last updated: 2026-05-17 23:33 CEST
+Last updated: 2026-05-17 23:50 CEST
 
-Status: VM-fork Patch 1-9 evidence. Patch 4 proves a narrow
+Status: VM-fork Patch 1-10 evidence. Patch 4 proves a narrow
 interpreter-only ordinary-object allocation prototype for explicitly
 registered final primitive-field classes. Patch 5 adds an interpreter oop-store
 guard that rejects heap retention of live region objects for static fields,
@@ -12,11 +12,12 @@ guards to Unsafe/JNI object-store entrypoints used by reflection and low-level
 libraries. Patch 7 adds an explicit `verifyLive` VM hook for API-boundary
 stale-use checks and teaches store guards to reject closed region objects.
 Patch 8 adds conservative C1 allocation through the runtime allocation stub.
-Patch 9 adds conservative C1 compiled store guards for reference stores.
+Patch 9 adds conservative C1 compiled store guards for reference stores. Patch
+10 gates unsupported C2/JVMCI compilation while Rift regions are enabled.
 This is still not a performance-ready JVM Rift backend because GC integration,
-C2 allocation/stores, arrays as region allocations, reference fields inside
-region objects, and automatic broad post-close stale-use handling are not
-implemented.
+true C2 allocation/stores, arrays as region allocations, reference fields
+inside region objects, and automatic broad post-close stale-use handling are
+not implemented.
 
 ## Scaffold
 
@@ -126,6 +127,12 @@ Current branch and commit:
 
 ```text
 rift-jdk25
+37f9d24dd561 Gate C2 under Rift regions
+```
+
+Patch 9 base commit:
+
+```text
 f5bcc3f9629 Add C1 Rift store guards
 ```
 
@@ -831,16 +838,86 @@ Patch 9 limitations:
 - GC/safepoint integration is still absent, so no JVM performance claim should
   be made from this patch.
 
+## Patch 10: C2/JVMCI Safety Gate
+
+Patch file:
+
+`experimental/hotspot-rift/patches/08-c2-safety-gate.patch`
+
+Implementation:
+
+- `CompileBroker::compile_method` returns without compiling when
+  `-XX:+UseRiftRegions` is enabled and the selected compiler is C2 or JVMCI;
+- C1 and interpreter execution remain available for the current supported
+  region allocation and store-guard subset;
+- added `experimental/hotspot-rift/scripts/run_c2_gate_smoke.sh`.
+
+Interpretation:
+
+- This is a safety gate, not a C2 implementation. It prevents unsupported
+  C2/JVMCI allocation and store paths from silently bypassing the prototype's
+  C1/interpreter checks while Rift regions are enabled.
+
+Validation commands:
+
+```text
+HOTSPOT_RIFT_DEVKIT=/Users/siyaoliu/rift/cache/openjdk-rift/build/devkit/Xcode26.5-MacOSX26 \
+  experimental/hotspot-rift/scripts/build_openjdk.sh
+
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-c2-gate-smoke-patch10-20260517 \
+  experimental/hotspot-rift/scripts/run_c2_gate_smoke.sh
+
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-c1-store-guard-smoke-patch10-20260517 \
+  experimental/hotspot-rift/scripts/run_c1_store_guard_smoke.sh
+
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-c1-region-smoke-patch10-20260517 \
+  experimental/hotspot-rift/scripts/run_c1_object_region_smoke.sh
+
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-object-region-smoke-patch10-20260517 \
+  experimental/hotspot-rift/scripts/run_object_region_smoke.sh
+
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-region-smoke-patch10-20260517 \
+  experimental/hotspot-rift/scripts/run_region_smoke.sh
+
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-smoke-patch10-20260517 \
+  experimental/hotspot-rift/scripts/run_baseline_smoke.sh
+```
+
+Validation results:
+
+| Smoke | Output | Result |
+|---|---|---|
+| C2/JVMCI safety gate | `/private/tmp/rift-hotspot-c2-gate-smoke-patch10-20260517` | `c2-gate-ok` |
+| C1 compiled store guard | `/private/tmp/rift-hotspot-c1-store-guard-smoke-patch10-20260517` | `c1-store-guard-ok` |
+| C1 region allocation | `/private/tmp/rift-hotspot-c1-region-smoke-patch10-20260517` | `c1-allocation-ok` |
+| Interpreter object allocation + safety subset | `/private/tmp/rift-hotspot-object-region-smoke-patch10-20260517` | `object-enabled-ok` |
+| Region lifecycle | `/private/tmp/rift-hotspot-region-smoke-patch10-20260517` | `disabled-ok`, `enabled-ok` |
+| Flag-off baseline | `/private/tmp/rift-hotspot-smoke-patch10-20260517` | checksum `7351360`, output `1000000`, internal elapsed `11.123 ms`, external `0.08 s`, max RSS `88440832` bytes |
+
+Patch 10 smoke coverage:
+
+- tiered compilation is enabled with `TieredStopAtLevel=4`;
+- compile commands request compilation of the C1 allocation and store-guard
+  smoke methods;
+- C2/JVMCI requests are rejected by the VM gate, and the supported C1/runtime
+  subset still executes correctly.
+
+Patch 10 limitations:
+
+- no C2 region allocation exists yet;
+- no C2 store barrier exists yet;
+- no GC/safepoint integration is added by this patch;
+- performance claims remain out of scope.
+
 ## Next Required Step
 
-1. Extend Patch 9 safety beyond the interpreter plus C1 allocation/store guards
-   plus Unsafe/JNI plus explicit verifier subset: C2 allocation/stores, native
-   stores outside guarded entrypoints, and automatic stale post-close use where
-   required.
+1. Decide whether the next VM milestone is true C2 allocation/store support or
+   GC/safepoint integration for active region objects. Patch 10 only gates C2;
+   it does not implement C2 support.
 2. Decide the first supported bridge/root rule for JVM region-to-heap
    references before allowing reference fields.
 3. Add GC/safepoint integration before any region object may survive a
    safepoint in a broader program.
-4. Keep compressed oops, compact object headers, C1/C2 allocation paths, and
+4. Keep compressed oops, compact object headers, broad C2 support, and
    performance claims out of scope until the safety story covers more than the
-   current interpreter subset.
+   current interpreter/C1 subset.
