@@ -1,7 +1,7 @@
 # GC-Heavy Data Processing Benchmark Investigation
 
 Date: 2026-05-15
-Last updated: 2026-05-16 19:31 CEST
+Last updated: 2026-05-17 02:54 CEST
 
 Status: literature and online-investigation note. This is not a benchmark
 result pack. It records where GC pressure is expected in stream/data-processing
@@ -105,6 +105,21 @@ Concrete provenance notes from this pass:
   join/aggregate methodology row. This will be generated benchmark data, not
   real-input proof, but it is the closest Broom/Naiad paper-axis match.
 
+2026-05-17 q17 implementation pass: the first TPC-H-Q17-like retained
+join/aggregate row is now implemented in `BroomRetainedDataflowMatrix` as
+`q17` / `tpch-q17` / `q17-retained`. It uses deterministic generated
+`Part`/`LineItem`-like records and computes a Q17-style below-average
+quantity/revenue filter at timestamp close. This is not exact TPC-H or real
+input, but it directly tests the Broom/Naiad retained dataflow shape. The
+strongest q17 row is 20M records with 16 active timestamps: natural heap is
+`14.45 s`, RSS `231.7 MB`, and L2 median timed GC `1370.380 ms` inside
+`4781.079 ms`; checked Rift is `9.67 s`, RSS `49.9 MB`, and zero timed GC.
+Checked scoped is `13.02 s`, RSS `50.3 MB`, and zero timed GC. Heap caps at
+`512M`, `384M`, and `256M` all complete, so q17 is a throughput/GC/RSS
+case, not a fixed-memory failure case. This validates the top-ranked Broom-like
+candidate enough that shopper JOIN-SELECT-JOIN can remain a separate optional
+next shape instead of being bundled into the q17 slice.
+
 2026-05-16 19:31 backend implication: it is plausible that many public
 real-input rows will not become strongly GC-heavy under Scala Native Immix.
 Immix is already a fast mark-region collector with cheap allocation and good
@@ -167,7 +182,7 @@ summarized away before the lifetime boundary.
 
 | Priority | Candidate shape | Why it is promising | First local action |
 |---:|---|---|---|
-| 1 | Broom-like TPC-H Q17 / shopper retained dataflow | Prior work explicitly reports high GC share in join-heavy dataflow workflows and our Broom active-16 row already reproduces material Scala Native GC pressure. | Add one Q17-like retained join/aggregate and one shopper-style JOIN-SELECT-JOIN shape with natural heap/GC versus checked Rift headline rows. |
+| 1 | Broom-like TPC-H Q17 / shopper retained dataflow | Prior work explicitly reports high GC share in join-heavy dataflow workflows and our Broom active-16 row already reproduces material Scala Native GC pressure. The q17-like shape is now implemented and gives a strong throughput/GC/RSS result. | Use q17 as the current prior-work-style retained join/aggregate row; add shopper-style JOIN-SELECT-JOIN only as a separate next slice if another Broom/Naiad shape is needed. |
 | 2 | StreamFlex event-correlation / transaction-tracking / IDS design rows | StreamFlex's strongest story is latency/tail GC interference, stable/transient state, and scoped periods, not just primitive DSP throughput. | Extend `StreamFlexDesignMatrix` with retained event-correlation and transaction-tracking variants, paced latency, p99/p999/max, and deadline misses. |
 | 3 | Yak-scale graph/text epochs | LiveJournal already works; Yak's original graph/text rows were much larger and more epochal. | Scale LiveJournal/SNAP if feasible; only fetch Twitter-2010 or larger StackExchange after disk/time preflight. |
 | 4 | Spark/Flink-like high-cardinality groupBy/join/top-k/session | Official Spark/Flink guidance points to many retained heap objects and heap state as the GC-sensitive shape. | Use real LogHub/StackExchange/GH Archive fields to build retained keyed-state rows plus checked epoch/page/window counterparts. |

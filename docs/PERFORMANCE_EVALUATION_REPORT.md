@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-16 19:31 CEST
+Last updated: 2026-05-17 02:54 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -70,8 +70,9 @@ allocation wins.
 The detailed algorithmic justification is in `docs/IMMIX_REGION_COMPARISON.md`:
 Immix is itself a mark-region collector with bump-style allocation and
 block/line reclamation, so simple short-lived stream objects may impose little
-visible GC pressure. Non-Native prototype work is intentionally out of scope
-for this Scala Native benchmark milestone.
+visible GC pressure. Non-Native prototype work is now isolated under
+`scala-native-rift/experimental/portable-rift/**`; the shared API and ownership
+rules are in `docs/RIFT_PORTABLE_API_CONTRACT.md`.
 
 Latest clean final-selection headline sweep:
 `evidence/FINAL_SELECTION_HEADLINE_2026_05_06.md`.
@@ -125,6 +126,16 @@ versus checked Rift `8.09 s`, RSS `57 MB`, and zero timed GC. Heap completes
 at a `512M` cap but fails at `384M` and `256M`; checked Rift completes
 uncapped at about `53-57 MB`. This is now the strongest Broom/Naiad-style
 retained-object throughput/GC/RSS/fixed-memory result.
+The 2026-05-17 q17 follow-up adds a TPC-H-Q17-like retained join/aggregate
+workload to the same matrix. It uses deterministic generated `Part` and
+`LineItem`-like records, retains per-timestamp per-part lineitems and aggregate
+entries, and computes the below-average quantity/revenue output at timestamp
+close. It is methodology evidence, not exact TPC-H artifact reproduction. At
+20M active-16, q17 heap is `14.45 s`, RSS `231.7 MB`, with `1370.380 ms`
+median timed GC inside `4781.079 ms` L2. Checked Rift is `9.67 s`,
+RSS `49.9 MB`, and zero timed GC; checked scoped is `13.02 s`, RSS `50.3 MB`,
+and zero timed GC. Heap caps down to `256M` complete, so the q17 claim is
+throughput, GC, and RSS rather than fixed-memory failure.
 Same-shape/drop-anchor controls remain appendix/mechanism evidence; this row's
 paper-facing comparison is natural heap/GC versus checked Rift.
 

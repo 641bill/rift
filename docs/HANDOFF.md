@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-17 02:28 CEST
+Last updated: 2026-05-17 02:54 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -129,6 +129,23 @@ Rift `8.09 s`, RSS `57 MB`, GC `0 ms`. Heap completes at `512M` but fails at
 `384M` and `256M`; checked Rift completes at about `53-57 MB`. Use this as the
 current strongest Broom/Naiad-style retained-object row.
 
+Latest Broom q17 retained dataflow update:
+`BroomRetainedDataflowMatrix` now also supports `q17`, `tpch-q17`, and
+`q17-retained`. This is a deterministic generated TPC-H-Q17-like methodology
+row, not exact TPC-H artifact reproduction. The benchmark retains
+`Part`/`LineItem`-like objects and per-part aggregate entries until timestamp
+notify/close, then computes the below-average quantity/revenue output. The 20k
+smoke matched checksum/output across `heap-gc`, `checked-rift`, and
+`checked-region-scoped`. At 20M active-4, checked Rift is `4.76 s`,
+RSS `13.2 MB`, and L2 GC `0 ms` versus heap `5.89 s`, RSS `39.4 MB`, and
+`213.555 ms` median timed GC. At 20M active-16, checked Rift is `9.67 s`,
+RSS `49.9 MB`, and L2 GC `0 ms` versus heap `14.45 s`, RSS `231.7 MB`, and
+`1370.380 ms` median timed GC inside `4781.079 ms`. Checked scoped is
+`13.02 s`, RSS `50.3 MB`, and zero timed GC at 20M active-16. Heap caps at
+`512M`, `384M`, and `256M` all complete, so q17 is a throughput/GC/RSS case,
+not fixed-memory failure evidence. Shopper JOIN-SELECT-JOIN remains a separate
+future Broom/Naiad shape if another retained dataflow row is needed.
+
 Latest LogHub retained session/join triage:
 `LogHubRetainedSessionMatrix` and
 `sandbox/run_loghub_retained_session_matrix.sh` were added in the child repo,
@@ -184,9 +201,19 @@ pressure, or latency/tail-sensitive workloads.
 `docs/IMMIX_REGION_COMPARISON.md` records the algorithmic justification:
 Scala Native Immix is a mostly-precise mark-region collector with bump-style
 allocation and block/line reclamation, so it can behave close to region
-allocation on short-lived object streams. Non-Native backend implementation
-belongs in the separate backend fork for now; this Scala Native fork should not
-grow JVM/Scala.js/Wasm prototype code during the current benchmark milestone.
+allocation on short-lived object streams. The portable prototype has now been
+moved out of the Native benchmark sandbox into
+`scala-native-rift/experimental/portable-rift/**`, with ownership rules in that
+directory's README and the shared contract in
+`docs/RIFT_PORTABLE_API_CONTRACT.md`. Native backend work should avoid
+`experimental/portable-rift/**`; portable backend work should avoid
+`nativelib/**`, `nscplugin/**`, and Native benchmark matrices unless
+coordinated.
+Validation after the move: the standalone prototype source compiles with
+`scalac`, the `scala run --server=false` smoke passes under
+`rift.portable.PortableRiftBackendPrototype`, and
+`sandbox3_next/compile` still passes with the portable file removed from
+`sandbox/`.
 
 Latest throughput/RSS reuse-policy checkpoint:
 child implementation commit: `70672972c`

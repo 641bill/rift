@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-17 02:28 CEST
+Last updated: 2026-05-17 02:54 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -90,6 +90,16 @@ completes at `512M` but fails at `384M`/`256M`, while checked Rift completes
 with low RSS. Use this as the first Broom-style GC-heavy dataflow case study;
 keep retained heap/drop-anchor controls in appendix for causality, not as the
 headline comparison.
+The 2026-05-17 q17 follow-up adds the planned TPC-H-Q17-like retained
+join/aggregate shape to the same matrix. It is deterministic generated
+methodology evidence, not exact TPC-H artifact reproduction. At 20M active-16,
+natural heap is `14.45 s`, RSS `231.7 MB`, with `1370.380 ms` median timed GC
+inside `4781.079 ms` L2; checked Rift is `9.67 s`, RSS `49.9 MB`, and zero
+timed GC; checked scoped is `13.02 s`, RSS `50.3 MB`, and zero timed GC. Heap
+caps down to `256M` complete, so q17 is throughput/GC/RSS evidence rather than
+fixed-memory failure evidence. Mark the TPC-H-Q17-like slice complete; keep
+shopper JOIN-SELECT-JOIN as a separate future Broom/Naiad candidate only if
+another retained dataflow shape is needed.
 
 Latest LogHub retained session/join triage:
 `evidence/LOGHUB_RETAINED_SESSION_MATRIX.md` adds a true HDFS streaming-file
@@ -120,6 +130,9 @@ text, larger SNAP/Twitter graph replay, higher-cardinality LogHub
 session/template dictionaries, and Alibaba-style machine traces. HiBench,
 BigDataBench, and Renaissance should be used as workload catalogues for local
 Rift-shaped kernels, not as opaque distributed-framework headline runs.
+The TPC-H-Q17-like slice is now complete; shopper remains optional and should
+not block the next StreamFlex-style retained event-correlation/transaction row
+or the real-input search.
 
 New long-term backend track:
 `docs/SCALA_LEVEL_BACKEND_PLAN.md` is now the roadmap anchor for making Rift a
@@ -143,8 +156,13 @@ while the front-end safety/topology contribution should be portable.
 `docs/IMMIX_REGION_COMPARISON.md` now records the mechanism argument: Immix is
 already a mark-region collector with bump-style allocation and line/block
 reclamation, so it can hide GC pressure on short-lived parser/filter/count
-streams. Non-Native backend prototype code should remain in the separate
-backend fork until the current Scala Native benchmark story is stable.
+streams. Non-Native backend prototype code is isolated under
+`scala-native-rift/experimental/portable-rift/**` so the portable fork and the
+Native backend fork do not edit the same runtime/compiler/sandbox files. The
+shared boundary is documented in `docs/RIFT_PORTABLE_API_CONTRACT.md`.
+After the move, the standalone prototype compiles with `scalac`, its
+`scala run --server=false` smoke passes, and the Native `sandbox3_next/compile`
+also passes without owning the portable source.
 
 Latest throughput/RSS reuse-policy update:
 Child implementation commit: `70672972c`

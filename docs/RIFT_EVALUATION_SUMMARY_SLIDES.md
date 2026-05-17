@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-16 19:31 CEST
+Last updated: 2026-05-17 02:54 CEST
 
 Status: markdown slide deck outline. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report,
@@ -37,6 +37,7 @@ Representative numbers to keep on slides:
 | Evidence class | Best current row | Interpretation |
 |---|---|---|
 | Prior-work-style retained dataflow | Broom active-16 aggregate 20M: checked Rift `8.48 s`, `53 MB` RSS, `0 ms` GC vs natural heap `10.78 s`, `236 MB`, L2 GC `953.153 ms` and max GC `2241.709 ms`; checked scoped backend is `11.51 s`, `54 MB`. Active-16 join 20M: checked Rift `8.09 s`, `57 MB` vs heap `9.88 s`, `438 MB`, L2 GC `486.649 ms`; checked scoped backend is `9.15 s`, `57 MB`. Heap completes at `512M` but fails at `384M`/`256M`. | This is the Broom/Naiad-style headline comparison: natural heap/GC versus checked Rift on ordinary objects retained until notification/close, with safe scoped backend and fixed-memory behavior shown as comparison axes. |
+| Prior-work-style q17 retained join/aggregate | Broom q17 active-16 20M: checked Rift `9.67 s`, `50 MB` RSS, `0 ms` GC vs natural heap `14.45 s`, `232 MB`, L2 GC `1370.380 ms`; checked scoped backend is `13.02 s`, `50 MB`. Heap caps down to `256M` complete. | TPC-H-Q17-like retained dataflow shape with deterministic generated `Part`/`LineItem` records. This is throughput/GC/RSS methodology evidence, not exact TPC-H or real-input proof. |
 | Retained-object memory management | Focused 1M retained: checked scoped `24.274 ms`, `0 ms` GC, `4.9 MB` RSS vs retained heap `36.233 ms`, `10.109 ms` GC, `21.3 MB` RSS. | Fair region-reclaim win: both sides retain ordinary objects until epoch close. |
 | Retained generated/preloaded stressor | GH Archive-shaped retained q2 L1: checked scoped `3.44 s`, `16 MB` RSS vs retained heap `4.62 s`, `147 MB` RSS for 20 x 1M iterations; L2 checked scoped `186.868 ms` vs retained heap `257.377 ms`, `77.208 ms` GC. | Strong retained memory/RSS win, but not real-input proof. |
 | Direct-summary lower bound | GH Archive-shaped q2 L1: heap direct-summary `1.36 s`; checked stream/scoped direct-summary `1.45/1.45 s`. DSPBench Fraud/Log q2 and LogHub q2/q3 now also have checked direct-summary counterparts within about `1-4%` of heap direct-summary, except LogHub q3's CPU-heavy row at about `2-3%`. | Symmetric topology lower bound: direct-summary is fast for heap and checked regions, but it is not a reclaim claim. |

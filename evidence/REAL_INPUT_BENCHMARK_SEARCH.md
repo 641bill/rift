@@ -1,7 +1,7 @@
 # Real-Input GC-Heavy Stream Benchmark Search
 
 Date: 2026-05-07
-Last updated: 2026-05-16 18:39 CEST
+Last updated: 2026-05-17 02:54 CEST
 
 Status: active Phase 6 search ledger. This file tracks public real-input
 stream/dataflow candidates before implementation work. It is deliberately a
@@ -78,6 +78,17 @@ session heap GC is `82.341 ms` inside `6595.172 ms`, and join heap GC is only
 `9.474 ms` inside `6837.810 ms`. Park it as real-streaming retained-object
 control evidence and keep searching for higher-cardinality retained state or
 transaction/graph/text epochs.
+
+The new Broom q17 retained join/aggregate row is useful for the search, but it
+does not change the real-input ledger: it is deterministic generated
+methodology evidence, not real-input proof. It shows that a TPC-H-Q17-like
+retained dataflow shape can make Scala Native heap GC material (`1370.380 ms`
+median timed GC inside `4781.079 ms` L2 at 20M active-16), and checked Rift
+cuts L1 elapsed from `14.45 s` to `9.67 s` while reducing RSS from about
+`232 MB` to `50 MB`. The real-input search should now look for public data
+that naturally behaves like this: retained joins, high-cardinality sessions,
+graph/text epochs, or transaction-local object batches. Do not treat q17 as a
+real-data substitute.
 
 2026-05-16 18:39 second search pass: the next real-input search should be more
 selective. Official/prior-work sources point to retained heap objects in

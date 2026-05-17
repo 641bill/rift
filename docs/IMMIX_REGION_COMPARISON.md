@@ -1,7 +1,7 @@
 # Immix And Regions: Why Scala Native Heap Pressure Can Be Low
 
 Date: 2026-05-16
-Last updated: 2026-05-16 19:31 CEST
+Last updated: 2026-05-17 02:47 CEST
 
 Status: investigation note. This explains why Scala Native Immix can make
 natural heap/GC baselines strong, why some real-input rows show little GC time,
@@ -29,6 +29,36 @@ pressure. A parser/filter/count loop that allocates records briefly and then
 drops them may be handled well by Immix. Rift should expect strong wins only
 when lifetime topology lets it avoid tracing large retained transient graphs,
 reduce peak RSS/fixed-memory failures, or remove GC latency tails.
+
+## How Immix Imitates Region Behavior
+
+Immix is still a tracing garbage collector, not a programmer-visible region
+system. But several implementation choices make it behave region-like in the
+common stream-processing cases we keep seeing:
+
+| Region idea | Immix analogue | Why this lowers pressure |
+|---|---|---|
+| Bump allocation in an arena | Allocate sequentially into holes/lines inside blocks. | Allocation cost is close to region bump allocation for many small objects. |
+| Bulk reclaim instead of per-object free | After tracing, reclaim whole free lines or blocks. | Dead short-lived objects do not need individual destruct/free operations. |
+| Many objects die together | Dead objects in the same lines/blocks become reusable together. | Parser/filter objects that die before collection impose little direct reclaim cost. |
+| Fragmentation control by region reset/slab reuse | Line-level reuse plus opportunistic evacuation/defragmentation. | Immix can keep allocation spaces usable without compacting every collection. |
+| Lifetime boundary not needed for young dead objects | Reachability tracing discovers that objects are dead. | If objects do not survive until a collection, timed GC may stay near zero. |
+
+This is why Immix can look close to Rift on simple real streams:
+
+1. The program allocates many short-lived records.
+2. The records are dropped quickly after parsing/filter/counting.
+3. The heap has enough headroom, so collection is infrequent.
+4. When collection happens, the live set is mostly compact durable state, not
+   the total number of records that were allocated.
+5. Immix reuses free lines/blocks in bulk, so the dead records do not create a
+   large per-object cleanup cost.
+
+Rift differs when the program retains many ordinary objects until a known
+logical boundary. Immix must still discover the live/dead split by tracing
+reachable heap graphs. Rift can use the explicit boundary: close/reset the
+epoch/window/page/transaction and reclaim the whole region without tracing
+region-local objects, provided static rules prevent unsafe heap references.
 
 ## Mechanism Comparison
 

@@ -1,7 +1,7 @@
 # Scala-Level Rift Backend Plan
 
 Date: 2026-05-16
-Last updated: 2026-05-16 19:31 CEST
+Last updated: 2026-05-17 02:36 CEST
 
 Status: planning document. This is not implemented backend evidence. It records
 the intended long-term split between Rift's Scala-level safety/topology model
@@ -43,6 +43,23 @@ backend lowerings.
 | Scala.js | Portability and allocation-reduction experiment. | Object pooling and lifetime-bounded reuse for generated JS objects where semantics allow. | Planned. |
 | Wasm | Natural arena backend. | Linear-memory bump allocation and reset for region-shaped values and buffers. | Planned. |
 | Analysis-only | Front-end safety proof independent of allocation placement. | Run capture/separation checks but allocate normally on the target heap. | Planned. |
+
+## Prototype Location
+
+The first pure-Scala backend-facade prototype is intentionally isolated from
+the Scala Native sandbox:
+
+`scala-native-rift/experimental/portable-rift/src/main/scala/rift/portable/PortableRiftBackendPrototype.scala`
+
+It models a shared `epoch` scope, active/closed scope checks, heap fallback
+allocation, explicit reusable object pools for JVM/Scala.js-like lowerings, a
+simple Wasm linear-memory arena, and analysis-only checking. It is not a full
+backend implementation and does not claim that non-Native platforms can place
+arbitrary Scala objects in real regions.
+
+The fork ownership boundary and portable API contract are tracked in
+`docs/RIFT_PORTABLE_API_CONTRACT.md`. Prototype smoke evidence is recorded in
+`evidence/PORTABLE_BACKEND_PROTOTYPE.md`.
 
 ## JVM Experiment Rules
 
