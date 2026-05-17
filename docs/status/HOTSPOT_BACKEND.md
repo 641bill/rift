@@ -1,6 +1,6 @@
 # HotSpot Backend Status
 
-Last updated: 2026-05-17 17:35 CEST
+Last updated: 2026-05-17 22:12 CEST
 
 Status: hot status file for the custom HotSpot VM-fork track. This is separate
 from the portable JVM library prototype.
@@ -74,8 +74,10 @@ Detailed HotSpot progress belongs here and in
 - The worktree is on local branch `rift-jdk25` from `origin/jdk25`. The Rift
   patch stack is committed locally as OpenJDK commit `94e2a36f7b9`
   (`Prototype Rift region backend`), one commit ahead of `origin/jdk25`.
-  No GitHub fork remote is configured yet; `origin` is still
-  `https://github.com/openjdk/jdk.git`.
+  It is pushed to the user fork remote
+  `git@github.com:641bill/jdk.git` as branch `rift-jdk25`, tracking
+  `rift-github/rift-jdk25`. `origin` remains
+  `https://github.com/openjdk/jdk.git` for upstream OpenJDK.
 - Added an Xcode-derived devkit workflow:
   `experimental/hotspot-rift/scripts/create_macosx_devkit.sh` creates an
   OpenJDK macOS devkit from a local `Xcode.app`, and
