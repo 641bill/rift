@@ -52,4 +52,7 @@ Examples:
 - tar.gz:/Users/siyaoliu/rift/cache/benchmark-data/loghub/HDFS_1.tar.gz!HDFS.log
 - tar.gz:/Users/siyaoliu/rift/cache/benchmark-data/loghub/BGL.tar.gz!BGL.log
 - zip:/Users/siyaoliu/rift/cache/benchmark-data/theodolite/real-power/household_power_consumption.zip!household_power_consumption.txt
+- /Users/siyaoliu/rift/cache/benchmark-data/yak/stackexchange/askubuntu-Posts.xml.gz
+- /Users/siyaoliu/rift/cache/tpch-sf1/lineitem.tbl.gz
+- /Users/siyaoliu/rift/trip_data/trip_data_1.csv.gz
 EOF

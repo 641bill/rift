@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-17 13:05 CEST
+Last updated: 2026-05-17 13:30 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -11,18 +11,19 @@ Active implementation branch for this update:
 
 Latest data-footprint cleanup:
 `evidence/DATA_FOOTPRINT_AND_STREAMING_PLAN.md` records the local benchmark
-data inventory. The largest space users are extracted LogHub Windows
-(`26G`), DEBS/NYC taxi directories (`45G` total), extracted LogHub HDFS
-(`1.5G`), extracted AskUbuntu `Posts.xml` (`1.3G`), DBGEN SF1 (`759M`), and
-other extracted real-data duplicates. `BenchmarkInputSupport` now supports
-plain `.gz`, `tar.gz:/archive!member`, and `zip:/archive!member` inputs, so
-LogHub, Common Crawl, Linear Road, and Theodolite-style rows can run from
-compressed local sources without keeping extracted copies. New helper scripts:
+data inventory. The extracted LogHub, Common Crawl, Linear Road, and
+Theodolite duplicates were removed while preserving compressed local sources.
+The remaining large plain-text benchmark inputs were converted to gzip in
+place: DEBS/NYC taxi monthly CSVs, TPC-H DBGEN `part.tbl`/`lineitem.tbl`,
+AskUbuntu `Posts.xml`, and MHEALTH subject logs. Free disk moved from about
+`72G` to about `102G`. `BenchmarkInputSupport` supports plain `.gz`,
+`tar.gz:/archive!member`, and `zip:/archive!member` inputs. DEBS taxi sample
+generation now defaults to `.csv.gz` monthly files when plain `.csv` files are
+absent; Broom TPC-H file mode now opens inputs through `BenchmarkInputSupport`;
+RIoTBench MHEALTH directory scanning now accepts `.log.gz`. New helper scripts:
 `scripts/benchmark-data-footprint.sh` lists large local inputs, and
 `scripts/cleanup-benchmark-data.sh` dry-runs deletion of extracted duplicates;
-set `RIFT_CLEAN_DATA=1` only when intentionally deleting. The taxi directories
-are not backed by compressed local archives, so they require explicit
-`RIFT_CLEAN_TAXI=1`.
+set `RIFT_CLEAN_DATA=1` only when intentionally deleting.
 
 Latest report/HTML normalization:
 `docs/PERFORMANCE_EVALUATION_REPORT.md` remains the presentation source and

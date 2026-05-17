@@ -55,7 +55,8 @@ fi
 if [[ "${RIFT_CLEAN_TAXI:-0}" == "1" ]]; then
   echo
   echo "## Very large DEBS/NYC taxi directories"
-  echo "These are not replaced by a local compressed archive in this repo."
+  echo "These directories now contain gzip-compressed monthly CSVs."
+  echo "Delete only if DEBS taxi reruns are not needed locally."
   say_action "$ROOT/trip_data"
   say_action "$ROOT/trip_fare"
 fi

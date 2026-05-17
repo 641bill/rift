@@ -1,6 +1,6 @@
 # Data Footprint And Streaming Plan
 
-Last updated: 2026-05-17 13:05 CEST
+Last updated: 2026-05-17 13:30 CEST
 
 Status: active disk-space triage note. This file separates benchmark inputs
 that must stay local from extracted duplicates that can be replaced by
@@ -25,20 +25,19 @@ read either:
 
 ## Current Biggest Files
 
-Measured on 2026-05-17:
+Measured on 2026-05-17 after compressed cleanup:
 
 | Path | Size | Classification | Replacement |
 |---|---:|---|---|
-| `/Users/siyaoliu/rift/cache/benchmark-data/loghub/Windows/Windows.log` | `26G` | extracted duplicate | stream `tar.gz:/Users/siyaoliu/rift/cache/benchmark-data/loghub/Windows.tar.gz!Windows.log` |
-| `/Users/siyaoliu/rift/trip_data` | `27G` | local DEBS/NYC taxi CSV directory | no compressed local replacement in this repo; delete only if DEBS taxi reruns are not needed soon |
-| `/Users/siyaoliu/rift/trip_fare` | `18G` | local DEBS/NYC taxi CSV directory | no compressed local replacement in this repo; delete only if DEBS taxi reruns are not needed soon |
-| `/Users/siyaoliu/rift/cache/benchmark-data/loghub/HDFS_1/HDFS.log` | `1.5G` | extracted duplicate | stream `tar.gz:/Users/siyaoliu/rift/cache/benchmark-data/loghub/HDFS_1.tar.gz!HDFS.log` |
-| `/Users/siyaoliu/rift/cache/benchmark-data/yak/stackexchange/askubuntu-Posts.xml` | `1.3G` | extracted 7z member | keep for now unless `7z`/`unar` streaming is installed; current helper does not support `.7z` |
-| `/Users/siyaoliu/rift/cache/tpch-sf1/lineitem.tbl` | `725M` | generated DBGEN table | can be deleted and regenerated from `cache/tpch-dbgen` |
-| `/Users/siyaoliu/rift/cache/benchmark-data/loghub/BGL/BGL.log` | `709M` | extracted duplicate | stream `tar.gz:/Users/siyaoliu/rift/cache/benchmark-data/loghub/BGL.tar.gz!BGL.log` |
-| `/Users/siyaoliu/rift/cache/benchmark-data/common-crawl/...warc.wat` | `708M` | decompressed duplicate | use `.warc.wat.gz` directly |
-| `/Users/siyaoliu/rift/cache/benchmark-data/linear-road/test-data/datafile3hours.dat` | `569M` | extracted duplicate | stream from `datadriverTestData.tar.gz` once runner commands are updated |
-| `/Users/siyaoliu/rift/cache/benchmark-data/theodolite/real-power/household_power_consumption.txt` | `127M` | extracted duplicate | stream `zip:/Users/siyaoliu/rift/cache/benchmark-data/theodolite/real-power/household_power_consumption.zip!household_power_consumption.txt` |
+| `/Users/siyaoliu/rift/trip_data` | `10G` | compressed DEBS/NYC taxi monthly CSVs | `join_nyc_taxi_sample.sh` defaults to `.csv.gz` when plain `.csv` is absent |
+| `/Users/siyaoliu/rift/trip_fare` | `6.9G` | compressed DEBS/NYC taxi monthly CSVs | `join_nyc_taxi_sample.sh` defaults to `.csv.gz` when plain `.csv` is absent |
+| `/Users/siyaoliu/rift/cache/benchmark-data/loghub/Windows.tar.gz` | `1.6G` | compressed LogHub source | stream `tar.gz:/Users/siyaoliu/rift/cache/benchmark-data/loghub/Windows.tar.gz!Windows.log` |
+| `/Users/siyaoliu/rift/cache/benchmark-data/yak/stackexchange/askubuntu.com.7z` | `1.0G` | original compressed StackExchange dump | keep as provenance source |
+| `/Users/siyaoliu/rift/cache/benchmark-data/yak/stackexchange/askubuntu-Posts.xml.gz` | `369M` | gzip-converted benchmark input | usable by `YAK_TEXT_INPUT_MODE=streaming-file` |
+| `/Users/siyaoliu/rift/cache/tpch-sf1/lineitem.tbl.gz` | `225M` | compressed DBGEN table | usable by `BROOM_Q17_INPUT_MODE=tpch-file` after `BroomRetainedDataflowMatrix` switched to `BenchmarkInputSupport.openText` |
+| `/Users/siyaoliu/rift/cache/benchmark-data/riot-bench/mhealth/MHEALTHDATASET/*.log.gz` | `~73M` | gzip-converted MHEALTH subject logs | `RiotBenchRegionMatrix` scans `.log.gz` as well as `.log` |
+| `/Users/siyaoliu/rift/cache/benchmark-data/loghub/HDFS_1.tar.gz` | `154M` | compressed LogHub source | stream `tar.gz:/Users/siyaoliu/rift/cache/benchmark-data/loghub/HDFS_1.tar.gz!HDFS.log` |
+| `/Users/siyaoliu/rift/cache/tpch-sf0.1/lineitem.tbl.gz` | `21M` | compressed DBGEN table | same as SF1 |
 
 Non-benchmark disk use:
 
@@ -76,10 +75,11 @@ RIFT_CLEAN_DATA=1 RIFT_CLEAN_TAXI=1 scripts/cleanup-benchmark-data.sh
 RIFT_CLEAN_DATA=1 RIFT_CLEAN_OPENJDK=1 scripts/cleanup-benchmark-data.sh
 ```
 
-The first delete command should reclaim roughly `30G` from extracted duplicates
-while preserving compressed local sources. The taxi directories account for
-about `45G` more, but they are not currently backed by compressed local copies
-inside this repo.
+The first delete command has already reclaimed roughly `30G` from extracted
+duplicates while preserving compressed local sources. A second cleanup converted
+DEBS/NYC taxi CSVs, TPC-H DBGEN tables, AskUbuntu `Posts.xml`, and MHEALTH
+subject logs to `.gz` in place. Disk availability improved from about `72G` to
+about `102G` free across the two cleanup passes.
 
 ## Runner Migration Notes
 
@@ -91,6 +91,12 @@ families:
 - `THEODOLITE_POWER_INPUT_MODE=streaming-file`;
 - gzip-backed graph, GH Archive, Wikimedia, and Common Crawl paths through
   `BenchmarkInputSupport.openBinary`.
+- DEBS/NYC taxi sample generation through `join_nyc_taxi_sample.sh`, which now
+  selects `.csv.gz` defaults when the plain monthly `.csv` files are absent.
+- TPC-H Q17 file-backed Broom rows through `BenchmarkInputSupport.openText`,
+  so `part.tbl.gz` and `lineitem.tbl.gz` are valid inputs.
+- RIoTBench MHEALTH directory inputs after `RiotBenchRegionMatrix` was extended
+  to scan `.log.gz` subject logs.
 
 Use archive member specs in those same input variables when a compressed
 archive is available. Examples:
@@ -101,6 +107,13 @@ LOGHUB_TOP_INPUT='tar.gz:/Users/siyaoliu/rift/cache/benchmark-data/loghub/Window
 
 THEODOLITE_POWER_INPUT_MODE=streaming-file \
 THEODOLITE_POWER_INPUT='zip:/Users/siyaoliu/rift/cache/benchmark-data/theodolite/real-power/household_power_consumption.zip!household_power_consumption.txt'
+
+YAK_TEXT_INPUT_MODE=streaming-file \
+YAK_TEXT_INPUT=/Users/siyaoliu/rift/cache/benchmark-data/yak/stackexchange/askubuntu-Posts.xml.gz
+
+BROOM_Q17_INPUT_MODE=tpch-file \
+BROOM_TPCH_PART_INPUT=/Users/siyaoliu/rift/cache/tpch-sf1/part.tbl.gz \
+BROOM_TPCH_LINEITEM_INPUT=/Users/siyaoliu/rift/cache/tpch-sf1/lineitem.tbl.gz
 ```
 
 The next implementation step, if we want fully extraction-free selected sweeps,
