@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-17 12:03 CEST
+Last updated: 2026-05-17 12:22 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -140,14 +140,17 @@ The q17 matrix now also supports DBGEN/TPC-H file-backed input through
 `BROOM_Q17_INPUT_MODE=tpch-file`, `BROOM_TPCH_PART_INPUT`, and
 `BROOM_TPCH_LINEITEM_INPUT`. The file-backed mode retains all DBGEN lineitems
 until timestamp close, then applies the Q17 selected-part and below-average
-filters. A tiny fixture smoke passed, then SF0.1 was generated locally from
-the public `electrum/tpch-dbgen` mirror. At SF0.1 (`600572` lineitems),
-natural heap is `5.57 s`, RSS `257.5 MB`, with `59.210 ms` L2 median timed
-GC; checked Rift is `5.15 s`, RSS `50.9 MB`, with `38.075 ms` L2 median timed
-GC and `0.468 ms` region-op time; checked scoped is `5.22 s`, RSS `51.1 MB`.
-Heap completes at `128M` but fails at `64M`, while checked Rift completes at
-about `51 MB` RSS. This is standardized generated benchmark input rather than
-real-world production data, and SF1/full TPC-H rows remain pending.
+filters. A tiny fixture smoke passed, then SF0.1 and SF1 were generated
+locally from the public `electrum/tpch-dbgen` mirror. At SF0.1 (`600572`
+lineitems), checked Rift is `5.15 s` and `50.9 MB` RSS versus heap `5.57 s`
+and `257.5 MB`; heap fails at `64M`. At SF1 (`6001215` lineitems), natural
+heap is `55.44 s`, RSS `433.3 MB`, with `877.190 ms` L2 median timed GC;
+checked Rift is `51.47 s`, RSS `48.7 MB`, with `503.444 ms` L2 median timed
+GC and `5.922 ms` region-op time; checked scoped is `53.35 s`, RSS
+`48.9 MB`. Heap completes at `256M`/`384M` but fails at `128M`, while checked
+Rift completes around `49-53 MB` RSS. This is standardized generated TPC-H
+benchmark input rather than real-world production data or an official audited
+TPC-H result.
 Same-shape/drop-anchor controls remain appendix/mechanism evidence; this row's
 paper-facing comparison is natural heap/GC versus checked Rift.
 

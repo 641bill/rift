@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-17 12:03 CEST
+Last updated: 2026-05-17 12:22 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -156,14 +156,19 @@ mode retains all lineitems until timestamp close and only then applies the Q17
 selected-part/below-average filters. A tiny `/private/tmp` fixture smoke
 matched checksum/output across heap, checked Rift, and checked scoped with
 checksum `-3582489220934111213` and output count `1`. The follow-up generated
-SF0.1 from the public `electrum/tpch-dbgen` mirror: `part.tbl` has `20000`
-rows and `lineitem.tbl` has `600572` rows. At SF0.1, heap is `5.57 s`, RSS
-`257.5 MB`, L2 GC `59.210 ms`; checked Rift is `5.15 s`, RSS `50.9 MB`, L2
-GC `38.075 ms`, region-op `0.468 ms`; checked scoped is `5.22 s`, RSS
-`51.1 MB`. Heap completes at `128M` but fails at `64M`, while checked Rift
-completes around `51 MB` RSS. SF1/full TPC-H remains pending. Shopper
-JOIN-SELECT-JOIN remains a separate future Broom/Naiad shape if another
-retained dataflow row is needed.
+SF0.1 and SF1 from the public `electrum/tpch-dbgen` mirror. SF0.1 has
+`20000` part rows and `600572` lineitem rows; checked Rift is `5.15 s`,
+RSS `50.9 MB`, L2 GC `38.075 ms`, and region-op `0.468 ms` versus heap
+`5.57 s`, RSS `257.5 MB`, and L2 GC `59.210 ms`. Heap completes at `128M`
+but fails at `64M`. SF1 has `200000` part rows and `6001215` lineitem rows.
+At SF1, heap is `55.44 s`, RSS `433.3 MB`, and L2 GC `877.190 ms`; checked
+Rift is `51.47 s`, RSS `48.7 MB`, L2 GC `503.444 ms`, and region-op
+`5.922 ms`; checked scoped is `53.35 s`, RSS `48.9 MB`. Heap completes at
+`256M`/`384M` but fails at `128M`, while checked Rift completes around
+`49-53 MB` RSS. Mark the DBGEN SF1 Q17 follow-up complete as standardized
+generated TPC-H input evidence, not official audited TPC-H or real-world
+input. Shopper JOIN-SELECT-JOIN remains a separate future Broom/Naiad shape if
+another retained dataflow row is needed.
 
 Latest LogHub retained session/join triage:
 `LogHubRetainedSessionMatrix` and

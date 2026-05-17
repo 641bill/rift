@@ -1,7 +1,7 @@
 # GC-Heavy Data Processing Benchmark Investigation
 
 Date: 2026-05-15
-Last updated: 2026-05-17 12:03 CEST
+Last updated: 2026-05-17 12:22 CEST
 
 Status: literature and online-investigation note. This is not a benchmark
 result pack. It records where GC pressure is expected in stream/data-processing
@@ -134,8 +134,16 @@ Using QGEN's `Brand#13` / `SM PKG` parameters, checked Rift is `5.15 s` and
 `50.9 MB` RSS versus heap `5.57 s` and `257.5 MB`; L2 heap GC is
 `59.210 ms`, checked Rift L2 GC is `38.075 ms`, and checked Rift region-op is
 `0.468 ms`. Heap completes at `128M` but fails at `64M`. This is now
-standardized DBGEN-generated evidence, but not real-world input and not yet
-SF1/full TPC-H.
+standardized DBGEN-generated evidence, but not real-world input.
+
+The SF1 follow-up consumes `200000` DBGEN part rows and `6001215` lineitems.
+Checked Rift is `51.47 s` and `48.7 MB` RSS versus heap `55.44 s` and
+`433.3 MB`; L2 heap GC is `877.190 ms`, checked Rift L2 GC is `503.444 ms`,
+and checked Rift region-op is `5.922 ms` for `17283786` region objects. Heap
+completes at `256M`/`384M` but fails at `128M`, while checked Rift completes
+the same logical query around `49-53 MB` RSS. This completes the planned SF1
+DBGEN Q17 scale step as standardized generated TPC-H input evidence, not
+official audited TPC-H or real-world input.
 
 2026-05-16 19:31 backend implication: it is plausible that many public
 real-input rows will not become strongly GC-heavy under Scala Native Immix.

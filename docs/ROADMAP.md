@@ -102,13 +102,16 @@ file-backed mode from child `3ae71c636`
 (`BROOM_Q17_INPUT_MODE=tpch-file`) that reads `part.tbl` and `lineitem.tbl`
 incrementally, retains all lineitems until timestamp close, and then applies
 the Q17 filters. A tiny fixture smoke passed with matching checksum/output,
-and the SF0.1 follow-up generated `20000` part rows and `600572` lineitem rows
-from the public `electrum/tpch-dbgen` mirror. At SF0.1, checked Rift is
-`5.15 s` and `50.9 MB` RSS versus heap `5.57 s` and `257.5 MB`; heap completes
-at `128M` but fails at `64M`. Mark the TPC-H-Q17-like generated slice
-complete; keep SF1/full DBGEN-backed scale as pending input-provenance work,
-and keep shopper JOIN-SELECT-JOIN as a separate future Broom/Naiad candidate
-only if another retained dataflow shape is needed.
+and the SF0.1/SF1 follow-up generated standardized DBGEN input from the public
+`electrum/tpch-dbgen` mirror. At SF0.1, checked Rift is `5.15 s` and
+`50.9 MB` RSS versus heap `5.57 s` and `257.5 MB`; heap completes at `128M`
+but fails at `64M`. At SF1 (`200000` part rows and `6001215` lineitem rows),
+checked Rift is `51.47 s` and `48.7 MB` RSS versus heap `55.44 s` and
+`433.3 MB`; heap fails at `128M` while checked Rift completes around
+`49-53 MB`. Mark the TPC-H-Q17-like generated and DBGEN SF1 slices complete
+as standardized generated TPC-H input evidence; keep shopper
+JOIN-SELECT-JOIN as a separate future Broom/Naiad candidate only if another
+retained dataflow shape is needed.
 
 Latest LogHub retained session/join triage:
 `evidence/LOGHUB_RETAINED_SESSION_MATRIX.md` adds a true HDFS streaming-file

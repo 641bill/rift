@@ -1,7 +1,7 @@
 # Final-Clean Headline Results
 
 Date: 2026-05-09
-Last updated: 2026-05-16 14:42 CEST
+Last updated: 2026-05-17 12:22 CEST
 
 Status: L1 runner support exists for the first representative binaries. One
 focused retained-epoch L1 row has been collected from clean child commit
@@ -203,6 +203,9 @@ for those 20 iterations.
 | Broom retained aggregate active-16 1M | generated Broom/Naiad-style high-live-state dataflow | checked timestamp/epoch region | prior-work-style checked region win | `checked-rift` | 3 measured runs in one final-clean process | `0.51 s` | `0.51 s` | `0.51 s` | `53149696 bytes` | checksum `8854638383809110735`, output `839789` | Checked Rift is about `23.9%` faster and `77%` lower RSS |
 | Broom retained join active-16 1M | generated Broom/Naiad-style high-live-state dataflow | timestamp/epoch region | natural heap baseline | `heap-gc` | 3 measured runs in one final-clean process | `0.63 s` | `0.63 s` | `0.63 s` | `239403008 bytes` | checksum `3791171928160505090`, output `591580` | Heap baseline with 16 active timestamp states |
 | Broom retained join active-16 1M | generated Broom/Naiad-style high-live-state dataflow | checked timestamp/epoch region | prior-work-style checked region win | `checked-rift` | 3 measured runs in one final-clean process | `0.42 s` | `0.42 s` | `0.42 s` | `56492032 bytes` | checksum `3791171928160505090`, output `591580` | Checked Rift is about `33.3%` faster and `76%` lower RSS |
+| Broom q17 DBGEN SF1 | standardized generated TPC-H DBGEN input | timestamp/epoch region | natural heap baseline | `heap-gc` | 3 measured runs in one final-clean process | `55.44 s` | `55.44 s` | `55.44 s` | `433291264 bytes` | checksum `2919462578996881752`, output `37` | Natural heap/GC retained Q17 baseline over DBGEN SF1 |
+| Broom q17 DBGEN SF1 | standardized generated TPC-H DBGEN input | checked timestamp/epoch region | prior-work-style checked region win | `checked-rift` | 3 measured runs in one final-clean process | `51.47 s` | `51.47 s` | `51.47 s` | `48676864 bytes` | checksum `2919462578996881752`, output `37` | Checked Rift is about `7.2%` faster and about `88.8%` lower RSS; heap fails at `128M` while this row completes around `49 MB` |
+| Broom q17 DBGEN SF1 | standardized generated TPC-H DBGEN input | checked scoped timestamp/epoch region | best safe backend comparison | `checked-region-scoped` | 3 measured runs in one final-clean process | `53.35 s` | `53.35 s` | `53.35 s` | `48889856 bytes` | checksum `2919462578996881752`, output `37` | Checked scoped is about `3.8%` faster than heap and about `88.7%` lower RSS |
 | retained epoch focused 1M x20 | synthetic focused matrix | retained epoch/drop-anchor | retained-object memory-management | `heap-epoch-retained-no-traverse` | 3 processes x 20 iterations | `0.70 s` total (`35.0 ms/iter`) | `0.70 s` | `0.99 s` | `21233664 bytes` | checksum `-829278451938965381`, output `163644` | L1 clean heap retained/drop-anchor control |
 | retained epoch focused 1M x20 | synthetic focused matrix | retained epoch/drop-anchor | retained-object memory-management | `checked-epoch-retained-no-traverse` | 3 processes x 20 iterations | `0.50 s` total (`25.0 ms/iter`) | `0.50 s` | `0.51 s` | `6144000 bytes` | checksum `-829278451938965381`, output `163644` | L1 clean checked stream retained win over heap retained |
 | retained epoch focused 1M x20 | synthetic focused matrix | retained epoch/drop-anchor | retained-object memory-management | `checked-scoped-epoch-retained-no-traverse` | 3 processes x 20 iterations | `0.47 s` total (`23.5 ms/iter`) | `0.47 s` | `0.48 s` | `6193152 bytes` | checksum `-829278451938965381`, output `163644` | L1 clean checked scoped retained win over heap retained |

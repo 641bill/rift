@@ -1,7 +1,7 @@
 # Evaluation Classified Summary
 
 Date: 2026-05-09
-Last updated: 2026-05-17 12:03 CEST
+Last updated: 2026-05-17 12:22 CEST
 
 Status: thesis-facing classified summary built from committed evidence.
 Baseline commits for clean rows: parent `1cc3b2c`, child `13a3df1c7`.
@@ -69,13 +69,17 @@ heap is `14.45 s`, RSS `232 MB`, with `1370.380 ms` median timed GC inside
 GC. Heap caps down to `256M` complete, so q17 is a throughput/GC/RSS result
 rather than a fixed-memory failure result.
 An optional DBGEN/TPC-H file-backed q17 mode is now implemented and validated
-at SF0.1. The corrected file-backed implementation retains all lineitems until
-timestamp close and only then applies the Q17 filters. At SF0.1 (`600572`
-lineitems), heap is `5.57 s`, RSS `257.5 MB`, with `59.210 ms` L2 median
-timed GC; checked Rift is `5.15 s`, RSS `50.9 MB`, with `38.075 ms` L2 median
-timed GC and `0.468 ms` region-op time; checked scoped is `5.22 s`, RSS
-`51.1 MB`. Heap completes at `128M` but fails at `64M`. SF1/full DBGEN scale
-remains pending.
+at SF0.1 and SF1. The corrected file-backed implementation retains all
+lineitems until timestamp close and only then applies the Q17 filters. At
+SF0.1 (`600572` lineitems), checked Rift is `5.15 s`, RSS `50.9 MB`, with
+`38.075 ms` L2 median timed GC and `0.468 ms` region-op time versus heap
+`5.57 s`, RSS `257.5 MB`, and `59.210 ms` L2 median timed GC. Heap completes
+at `128M` but fails at `64M`. At SF1 (`6001215` lineitems), checked Rift is
+`51.47 s`, RSS `48.7 MB`, with `503.444 ms` L2 median timed GC and
+`5.922 ms` region-op time versus heap `55.44 s`, RSS `433.3 MB`, and
+`877.190 ms` L2 median timed GC. Heap completes at `256M`/`384M` but fails at
+`128M`. SF1 is standardized generated TPC-H input evidence, not official
+audited TPC-H or real-world input.
 The new `evidence/LOGHUB_RETAINED_SESSION_MATRIX.md` row is the opposite
 lesson: it is a true real-streaming retained session/join row over HDFS, but
 heap GC remains too small to headline.
@@ -142,7 +146,7 @@ not presentation requirements.
 |---|---|---|---|---|
 | Focused retained epoch | complete | complete | retained-object memory-management | keep as cleanest memory-management row |
 | Broom retained timestamped aggregate/join | complete, including 1M/5M/20M checked scoped backend comparison | complete, including 1M/5M/20M checked scoped backend interpretation | prior-work-style natural heap vs checked Rift retained dataflow | keep as the first Broom/Naiad-like GC-heavy dataflow row; same-shape controls are appendix-only and checked scoped is the safe backend comparison |
-| Broom q17 retained join/aggregate | complete through 1M/5M/20M active-4 and 5M/20M active-16; DBGEN SF0.1 file-backed L1/L2 complete | complete through the same generated scale points and DBGEN SF0.1; SF1/full DBGEN scale pending | prior-work-style generated TPC-H-Q17-like retained dataflow; optional DBGEN/TPC-H file-backed input mode | keep as the next Broom/Naiad-like GC-heavy dataflow row; classify generated rows as deterministic methodology, and DBGEN rows as standardized generated TPC-H input rather than real-world input |
+| Broom q17 retained join/aggregate | complete through 1M/5M/20M active-4, 5M/20M active-16, and DBGEN SF0.1/SF1 file-backed L1 | complete through the same generated scale points and DBGEN SF0.1/SF1 L2 plus heap-cap follow-ups | prior-work-style generated TPC-H-Q17-like retained dataflow; optional DBGEN/TPC-H file-backed input mode | keep as the next Broom/Naiad-like GC-heavy dataflow row; classify generated rows as deterministic methodology, and DBGEN rows as standardized generated TPC-H input rather than real-world input |
 | GH Archive-shaped retained q2 | complete | complete | generated/preloaded retained-object row | keep; label generated/preloaded, not real-input proof |
 | LogHub retained q2/q3 | complete | complete | generated/indexable retained rows | keep q2 as strong retained row; mark q3 checked-stream as modest/RSS row |
 | DSPBench Fraud retained q2 | complete | complete | generated/indexable retained row | keep as modest retained win |

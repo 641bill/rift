@@ -1,7 +1,7 @@
 # Real-Input GC-Heavy Stream Benchmark Search
 
 Date: 2026-05-07
-Last updated: 2026-05-17 12:03 CEST
+Last updated: 2026-05-17 12:22 CEST
 
 Status: active Phase 6 search ledger. This file tracks public real-input
 stream/dataflow candidates before implementation work. It is deliberately a
@@ -89,10 +89,11 @@ cuts L1 elapsed from `14.45 s` to `9.67 s` while reducing RSS from about
 that naturally behaves like this: retained joins, high-cardinality sessions,
 graph/text epochs, or transaction-local object batches. Do not treat q17 as a
 real-data substitute. The DBGEN/TPC-H file-backed q17 mode is now implemented
-and validated at SF0.1, where checked Rift cuts RSS from about `257 MB` to
-`51 MB`, modestly improves L1 elapsed, and heap fails at a `64M` cap. It is
-still standardized generated input rather than real-world input; SF1/full
-DBGEN scale remains pending.
+and validated at SF0.1 and SF1. At SF1, checked Rift cuts RSS from about
+`433 MB` to `49 MB`, improves L1 elapsed from `55.44 s` to `51.47 s`, lowers
+L2 GC from `877.190 ms` to `503.444 ms`, and heap fails at a `128M` cap while
+checked Rift completes around `49-53 MB`. It is still standardized generated
+input rather than real-world input.
 
 2026-05-16 18:39 second search pass: the next real-input search should be more
 selective. Official/prior-work sources point to retained heap objects in
