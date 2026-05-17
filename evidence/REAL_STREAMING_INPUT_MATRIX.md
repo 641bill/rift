@@ -1,7 +1,7 @@
 # Real Streaming Input Matrix
 
 Date: 2026-05-11
-Last updated: 2026-05-18 00:09 CEST
+Last updated: 2026-05-18 00:22 CEST
 
 Status: started. This matrix records only rows that satisfy the
 `real-streaming-input` protocol: no full-input preload, incremental source
@@ -170,6 +170,20 @@ All modes matched checksum `-31772606416651040`.
 | `checked-epoch-stream` | `17.59` | `101564416` | `5530.190` | `0.000` | `2.869` | `20000000` | `-5977224669223427032` |
 | `checked-epoch-scoped` | `17.15` | `101679104` | `5812.138` | `0.000` | `0.000` | `20000000` | `-5977224669223427032` |
 
+20M heap-cap probe:
+
+| Mode | `GC_MAXIMUM_HEAP_SIZE` | Status | L1 external s | L1 RSS bytes | Checksum |
+|---|---:|---|---:|---:|---:|
+| `gc-heap` | `512M` | ok | `6.88` | `408551424` | `-5977224669223427032` |
+| `gc-heap` | `384M` | ok | `6.67` | `405979136` | `-5977224669223427032` |
+| `gc-heap` | `256M` | ok | `6.45` | `272433152` | `-5977224669223427032` |
+| `gc-heap` | `128M` | ok | `6.76` | `138182656` | `-5977224669223427032` |
+| `gc-heap` | `64M` | failed OOM | `0.41` | `71548928` | n/a |
+| `checked-epoch-stream` | `64M` | ok | `6.16` | `97140736` | `-5977224669223427032` |
+| `checked-epoch-scoped` | `64M` | ok | `7.14` | `97173504` | `-5977224669223427032` |
+| `checked-epoch-stream` | `32M` | ok | `6.72` | `98222080` | `-5977224669223427032` |
+| `checked-epoch-scoped` | `32M` | ok | `6.00` | `98467840` | `-5977224669223427032` |
+
 Interpretation:
 
 - This is true real-streaming-input graph evidence: the compressed SNAP
@@ -182,6 +196,9 @@ Interpretation:
   `165.387 ms` inside `6333.745 ms` at 20M, about `2.6%`. Classify as
   real-streaming graph RSS/fixed-memory and throughput evidence, not a
   GC-time-heavy flagship.
+- The one-run cap probe adds fixed-memory evidence: heap completes down to
+  `128M` but fails at `64M`, while checked epoch rows complete under `64M` and
+  `32M` caps with matching checksums.
 
 ### LogHub HDFS Top Templates, Streaming-File
 

@@ -1,7 +1,7 @@
 # Real-Input GC-Heavy Stream Benchmark Search
 
 Date: 2026-05-07
-Last updated: 2026-05-18 00:09 CEST
+Last updated: 2026-05-18 00:22 CEST
 
 Status: active Phase 6 search ledger. This file tracks public real-input
 stream/dataflow candidates before implementation work. It is deliberately a
@@ -20,7 +20,9 @@ checked scoped is L1 `17.15 s`, RSS `102 MB`, versus heap `18.32 s`, RSS
 `577 MB`; checked stream is L2 `5530.190 ms` versus heap `6333.745 ms`. Heap
 timed GC is `165.387 ms`, still only about `2.6%`, so this is strong
 real-streaming graph RSS/fixed-memory and throughput evidence, not the
-GC-time flagship.
+GC-time flagship. A one-run cap probe adds fixed-memory evidence: heap passes
+at `128M` but fails at `64M`, while checked epoch rows complete under `64M`
+and `32M` caps with matching checksums.
 
 ## Goal
 

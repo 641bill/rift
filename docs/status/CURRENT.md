@@ -1,6 +1,6 @@
 # Current Rift Status
 
-Last updated: 2026-05-18 00:09 CEST
+Last updated: 2026-05-18 00:22 CEST
 
 Status: hot status file. Update this file for routine turn-by-turn progress
 instead of editing `docs/HANDOFF.md`, `docs/ROADMAP.md`,
@@ -12,7 +12,7 @@ instead of editing `docs/HANDOFF.md`, `docs/ROADMAP.md`,
 |---|---|---|
 | Native backend | `scala-native-rift/nativelib/**`, `nscplugin/**`, `unit-tests/native/**`, `sandbox/**` | Scala Native remains the only validated performance backend. Native sandbox compile passed after portable prototype extraction. |
 | Backend portability | parent branch `backend-portability` | JVM/HotSpot/Scala.js/Wasm portability docs, prototype evidence, and `experimental/**` patch exports are isolated on `backend-portability` at `065b521`. Keep `main` focused on Scala Native evidence unless backend results are intentionally promoted to presentation context. |
-| Benchmark search | parent `evidence/**` plus child sandbox result files | Broom q17 retained join/aggregate and Broom shopper are complete generated methodology rows. SPECjbb/Stancu-style 8M transaction scaling is recorded as generated clean-room methodology evidence, not real-input proof. LogHub Spark archive-wide retained session is now the strongest LogHub real-streaming RSS/fixed-memory row, AskUbuntu compressed streaming scales to 5M, and Yak LiveJournal now has a 20M compressed-source graph streaming row with strong RSS/fixed-memory and throughput gains but low GC-time share. Real-input search remains focused on retained-object workloads because Immix keeps many parser/filter/count real streams low-GC. |
+| Benchmark search | parent `evidence/**` plus child sandbox result files | Broom q17 retained join/aggregate and Broom shopper are complete generated methodology rows. SPECjbb/Stancu-style 8M transaction scaling is recorded as generated clean-room methodology evidence, not real-input proof. LogHub Spark archive-wide retained session is now the strongest LogHub real-streaming RSS/fixed-memory row, AskUbuntu compressed streaming scales to 5M, and Yak LiveJournal now has a 20M compressed-source graph streaming row with RSS/fixed-memory, heap-cap, and throughput gains but low GC-time share. Real-input search remains focused on retained-object workloads because Immix keeps many parser/filter/count real streams low-GC. |
 | Presentation report | `docs/PERFORMANCE_EVALUATION_REPORT.md` and generated `docs/report.html` | Do not edit/regenerate unless presentation claims or tables change. |
 
 ## Latest Validation
@@ -58,7 +58,8 @@ instead of editing `docs/HANDOFF.md`, `docs/ROADMAP.md`,
   RSS `577 MB`; L2 checked epoch stream `5530.190 ms`, GC `0 ms`, region op
   `2.869 ms`, versus heap `6333.745 ms`, GC `165.387 ms`. This is strong
   real-streaming graph RSS/fixed-memory and throughput evidence, but heap GC is
-  still only about `2.6%` of L2 elapsed.
+  still only about `2.6%` of L2 elapsed. One-run cap probes: heap passes
+  `128M` and fails `64M`; checked epoch stream/scoped pass `64M` and `32M`.
 - Previous checked suites also passed:
   `RiftRegionCheckedCompilerTest` `141/141`,
   `RiftRegionCheckedTest` `65/65`.
@@ -69,10 +70,10 @@ instead of editing `docs/HANDOFF.md`, `docs/ROADMAP.md`,
    do not mix HotSpot/JVM prototype churn into `main`.
 2. If continuing Native evidence, move from completed q17/shopper/SPECjbb,
    Spark retained-session, AskUbuntu compressed-streaming, and Yak LiveJournal
-   compressed graph streaming rows to either heap-cap follow-up for the 20M
-   LiveJournal streaming row, a disk/time preflight for larger SNAP/Twitter
-   graph streaming, or a provenance-clean larger StackOverflow/StackExchange
-   compressed dump. Park the current LogHub and AskUbuntu variants unless the
-   next query retains more state than parser/hash/XML scanning work.
+   compressed graph streaming rows to a disk/time preflight for larger
+   SNAP/Twitter graph streaming or a provenance-clean larger
+   StackOverflow/StackExchange compressed dump. Park the current LogHub,
+   AskUbuntu, and LiveJournal variants unless the next query retains more state
+   than parser/hash/XML/edge scanning work.
 3. If preparing presentation, update `PERFORMANCE_EVALUATION_REPORT.md` and
    regenerate `report.html`; otherwise leave them alone.

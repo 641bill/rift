@@ -1,7 +1,7 @@
 # GC-Heavy Data Processing Benchmark Investigation
 
 Date: 2026-05-15
-Last updated: 2026-05-18 00:09 CEST
+Last updated: 2026-05-18 00:22 CEST
 
 Status: literature and online-investigation note. This is not a benchmark
 result pack. It records where GC pressure is expected in stream/data-processing
@@ -88,6 +88,9 @@ fixed-memory, and throughput evidence. It also confirms that even large real
 streams are not automatically GC-time-heavy on Scala Native Immix: heap GC is
 still only about `2.6%` of L2 elapsed, while parsing and graph update work
 dominate the rest.
+The same row does produce fixed-memory evidence: heap completes down to a
+`128M` cap but fails at `64M`, while checked epoch stream/scoped rows complete
+under both `64M` and `32M` caps with matching checksums.
 
 2026-05-16 18:39 second search pass: a fresh prior-work/official-source pass
 confirms the same direction. Spark's tuning guide says GC cost becomes a
@@ -264,7 +267,7 @@ summarized away before the lifetime boundary.
 | Alibaba machine-usage / DSPBench Machine Outlier | Alibaba Cluster Trace 2018 `machine_usage` slice | compressed `machine_usage.tar.gz` only | machine usage records, feature/window outlier objects | time window close | plausible, but data fetch is large | gated | disk/provenance preflight before download |
 | SPECjbb/Stancu transaction scaling | clean-room SPECjbb2005-style port | generated in-process, no data file | transaction request/order/line/accounting objects | transaction/batch close | high for transaction-local allocation | current 8M scale row complete | keep as generated methodology evidence, not real-input proof; next non-streaming search should prefer real retained graph/text/transaction inputs |
 | StackExchange / StackOverflow text epochs | Stack Exchange dumps | existing `.7z` first; larger dumps only after disk preflight | post/token/top-word candidate objects | token epoch close | medium; AskUbuntu direct epoch is useful but GC is modest | gated | use compressed `.7z` and scale only if disk/time allow |
-| SNAP graph edge epochs | SNAP compressed graph datasets | `.txt.gz` edge streams | edge/update/message objects | graph epoch close | high for RSS/fixed-memory at LiveJournal scale; moderate for timed GC under Immix | LiveJournal preloaded 50M and streaming-file 20M complete | keep LiveJournal as strongest graph row; avoid Twitter-2010 unless disk/time allow |
+| SNAP graph edge epochs | SNAP compressed graph datasets | `.txt.gz` edge streams | edge/update/message objects | graph epoch close | high for RSS/fixed-memory at LiveJournal scale; moderate for timed GC under Immix | LiveJournal preloaded 50M and streaming-file 20M complete; 20M heap cap fails at `64M` while checked passes `32M` | keep LiveJournal as strongest graph row; avoid Twitter-2010 unless disk/time allow |
 
 ## Search Gates
 
