@@ -1,7 +1,7 @@
 # Evaluation Classified Summary
 
 Date: 2026-05-09
-Last updated: 2026-05-17 17:45 CEST
+Last updated: 2026-05-17 22:35 CEST
 
 Status: thesis-facing classified summary built from committed evidence.
 Baseline commits for clean rows: parent `1cc3b2c`, child `13a3df1c7`.
@@ -46,6 +46,13 @@ optimized `rift-checked-direct-epoch` is `28.554 ms` versus legacy
 `29.687 ms`, with matching checksum and heap at `44.144 ms` / `4.837 ms` GC;
 checked SafeZone direct epoch remains fastest at `26.405 ms`, so this is
 allocation-lowering transfer evidence rather than a new headline row.
+The current SPECjbb/Stancu-style scale row extends the clean-room workload
+port to 8 warehouses and 1,000,000 transactions per warehouse. It is generated
+methodology evidence, not real-input evidence and not official SPECjbb2005.
+At 8M transactions, L1 heap is `4.89 s`, checked epoch stream is `4.35 s`,
+and checked epoch scoped is `3.95 s`; L2 heap spends `164.932 ms` in GC
+across `520` collections, while checked epoch stream is `996.765 ms` with
+`4.075 ms` region-op time.
 The latest retained-object prior-work row is
 `evidence/BROOM_RETAINED_DATAFLOW_MATRIX.md`: a Broom/Naiad-style timestamped
 aggregate/join matrix that headlines natural heap/GC versus checked Rift,
@@ -163,7 +170,7 @@ not presentation requirements.
 | StreamFlex throughput/latency | complete | complete | StreamFlex-style generated methodology, latency/deadline axes | keep; report latency tail/deadline misses separately from throughput |
 | StreamFlex design stable/transient/capsule | complete for first 1M throughput and latency candidates | complete | StreamFlex-design generated methodology, checked framework API, latency/deadline axes | keep as Rift-native StreamFlex design reproduction; not exact Ovm artifact evidence |
 | StreamIt BeamFormer/FilterBank ports | 3-run L1 complete | 3-run L2 complete | StreamFlex/StreamIt-style primitive DSP controls | keep as methodology/control rows; not GC-heavy memory-management wins |
-| Stancu and SPECjbb2005 workload port | complete | complete | transaction/epoch topology | keep; label SPECjbb row as clean-room port, not official SPEC |
+| Stancu and SPECjbb2005 workload port | complete, including current 8M transaction scale row | complete, including current 8M transaction scale row | generated transaction/epoch methodology; clean-room port, not real-input and not official SPEC | keep as Stancu/SPECjbb-style prior-work-axis evidence; do not call it real input |
 | Common Crawl WET-shaped q1/q2 | complete, refreshed in selected stream sweep | complete | generated stream stressor, checked page-token | keep as generated high-object-pressure row only |
 | NEXMark q3/q8/q9/q11 | complete, refreshed in selected stream sweep | L2 remains interpretation source | generated Beam-default-style methodology | keep; not exact Beam runner evidence |
 | LogHub HDFS top templates | complete at 1M and 5M | complete | real retained top-k API row | keep as strongest real retained top-k row |
@@ -205,6 +212,7 @@ not presentation requirements.
 | StreamFlex design pressure latency | generated methodology / object-retained stream design | framework API win / tail-latency win | heap-same-shape `202.148 ms`, median GC `21.606 ms`, max `1356958 ns`, `22` deadline misses | `checked-epoch-scoped` `192.432 ms`, median GC `0.794 ms`, `1` miss; `checked-epoch-stream` max `20875 ns`, `0` misses | scoped checked fastest; streaming checked best tail/deadline row | `-20.812 ms` versus same-shape heap median GC | similar RSS in pressure row | StreamFlex-style allocation-pressure latency evidence: report throughput, GC, max latency, and misses separately. |
 | Stancu-style transactions 200k x20 | transaction methodology probe | best checked topology / L1 final-clean | heap `0.85 s`, RSS `7.8 MB` | checked scoped direct epoch `0.57 s`, RSS `7.9 MB` | `32.9%` faster | L2 rows show timed GC removal; L1 intentionally omits GC reads | near tie | L1 checked transaction-boundary win; local methodology probe, not official SPEC. |
 | SPECjbb2005 workload port, 8 warehouses x20 | clean-room transaction workload port | best checked topology / L1 final-clean | heap `2.64 s`, RSS `12.4 MB`; L2 heap GC `15.125 ms` per inner 8w run | checked epoch scoped `2.21 s`, RSS `8.0 MB`; L2 checked GC `0 ms` | `16.3%` faster | L2 removes heap timed GC on transaction-local objects | about `-35%` | L1 checked transaction/epoch win; clean-room Stancu/SPECjbb-shaped port, not official SPECjbb2005. |
+| SPECjbb2005 workload port, 8M transactions | generated clean-room transaction workload port | prior-work-style generated methodology / Stancu axes / L1+L2 | L1 heap `4.89 s`, RSS `7.9 MB`; L2 heap `1379.590 ms`, GC `164.932 ms`, `520` collections | L1 checked epoch stream `4.35 s`, RSS `8.0 MB`; L2 checked epoch stream `996.765 ms`, GC `0.515 ms`, region op `4.075 ms`; L1 checked epoch scoped `3.95 s`, RSS `8.0 MB` | checked stream `11.0%` faster than heap at L1 and `27.7%` faster at L2; checked scoped `19.2%` faster at L1 | L2 removes almost all heap timed GC and reports region-freed proxy `41,585,448` objects / `1,919,417,920` bytes | roughly neutral RSS | Stronger current Stancu/SPECjbb-style methodology row. It is generated deterministic workload evidence, not real-input proof and not official SPECjbb2005. |
 | SPECjbb2005 workload port, 4 warehouses | clean-room transaction workload port | handle-backed checked epoch promotion / L1+L2 gate | L1 heap `0.64 s`, RSS `7.9 MB`; L2 heap `67.378 ms`, GC `7.635 ms` | optimized checked epoch stream L1 `0.27 s`, RSS `6.8 MB`, L2 `51.168 ms`; legacy checked stream L1 `0.30 s`, L2 `56.371 ms`; checked scoped L1 `0.31 s`, L2 `54.146 ms`; rooted scoped L1 `0.34 s`, L2 `60.347 ms` | checked stream `57.8%` faster than heap and `10.0%` faster than legacy at L1 | L2 removes heap timed GC and reduces generic checked allocation path overhead | about `-14%` vs heap | First remaining-path audit win: backend-known checked allocation transfers from Dataflow/StreamFlex into the SPECjbb/Stancu transaction topology. Not official SPECjbb2005. |
 | LogHub generated direct q2/q3 | generated/indexable log methodology | handle-backed checked epoch promotion / L2 gate | 1M q2/q3 heap `542.854/2161.937 ms`, GC `143.713/140.570 ms`, RSS `813 MB/2.29 GB` | optimized checked direct epoch `192.452/1794.369 ms`; legacy checked direct epoch `222.544/1837.885 ms`; checked scoped direct epoch `222.620/1869.150 ms` | optimized checked is `64.5%/17.0%` faster than heap and `13.5%/2.4%` faster than legacy checked | removes heap median timed GC in the direct-epoch rows | q2 about `-16%` RSS, q3 near-tie RSS | Generated allocation-lowering transfer evidence for LogHub q2/q3; not a real-input headline row. |
 | LogHub generated page-token q2/q3 | generated/indexable log methodology | mechanism control / gated page-token lowering | 1M q2/q3 heap `518.300/2229.223 ms`, GC `126.070/160.218 ms` | explicit `rift-checked-page-token-open-handle` `548.894/2310.891 ms`; legacy `558.582/2357.261 ms`; checked scoped page-token `543.155/2448.068 ms` | open-handle is `1.7%/2.0%` faster than legacy but not a headline win | removes heap median timed GC, but q2/q3 page-token is not the best generated topology | near-tie/high RSS | Appendix/control evidence only; keep LogHub page-token default generic/legacy and use direct epoch for generated/indexable q2/q3. |
