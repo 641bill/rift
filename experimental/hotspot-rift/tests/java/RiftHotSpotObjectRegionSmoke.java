@@ -54,6 +54,7 @@ public final class RiftHotSpotObjectRegionSmoke {
         checkUnsafeRetentionRejected();
         checkMethodHandleRetentionRejected();
         checkAnonymousClosureRetentionRejected();
+        checkVerifyLiveRejectsClosedRegionObject();
         System.out.println("object-enabled-ok");
     }
 
@@ -274,6 +275,26 @@ public final class RiftHotSpotObjectRegionSmoke {
             RiftRegion.leave(handle);
             RiftRegion.close(handle);
         }
+    }
+
+    private static void checkVerifyLiveRejectsClosedRegionObject() {
+        PrimitiveRecord saved;
+        long handle = RiftRegion.open(4096);
+        RiftRegion.enter(handle);
+        PrimitiveRecord record = new PrimitiveRecord(10, 11L, 12.0d);
+        RiftRegion.verifyLive(record);
+        saved = record;
+        RiftRegion.leave(handle);
+        RiftRegion.close(handle);
+        try {
+            RiftRegion.verifyLive(saved);
+            throw new AssertionError("verifyLive should reject closed region object");
+        } catch (IllegalStateException expected) {
+            // expected
+        }
+
+        RiftRegion.verifyLive(new UnregisteredRecord(13));
+        RiftRegion.verifyLive(null);
     }
 
     private static void requireRetentionRejection(Throwable thrown, String label) {

@@ -1,18 +1,19 @@
 # HotSpot Region Backend Status
 
 Date: 2026-05-17
-Last updated: 2026-05-17 22:12 CEST
+Last updated: 2026-05-17 22:31 CEST
 
-Status: VM-fork Patch 1-6 evidence. Patch 4 proves a narrow
+Status: VM-fork Patch 1-7 evidence. Patch 4 proves a narrow
 interpreter-only ordinary-object allocation prototype for explicitly
 registered final primitive-field classes. Patch 5 adds an interpreter oop-store
 guard that rejects heap retention of live region objects for static fields,
 object arrays, and object fields in the supported subset. Patch 6 extends store
 guards to Unsafe/JNI object-store entrypoints used by reflection and low-level
-libraries. This is still not a
-performance-ready JVM Rift backend because GC integration, C1/C2 paths, arrays
-as region allocations, reference fields inside region objects, and broad
-post-close stale-use handling are not implemented.
+libraries. Patch 7 adds an explicit `verifyLive` VM hook for API-boundary
+stale-use checks and teaches store guards to reject closed region objects.
+This is still not a performance-ready JVM Rift backend because GC integration,
+C1/C2 paths, arrays as region allocations, reference fields inside region
+objects, and automatic broad post-close stale-use handling are not implemented.
 
 ## Scaffold
 
@@ -122,6 +123,12 @@ Current branch and commit:
 
 ```text
 rift-jdk25
+c455daa9cef Add Rift verifyLive VM hook
+```
+
+Patch 1-6 base commit:
+
+```text
 94e2a36f7b9 Prototype Rift region backend
 ```
 
@@ -597,11 +604,83 @@ Patch 6 limitations:
 - region oops are still not GC-scanned, so performance and broad safety claims
   remain out of scope.
 
+## Patch 7: Explicit Live Verifier
+
+Patch file:
+
+`experimental/hotspot-rift/patches/05-explicit-verify-live.patch`
+
+Implementation:
+
+- `jdk.internal.rift.RiftRegion.verifyLive(Object)` now exposes an internal VM
+  test/API-boundary verifier;
+- `RiftRegionRuntime::verify_live_oop` rejects objects whose address belongs
+  to a closed Rift region;
+- closed region address ranges are remembered after close/reset so explicit
+  verification and store guards can identify stale region objects;
+- region lookup now prefers active ranges before remembered closed ranges,
+  avoiding false stale matches when the C heap reuses an old region address;
+- `verify_oop_store` uses the known-range lookup, so heap stores of closed
+  region objects are rejected along with live region objects.
+
+Pre-patch finding:
+
+- The first closed-range lookup tried for Patch 7 could falsely reject an
+  active region object because `malloc` reused an address range from a previous
+  closed region. The accepted implementation uses a two-pass lookup: active
+  regions first, then closed remembered ranges only if no active region owns
+  the address.
+
+Validation commands:
+
+```text
+HOTSPOT_RIFT_DEVKIT=/Users/siyaoliu/rift/cache/openjdk-rift/build/devkit/Xcode26.5-MacOSX26 \
+  experimental/hotspot-rift/scripts/build_openjdk.sh
+
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-object-region-smoke-patch7c-20260517 \
+  experimental/hotspot-rift/scripts/run_object_region_smoke.sh
+
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-region-smoke-patch7c-20260517 \
+  experimental/hotspot-rift/scripts/run_region_smoke.sh
+
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-smoke-patch7c-20260517 \
+  experimental/hotspot-rift/scripts/run_baseline_smoke.sh
+```
+
+Validation results:
+
+| Smoke | Output | Result |
+|---|---|---|
+| Object allocation + explicit live verifier | `/private/tmp/rift-hotspot-object-region-smoke-patch7c-20260517` | `object-enabled-ok` |
+| Region lifecycle | `/private/tmp/rift-hotspot-region-smoke-patch7c-20260517` | `disabled-ok`, `enabled-ok` |
+| Flag-off baseline | `/private/tmp/rift-hotspot-smoke-patch7c-20260517` | checksum `7351360`, output `1000000`, internal elapsed `12.636 ms`, external `0.11 s`, max RSS `88653824` bytes |
+
+Patch 7 smoke coverage:
+
+- active region objects pass `RiftRegion.verifyLive`;
+- after close, the same region object is rejected by `verifyLive` when held in
+  a Java local variable;
+- the smoke avoids storing that stale object in heap state, because the Patch
+  5/6 store guards correctly reject heap retention first;
+- unregistered heap objects and `null` pass `verifyLive`.
+
+Patch 7 limitations:
+
+- `verifyLive` is explicit. It is suitable for Rift-lowered API boundaries and
+  VM tests, but it is not an automatic arbitrary object-use barrier;
+- closed address-range memory can still be reused by the C allocator. The
+  active-first lookup avoids active-region false positives, but this remains a
+  prototype mechanism until region memory is integrated with a VM-managed
+  address space and GC/safepoints;
+- C1/C2 compiled stores, native stores outside guarded Unsafe/JNI entrypoints,
+  GC scanning, arrays, reference fields, and bridge/root rules remain future
+  work.
+
 ## Next Required Step
 
-1. Extend Patch 6 safety beyond the interpreter plus Unsafe/JNI store subset:
-   C1/C2 barriers, native stores outside guarded entrypoints, and stale
-   post-close use.
+1. Extend Patch 7 safety beyond the interpreter plus Unsafe/JNI plus explicit
+   verifier subset: C1/C2 barriers, native stores outside guarded entrypoints,
+   and automatic stale post-close use where required.
 2. Decide the first supported bridge/root rule for JVM region-to-heap
    references before allowing reference fields.
 3. Add GC/safepoint integration before any region object may survive a

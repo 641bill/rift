@@ -1,6 +1,6 @@
 # HotSpot Backend Status
 
-Last updated: 2026-05-17 22:12 CEST
+Last updated: 2026-05-17 22:31 CEST
 
 Status: hot status file for the custom HotSpot VM-fork track. This is separate
 from the portable JVM library prototype.
@@ -68,12 +68,19 @@ Detailed HotSpot progress belongs here and in
   It guards `Unsafe.putReference`, `Unsafe.putReferenceVolatile`, JNI
   `SetObjectField`, and JNI `SetStaticObjectField`. This closes the first
   reflective `Field.set` retention hole found by the extended object smoke.
+- Patch 7 explicit live verification is implemented and exported as
+  `experimental/hotspot-rift/patches/05-explicit-verify-live.patch`.
+  It adds the internal `RiftRegion.verifyLive(Object)` test/API-boundary hook,
+  remembers closed region address ranges, rejects closed region objects through
+  explicit verification and store guards, and prefers active ranges before
+  closed ranges to avoid C-heap address-reuse false positives.
 - `autoconf` was installed with Homebrew and preflight now passes for `git`,
   `bash`, `make`, `autoconf`, `clang`, Java `25.0.1`, and Homebrew.
 - OpenJDK was cloned into `/Users/siyaoliu/rift/cache/openjdk-rift`.
 - The worktree is on local branch `rift-jdk25` from `origin/jdk25`. The Rift
-  patch stack is committed locally as OpenJDK commit `94e2a36f7b9`
-  (`Prototype Rift region backend`), one commit ahead of `origin/jdk25`.
+  patch stack is currently OpenJDK commit `c455daa9cef` (`Add Rift verifyLive
+  VM hook`), with the Patch 1-6 base at `94e2a36f7b9` (`Prototype Rift region
+  backend`).
   It is pushed to the user fork remote
   `git@github.com:641bill/jdk.git` as branch `rift-jdk25`, tracking
   `rift-github/rift-jdk25`. `origin` remains
@@ -159,16 +166,27 @@ Detailed HotSpot progress belongs here and in
   `/private/tmp/rift-hotspot-smoke-patch6-20260517`: checksum `7351360`,
   output `1000000`, internal elapsed `11.938 ms`, external `0.10 s` real,
   max RSS `88489984` bytes.
+- Patch 7 object smoke passed at
+  `/private/tmp/rift-hotspot-object-region-smoke-patch7c-20260517` with
+  `object-enabled-ok`. The smoke now verifies an active region object, closes
+  the region, and then confirms `verifyLive` rejects the stale object when it
+  is held only in a Java local variable.
+- Existing region lifecycle smoke passed after Patch 7 at
+  `/private/tmp/rift-hotspot-region-smoke-patch7c-20260517`.
+- Flag-off built-JDK baseline smoke after Patch 7 passed at
+  `/private/tmp/rift-hotspot-smoke-patch7c-20260517`: checksum `7351360`,
+  output `1000000`, internal elapsed `12.636 ms`, external `0.11 s` real,
+  max RSS `88653824` bytes.
 - Stock-JDK retained-object baseline smoke passed at
   `/private/tmp/rift-hotspot-smoke-20260517`.
 
 ## Next Step
 
-Extend the safety work beyond the current Patch 6 interpreter plus Unsafe/JNI
-subset. The next work should cover C1/C2 compiled stores, native stores outside
-the guarded Unsafe/JNI entrypoints, explicit JVM bridge/root rules before
-allowing reference fields, and GC/safepoint integration. Stale post-close use
-remains open, but the generic receiver-load VM hook is not viable as
-implemented; prefer a dedicated Rift lowering helper, API-boundary verifier, or
-deeper barrier/deoptimization design. Performance claims remain out of scope
-until GC/safepoint integration is designed.
+Extend the safety work beyond the current Patch 7 interpreter plus Unsafe/JNI
+and explicit API-boundary subset. The next work should cover C1/C2 compiled
+stores, native stores outside the guarded Unsafe/JNI entrypoints, explicit JVM
+bridge/root rules before allowing reference fields, and GC/safepoint
+integration. Automatic stale post-close use remains open: Patch 7 gives an
+explicit verifier that Rift lowering can call, not a general object-use
+barrier. Performance claims remain out of scope until GC/safepoint integration
+is designed.

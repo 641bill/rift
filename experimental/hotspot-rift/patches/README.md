@@ -1,12 +1,13 @@
 # HotSpot Patch Roadmap
 
-Last updated: 2026-05-17 17:27 CEST
+Last updated: 2026-05-17 22:31 CEST
 
 This directory holds patch notes and exported patches for the HotSpot
-ordinary-object Rift backend. Patch 1-6 are now exported. Patch 4 is a narrow
+ordinary-object Rift backend. Patch 1-7 are now exported. Patch 4 is a narrow
 interpreter-only object-allocation prototype; Patch 5 adds the first
 interpreter store guard; Patch 6 extends store checks to Unsafe/JNI paths used
-by reflection. This is still not a complete safe JVM Rift backend.
+by reflection; Patch 7 adds an explicit live-object verifier for API-boundary
+stale-use checks. This is still not a complete safe JVM Rift backend.
 
 ## Patch 0: Build Baseline
 
@@ -174,3 +175,39 @@ Implementation note:
 - This is still not a complete store-barrier design. C1/C2 compiled stores,
   native code outside these entrypoints, reflection routes not backed by these
   calls, stale post-close object use, and GC scanning remain future work.
+
+## Patch 7: Explicit Live Verifier
+
+Patch file:
+
+`05-explicit-verify-live.patch`
+
+Implemented:
+
+- `RiftRegion.verifyLive(Object)` internal VM test surface;
+- `RiftRegionRuntime::verify_live_oop` for explicit API-boundary stale-use
+  checks;
+- closed region address ranges are remembered after close/reset so an explicit
+  verifier can reject objects from closed Rift regions;
+- store guards now use the same known-range lookup and reject closed region
+  objects as well as live region objects;
+- active regions are matched before closed ranges, avoiding false positives
+  when the C heap reuses an old region address.
+
+Validation:
+
+- patched fastdebug OpenJDK image builds;
+- `experimental/hotspot-rift/scripts/run_object_region_smoke.sh` passes at
+  `/private/tmp/rift-hotspot-object-region-smoke-patch7c-20260517` with
+  `object-enabled-ok`;
+- the Patch 1-3 region smoke still passes at
+  `/private/tmp/rift-hotspot-region-smoke-patch7c-20260517`;
+- flag-off built-JDK baseline smoke still passes at
+  `/private/tmp/rift-hotspot-smoke-patch7c-20260517`.
+
+Implementation note:
+
+- Patch 7 is not an automatic arbitrary object-use barrier. It gives Rift
+  lowering and VM tests an explicit verifier to call at API boundaries after a
+  region closes. A complete design still needs GC/safepoint integration and
+  compiled-path barrier coverage.

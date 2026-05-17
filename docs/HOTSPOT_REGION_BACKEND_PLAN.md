@@ -1,18 +1,19 @@
 # HotSpot Ordinary-Object Region Backend Plan
 
 Date: 2026-05-17
-Last updated: 2026-05-17 22:12 CEST
+Last updated: 2026-05-17 22:31 CEST
 
-Status: long-term VM-fork roadmap with Patch 1-6 implemented through a narrow
+Status: long-term VM-fork roadmap with Patch 1-7 implemented through a narrow
 interpreter-only object-allocation and store-guard prototype. Ordinary
 Scala/JVM object allocation into Rift regions now works only for explicitly
 registered, final/simple primitive-field classes under conservative VM flags.
 The first store guards reject static, array, heap-object-field, reflective,
 Unsafe, MethodHandle setter, and anonymous-closure retention of live region
-objects in the currently covered interpreter/Unsafe/JNI subset. GC integration,
-C1/C2 fast paths, arrays as region allocations, reference fields inside region
-objects, stale post-close object use, and broad bridge/root handling are still
-future work.
+objects in the currently covered interpreter/Unsafe/JNI subset. Patch 7 adds
+an explicit `verifyLive` API-boundary verifier for stale post-close objects.
+GC integration, C1/C2 fast paths, arrays as region allocations, reference
+fields inside region objects, automatic stale-use barriers, and broad
+bridge/root handling are still future work.
 
 ## Goal
 
@@ -173,8 +174,8 @@ Observed on 2026-05-17:
 - OpenJDK is cloned at `/Users/siyaoliu/rift/cache/openjdk-rift`;
 - the worktree uses local branch `rift-jdk25` from `origin/jdk25`;
 - the current Rift VM stack is committed locally as OpenJDK commit
-  `94e2a36f7b9` (`Prototype Rift region backend`), one commit ahead of
-  `origin/jdk25`;
+  `c455daa9cef` (`Add Rift verifyLive VM hook`), with the Patch 1-6 base at
+  `94e2a36f7b9` (`Prototype Rift region backend`);
 - the OpenJDK worktree remote `rift-github` points at
   `git@github.com:641bill/jdk.git`, and branch `rift-jdk25` is pushed there
   while tracking `rift-github/rift-jdk25`;
@@ -254,6 +255,20 @@ Observed on 2026-05-17:
   `/private/tmp/rift-hotspot-object-region-smoke-stable-after-stale-backout-20260517`,
   `/private/tmp/rift-hotspot-region-smoke-stable-after-stale-backout-20260517`,
   and `/private/tmp/rift-hotspot-smoke-stable-after-stale-backout-20260517`.
+- Patch 7 has been implemented and exported as
+  `experimental/hotspot-rift/patches/05-explicit-verify-live.patch`;
+- Patch 7 adds internal `RiftRegion.verifyLive(Object)` and VM-side
+  `RiftRegionRuntime::verify_live_oop`, remembers closed region address
+  ranges, and rejects closed region objects through explicit verification and
+  store guards;
+- active regions are checked before remembered closed ranges so C-heap
+  address reuse does not make an active region object look stale;
+- object-region smoke passes after Patch 7 at
+  `/private/tmp/rift-hotspot-object-region-smoke-patch7c-20260517`;
+- region lifecycle smoke passes after Patch 7 at
+  `/private/tmp/rift-hotspot-region-smoke-patch7c-20260517`;
+- flag-off baseline smoke after Patch 7 passes at
+  `/private/tmp/rift-hotspot-smoke-patch7c-20260517`.
 
 Patch 4 limitations:
 
@@ -292,9 +307,10 @@ Patch 5-6 accepted path:
   closure capture routes in the covered subset.
 
 Next concrete step: extend reference safety beyond the current interpreter plus
-Unsafe/JNI subset. Add tests and VM checks for C1/C2 barriers, native stores
-outside the guarded entrypoints, supported region-to-heap bridges, and
-GC/safepoint behavior before making any JVM backend safety or performance
-claim. For stale post-close use, avoid the generic interpreter receiver-load
-hook; use a dedicated Rift lowering helper, explicit API-boundary verifier, or
-a deeper barrier/deoptimization design after the GC/safepoint plan is clearer.
+Unsafe/JNI plus explicit verifier subset. Add tests and VM checks for C1/C2
+barriers, native stores outside the guarded entrypoints, supported
+region-to-heap bridges, and GC/safepoint behavior before making any JVM
+backend safety or performance claim. Patch 7 is an API-boundary stale-use
+verifier, not a general object-use barrier; automatic stale-use protection
+still needs a dedicated Rift lowering pattern or a deeper
+barrier/deoptimization design after the GC/safepoint plan is clearer.

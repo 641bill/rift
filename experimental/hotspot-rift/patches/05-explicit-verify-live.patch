@@ -1,0 +1,171 @@
+diff --git a/src/hotspot/share/prims/riftRegion.cpp b/src/hotspot/share/prims/riftRegion.cpp
+index 57f8fb1185c..e0c98127779 100644
+--- a/src/hotspot/share/prims/riftRegion.cpp
++++ b/src/hotspot/share/prims/riftRegion.cpp
+@@ -63,6 +63,10 @@ RIFT_ENTRY(void, RiftRegion_RegisterEligible(JNIEnv* env, jclass cls, jclass eli
+   RiftRegionRuntime::register_eligible(InstanceKlass::cast(klass), CHECK);
+ RIFT_END
+
++RIFT_ENTRY(void, RiftRegion_VerifyLive(JNIEnv* env, jclass cls, jobject value))
++  RiftRegionRuntime::verify_live_oop(JNIHandles::resolve(value), CHECK);
++RIFT_END
++
+ RIFT_ENTRY(jlongArray, RiftRegion_Stats(JNIEnv* env, jclass cls, jlong handle))
+   const int len = RiftRegionRuntime::StatsLength;
+   jlong values[len];
+@@ -82,6 +86,7 @@ static JNINativeMethod jdk_internal_rift_RiftRegion_methods[] = {
+   { const_cast<char*>("current"),     const_cast<char*>("()J"),   reinterpret_cast<void*>(RiftRegion_Current) },
+   { const_cast<char*>("allocateRaw"), const_cast<char*>("(JJ)J"), reinterpret_cast<void*>(RiftRegion_AllocateRaw) },
+   { const_cast<char*>("registerEligible"), const_cast<char*>("(Ljava/lang/Class;)V"), reinterpret_cast<void*>(RiftRegion_RegisterEligible) },
++  { const_cast<char*>("verifyLive"), const_cast<char*>("(Ljava/lang/Object;)V"), reinterpret_cast<void*>(RiftRegion_VerifyLive) },
+   { const_cast<char*>("stats"),       const_cast<char*>("(J)[J"), reinterpret_cast<void*>(RiftRegion_Stats) },
+ };
+
+diff --git a/src/hotspot/share/runtime/riftRegionRuntime.cpp b/src/hotspot/share/runtime/riftRegionRuntime.cpp
+index 515ead83ef9..51937f7eaf8 100644
+--- a/src/hotspot/share/runtime/riftRegionRuntime.cpp
++++ b/src/hotspot/share/runtime/riftRegionRuntime.cpp
+@@ -34,6 +34,8 @@ class RiftRegionRuntime::RegionState : public CHeapObj<mtInternal> {
+   char* _base;
+   char* _top;
+   char* _end;
++  char* _closed_base;
++  char* _closed_end;
+   size_t _capacity;
+   size_t _high_water;
+   jlong _opens;
+@@ -52,6 +54,8 @@ class RiftRegionRuntime::RegionState : public CHeapObj<mtInternal> {
+     _base(nullptr),
+     _top(nullptr),
+     _end(nullptr),
++    _closed_base(nullptr),
++    _closed_end(nullptr),
+     _capacity(capacity),
+     _high_water(0),
+     _opens(1),
+@@ -80,6 +84,8 @@ class RiftRegionRuntime::RegionState : public CHeapObj<mtInternal> {
+
+   void reset_and_free() {
+     if (_base != nullptr) {
++      _closed_base = _base;
++      _closed_end = _end;
+       FREE_C_HEAP_ARRAY(char, _base);
+       _base = nullptr;
+       _top = nullptr;
+@@ -95,6 +101,17 @@ class RiftRegionRuntime::RegionState : public CHeapObj<mtInternal> {
+     char* p = cast_from_oop<char*>(obj);
+     return _base <= p && p < _top;
+   }
++
++  bool contains_known(oop obj) const {
++    if (obj == nullptr) {
++      return false;
++    }
++    char* p = cast_from_oop<char*>(obj);
++    if (_base != nullptr && _base <= p && p < _top) {
++      return true;
++    }
++    return _closed_base != nullptr && _closed_base <= p && p < _closed_end;
++  }
+ };
+
+ volatile jlong RiftRegionRuntime::RegionState::_next_id = 0;
+@@ -210,21 +227,35 @@ static HeapWord* allocate_region_words(RiftRegionRuntime::RegionState* state, si
+   return reinterpret_cast<HeapWord*>(result);
+ }
+
+-bool RiftRegionRuntime::has_current_region(JavaThread* current) {
+-  return current->rift_current_region() != nullptr;
+-}
+-
+-bool RiftRegionRuntime::is_region_oop(oop obj) {
++static RiftRegionRuntime::RegionState* find_region_oop_state(oop obj, bool include_closed) {
+   if (obj == nullptr || rift_regions == nullptr) {
+-    return false;
++    return nullptr;
+   }
+   for (int i = 0; i < rift_regions->length(); i++) {
+-    RegionState* state = rift_regions->at(i);
++    RiftRegionRuntime::RegionState* state = rift_regions->at(i);
+     if (!state->_closed && state->contains(obj)) {
+-      return true;
++      return state;
+     }
+   }
+-  return false;
++  if (!include_closed) {
++    return nullptr;
++  }
++  for (int i = 0; i < rift_regions->length(); i++) {
++    RiftRegionRuntime::RegionState* state = rift_regions->at(i);
++    if (state->_closed && state->contains_known(obj)) {
++      return state;
++    }
++  }
++  return nullptr;
++}
++
++bool RiftRegionRuntime::has_current_region(JavaThread* current) {
++  return current->rift_current_region() != nullptr;
++}
++
++bool RiftRegionRuntime::is_region_oop(oop obj) {
++  RegionState* state = find_region_oop_state(obj, false);
++  return state != nullptr && !state->_closed;
+ }
+
+ static bool is_region_address(address dst) {
+@@ -381,7 +412,8 @@ void RiftRegionRuntime::verify_oop_store(oop value, address dst, TRAPS) {
+   if (value == nullptr || !UseRiftRegions) {
+     return;
+   }
+-  if (!is_region_oop(value)) {
++  RegionState* state = find_region_oop_state(value, true);
++  if (state == nullptr) {
+     return;
+   }
+   if (is_region_address(dst)) {
+@@ -391,6 +423,19 @@ void RiftRegionRuntime::verify_oop_store(oop value, address dst, TRAPS) {
+             "heap object retains an object allocated in a Rift region");
+ }
+
++void RiftRegionRuntime::verify_live_oop(oop value, TRAPS) {
++  if (value == nullptr || !UseRiftRegions) {
++    return;
++  }
++  RegionState* state = find_region_oop_state(value, true);
++  if (state == nullptr) {
++    return;
++  }
++  if (state->_closed) {
++    THROW_MSG(vmSymbols::java_lang_IllegalStateException(), "Rift region object is closed");
++  }
++}
++
+ void RiftRegionRuntime::stats(JavaThread* current, jlong handle, jlong* out, int len, TRAPS) {
+   require_enabled(CHECK);
+   RegionState* state = require_state(handle, CHECK);
+diff --git a/src/hotspot/share/runtime/riftRegionRuntime.hpp b/src/hotspot/share/runtime/riftRegionRuntime.hpp
+index 24f597cbcce..5ee1f6f8266 100644
+--- a/src/hotspot/share/runtime/riftRegionRuntime.hpp
++++ b/src/hotspot/share/runtime/riftRegionRuntime.hpp
+@@ -37,6 +37,7 @@ class RiftRegionRuntime : public AllStatic {
+   static void register_eligible(InstanceKlass* klass, TRAPS);
+   static bool is_eligible(InstanceKlass* klass);
+   static oop allocate_instance(JavaThread* current, InstanceKlass* klass, TRAPS);
++  static void verify_live_oop(oop value, TRAPS);
+   static void verify_oop_store(oop value, address dst, TRAPS);
+   static void stats(JavaThread* current, jlong handle, jlong* out, int len, TRAPS);
+ };
+diff --git a/src/java.base/share/classes/jdk/internal/rift/RiftRegion.java b/src/java.base/share/classes/jdk/internal/rift/RiftRegion.java
+index a71930d9525..4024a8f46ec 100644
+--- a/src/java.base/share/classes/jdk/internal/rift/RiftRegion.java
++++ b/src/java.base/share/classes/jdk/internal/rift/RiftRegion.java
+@@ -36,6 +36,7 @@ private RiftRegion() {}
+     public static native long current();
+     public static native long allocateRaw(long handle, long bytes);
+     public static native void registerEligible(Class<?> cls);
++    public static native void verifyLive(Object value);
+     public static native long[] stats(long handle);
+
+     public static void epoch(long capacity, Runnable body) {

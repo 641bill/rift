@@ -1,8 +1,8 @@
 # HotSpot Rift Experiment
 
-Last updated: 2026-05-17 17:27 CEST
+Last updated: 2026-05-17 22:31 CEST
 
-Status: scaffold and exported Patch 1-6 artifacts for the custom HotSpot
+Status: scaffold and exported Patch 1-7 artifacts for the custom HotSpot
 VM-fork backend. This directory does not contain an OpenJDK checkout. It
 contains the scripts, patch notes, exported patches, and smoke tests used to
 create and validate one.
@@ -116,6 +116,7 @@ The current patched HotSpot is a prototype. It proves a narrow interpreter-mode
 ordinary-object allocation path for explicitly registered final primitive-field
 classes, plus heap-retention rejection for the covered interpreter,
 Unsafe/JNI, reflection, MethodHandle, and closure-capture smoke routes. It does
-not yet prove broad JVM Rift safety or performance: GC scanning, C1/C2 paths,
-reference fields, arrays as region allocations, bridge/root rules, and
-post-close stale-use handling remain open.
+not yet prove broad JVM Rift safety or performance. Patch 7 adds an explicit
+`RiftRegion.verifyLive(Object)` test hook for API-boundary stale-use checks,
+but GC scanning, C1/C2 paths, reference fields, arrays as region allocations,
+bridge/root rules, and automatic arbitrary stale-use barriers remain open.
