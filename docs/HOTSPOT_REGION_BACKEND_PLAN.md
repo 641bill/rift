@@ -1,7 +1,7 @@
 # HotSpot Ordinary-Object Region Backend Plan
 
 Date: 2026-05-17
-Last updated: 2026-05-17 17:27 CEST
+Last updated: 2026-05-17 17:35 CEST
 
 Status: long-term VM-fork roadmap with Patch 1-6 implemented through a narrow
 interpreter-only object-allocation and store-guard prototype. Ordinary
@@ -171,8 +171,12 @@ Observed on 2026-05-17:
 - stock-JDK baseline smoke passed at
   `/private/tmp/rift-hotspot-smoke-20260517`;
 - OpenJDK is cloned at `/Users/siyaoliu/rift/cache/openjdk-rift`;
-- the worktree uses local branch `rift-jdk25` from `origin/jdk25`, commit
-  `6c48f4ed707bf0b15f9b6098de30db8aae6fa40f`;
+- the worktree uses local branch `rift-jdk25` from `origin/jdk25`;
+- the current Rift VM stack is committed locally as OpenJDK commit
+  `94e2a36f7b9` (`Prototype Rift region backend`), one commit ahead of
+  `origin/jdk25`;
+- no user GitHub fork remote is configured yet; `origin` still points at
+  `https://github.com/openjdk/jdk.git`;
 - Xcode 26.5 was installed and an OpenJDK macOS devkit was created at
   `/Users/siyaoliu/rift/cache/openjdk-rift/build/devkit/Xcode26.5-MacOSX26`;
 - `experimental/hotspot-rift/scripts/build_openjdk.sh` now prepends the

@@ -1,7 +1,7 @@
 # HotSpot Region Backend Status
 
 Date: 2026-05-17
-Last updated: 2026-05-17 17:27 CEST
+Last updated: 2026-05-17 17:35 CEST
 
 Status: VM-fork Patch 1-6 evidence. Patch 4 proves a narrow
 interpreter-only ordinary-object allocation prototype for explicitly
@@ -122,8 +122,13 @@ Current branch and commit:
 
 ```text
 rift-jdk25
-6c48f4ed707bf0b15f9b6098de30db8aae6fa40f
+94e2a36f7b9 Prototype Rift region backend
 ```
+
+The local OpenJDK worktree is now one commit ahead of `origin/jdk25`. `origin`
+still points at `https://github.com/openjdk/jdk.git`; no user GitHub fork
+remote is configured yet. The same changes are also exported as parent-repo
+patch files under `experimental/hotspot-rift/patches/**`.
 
 Devkit command:
 
