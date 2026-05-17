@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-17 16:43 CEST
+Last updated: 2026-05-17 17:45 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -74,6 +74,13 @@ been filled as a selected-row addendum over the local real UCI household-power
 trace: `checked-epoch-stream` is `4.58 s` versus heap `5.13 s`, removes
 `19.465 ms` median timed heap GC, and has slightly higher RSS, so it is a
 real-streaming throughput/GC control rather than an RSS win.
+The investigation-driven retained follow-up, `q3-retained-uc4`, is now the
+stronger Theodolite row and should replace q2 as the time-series streaming case
+study. It streams the compressed UCI archive member, retains one measurement
+plus twelve hierarchy contribution objects per usable record, and on the full
+local input gives checked Rift stream `14.06 s`, RSS `26.6 MB`, versus heap
+`16.85 s`, RSS `207 MB`; L2 removes about `304 ms` median timed GC and heap
+fails under a `64M` cap while checked Rift completes. Keep q1/q2 as controls.
 
 Latest all-optimizations selected sweep:
 `evidence/ALL_OPTIMIZATIONS_SELECTED_SWEEP.md` records the 2026-05-16 compact
