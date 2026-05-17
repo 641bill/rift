@@ -1,9 +1,9 @@
 # HotSpot Ordinary-Object Region Backend Plan
 
 Date: 2026-05-17
-Last updated: 2026-05-18 00:05 CEST
+Last updated: 2026-05-18 00:13 CEST
 
-Status: long-term VM-fork roadmap with Patch 1-11 implemented through a narrow
+Status: long-term VM-fork roadmap with Patch 1-12 implemented through a narrow
 interpreter-only object-allocation and store-guard prototype. Ordinary
 Scala/JVM object allocation into Rift regions now works only for explicitly
 registered, final/simple primitive-field classes under conservative VM flags.
@@ -15,7 +15,9 @@ Patch 8 adds conservative C1 allocation through the runtime stub for eligible
 records. Patch 9 adds conservative C1 compiled store guards. Patch 10 gates
 unsupported C2/JVMCI compilation while Rift regions are enabled. GC
 integration now has a first Serial-GC-only root handling prototype in Patch
-11 for uncompressed primitive-field region objects. True C2
+11 for uncompressed primitive-field region objects. Patch 12 gates unsupported
+VM configurations up front, so the prototype now fails cleanly unless it is
+run with Serial GC, uncompressed oops, and non-compact object headers. True C2
 allocation/stores, arrays as region allocations, reference fields inside
 region objects, automatic stale-use barriers, other collectors, compressed
 oops, and broad bridge/root handling are still future work.
@@ -187,7 +189,8 @@ Observed on 2026-05-17:
 - OpenJDK is cloned at `/Users/siyaoliu/rift/cache/openjdk-rift`;
 - the worktree uses local branch `rift-jdk25` from `origin/jdk25`;
 - the current Rift VM stack is committed locally as OpenJDK commit
-  `8984cdb1241f` (`Skip Rift roots in Serial GC`), with the Patch 10 base at
+  `30c3c0e49034` (`Gate unsupported Rift VM configs`), with the Patch 11 base
+  at `8984cdb1241f` (`Skip Rift roots in Serial GC`), the Patch 10 base at
   `37f9d24dd561` (`Gate C2 under Rift regions`), the Patch 9 base at
   `f5bcc3f9629` (`Add C1 Rift store guards`), the Patch 8 base at
   `8cd8da1a443` (`Add C1 Rift region allocation path`), the Patch 7 base at
@@ -345,6 +348,22 @@ Observed on 2026-05-17:
   `/private/tmp/rift-hotspot-object-region-smoke-patch11-20260518`,
   `/private/tmp/rift-hotspot-region-smoke-patch11-20260518`, and
   `/private/tmp/rift-hotspot-smoke-patch11-20260518`.
+- Patch 12 has been implemented and exported as
+  `experimental/hotspot-rift/patches/10-vm-config-gate.patch`;
+- Patch 12 rejects unsupported VM configurations through the Rift runtime
+  entrypoints unless `-XX:+UseSerialGC`, `-XX:-UseCompressedOops`, and
+  `-XX:-UseCompactObjectHeaders` are active;
+- config-gate smoke passes at
+  `/private/tmp/rift-hotspot-config-gate-smoke-patch12-20260518`;
+- region lifecycle, safepoint/GC, C2-gate, C1 store-guard, C1 allocation,
+  interpreter object, and flag-off baseline smokes pass after Patch 12 at
+  `/private/tmp/rift-hotspot-region-smoke-patch12-20260518`,
+  `/private/tmp/rift-hotspot-safepoint-probe-patch12-20260518`,
+  `/private/tmp/rift-hotspot-c2-gate-smoke-patch12-20260518`,
+  `/private/tmp/rift-hotspot-c1-store-guard-smoke-patch12-20260518`,
+  `/private/tmp/rift-hotspot-c1-region-smoke-patch12-20260518`,
+  `/private/tmp/rift-hotspot-object-region-smoke-patch12-20260518`, and
+  `/private/tmp/rift-hotspot-smoke-patch12-20260518`.
 
 Patch 4 limitations:
 
@@ -383,9 +402,10 @@ Patch 5-6 accepted path:
   closure capture routes in the covered subset.
 
 Next concrete step: generalize the GC/safepoint story beyond the current
-Serial-GC, uncompressed-oop, primitive-field-only root-skip prototype. Patch
-10 prevents unsupported C2/JVMCI execution under `UseRiftRegions`, so true C2
-support can wait. Native stores outside the guarded entrypoints, supported
-region-to-heap bridges, other collectors, compressed oops, reference fields,
-and automatic stale-use protection still need dedicated design before making
-any JVM backend safety or performance claim.
+explicitly gated Serial-GC, uncompressed-oop, primitive-field-only root-skip
+prototype. Patch 10 prevents unsupported C2/JVMCI execution under
+`UseRiftRegions`, so true C2 support can wait. Native stores outside the
+guarded entrypoints, supported region-to-heap bridges, other collectors,
+compressed oops, reference fields, and automatic stale-use protection still
+need dedicated design before making any JVM backend safety or performance
+claim.

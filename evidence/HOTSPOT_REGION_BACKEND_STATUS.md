@@ -1,9 +1,9 @@
 # HotSpot Region Backend Status
 
 Date: 2026-05-17
-Last updated: 2026-05-18 00:05 CEST
+Last updated: 2026-05-18 00:13 CEST
 
-Status: VM-fork Patch 1-11 evidence. Patch 4 proves a narrow
+Status: VM-fork Patch 1-12 evidence. Patch 4 proves a narrow
 interpreter-only ordinary-object allocation prototype for explicitly
 registered final primitive-field classes. Patch 5 adds an interpreter oop-store
 guard that rejects heap retention of live region objects for static fields,
@@ -15,18 +15,19 @@ Patch 8 adds conservative C1 allocation through the runtime allocation stub.
 Patch 9 adds conservative C1 compiled store guards for reference stores. Patch
 10 gates unsupported C2/JVMCI compilation while Rift regions are enabled.
 Patch 11 adds a first Serial-GC-only root handling prototype for active
-uncompressed primitive-field region objects. This is still not a
-performance-ready JVM Rift backend because true C2 allocation/stores, other
-collectors, compressed oops, arrays as region allocations, reference fields
-inside region objects, and automatic broad post-close stale-use handling are
-not implemented.
+uncompressed primitive-field region objects. Patch 12 rejects unsupported
+collector/header configurations up front. This is still not a performance-ready
+JVM Rift backend because true C2 allocation/stores, other collectors,
+compressed oops, arrays as region allocations, reference fields inside region
+objects, and automatic broad post-close stale-use handling are not implemented.
 
 The safepoint/GC probe first exposed the immediate GC blocker: a live region
 object survived a plain safepoint-only check, but `System.gc()` aborted
 fastdebug verification because root handling required the value to be in the
 Java heap. Patch 11 fixes that narrow Serial GC path by skipping
 marking/relocation for active Rift region roots in the primitive-field-only
-subset.
+subset. Patch 12 then makes the accepted VM configuration match that
+implementation.
 
 ## Scaffold
 
@@ -136,6 +137,12 @@ Current branch and commit:
 
 ```text
 rift-jdk25
+30c3c0e49034 Gate unsupported Rift VM configs
+```
+
+Patch 11 base commit:
+
+```text
 8984cdb1241f Skip Rift roots in Serial GC
 ```
 
@@ -1033,13 +1040,79 @@ Interpretation:
 - it does not support other collectors, compressed oops, region arrays,
   reference fields, or durable heap roots.
 
+## Patch 12: VM Configuration Gate
+
+Patch file:
+
+`experimental/hotspot-rift/patches/10-vm-config-gate.patch`
+
+Implementation:
+
+- Rift runtime entrypoints reject unsupported VM configurations while
+  `-XX:+UseRiftRegions` is enabled;
+- the prototype currently requires `-XX:+UseSerialGC`,
+  `-XX:-UseCompressedOops`, and `-XX:-UseCompactObjectHeaders`;
+- added `RiftHotSpotConfigGateSmoke` and
+  `experimental/hotspot-rift/scripts/run_config_gate_smoke.sh`.
+
+Validation commands:
+
+```text
+HOTSPOT_RIFT_DEVKIT=/Users/siyaoliu/rift/cache/openjdk-rift/build/devkit/Xcode26.5-MacOSX26 \
+  experimental/hotspot-rift/scripts/build_openjdk.sh
+
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-config-gate-smoke-patch12-20260518 \
+  experimental/hotspot-rift/scripts/run_config_gate_smoke.sh
+
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-region-smoke-patch12-20260518 \
+  experimental/hotspot-rift/scripts/run_region_smoke.sh
+
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-safepoint-probe-patch12-20260518 \
+  experimental/hotspot-rift/scripts/run_safepoint_probe.sh
+
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-c2-gate-smoke-patch12-20260518 \
+  experimental/hotspot-rift/scripts/run_c2_gate_smoke.sh
+
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-c1-store-guard-smoke-patch12-20260518 \
+  experimental/hotspot-rift/scripts/run_c1_store_guard_smoke.sh
+
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-c1-region-smoke-patch12-20260518 \
+  experimental/hotspot-rift/scripts/run_c1_object_region_smoke.sh
+
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-object-region-smoke-patch12-20260518 \
+  experimental/hotspot-rift/scripts/run_object_region_smoke.sh
+
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-smoke-patch12-20260518 \
+  experimental/hotspot-rift/scripts/run_baseline_smoke.sh
+```
+
+Validation results:
+
+| Smoke | Output | Result |
+|---|---|---|
+| Unsupported VM config gate | `/private/tmp/rift-hotspot-config-gate-smoke-patch12-20260518` | `config-gate-ok` |
+| Region lifecycle | `/private/tmp/rift-hotspot-region-smoke-patch12-20260518` | `disabled-ok`, `enabled-ok` |
+| Safepoint + explicit GC probe | `/private/tmp/rift-hotspot-safepoint-probe-patch12-20260518` | `safepoint-probe-ok`, `system-gc-probe-ok`, `system-gc-probe-status=passed` |
+| C2/JVMCI safety gate | `/private/tmp/rift-hotspot-c2-gate-smoke-patch12-20260518` | `c2-gate-ok` |
+| C1 compiled store guard | `/private/tmp/rift-hotspot-c1-store-guard-smoke-patch12-20260518` | `c1-store-guard-ok` |
+| C1 region allocation | `/private/tmp/rift-hotspot-c1-region-smoke-patch12-20260518` | `c1-allocation-ok` |
+| Interpreter object allocation + safety subset | `/private/tmp/rift-hotspot-object-region-smoke-patch12-20260518` | `object-enabled-ok` |
+| Flag-off baseline | `/private/tmp/rift-hotspot-smoke-patch12-20260518` | checksum `7351360`, output `1000000`, internal elapsed `11.585 ms`, external `0.09 s`, max RSS `88588288` bytes |
+
+Interpretation:
+
+- Patch 12 closes an accidental-footgun gap: unsupported default collector and
+  header settings now fail with a Java exception before any region object is
+  allocated;
+- it does not broaden collector/header support.
+
 ## Next Required Step
 
-1. Generalize GC/safepoint handling beyond the current Serial-GC,
-   uncompressed-oop, primitive-field-only root-skip prototype. Decide whether
-   active region roots are collector-specific non-heap roots, a VM-known
-   auxiliary heap space, or unsupported for collectors that cannot tolerate
-   them.
+1. Generalize GC/safepoint handling beyond the current explicitly gated
+   Serial-GC, uncompressed-oop, primitive-field-only root-skip prototype.
+   Decide whether active region roots are collector-specific non-heap roots, a
+   VM-known auxiliary heap space, or unsupported for collectors that cannot
+   tolerate them.
 2. Decide the first supported bridge/root rule for JVM region-to-heap
    references before allowing reference fields.
 3. Keep broad GC/safepoint integration explicit before any region object may

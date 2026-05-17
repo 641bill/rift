@@ -1,0 +1,23 @@
+diff --git a/src/hotspot/share/runtime/riftRegionRuntime.cpp b/src/hotspot/share/runtime/riftRegionRuntime.cpp
+index 6c53cee1439..09f8144b6c4 100644
+--- a/src/hotspot/share/runtime/riftRegionRuntime.cpp
++++ b/src/hotspot/share/runtime/riftRegionRuntime.cpp
+@@ -132,6 +132,18 @@ static void require_enabled(TRAPS) {
+     THROW_MSG(vmSymbols::java_lang_UnsupportedOperationException(),
+               "Rift regions require -XX:+UnlockExperimentalVMOptions -XX:+UseRiftRegions");
+   }
++  if (!UseSerialGC) {
++    THROW_MSG(vmSymbols::java_lang_UnsupportedOperationException(),
++              "Rift regions prototype currently requires -XX:+UseSerialGC");
++  }
++  if (UseCompressedOops) {
++    THROW_MSG(vmSymbols::java_lang_UnsupportedOperationException(),
++              "Rift regions prototype currently requires -XX:-UseCompressedOops");
++  }
++  if (UseCompactObjectHeaders) {
++    THROW_MSG(vmSymbols::java_lang_UnsupportedOperationException(),
++              "Rift regions prototype currently requires -XX:-UseCompactObjectHeaders");
++  }
+ }
+
+ static RiftRegionRuntime::RegionState* require_state(jlong handle, TRAPS) {

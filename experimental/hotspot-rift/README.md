@@ -1,8 +1,8 @@
 # HotSpot Rift Experiment
 
-Last updated: 2026-05-18 00:05 CEST
+Last updated: 2026-05-18 00:13 CEST
 
-Status: scaffold and exported Patch 1-11 artifacts for the custom HotSpot
+Status: scaffold and exported Patch 1-12 artifacts for the custom HotSpot
 VM-fork backend. This directory does not contain an OpenJDK checkout. It
 contains the scripts, patch notes, exported patches, and smoke tests used to
 create and validate one.
@@ -27,8 +27,10 @@ heap fallback.
 | `scripts/run_c1_object_region_smoke.sh` | Run the conservative C1 region-allocation smoke. |
 | `scripts/run_c1_store_guard_smoke.sh` | Run the conservative C1 compiled-store guard smoke. |
 | `scripts/run_c2_gate_smoke.sh` | Run the conservative C2/JVMCI safety-gate smoke. |
+| `scripts/run_config_gate_smoke.sh` | Run the unsupported VM-configuration rejection smoke. |
 | `scripts/run_safepoint_probe.sh` | Probe safepoint-only and explicit-GC behavior for live region objects. |
 | `tests/java/RiftHotSpotBaselineSmoke.java` | Baseline retained-object workload for stock/patched JDKs. |
+| `tests/java/RiftHotSpotConfigGateSmoke.java` | Unsupported collector/header mode rejection smoke. |
 | `tests/java/RiftHotSpotRegionSmoke.java` | Region lifecycle smoke. |
 | `tests/java/RiftHotSpotObjectRegionSmoke.java` | Object-region allocation and store-guard smoke. |
 | `tests/java/RiftHotSpotC1RegionAllocationSmoke.java` | C1 allocation smoke for registered primitive-field records. |
@@ -138,6 +140,13 @@ HOTSPOT_RIFT_JAVA=/Users/siyaoliu/rift/cache/openjdk-rift/build/rift-fastdebug/j
   experimental/hotspot-rift/scripts/run_c2_gate_smoke.sh
 ```
 
+Run unsupported VM-configuration gate smoke with a built JDK:
+
+```sh
+HOTSPOT_RIFT_JAVA=/Users/siyaoliu/rift/cache/openjdk-rift/build/rift-fastdebug/jdk/bin/java \
+  experimental/hotspot-rift/scripts/run_config_gate_smoke.sh
+```
+
 Run safepoint/GC probe with a built JDK:
 
 ```sh
@@ -160,7 +169,10 @@ reference stores. Patch 10 gates C2/JVMCI compilation while
 bypass the C1/interpreter region allocation and store-guard subset. Patch 11
 adds a first Serial-GC-only root handling path for active uncompressed Rift
 region oops: the safepoint probe now passes both plain safepoint and explicit
-`System.gc()` cases for primitive-field region objects. This is still narrow:
-true C2 allocation/stores, other collectors, compressed oops, native stores
-outside guarded entrypoints, reference fields, arrays as region allocations,
-bridge/root rules, and automatic arbitrary stale-use barriers remain open.
+`System.gc()` cases for primitive-field region objects. Patch 12 gates the VM
+configuration up front: the prototype now requires `-XX:+UseSerialGC`,
+`-XX:-UseCompressedOops`, and `-XX:-UseCompactObjectHeaders` whenever
+`UseRiftRegions` is used. This is still narrow: true C2 allocation/stores,
+other collectors, compressed oops, native stores outside guarded entrypoints,
+reference fields, arrays as region allocations, bridge/root rules, and
+automatic arbitrary stale-use barriers remain open.
