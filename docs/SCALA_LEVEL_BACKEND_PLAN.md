@@ -1,7 +1,7 @@
 # Scala-Level Rift Backend Plan
 
 Date: 2026-05-16
-Last updated: 2026-05-17 02:36 CEST
+Last updated: 2026-05-17 12:10 CEST
 
 Status: planning document. This is not implemented backend evidence. It records
 the intended long-term split between Rift's Scala-level safety/topology model
@@ -39,7 +39,8 @@ backend lowerings.
 | Track | Purpose | First lowering target | Evidence status |
 |---|---|---|---|
 | Scala Native | Main validated implementation backend. | Real region allocator, backend-known checked allocation, proof-gated no-zero, bulk close/reset. | Active implementation and benchmark evidence. |
-| JVM | Experimental portability backend. | Same Scala API and checks; object pools, scoped arenas for selected record-like classes, reusable arrays/buffers, optional off-heap/foreign-memory arenas, normal heap fallback. | Planned. |
+| JVM library | Experimental portability backend. | Same Scala API and checks; object pools, scoped arenas for selected record-like classes, reusable arrays/buffers, optional off-heap/foreign-memory handles, normal heap fallback. | Prototype. |
+| HotSpot VM fork | Research backend for ordinary JVM object regions. | VM-known region space for ordinary object layouts, checked region allocation entrypoints, and bulk close/reset under Rift capture/separation invariants. | Planned. |
 | Scala.js | Portability and allocation-reduction experiment. | Object pooling and lifetime-bounded reuse for generated JS objects where semantics allow. | Planned. |
 | Wasm | Natural arena backend. | Linear-memory bump allocation and reset for region-shaped values and buffers. | Planned. |
 | Analysis-only | Front-end safety proof independent of allocation placement. | Run capture/separation checks but allocate normally on the target heap. | Planned. |
@@ -49,13 +50,15 @@ backend lowerings.
 The first pure-Scala backend-facade prototype is intentionally isolated from
 the Scala Native sandbox:
 
-`scala-native-rift/experimental/portable-rift/src/main/scala/rift/portable/PortableRiftBackendPrototype.scala`
+`scala-native-rift/experimental/portable-rift/src/main/scala/rift/portable/**`
 
-It models a shared `epoch` scope, active/closed scope checks, heap fallback
-allocation, explicit reusable object pools for JVM/Scala.js-like lowerings, a
-simple Wasm linear-memory arena, and analysis-only checking. It is not a full
-backend implementation and does not claim that non-Native platforms can place
-arbitrary Scala objects in real regions.
+It now has a split JVM-first module: portable API, backend implementations,
+record examples, smoke runner, tiny JVM microbenchmark harness, and MUnit
+tests. It models a shared `epoch` scope, active/closed scope checks, heap
+fallback allocation, explicit reusable object pools for JVM/Scala.js-like
+lowerings, a simple Wasm linear-memory arena, and analysis-only checking. It is
+not a full backend implementation and does not claim that non-Native platforms
+can place arbitrary Scala objects in real regions.
 
 The fork ownership boundary and portable API contract are tracked in
 `docs/RIFT_PORTABLE_API_CONTRACT.md`. Prototype smoke evidence is recorded in
@@ -63,8 +66,8 @@ The fork ownership boundary and portable API contract are tracked in
 
 ## JVM Experiment Rules
 
-The JVM track should not claim that HotSpot can place arbitrary Scala objects
-into Rift regions. V1 should be explicit and conservative:
+The JVM library track should not claim that HotSpot can place arbitrary Scala
+objects into Rift regions. V1 should be explicit and conservative:
 
 - preserve the same source-level checked APIs;
 - keep capture/separation errors identical where possible;
@@ -72,6 +75,13 @@ into Rift regions. V1 should be explicit and conservative:
 - use normal heap allocation for unsupported shapes;
 - compare against HotSpot GCs only as cross-runtime context, not as a direct
   replacement for Scala Native Immix rows.
+
+For ordinary Scala/JVM objects in regions, Rift needs a separate HotSpot VM
+fork track. That plan is now recorded in
+`docs/HOTSPOT_REGION_BACKEND_PLAN.md`. The VM track would allocate normal
+HotSpot object layouts in a VM-known region space and bulk-close those regions
+only when Rift's static checks reject heap-retains-region, stale handles,
+closure escape, generic hiding, and parent/child lifetime violations.
 
 Promising JVM experiment rows:
 

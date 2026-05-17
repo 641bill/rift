@@ -1,0 +1,121 @@
+diff --git a/src/hotspot/cpu/aarch64/templateTable_aarch64.cpp b/src/hotspot/cpu/aarch64/templateTable_aarch64.cpp
+index fcfe153a9a5..2bb053646f0 100644
+--- a/src/hotspot/cpu/aarch64/templateTable_aarch64.cpp
++++ b/src/hotspot/cpu/aarch64/templateTable_aarch64.cpp
+@@ -149,7 +149,18 @@ static void do_oop_store(InterpreterMacroAssembler* _masm,
+                          Register val,
+                          DecoratorSet decorators) {
+   assert(val == noreg || val == r0, "parameter is just for looks");
+-  __ store_heap_oop(dst, val, r10, r11, r3, decorators);
++  if (val != noreg) {
++    const Register dst_addr = r9;
++    __ lea(dst_addr, dst);
++    __ stp(val, dst_addr, Address(__ pre(sp, -2 * wordSize)));
++    __ mov(c_rarg1, val);
++    __ mov(c_rarg2, dst_addr);
++    __ call_VM(noreg, CAST_FROM_FN_PTR(address, InterpreterRuntime::rift_oop_store), c_rarg1, c_rarg2);
++    __ ldp(val, dst_addr, Address(__ post(sp, 2 * wordSize)));
++    __ store_heap_oop(Address(dst_addr), val, r10, r11, r3, decorators);
++  } else {
++    __ store_heap_oop(dst, val, r10, r11, r3, decorators);
++  }
+ }
+
+ static void do_oop_load(InterpreterMacroAssembler* _masm,
+@@ -3593,6 +3604,10 @@ void TemplateTable::_new() {
+   Label done;
+   Label initialize_header;
+
++  if (UseRiftRegions) {
++    __ b(slow_case);
++  }
++
+   __ get_cpool_and_tags(r4, r0);
+   // Make sure the class we're about to instantiate has been resolved.
+   // This is done before loading InstanceKlass to be consistent with the order
+diff --git a/src/hotspot/share/interpreter/interpreterRuntime.cpp b/src/hotspot/share/interpreter/interpreterRuntime.cpp
+index ebfc5f59896..6580637ee78 100644
+--- a/src/hotspot/share/interpreter/interpreterRuntime.cpp
++++ b/src/hotspot/share/interpreter/interpreterRuntime.cpp
+@@ -232,6 +232,12 @@ JRT_ENTRY(void, InterpreterRuntime::_new(JavaThread* current, ConstantPool* pool
+   current->set_vm_result_oop(obj);
+ JRT_END
+
++JRT_ENTRY(void, InterpreterRuntime::rift_oop_store(JavaThread* current, oopDesc* value, address dst))
++  if (UseRiftRegions) {
++    RiftRegionRuntime::verify_oop_store(cast_to_oop(value), dst, CHECK);
++  }
++JRT_END
++
+
+ JRT_ENTRY(void, InterpreterRuntime::newarray(JavaThread* current, BasicType type, jint size))
+   oop obj = oopFactory::new_typeArray(type, size, CHECK);
+diff --git a/src/hotspot/share/interpreter/interpreterRuntime.hpp b/src/hotspot/share/interpreter/interpreterRuntime.hpp
+index 3cc7a938a6a..166a5e977aa 100644
+--- a/src/hotspot/share/interpreter/interpreterRuntime.hpp
++++ b/src/hotspot/share/interpreter/interpreterRuntime.hpp
+@@ -61,6 +61,7 @@ class InterpreterRuntime: AllStatic {
+   static void    anewarray     (JavaThread* current, ConstantPool* pool, int index, jint size);
+   static void    multianewarray(JavaThread* current, jint* first_size_address);
+   static void    register_finalizer(JavaThread* current, oopDesc* obj);
++  static void    rift_oop_store(JavaThread* current, oopDesc* value, address dst);
+
+   // Quicken instance-of and check-cast bytecodes
+   static void    quicken_io_cc(JavaThread* current);
+diff --git a/src/hotspot/share/runtime/riftRegionRuntime.cpp b/src/hotspot/share/runtime/riftRegionRuntime.cpp
+index e7127224c67..515ead83ef9 100644
+--- a/src/hotspot/share/runtime/riftRegionRuntime.cpp
++++ b/src/hotspot/share/runtime/riftRegionRuntime.cpp
+@@ -227,6 +227,20 @@ bool RiftRegionRuntime::is_region_oop(oop obj) {
+   return false;
+ }
+
++static bool is_region_address(address dst) {
++  if (dst == nullptr || rift_regions == nullptr) {
++    return false;
++  }
++  char* p = reinterpret_cast<char*>(dst);
++  for (int i = 0; i < rift_regions->length(); i++) {
++    RiftRegionRuntime::RegionState* state = rift_regions->at(i);
++    if (!state->_closed && state->_base != nullptr && state->_base <= p && p < state->_top) {
++      return true;
++    }
++  }
++  return false;
++}
++
+ jlong RiftRegionRuntime::open(JavaThread* current, jlong capacity, TRAPS) {
+   require_enabled(CHECK_0);
+   if (capacity <= 0) {
+@@ -363,6 +377,20 @@ oop RiftRegionRuntime::allocate_instance(JavaThread* current, InstanceKlass* kla
+   return cast_to_oop(mem);
+ }
+
++void RiftRegionRuntime::verify_oop_store(oop value, address dst, TRAPS) {
++  if (value == nullptr || !UseRiftRegions) {
++    return;
++  }
++  if (!is_region_oop(value)) {
++    return;
++  }
++  if (is_region_address(dst)) {
++    return;
++  }
++  THROW_MSG(vmSymbols::java_lang_IllegalStateException(),
++            "heap object retains an object allocated in a Rift region");
++}
++
+ void RiftRegionRuntime::stats(JavaThread* current, jlong handle, jlong* out, int len, TRAPS) {
+   require_enabled(CHECK);
+   RegionState* state = require_state(handle, CHECK);
+diff --git a/src/hotspot/share/runtime/riftRegionRuntime.hpp b/src/hotspot/share/runtime/riftRegionRuntime.hpp
+index a0052ee7357..24f597cbcce 100644
+--- a/src/hotspot/share/runtime/riftRegionRuntime.hpp
++++ b/src/hotspot/share/runtime/riftRegionRuntime.hpp
+@@ -37,6 +37,7 @@ class RiftRegionRuntime : public AllStatic {
+   static void register_eligible(InstanceKlass* klass, TRAPS);
+   static bool is_eligible(InstanceKlass* klass);
+   static oop allocate_instance(JavaThread* current, InstanceKlass* klass, TRAPS);
++  static void verify_oop_store(oop value, address dst, TRAPS);
+   static void stats(JavaThread* current, jlong handle, jlong* out, int len, TRAPS);
+ };

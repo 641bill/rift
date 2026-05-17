@@ -1,0 +1,476 @@
+diff --git a/src/hotspot/share/prims/nativeLookup.cpp b/src/hotspot/share/prims/nativeLookup.cpp
+index 8c8d8510dfc..bb024309217 100644
+--- a/src/hotspot/share/prims/nativeLookup.cpp
++++ b/src/hotspot/share/prims/nativeLookup.cpp
+@@ -207,6 +207,7 @@ extern "C" {
+   void JNICALL JVM_RegisterPerfMethods(JNIEnv *env, jclass perfclass);
+   void JNICALL JVM_RegisterWhiteBoxMethods(JNIEnv *env, jclass wbclass);
+   void JNICALL JVM_RegisterVectorSupportMethods(JNIEnv *env, jclass vsclass);
++  void JNICALL JVM_RegisterJDKInternalRiftRegionMethods(JNIEnv *env, jclass rift_region_class);
+ #if INCLUDE_JVMCI
+   jobject  JNICALL JVM_GetJVMCIRuntime(JNIEnv *env, jclass c);
+   jlong    JNICALL JVM_ReadSystemPropertiesInfo(JNIEnv *env, jclass c, jintArray offsets);
+@@ -227,6 +228,7 @@ static JNINativeMethod lookup_special_native_methods[] = {
+   { CC"Java_sun_hotspot_WhiteBox_registerNatives",                 nullptr, FN_PTR(JVM_RegisterWhiteBoxMethods)     },
+   { CC"Java_jdk_test_whitebox_WhiteBox_registerNatives",           nullptr, FN_PTR(JVM_RegisterWhiteBoxMethods)     },
+   { CC"Java_jdk_internal_vm_vector_VectorSupport_registerNatives", nullptr, FN_PTR(JVM_RegisterVectorSupportMethods)},
++  { CC"Java_jdk_internal_rift_RiftRegion_registerNatives",         nullptr, FN_PTR(JVM_RegisterJDKInternalRiftRegionMethods)},
+ #if INCLUDE_JVMCI
+   { CC"Java_jdk_vm_ci_runtime_JVMCI_initializeRuntime",            nullptr, FN_PTR(JVM_GetJVMCIRuntime)             },
+   { CC"Java_jdk_vm_ci_services_Services_readSystemPropertiesInfo", nullptr, FN_PTR(JVM_ReadSystemPropertiesInfo)    },
+diff --git a/src/hotspot/share/prims/riftRegion.cpp b/src/hotspot/share/prims/riftRegion.cpp
+new file mode 100644
+index 00000000000..e3374464c5f
+--- /dev/null
++++ b/src/hotspot/share/prims/riftRegion.cpp
+@@ -0,0 +1,80 @@
++/*
++ * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
++ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
++ *
++ * This code is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License version 2 only, as
++ * published by the Free Software Foundation.
++ *
++ * This code is distributed in the hope that it will be useful, but WITHOUT
++ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
++ * FITNESS FOR A PARTICULAR PURPOSE.
++ */
++
++#include "jni.h"
++#include "jvm.h"
++#include "memory/allocation.inline.hpp"
++#include "memory/oopFactory.hpp"
++#include "oops/typeArrayOop.inline.hpp"
++#include "runtime/interfaceSupport.inline.hpp"
++#include "runtime/jniHandles.inline.hpp"
++#include "runtime/riftRegionRuntime.hpp"
++
++#define RIFT_ENTRY(result_type, header) \
++  JVM_ENTRY(static result_type, header)
++
++#define RIFT_END JVM_END
++
++RIFT_ENTRY(jlong, RiftRegion_Open(JNIEnv* env, jclass cls, jlong capacity))
++  return RiftRegionRuntime::open(thread, capacity, CHECK_0);
++RIFT_END
++
++RIFT_ENTRY(void, RiftRegion_Enter(JNIEnv* env, jclass cls, jlong handle))
++  RiftRegionRuntime::enter(thread, handle, CHECK);
++RIFT_END
++
++RIFT_ENTRY(void, RiftRegion_Leave(JNIEnv* env, jclass cls, jlong handle))
++  RiftRegionRuntime::leave(thread, handle, CHECK);
++RIFT_END
++
++RIFT_ENTRY(void, RiftRegion_Close(JNIEnv* env, jclass cls, jlong handle))
++  RiftRegionRuntime::close(thread, handle, CHECK);
++RIFT_END
++
++RIFT_ENTRY(jlong, RiftRegion_Current(JNIEnv* env, jclass cls))
++  return RiftRegionRuntime::current(thread);
++RIFT_END
++
++RIFT_ENTRY(jlong, RiftRegion_AllocateRaw(JNIEnv* env, jclass cls, jlong handle, jlong bytes))
++  return RiftRegionRuntime::allocate_raw(thread, handle, bytes, CHECK_0);
++RIFT_END
++
++RIFT_ENTRY(jlongArray, RiftRegion_Stats(JNIEnv* env, jclass cls, jlong handle))
++  const int len = RiftRegionRuntime::StatsLength;
++  jlong values[len];
++  RiftRegionRuntime::stats(thread, handle, values, len, CHECK_NULL);
++  typeArrayOop result = oopFactory::new_longArray(len, CHECK_NULL);
++  for (int i = 0; i < len; i++) {
++    result->long_at_put(i, values[i]);
++  }
++  return (jlongArray) JNIHandles::make_local(THREAD, result);
++RIFT_END
++
++static JNINativeMethod jdk_internal_rift_RiftRegion_methods[] = {
++  { const_cast<char*>("open"),        const_cast<char*>("(J)J"),  reinterpret_cast<void*>(RiftRegion_Open) },
++  { const_cast<char*>("enter"),       const_cast<char*>("(J)V"),  reinterpret_cast<void*>(RiftRegion_Enter) },
++  { const_cast<char*>("leave"),       const_cast<char*>("(J)V"),  reinterpret_cast<void*>(RiftRegion_Leave) },
++  { const_cast<char*>("close"),       const_cast<char*>("(J)V"),  reinterpret_cast<void*>(RiftRegion_Close) },
++  { const_cast<char*>("current"),     const_cast<char*>("()J"),   reinterpret_cast<void*>(RiftRegion_Current) },
++  { const_cast<char*>("allocateRaw"), const_cast<char*>("(JJ)J"), reinterpret_cast<void*>(RiftRegion_AllocateRaw) },
++  { const_cast<char*>("stats"),       const_cast<char*>("(J)[J"), reinterpret_cast<void*>(RiftRegion_Stats) },
++};
++
++JVM_ENTRY(void, JVM_RegisterJDKInternalRiftRegionMethods(JNIEnv* env, jclass rift_region_class))
++  ThreadToNativeFromVM ttnfv(thread);
++
++  int ok = env->RegisterNatives(rift_region_class,
++                                jdk_internal_rift_RiftRegion_methods,
++                                sizeof(jdk_internal_rift_RiftRegion_methods) / sizeof(JNINativeMethod));
++  guarantee(ok == 0, "register jdk.internal.rift.RiftRegion natives");
++JVM_END
+diff --git a/src/hotspot/share/runtime/globals.hpp b/src/hotspot/share/runtime/globals.hpp
+index 75736d0dc7d..ce0551888cd 100644
+--- a/src/hotspot/share/runtime/globals.hpp
++++ b/src/hotspot/share/runtime/globals.hpp
+@@ -174,6 +174,9 @@ const int ObjectAlignmentInBytes = 8;
+   product(bool, AlwaysSafeConstructors, false, EXPERIMENTAL,                \
+           "Force safe construction, as if all fields are final.")           \
+                                                                             \
++  product(bool, UseRiftRegions, false, EXPERIMENTAL,                       \
++          "Enable the experimental Rift region VM backend.")                \
++                                                                            \
+   product(bool, UnlockDiagnosticVMOptions, trueInDebug, DIAGNOSTIC,         \
+           "Enable normal processing of flags relating to field diagnostics")\
+                                                                             \
+diff --git a/src/hotspot/share/runtime/javaThread.cpp b/src/hotspot/share/runtime/javaThread.cpp
+index ddb682cbc75..62e33d2a904 100644
+--- a/src/hotspot/share/runtime/javaThread.cpp
++++ b/src/hotspot/share/runtime/javaThread.cpp
+@@ -430,6 +430,7 @@ JavaThread::JavaThread(MemTag mem_tag) :
+   _current_waiting_monitor(nullptr),
+   _active_handles(nullptr),
+   _free_handle_block(nullptr),
++  _rift_current_region(nullptr),
+   _monitor_owner_id(0),
+
+   _suspend_flags(0),
+diff --git a/src/hotspot/share/runtime/javaThread.hpp b/src/hotspot/share/runtime/javaThread.hpp
+index 968dfd0ce48..0e1d6ccd639 100644
+--- a/src/hotspot/share/runtime/javaThread.hpp
++++ b/src/hotspot/share/runtime/javaThread.hpp
+@@ -163,6 +163,10 @@ class JavaThread: public Thread {
+   // One-element thread local free list
+   JNIHandleBlock* _free_handle_block;
+
++  // Experimental Rift region backend: currently active region handle for this
++  // Java thread. This is intentionally opaque outside riftRegionRuntime.
++  void* _rift_current_region;
++
+   // ID used as owner for inflated monitors. Same as the j.l.Thread.tid of the
+   // current _vthread object, except during creation of the primordial and JNI
+   // attached thread cases where this field can have a temporary value.
+@@ -209,6 +213,9 @@ class JavaThread: public Thread {
+   JNIHandleBlock* free_handle_block() const      { return _free_handle_block; }
+   void set_free_handle_block(JNIHandleBlock* block) { _free_handle_block = block; }
+
++  void* rift_current_region() const              { return _rift_current_region; }
++  void set_rift_current_region(void* region)     { _rift_current_region = region; }
++
+   void push_jni_handle_block();
+   void pop_jni_handle_block();
+
+diff --git a/src/hotspot/share/runtime/riftRegionRuntime.cpp b/src/hotspot/share/runtime/riftRegionRuntime.cpp
+new file mode 100644
+index 00000000000..febe0cf8e80
+--- /dev/null
++++ b/src/hotspot/share/runtime/riftRegionRuntime.cpp
+@@ -0,0 +1,215 @@
++/*
++ * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
++ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
++ *
++ * This code is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License version 2 only, as
++ * published by the Free Software Foundation.
++ *
++ * This code is distributed in the hope that it will be useful, but WITHOUT
++ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
++ * FITNESS FOR A PARTICULAR PURPOSE.
++ */
++
++#include "classfile/vmSymbols.hpp"
++#include "memory/allocation.inline.hpp"
++#include "runtime/atomic.hpp"
++#include "runtime/globals.hpp"
++#include "runtime/interfaceSupport.inline.hpp"
++#include "runtime/javaThread.hpp"
++#include "runtime/riftRegionRuntime.hpp"
++#include "utilities/align.hpp"
++#include "utilities/globalDefinitions.hpp"
++
++class RiftRegionRuntime::RegionState : public CHeapObj<mtInternal> {
++ public:
++  static volatile jlong _next_id;
++
++  jlong _id;
++  char* _base;
++  char* _top;
++  char* _end;
++  size_t _capacity;
++  size_t _high_water;
++  jlong _opens;
++  jlong _enters;
++  jlong _leaves;
++  jlong _closes;
++  jlong _resets;
++  jlong _raw_allocs;
++  bool _closed;
++  bool _entered;
++  JavaThread* _owner;
++
++  RegionState(jlong id, size_t capacity) :
++    _id(id),
++    _base(nullptr),
++    _top(nullptr),
++    _end(nullptr),
++    _capacity(capacity),
++    _high_water(0),
++    _opens(1),
++    _enters(0),
++    _leaves(0),
++    _closes(0),
++    _resets(0),
++    _raw_allocs(0),
++    _closed(false),
++    _entered(false),
++    _owner(nullptr) {
++    _base = NEW_C_HEAP_ARRAY(char, _capacity, mtInternal);
++    _top = _base;
++    _end = _base + _capacity;
++  }
++
++  ~RegionState() {
++    if (_base != nullptr) {
++      FREE_C_HEAP_ARRAY(char, _base);
++      _base = nullptr;
++      _top = nullptr;
++      _end = nullptr;
++    }
++  }
++
++  void reset_and_free() {
++    if (_base != nullptr) {
++      FREE_C_HEAP_ARRAY(char, _base);
++      _base = nullptr;
++      _top = nullptr;
++      _end = nullptr;
++    }
++    _resets++;
++  }
++};
++
++volatile jlong RiftRegionRuntime::RegionState::_next_id = 0;
++
++static RiftRegionRuntime::RegionState* state_from_handle(jlong handle) {
++  return reinterpret_cast<RiftRegionRuntime::RegionState*>(static_cast<intptr_t>(handle));
++}
++
++static jlong handle_from_state(RiftRegionRuntime::RegionState* state) {
++  return static_cast<jlong>(reinterpret_cast<intptr_t>(state));
++}
++
++static void require_enabled(TRAPS) {
++  if (!UseRiftRegions) {
++    THROW_MSG(vmSymbols::java_lang_UnsupportedOperationException(),
++              "Rift regions require -XX:+UnlockExperimentalVMOptions -XX:+UseRiftRegions");
++  }
++}
++
++static RiftRegionRuntime::RegionState* require_state(jlong handle, TRAPS) {
++  if (handle == 0) {
++    THROW_MSG_NULL(vmSymbols::java_lang_NullPointerException(), "null Rift region handle");
++  }
++  return state_from_handle(handle);
++}
++
++static void require_open(RiftRegionRuntime::RegionState* state, TRAPS) {
++  if (state->_closed) {
++    THROW_MSG(vmSymbols::java_lang_IllegalStateException(), "Rift region is closed");
++  }
++}
++
++jlong RiftRegionRuntime::open(JavaThread* current, jlong capacity, TRAPS) {
++  require_enabled(CHECK_0);
++  if (capacity <= 0) {
++    THROW_MSG_0(vmSymbols::java_lang_IllegalArgumentException(), "capacity must be positive");
++  }
++  if (current->rift_current_region() != nullptr) {
++    THROW_MSG_0(vmSymbols::java_lang_IllegalStateException(), "nested Rift regions are not supported in this prototype");
++  }
++  RegionState* state = new RegionState(Atomic::add(&RegionState::_next_id, 1), static_cast<size_t>(capacity));
++  return handle_from_state(state);
++}
++
++void RiftRegionRuntime::enter(JavaThread* current, jlong handle, TRAPS) {
++  require_enabled(CHECK);
++  RegionState* state = require_state(handle, CHECK);
++  require_open(state, CHECK);
++  if (current->rift_current_region() != nullptr) {
++    THROW_MSG(vmSymbols::java_lang_IllegalStateException(), "thread already has an active Rift region");
++  }
++  state->_entered = true;
++  state->_owner = current;
++  state->_enters++;
++  current->set_rift_current_region(state);
++}
++
++void RiftRegionRuntime::leave(JavaThread* current, jlong handle, TRAPS) {
++  require_enabled(CHECK);
++  RegionState* state = require_state(handle, CHECK);
++  require_open(state, CHECK);
++  if (current->rift_current_region() != state) {
++    THROW_MSG(vmSymbols::java_lang_IllegalStateException(), "Rift region is not active on this thread");
++  }
++  state->_entered = false;
++  state->_leaves++;
++  current->set_rift_current_region(nullptr);
++}
++
++void RiftRegionRuntime::close(JavaThread* current, jlong handle, TRAPS) {
++  require_enabled(CHECK);
++  RegionState* state = require_state(handle, CHECK);
++  require_open(state, CHECK);
++  if (current->rift_current_region() == state) {
++    current->set_rift_current_region(nullptr);
++    state->_entered = false;
++    state->_leaves++;
++  } else if (state->_entered) {
++    THROW_MSG(vmSymbols::java_lang_IllegalStateException(), "Rift region is active on another thread");
++  }
++  state->_closed = true;
++  state->_closes++;
++  state->reset_and_free();
++}
++
++jlong RiftRegionRuntime::current(JavaThread* current) {
++  return handle_from_state(reinterpret_cast<RegionState*>(current->rift_current_region()));
++}
++
++jlong RiftRegionRuntime::allocate_raw(JavaThread* current, jlong handle, jlong bytes, TRAPS) {
++  require_enabled(CHECK_0);
++  RegionState* state = require_state(handle, CHECK_0);
++  require_open(state, CHECK_0);
++  if (current->rift_current_region() != state) {
++    THROW_MSG_0(vmSymbols::java_lang_IllegalStateException(), "Rift region is not active on this thread");
++  }
++  if (bytes <= 0) {
++    THROW_MSG_0(vmSymbols::java_lang_IllegalArgumentException(), "allocation size must be positive");
++  }
++  size_t size = align_up(static_cast<size_t>(bytes), BytesPerLong);
++  if (state->_base == nullptr || static_cast<size_t>(state->_end - state->_top) < size) {
++    THROW_MSG_0(vmSymbols::java_lang_OutOfMemoryError(), "Rift raw arena exhausted");
++  }
++  char* result = state->_top;
++  state->_top += size;
++  state->_raw_allocs++;
++  size_t used = static_cast<size_t>(state->_top - state->_base);
++  if (used > state->_high_water) {
++    state->_high_water = used;
++  }
++  return static_cast<jlong>(reinterpret_cast<intptr_t>(result));
++}
++
++void RiftRegionRuntime::stats(JavaThread* current, jlong handle, jlong* out, int len, TRAPS) {
++  require_enabled(CHECK);
++  RegionState* state = require_state(handle, CHECK);
++  if (len < StatsLength) {
++    THROW_MSG(vmSymbols::java_lang_IllegalArgumentException(), "stats array is too small");
++  }
++  size_t used = state->_base == nullptr ? 0 : static_cast<size_t>(state->_top - state->_base);
++  out[0] = state->_id;
++  out[1] = state->_closed ? 0 : 1;
++  out[2] = state->_entered ? 1 : 0;
++  out[3] = static_cast<jlong>(state->_capacity);
++  out[4] = static_cast<jlong>(used);
++  out[5] = static_cast<jlong>(state->_high_water);
++  out[6] = state->_opens;
++  out[7] = state->_enters;
++  out[8] = state->_leaves;
++  out[9] = state->_closes;
++  out[10] = state->_resets;
++  out[11] = state->_raw_allocs;
++}
+diff --git a/src/hotspot/share/runtime/riftRegionRuntime.hpp b/src/hotspot/share/runtime/riftRegionRuntime.hpp
+new file mode 100644
+index 00000000000..24a8b3c78f1
+--- /dev/null
++++ b/src/hotspot/share/runtime/riftRegionRuntime.hpp
+@@ -0,0 +1,37 @@
++/*
++ * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
++ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
++ *
++ * This code is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License version 2 only, as
++ * published by the Free Software Foundation.
++ *
++ * This code is distributed in the hope that it will be useful, but WITHOUT
++ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
++ * FITNESS FOR A PARTICULAR PURPOSE.
++ */
++
++#ifndef SHARE_RUNTIME_RIFTREGIONRUNTIME_HPP
++#define SHARE_RUNTIME_RIFTREGIONRUNTIME_HPP
++
++#include "memory/allocation.hpp"
++#include "utilities/globalDefinitions.hpp"
++
++class JavaThread;
++
++class RiftRegionRuntime : public AllStatic {
++ public:
++  static const int StatsLength = 12;
++
++  class RegionState;
++
++  static jlong open(JavaThread* current, jlong capacity, TRAPS);
++  static void enter(JavaThread* current, jlong handle, TRAPS);
++  static void leave(JavaThread* current, jlong handle, TRAPS);
++  static void close(JavaThread* current, jlong handle, TRAPS);
++  static jlong current(JavaThread* current);
++  static jlong allocate_raw(JavaThread* current, jlong handle, jlong bytes, TRAPS);
++  static void stats(JavaThread* current, jlong handle, jlong* out, int len, TRAPS);
++};
++
++#endif // SHARE_RUNTIME_RIFTREGIONRUNTIME_HPP
+diff --git a/src/java.base/share/classes/jdk/internal/rift/RiftRegion.java b/src/java.base/share/classes/jdk/internal/rift/RiftRegion.java
+new file mode 100644
+index 00000000000..9ada2013cf0
+--- /dev/null
++++ b/src/java.base/share/classes/jdk/internal/rift/RiftRegion.java
+@@ -0,0 +1,49 @@
++/*
++ * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
++ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
++ *
++ * This code is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License version 2 only, as
++ * published by the Free Software Foundation.
++ *
++ * This code is distributed in the hope that it will be useful, but WITHOUT
++ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
++ * FITNESS FOR A PARTICULAR PURPOSE.
++ */
++
++package jdk.internal.rift;
++
++/**
++ * Internal VM test surface for the experimental Rift region backend.
++ *
++ * This is not a public Java or Scala API. Source-level Rift APIs should lower
++ * to VM entrypoints only after capture/separation checks prove the lifetime
++ * topology.
++ */
++public final class RiftRegion {
++    private RiftRegion() {}
++
++    static {
++        registerNatives();
++    }
++
++    private static native void registerNatives();
++
++    public static native long open(long capacity);
++    public static native void enter(long handle);
++    public static native void leave(long handle);
++    public static native void close(long handle);
++    public static native long current();
++    public static native long allocateRaw(long handle, long bytes);
++    public static native long[] stats(long handle);
++
++    public static void epoch(long capacity, Runnable body) {
++        long handle = open(capacity);
++        enter(handle);
++        try {
++            body.run();
++        } finally {
++            close(handle);
++        }
++    }
++}

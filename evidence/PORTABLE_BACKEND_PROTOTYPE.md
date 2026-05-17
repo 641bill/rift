@@ -1,7 +1,7 @@
 # Portable Rift Backend Prototype
 
 Date: 2026-05-16
-Last updated: 2026-05-17 02:39 CEST
+Last updated: 2026-05-17 03:09 CEST
 
 Status: prototype smoke evidence. This is not JVM/Scala.js/Wasm performance
 evidence. It records the first pure-Scala facade that separates Rift's
@@ -11,7 +11,7 @@ Scala-level lifetime model from backend-specific allocation strategies.
 
 Source:
 
-`/Users/siyaoliu/rift/scala-native-rift/experimental/portable-rift/src/main/scala/rift/portable/PortableRiftBackendPrototype.scala`
+`/Users/siyaoliu/rift/scala-native-rift/experimental/portable-rift/src/main/scala/rift/portable/**`
 
 Ownership boundary:
 
@@ -33,6 +33,18 @@ Implemented model:
 
 The prototype also includes a stale-scope probe: allocation after epoch close
 must throw `IllegalStateException` for every backend model.
+
+The 2026-05-17 JVM-first split adds:
+
+- `Rift.epoch { scope => ... }`;
+- `RiftScope.alloc`, `RiftScope.borrow`, and `RiftScope.allocBytes`;
+- `HeapRoot` and `StaticMetadata`;
+- `ObjectPool[A <: ReusableRecord]`;
+- JVM `heap-gc`, `analysis-only`, and `jvm-pool-arena` modes;
+- Scala.js pool and Wasm linear-memory model stubs/examples;
+- MUnit runtime-discipline tests;
+- `PortableRiftMicrobench` for retained epoch and Broom-style aggregate smoke
+  rows.
 
 ## Validation
 
@@ -90,6 +102,87 @@ scala run --server=false \
 ```
 
 Result: passed on 2026-05-17 after extraction.
+
+JVM-first module compile:
+
+```text
+scala-cli compile --server=false experimental/portable-rift
+```
+
+Result: passed on 2026-05-17 after the API/backend split.
+
+JVM-first test suite:
+
+```text
+scala-cli test --server=false experimental/portable-rift
+```
+
+Result: passed on 2026-05-17, `10/10` MUnit tests. The sandboxed first
+attempt failed because Scala CLI could not acquire the Coursier cache lock; the
+rerun with approved cache/network access passed.
+
+JVM microbench smoke:
+
+```text
+scala-cli run --server=false experimental/portable-rift \
+  --main-class rift.portable.PortableRiftMicrobench -- \
+  --workload broom-aggregate --records 100000 \
+  --epoch-size 10000 --active-timestamps 4 --runs 2
+```
+
+Result: passed on 2026-05-17. `heap-gc`, `analysis-only`, and
+`jvm-pool-arena` all produced checksum `398184912` and output `100000`. The
+pool backend reported `10000` fresh pooled allocations and `90000` pooled
+reuses in each run. These are smoke/evidence-harness rows, not performance
+claims.
+
+JVM retained-object gate script:
+
+```text
+PORTABLE_RIFT_OUT_DIR=/private/tmp/portable-rift-jvm-gate-20260517-clean-smoke \
+PORTABLE_RIFT_RECORDS=500000 \
+PORTABLE_RIFT_RUNS=2 \
+PORTABLE_RIFT_WARMUPS=1 \
+PORTABLE_RIFT_JAVA_HEAP=1g \
+experimental/portable-rift/scripts/run_jvm_gate.sh
+```
+
+Result: passed on 2026-05-17 with escalation because `/usr/bin/time -l` needs
+macOS `sysctl` access outside the sandbox. Output directory:
+
+`/private/tmp/portable-rift-jvm-gate-20260517-clean-smoke`
+
+The runner uses:
+
+- separate JVM process per workload/mode;
+- `-Xms1g -Xmx1g -XX:+UseG1GC`;
+- `-Xlog:gc*:file=...`;
+- `/usr/bin/time -l -o ...`;
+- no default `System.gc()` in the timed harness.
+
+Compact result summary:
+
+| Workload | Mode | Internal run ms | External real s | Max RSS MB | GC pauses | Checksum/output | Allocation stats |
+|---|---:|---:|---:|---:|---:|---|---|
+| retained-epoch | `heap-gc` | `3.236`, `4.172` | `2.21` | `113.4` | `1` | matched | `500000` heap fallback allocs |
+| retained-epoch | `analysis-only` | `3.239`, `4.230` | `2.18` | `113.6` | `1` | matched | `500000` heap fallback allocs |
+| retained-epoch | `jvm-pool-arena` | `10.390`, `8.292` | `2.22` | `115.9` | `1` | matched | `10000` fresh pooled, `490000` reuses |
+| broom-aggregate | `heap-gc` | `1.112`, `1.010` | `2.18` | `90.1` | `0` | matched | `500000` heap fallback allocs |
+| broom-aggregate | `analysis-only` | `1.044`, `0.988` | `2.15` | `90.7` | `0` | matched | `500000` heap fallback allocs |
+| broom-aggregate | `jvm-pool-arena` | `10.713`, `10.413` | `2.46` | `116.8` | `1` | matched | `10000` fresh pooled, `490000` reuses |
+
+Interpretation:
+
+- This gate validates the JVM evidence harness, separate backend modes,
+  external RSS capture, GC logging, and pool reuse accounting.
+- It is not a JVM performance win. The current pool path is slower and can use
+  more RSS on tiny retained shapes.
+- Likely reason: HotSpot scalar replacement/escape analysis makes these simple
+  heap rows extremely cheap, while explicit pooling adds ArrayBuffer/bookkeeping
+  and keeps a pool live.
+- Next JVM experiment should use a retained object graph that cannot be
+  scalarized, or add an `-XX:-DoEscapeAnalysis` stress control before making
+  any performance claim.
 
 Earlier sandbox smoke before extraction also passed:
 

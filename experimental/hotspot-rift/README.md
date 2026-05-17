@@ -1,0 +1,104 @@
+# HotSpot Rift Experiment
+
+Last updated: 2026-05-17 15:15 CEST
+
+Status: scaffold for the custom HotSpot VM-fork backend. This directory does
+not contain an OpenJDK checkout. It contains the scripts, patch notes, and smoke
+tests used to create and validate one.
+
+## Goal
+
+Prototype ordinary JVM object allocation into VM-known Rift regions. This is
+separate from the portable JVM library backend, which uses object pools and
+heap fallback.
+
+## Directory Layout
+
+| Path | Purpose |
+|---|---|
+| `scripts/check_prereqs.sh` | Local prerequisite preflight. Does not clone or build. |
+| `scripts/bootstrap_openjdk.sh` | Clone an OpenJDK worktree for the HotSpot fork. |
+| `scripts/create_macosx_devkit.sh` | Create an OpenJDK macOS devkit from a local `Xcode.app`. |
+| `scripts/build_openjdk.sh` | Configure and build a fastdebug JDK from that worktree. |
+| `scripts/run_baseline_smoke.sh` | Run the Java smoke workload on a selected JDK. |
+| `tests/java/RiftHotSpotBaselineSmoke.java` | Baseline retained-object workload for stock/patched JDKs. |
+| `patches/README.md` | First HotSpot patch roadmap. |
+
+## Default Locations
+
+Scripts default to:
+
+- OpenJDK source: `/Users/siyaoliu/rift/cache/openjdk-rift`
+- Build name: `rift-fastdebug`
+- Smoke output: `/private/tmp/rift-hotspot-smoke`
+- Optional Xcode app: `/Applications/Xcode.app`
+- Optional devkit: set `HOTSPOT_RIFT_DEVKIT=/path/to/devkit`
+
+Override with:
+
+```sh
+HOTSPOT_RIFT_OPENJDK_DIR=/path/to/jdk \
+HOTSPOT_RIFT_BUILD_NAME=rift-fastdebug \
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-smoke
+```
+
+## Commands
+
+Preflight:
+
+```sh
+experimental/hotspot-rift/scripts/check_prereqs.sh
+```
+
+Clone OpenJDK:
+
+```sh
+experimental/hotspot-rift/scripts/bootstrap_openjdk.sh
+```
+
+Build fastdebug JDK:
+
+```sh
+experimental/hotspot-rift/scripts/build_openjdk.sh
+```
+
+Create an Xcode-derived OpenJDK devkit, then build from that devkit:
+
+```sh
+experimental/hotspot-rift/scripts/create_macosx_devkit.sh
+HOTSPOT_RIFT_DEVKIT=/Users/siyaoliu/rift/cache/openjdk-rift/build/devkit/Xcode... \
+  experimental/hotspot-rift/scripts/build_openjdk.sh
+```
+
+Current macOS note: Xcode 26.5 is installed and the OpenJDK devkit build works
+by combining the Xcode-derived devkit with the mounted Metal Toolchain
+MobileAsset. The build script auto-detects the mounted
+`Metal.xctoolchain/usr/bin` path and prepends it with `--with-toolchain-path`.
+
+If the MobileAsset path disappears after reboot, rerun:
+
+```sh
+sudo xcodebuild -runFirstLaunch
+xcodebuild -downloadComponent MetalToolchain
+xcrun -sdk macosx --find metallib
+```
+
+Then rerun the devkit/build commands.
+
+Run baseline smoke with the current `java`:
+
+```sh
+experimental/hotspot-rift/scripts/run_baseline_smoke.sh
+```
+
+Run baseline smoke with a built JDK:
+
+```sh
+HOTSPOT_RIFT_JAVA=/Users/siyaoliu/rift/cache/openjdk-rift/build/rift-fastdebug/jdk/bin/java \
+  experimental/hotspot-rift/scripts/run_baseline_smoke.sh
+```
+
+## Claim Discipline
+
+Until a patched HotSpot exists, this directory provides only scaffold and
+baseline JVM evidence. It does not prove ordinary-object Rift regions.

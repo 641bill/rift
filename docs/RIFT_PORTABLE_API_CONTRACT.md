@@ -1,7 +1,7 @@
 # Rift Portable API Contract
 
 Date: 2026-05-17
-Last updated: 2026-05-17 02:36 CEST
+Last updated: 2026-05-17 12:10 CEST
 
 Status: contract draft. This document separates portable Scala-level Rift work
 from Scala Native backend work so parallel forks do not edit the same files.
@@ -26,6 +26,47 @@ The portable API contract should eventually cover these concepts:
 | `HeapRoot[A]` | Explicit bridge from region values to durable heap metadata. | Backend must keep mixed references explicit. |
 | active/closed handle | Only active handles allocate; closed handles reject allocation/use. | Backend must enforce dynamically or prove statically. |
 | capture/separation checks | Region values cannot escape their lifetime or be hidden in closures/generic containers. | Front end/checker owns this; backend can remove checks only after proof. |
+
+## JVM-First V1 API Shape
+
+The current portable prototype implements the first source-level shape in
+ordinary Scala under `experimental/portable-rift/**`:
+
+| API / type | V1 meaning |
+|---|---|
+| `Rift.epoch { scope => ... }` | Deterministic lifetime boundary with `try/finally` close. |
+| `RiftScope.alloc(new Obj(...))` | Heap fallback allocation with active/closed runtime checks. |
+| `RiftScope.borrow(pool)(init)` | Backend-owned reusable record path for JVM/Scala.js-style pooling. |
+| `ObjectPool[A <: ReusableRecord]` | Explicit bounded reuse source for supported record-like values. |
+| `HeapRoot[A]` | Explicit bridge for durable heap values. |
+| `StaticMetadata[A]` | Stable metadata reference accepted by root-free-eligible experiments. |
+| `RiftStats` | Portable opens/closes/allocation/reuse/arena counters. |
+
+The JVM v1 backend is intentionally conservative. It does not claim that the
+JVM places arbitrary Scala objects in regions. It proves the source-level API
+shape, active/closed runtime discipline, and explicit record-pool lowering for
+values that opt into `ReusableRecord`.
+
+## HotSpot Ordinary-Object Backend Track
+
+Supporting ordinary Scala/JVM objects off heap or outside the normal Java heap
+is not a portable-library feature. It requires a HotSpot VM fork because normal
+JVM objects are VM-managed `oop`s with object headers, class metadata, GC
+barriers, stack-map/deoptimization behavior, monitors, identity, and reference
+semantics.
+
+The shared source contract stays the same:
+
+- `epoch`, `window`, `page`, and `transaction` express lifetime topology;
+- active handles allocate, closed handles reject use;
+- `HeapRoot` is the explicit bridge for durable heap references;
+- capture/separation checks reject heap-retains-region, closure escape,
+  generic hiding, stale handles, and parent/child lifetime violations.
+
+The HotSpot-specific lowering is different: checked allocations would go
+through VM entrypoints into a VM-known region space that preserves normal
+object layout and can be bulk-closed when the source-level invariants hold.
+The detailed roadmap is tracked in `docs/HOTSPOT_REGION_BACKEND_PLAN.md`.
 
 ## Backend Ownership
 

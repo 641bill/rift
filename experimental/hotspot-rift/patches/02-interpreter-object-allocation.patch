@@ -1,0 +1,408 @@
+diff --git a/src/hotspot/share/interpreter/interpreterRuntime.cpp b/src/hotspot/share/interpreter/interpreterRuntime.cpp
+index fcc0b96efa4..ebfc5f59896 100644
+--- a/src/hotspot/share/interpreter/interpreterRuntime.cpp
++++ b/src/hotspot/share/interpreter/interpreterRuntime.cpp
+@@ -67,6 +67,7 @@
+ #include "runtime/javaCalls.hpp"
+ #include "runtime/jfieldIDWorkaround.hpp"
+ #include "runtime/osThread.hpp"
++#include "runtime/riftRegionRuntime.hpp"
+ #include "runtime/sharedRuntime.hpp"
+ #include "runtime/stackWatermarkSet.hpp"
+ #include "runtime/stubRoutines.hpp"
+@@ -221,7 +222,13 @@ JRT_ENTRY(void, InterpreterRuntime::_new(JavaThread* current, ConstantPool* pool
+   // Make sure klass is initialized
+   klass->initialize(CHECK);
+
+-  oop obj = klass->allocate_instance(CHECK);
++  oop obj = nullptr;
++  if (UseRiftRegions && RiftRegionRuntime::has_current_region(current)) {
++    obj = RiftRegionRuntime::allocate_instance(current, klass, CHECK);
++  }
++  if (obj == nullptr) {
++    obj = klass->allocate_instance(CHECK);
++  }
+   current->set_vm_result_oop(obj);
+ JRT_END
+
+@@ -802,7 +809,8 @@ void InterpreterRuntime::resolve_invoke(JavaThread* current, Bytecodes::Code byt
+     Symbol* signature = call.signature();
+     receiver = Handle(current, last_frame.callee_receiver(signature));
+
+-    assert(Universe::heap()->is_in_or_null(receiver()),
++    assert(Universe::heap()->is_in_or_null(receiver()) ||
++           RiftRegionRuntime::is_region_oop(receiver()),
+            "sanity check");
+     assert(receiver.is_null() ||
+            !Universe::heap()->is_in(receiver->klass()),
+diff --git a/src/hotspot/share/oops/oop.cpp b/src/hotspot/share/oops/oop.cpp
+index 7f0068f7473..94191846784 100644
+--- a/src/hotspot/share/oops/oop.cpp
++++ b/src/hotspot/share/oops/oop.cpp
+@@ -36,6 +36,7 @@
+ #include "oops/verifyOopClosure.hpp"
+ #include "runtime/handles.inline.hpp"
+ #include "runtime/javaThread.hpp"
++#include "runtime/riftRegionRuntime.hpp"
+ #include "runtime/synchronizer.hpp"
+ #include "utilities/macros.hpp"
+
+@@ -112,7 +113,9 @@ intptr_t oopDesc::slow_identity_hash() {
+ // used only for asserts and guarantees
+ bool oopDesc::is_oop(oop obj, bool ignore_mark_word) {
+   if (!Universe::heap()->is_oop(obj)) {
+-    return false;
++    if (!UseRiftRegions || !RiftRegionRuntime::is_region_oop(obj)) {
++      return false;
++    }
+   }
+
+   // Header verification: the mark is typically non-zero. If we're
+diff --git a/src/hotspot/share/prims/riftRegion.cpp b/src/hotspot/share/prims/riftRegion.cpp
+index e3374464c5f..57f8fb1185c 100644
+--- a/src/hotspot/share/prims/riftRegion.cpp
++++ b/src/hotspot/share/prims/riftRegion.cpp
+@@ -11,10 +11,13 @@
+  * FITNESS FOR A PARTICULAR PURPOSE.
+  */
+
++#include "classfile/javaClasses.hpp"
++#include "classfile/vmSymbols.hpp"
+ #include "jni.h"
+ #include "jvm.h"
+ #include "memory/allocation.inline.hpp"
+ #include "memory/oopFactory.hpp"
++#include "oops/instanceKlass.hpp"
+ #include "oops/typeArrayOop.inline.hpp"
+ #include "runtime/interfaceSupport.inline.hpp"
+ #include "runtime/jniHandles.inline.hpp"
+@@ -49,6 +52,17 @@ RIFT_ENTRY(jlong, RiftRegion_AllocateRaw(JNIEnv* env, jclass cls, jlong handle,
+   return RiftRegionRuntime::allocate_raw(thread, handle, bytes, CHECK_0);
+ RIFT_END
+
++RIFT_ENTRY(void, RiftRegion_RegisterEligible(JNIEnv* env, jclass cls, jclass eligible_cls))
++  if (eligible_cls == nullptr) {
++    THROW_MSG(vmSymbols::java_lang_NullPointerException(), "eligible class is null");
++  }
++  Klass* klass = java_lang_Class::as_Klass(JNIHandles::resolve_non_null(eligible_cls));
++  if (klass == nullptr || !klass->is_instance_klass()) {
++    THROW_MSG(vmSymbols::java_lang_IllegalArgumentException(), "eligible class must be an instance class");
++  }
++  RiftRegionRuntime::register_eligible(InstanceKlass::cast(klass), CHECK);
++RIFT_END
++
+ RIFT_ENTRY(jlongArray, RiftRegion_Stats(JNIEnv* env, jclass cls, jlong handle))
+   const int len = RiftRegionRuntime::StatsLength;
+   jlong values[len];
+@@ -67,6 +81,7 @@ static JNINativeMethod jdk_internal_rift_RiftRegion_methods[] = {
+   { const_cast<char*>("close"),       const_cast<char*>("(J)V"),  reinterpret_cast<void*>(RiftRegion_Close) },
+   { const_cast<char*>("current"),     const_cast<char*>("()J"),   reinterpret_cast<void*>(RiftRegion_Current) },
+   { const_cast<char*>("allocateRaw"), const_cast<char*>("(JJ)J"), reinterpret_cast<void*>(RiftRegion_AllocateRaw) },
++  { const_cast<char*>("registerEligible"), const_cast<char*>("(Ljava/lang/Class;)V"), reinterpret_cast<void*>(RiftRegion_RegisterEligible) },
+   { const_cast<char*>("stats"),       const_cast<char*>("(J)[J"), reinterpret_cast<void*>(RiftRegion_Stats) },
+ };
+
+diff --git a/src/hotspot/share/runtime/riftRegionRuntime.cpp b/src/hotspot/share/runtime/riftRegionRuntime.cpp
+index febe0cf8e80..e7127224c67 100644
+--- a/src/hotspot/share/runtime/riftRegionRuntime.cpp
++++ b/src/hotspot/share/runtime/riftRegionRuntime.cpp
+@@ -13,12 +13,17 @@
+
+ #include "classfile/vmSymbols.hpp"
+ #include "memory/allocation.inline.hpp"
++#include "oops/instanceKlass.hpp"
++#include "oops/oop.inline.hpp"
+ #include "runtime/atomic.hpp"
++#include "runtime/fieldDescriptor.inline.hpp"
+ #include "runtime/globals.hpp"
+ #include "runtime/interfaceSupport.inline.hpp"
+ #include "runtime/javaThread.hpp"
+ #include "runtime/riftRegionRuntime.hpp"
+ #include "utilities/align.hpp"
++#include "utilities/copy.hpp"
++#include "utilities/growableArray.hpp"
+ #include "utilities/globalDefinitions.hpp"
+
+ class RiftRegionRuntime::RegionState : public CHeapObj<mtInternal> {
+@@ -37,6 +42,7 @@ class RiftRegionRuntime::RegionState : public CHeapObj<mtInternal> {
+   jlong _closes;
+   jlong _resets;
+   jlong _raw_allocs;
++  jlong _object_allocs;
+   bool _closed;
+   bool _entered;
+   JavaThread* _owner;
+@@ -54,6 +60,7 @@ class RiftRegionRuntime::RegionState : public CHeapObj<mtInternal> {
+     _closes(0),
+     _resets(0),
+     _raw_allocs(0),
++    _object_allocs(0),
+     _closed(false),
+     _entered(false),
+     _owner(nullptr) {
+@@ -80,10 +87,21 @@ class RiftRegionRuntime::RegionState : public CHeapObj<mtInternal> {
+     }
+     _resets++;
+   }
++
++  bool contains(oop obj) const {
++    if (obj == nullptr || _base == nullptr) {
++      return false;
++    }
++    char* p = cast_from_oop<char*>(obj);
++    return _base <= p && p < _top;
++  }
+ };
+
+ volatile jlong RiftRegionRuntime::RegionState::_next_id = 0;
+
++static GrowableArray<InstanceKlass*>* rift_eligible_klasses = nullptr;
++static GrowableArray<RiftRegionRuntime::RegionState*>* rift_regions = nullptr;
++
+ static RiftRegionRuntime::RegionState* state_from_handle(jlong handle) {
+   return reinterpret_cast<RiftRegionRuntime::RegionState*>(static_cast<intptr_t>(handle));
+ }
+@@ -112,6 +130,103 @@ static void require_open(RiftRegionRuntime::RegionState* state, TRAPS) {
+   }
+ }
+
++static bool is_supported_primitive_field(BasicType type) {
++  switch (type) {
++    case T_BOOLEAN:
++    case T_BYTE:
++    case T_CHAR:
++    case T_SHORT:
++    case T_INT:
++    case T_LONG:
++    case T_FLOAT:
++    case T_DOUBLE:
++      return true;
++    default:
++      return false;
++  }
++}
++
++class RiftEligibilityFieldClosure : public FieldClosure {
++  bool _unsupported;
++
++ public:
++  RiftEligibilityFieldClosure() : _unsupported(false) {}
++
++  void do_field(fieldDescriptor* fd) override {
++    if (!is_supported_primitive_field(fd->field_type())) {
++      _unsupported = true;
++    }
++  }
++
++  bool unsupported() const {
++    return _unsupported;
++  }
++};
++
++static void validate_eligible_klass(InstanceKlass* klass, TRAPS) {
++  if (!klass->is_final()) {
++    THROW_MSG(vmSymbols::java_lang_IllegalArgumentException(), "Rift region object classes must be final in this prototype");
++  }
++  if (klass->has_finalizer()) {
++    THROW_MSG(vmSymbols::java_lang_IllegalArgumentException(), "Rift region object classes must not have finalizers");
++  }
++  if (klass->is_hidden()) {
++    THROW_MSG(vmSymbols::java_lang_IllegalArgumentException(), "Rift region object classes must not be hidden classes");
++  }
++  if (klass->is_contended()) {
++    THROW_MSG(vmSymbols::java_lang_IllegalArgumentException(), "Rift region object classes must not be contended classes");
++  }
++  RiftEligibilityFieldClosure closure;
++  klass->do_nonstatic_fields(&closure);
++  if (closure.unsupported()) {
++    THROW_MSG(vmSymbols::java_lang_IllegalArgumentException(),
++              "Rift region object classes may only have primitive instance fields in this prototype");
++  }
++}
++
++static void ensure_eligible_storage() {
++  if (rift_eligible_klasses == nullptr) {
++    rift_eligible_klasses = new (mtInternal) GrowableArray<InstanceKlass*>(8, mtInternal);
++  }
++}
++
++static void ensure_region_storage() {
++  if (rift_regions == nullptr) {
++    rift_regions = new (mtInternal) GrowableArray<RiftRegionRuntime::RegionState*>(8, mtInternal);
++  }
++}
++
++static HeapWord* allocate_region_words(RiftRegionRuntime::RegionState* state, size_t word_size, TRAPS) {
++  size_t size = word_size * HeapWordSize;
++  if (state->_base == nullptr || static_cast<size_t>(state->_end - state->_top) < size) {
++    THROW_MSG_NULL(vmSymbols::java_lang_OutOfMemoryError(), "Rift region arena exhausted");
++  }
++  char* result = state->_top;
++  state->_top += size;
++  size_t used = static_cast<size_t>(state->_top - state->_base);
++  if (used > state->_high_water) {
++    state->_high_water = used;
++  }
++  return reinterpret_cast<HeapWord*>(result);
++}
++
++bool RiftRegionRuntime::has_current_region(JavaThread* current) {
++  return current->rift_current_region() != nullptr;
++}
++
++bool RiftRegionRuntime::is_region_oop(oop obj) {
++  if (obj == nullptr || rift_regions == nullptr) {
++    return false;
++  }
++  for (int i = 0; i < rift_regions->length(); i++) {
++    RegionState* state = rift_regions->at(i);
++    if (!state->_closed && state->contains(obj)) {
++      return true;
++    }
++  }
++  return false;
++}
++
+ jlong RiftRegionRuntime::open(JavaThread* current, jlong capacity, TRAPS) {
+   require_enabled(CHECK_0);
+   if (capacity <= 0) {
+@@ -121,6 +236,8 @@ jlong RiftRegionRuntime::open(JavaThread* current, jlong capacity, TRAPS) {
+     THROW_MSG_0(vmSymbols::java_lang_IllegalStateException(), "nested Rift regions are not supported in this prototype");
+   }
+   RegionState* state = new RegionState(Atomic::add(&RegionState::_next_id, 1), static_cast<size_t>(capacity));
++  ensure_region_storage();
++  rift_regions->append(state);
+   return handle_from_state(state);
+ }
+
+@@ -179,20 +296,73 @@ jlong RiftRegionRuntime::allocate_raw(JavaThread* current, jlong handle, jlong b
+   if (bytes <= 0) {
+     THROW_MSG_0(vmSymbols::java_lang_IllegalArgumentException(), "allocation size must be positive");
+   }
+-  size_t size = align_up(static_cast<size_t>(bytes), BytesPerLong);
+-  if (state->_base == nullptr || static_cast<size_t>(state->_end - state->_top) < size) {
++  size_t size = align_up(static_cast<size_t>(bytes), HeapWordSize);
++  size_t word_size = size / HeapWordSize;
++  if (word_size == 0) {
+     THROW_MSG_0(vmSymbols::java_lang_OutOfMemoryError(), "Rift raw arena exhausted");
+   }
+-  char* result = state->_top;
+-  state->_top += size;
++  HeapWord* result = allocate_region_words(state, word_size, CHECK_0);
+   state->_raw_allocs++;
+-  size_t used = static_cast<size_t>(state->_top - state->_base);
+-  if (used > state->_high_water) {
+-    state->_high_water = used;
+-  }
+   return static_cast<jlong>(reinterpret_cast<intptr_t>(result));
+ }
+
++void RiftRegionRuntime::register_eligible(InstanceKlass* klass, TRAPS) {
++  require_enabled(CHECK);
++  validate_eligible_klass(klass, CHECK);
++  ensure_eligible_storage();
++  if (!is_eligible(klass)) {
++    rift_eligible_klasses->append(klass);
++  }
++}
++
++bool RiftRegionRuntime::is_eligible(InstanceKlass* klass) {
++  if (rift_eligible_klasses == nullptr) {
++    return false;
++  }
++  for (int i = 0; i < rift_eligible_klasses->length(); i++) {
++    if (rift_eligible_klasses->at(i) == klass) {
++      return true;
++    }
++  }
++  return false;
++}
++
++oop RiftRegionRuntime::allocate_instance(JavaThread* current, InstanceKlass* klass, TRAPS) {
++  require_enabled(CHECK_NULL);
++  RegionState* state = reinterpret_cast<RegionState*>(current->rift_current_region());
++  if (state == nullptr) {
++    return nullptr;
++  }
++  require_open(state, CHECK_NULL);
++  if (!is_eligible(klass)) {
++    return nullptr;
++  }
++  if (UseCompressedOops) {
++    THROW_MSG_NULL(vmSymbols::java_lang_UnsupportedOperationException(),
++                   "Rift region object allocation prototype requires -XX:-UseCompressedOops");
++  }
++  if (UseCompactObjectHeaders) {
++    THROW_MSG_NULL(vmSymbols::java_lang_UnsupportedOperationException(),
++                   "Rift region object allocation prototype requires -XX:-UseCompactObjectHeaders");
++  }
++
++  validate_eligible_klass(klass, CHECK_NULL);
++  size_t word_size = klass->size_helper();
++  HeapWord* mem = allocate_region_words(state, word_size, CHECK_NULL);
++
++  const size_t header_size = oopDesc::header_size();
++  assert(word_size >= header_size, "unexpected object size");
++  if (oopDesc::has_klass_gap()) {
++    oopDesc::set_klass_gap(mem, 0);
++  }
++  Copy::fill_to_aligned_words(mem + header_size, word_size - header_size);
++  oopDesc::set_mark(mem, markWord::prototype());
++  oopDesc::release_set_klass(mem, klass);
++
++  state->_object_allocs++;
++  return cast_to_oop(mem);
++}
++
+ void RiftRegionRuntime::stats(JavaThread* current, jlong handle, jlong* out, int len, TRAPS) {
+   require_enabled(CHECK);
+   RegionState* state = require_state(handle, CHECK);
+@@ -212,4 +382,5 @@ void RiftRegionRuntime::stats(JavaThread* current, jlong handle, jlong* out, int
+   out[9] = state->_closes;
+   out[10] = state->_resets;
+   out[11] = state->_raw_allocs;
++  out[12] = state->_object_allocs;
+ }
+diff --git a/src/hotspot/share/runtime/riftRegionRuntime.hpp b/src/hotspot/share/runtime/riftRegionRuntime.hpp
+index 24a8b3c78f1..a0052ee7357 100644
+--- a/src/hotspot/share/runtime/riftRegionRuntime.hpp
++++ b/src/hotspot/share/runtime/riftRegionRuntime.hpp
+@@ -18,19 +18,25 @@
+ #include "utilities/globalDefinitions.hpp"
+
+ class JavaThread;
++class InstanceKlass;
+
+ class RiftRegionRuntime : public AllStatic {
+  public:
+-  static const int StatsLength = 12;
++  static const int StatsLength = 13;
+
+   class RegionState;
+
++  static bool has_current_region(JavaThread* current);
++  static bool is_region_oop(oop obj);
+   static jlong open(JavaThread* current, jlong capacity, TRAPS);
+   static void enter(JavaThread* current, jlong handle, TRAPS);
+   static void leave(JavaThread* current, jlong handle, TRAPS);
+   static void close(JavaThread* current, jlong handle, TRAPS);
+   static jlong current(JavaThread* current);
+   static jlong allocate_raw(JavaThread* current, jlong handle, jlong bytes, TRAPS);
++  static void register_eligible(InstanceKlass* klass, TRAPS);
++  static bool is_eligible(InstanceKlass* klass);
++  static oop allocate_instance(JavaThread* current, InstanceKlass* klass, TRAPS);
+   static void stats(JavaThread* current, jlong handle, jlong* out, int len, TRAPS);
+ };
+
+diff --git a/src/java.base/share/classes/jdk/internal/rift/RiftRegion.java b/src/java.base/share/classes/jdk/internal/rift/RiftRegion.java
+index 9ada2013cf0..a71930d9525 100644
+--- a/src/java.base/share/classes/jdk/internal/rift/RiftRegion.java
++++ b/src/java.base/share/classes/jdk/internal/rift/RiftRegion.java
+@@ -35,6 +35,7 @@ private RiftRegion() {}
+     public static native void close(long handle);
+     public static native long current();
+     public static native long allocateRaw(long handle, long bytes);
++    public static native void registerEligible(Class<?> cls);
+     public static native long[] stats(long handle);
+
+     public static void epoch(long capacity, Runnable body) {

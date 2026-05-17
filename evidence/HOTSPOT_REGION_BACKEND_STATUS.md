@@ -1,0 +1,525 @@
+# HotSpot Region Backend Status
+
+Date: 2026-05-17
+Last updated: 2026-05-17 16:42 CEST
+
+Status: VM-fork Patch 1-5 evidence. Patch 4 proves a narrow
+interpreter-only ordinary-object allocation prototype for explicitly
+registered final primitive-field classes. Patch 5 adds an interpreter oop-store
+guard that rejects heap retention of live region objects for static fields,
+object arrays, and object fields in the supported subset. This is still not a
+performance-ready JVM Rift backend because GC integration, C1/C2 paths, arrays
+as region allocations, reference fields inside region objects, and broad
+post-close stale-use handling are not implemented.
+
+## Scaffold
+
+Source:
+
+`/Users/siyaoliu/rift/experimental/hotspot-rift/**`
+
+Implemented scaffold:
+
+- HotSpot experiment README and ownership notes;
+- prerequisite preflight script;
+- OpenJDK bootstrap script;
+- OpenJDK fastdebug build script;
+- stock/patched-JDK baseline smoke script;
+- retained-object Java baseline smoke workload;
+- patch roadmap for `UseRiftRegions`, region space, simple object allocation,
+  and reference safety checks.
+
+## Preflight
+
+Command:
+
+```text
+experimental/hotspot-rift/scripts/check_prereqs.sh
+```
+
+Result on 2026-05-17:
+
+| Tool | Status | Observed |
+|---|---|---|
+| `git` | OK | `/usr/bin/git`, Apple Git `2.50.1` |
+| `bash` | OK | `/bin/bash`, GNU bash `3.2.57` |
+| `make` | OK | `/usr/bin/make`, GNU Make `3.81` |
+| `autoconf` | Initially missing, then installed | Homebrew `autoconf 2.73` |
+| `clang` | OK | Apple clang `21.0.0` |
+| `java` | OK | OpenJDK `25.0.1` via jenv |
+| `brew` | OK | Homebrew `5.1.10` checked separately |
+
+Follow-up:
+
+- `brew install autoconf` succeeded on 2026-05-17.
+- Preflight then passed for `git`, `bash`, `make`, `autoconf`, `clang`, Java
+  `25.0.1`, and Homebrew.
+
+Interpretation:
+
+- The first prerequisite blocker is fixed.
+- The Xcode/Metal blocker is now worked around by using an Xcode-derived
+  devkit plus the mounted Metal Toolchain MobileAsset path.
+
+## Baseline Smoke
+
+Command:
+
+```text
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-smoke-20260517 \
+HOTSPOT_RIFT_RECORDS=200000 \
+experimental/hotspot-rift/scripts/run_baseline_smoke.sh
+```
+
+Result: passed on 2026-05-17 with escalation because `/usr/bin/time -l`
+requires macOS `sysctl` access outside the sandbox.
+
+Output:
+
+`/private/tmp/rift-hotspot-smoke-20260517`
+
+Row:
+
+| Mode | Records | Epoch size | Active timestamps | Internal elapsed ms | Checksum | Output | External real s | Max RSS MB | GC pauses |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `heap-gc` | `200000` | `10000` | `16` | `6.392` | `1759552` | `200000` | `0.08` | `53.8` | `0` |
+
+Interpretation:
+
+- The HotSpot scaffold can compile and run a retained-object baseline workload
+  on the stock JVM.
+- This is only baseline harness evidence. It does not allocate objects into
+  Rift regions.
+
+## OpenJDK Baseline Build
+
+Clone command:
+
+```text
+experimental/hotspot-rift/scripts/bootstrap_openjdk.sh
+```
+
+Result: passed on 2026-05-17.
+
+OpenJDK worktree:
+
+`/Users/siyaoliu/rift/cache/openjdk-rift`
+
+Initial clone was `master` at:
+
+`22b46872d0d647c9ef9f4414b4685afa8313926d`
+
+That branch is JDK 27 and requires a boot JDK 26 or 27. The machine currently
+has Java `25.0.1`, so the worktree was switched to a local branch:
+
+```text
+git -C cache/openjdk-rift checkout -B rift-jdk25 origin/jdk25
+```
+
+Current branch and commit:
+
+```text
+rift-jdk25
+6c48f4ed707bf0b15f9b6098de30db8aae6fa40f
+```
+
+Devkit command:
+
+```text
+experimental/hotspot-rift/scripts/create_macosx_devkit.sh
+```
+
+Result: passed on 2026-05-17.
+
+Created devkit:
+
+```text
+/Users/siyaoliu/rift/cache/openjdk-rift/build/devkit/Xcode26.5-MacOSX26
+```
+
+The Xcode 26.5 `metal` executable is a stub unless the Metal Toolchain
+MobileAsset is selected. The build script now auto-detects the mounted
+MobileAsset path:
+
+```text
+/var/run/com.apple.security.cryptexd/mnt/com.apple.MobileAsset.MetalToolchain-v17.6.42.0.RyYM4f/Metal.xctoolchain/usr/bin
+```
+
+Build command:
+
+```text
+HOTSPOT_RIFT_DEVKIT=/Users/siyaoliu/rift/cache/openjdk-rift/build/devkit/Xcode26.5-MacOSX26 \
+  experimental/hotspot-rift/scripts/build_openjdk.sh
+```
+
+Result: passed on 2026-05-17 with escalation because configure needs `sysctl`
+and the build uses `/dev/fd`.
+
+First configure attempt:
+
+- branch: `master` / JDK 27;
+- blocker: boot JDK must be 26 or 27, but installed boot JDK is `25.0.1`.
+
+Earlier blocked configure attempts:
+
+- branch: `rift-jdk25`;
+- boot JDK: accepted, Java `25.0.1`;
+- script updated to pass `--enable-headless-only`;
+- blocker: OpenJDK configure still required working `metal`/`metallib`.
+
+Observed active developer directory:
+
+```text
+/Library/Developer/CommandLineTools
+```
+
+Earlier observed error:
+
+```text
+XCode tool 'metal' neither found in path nor with xcrun
+```
+
+Built JDK:
+
+```text
+/Users/siyaoliu/rift/cache/openjdk-rift/build/rift-fastdebug/jdk/bin/java
+```
+
+Version:
+
+```text
+openjdk version "25-internal" 2025-09-16
+OpenJDK Runtime Environment (fastdebug build 25-internal-adhoc.siyaoliu.openjdk-rift)
+OpenJDK 64-Bit Server VM (fastdebug build 25-internal-adhoc.siyaoliu.openjdk-rift, mixed mode)
+```
+
+Interpretation:
+
+- The OpenJDK baseline source, devkit, and fastdebug image are now available
+  locally.
+- Patch 1-3 can now start from a validated fastdebug VM baseline, not more
+  toolchain setup.
+
+## Built-JDK Baseline Smoke
+
+Command:
+
+```text
+HOTSPOT_RIFT_JAVA=/Users/siyaoliu/rift/cache/openjdk-rift/build/rift-fastdebug/jdk/bin/java \
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-smoke-built-20260517 \
+experimental/hotspot-rift/scripts/run_baseline_smoke.sh
+```
+
+Result: passed on 2026-05-17 with escalation because `/usr/bin/time -l`
+requires macOS `sysctl` access outside the sandbox.
+
+Output:
+
+```text
+/private/tmp/rift-hotspot-smoke-built-20260517
+```
+
+Row:
+
+| Mode | Records | Epoch size | Active timestamps | Internal elapsed ms | Checksum | Output | External real s | Max RSS MB | GC |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| `heap-gc` | `1000000` | `10000` | `16` | `88.406` | `7351360` | `1000000` | `0.60` | `151.8` | G1, no pause row in smoke log |
+
+## Rift VM Patch 1-3 Smoke
+
+Patch file:
+
+```text
+experimental/hotspot-rift/patches/01-rift-region-stubs.patch
+```
+
+OpenJDK worktree:
+
+```text
+/Users/siyaoliu/rift/cache/openjdk-rift
+```
+
+Implemented in the OpenJDK worktree:
+
+- experimental `-XX:+UseRiftRegions` flag gated by
+  `-XX:+UnlockExperimentalVMOptions`;
+- internal Java test surface `jdk.internal.rift.RiftRegion`;
+- native VM entrypoints for `open`, `enter`, `leave`, `close`, `current`,
+  raw arena allocation, and stats;
+- per-thread current Rift region state in `JavaThread`;
+- active/closed handle checks and nested-region rejection;
+- VM-owned raw bump/reset arena with high-water, open/close/reset, and
+  allocation counters.
+
+Important limitation:
+
+- no ordinary Java object allocation is redirected yet;
+- the raw arena is C-heap test memory, not an `oop` region space;
+- `new` bytecodes and HotSpot allocation paths remain unchanged.
+
+Build command:
+
+```text
+HOTSPOT_RIFT_DEVKIT=/Users/siyaoliu/rift/cache/openjdk-rift/build/devkit/Xcode26.5-MacOSX26 \
+  experimental/hotspot-rift/scripts/build_openjdk.sh
+```
+
+Result: passed on 2026-05-17 after fixing VM/JNI thread-state handling in the
+internal stats native.
+
+Region smoke command:
+
+```text
+HOTSPOT_RIFT_JAVA=/Users/siyaoliu/rift/cache/openjdk-rift/build/rift-fastdebug/jdk/bin/java \
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-region-smoke-20260517 \
+experimental/hotspot-rift/scripts/run_region_smoke.sh
+```
+
+Result:
+
+```text
+disabled-ok
+enabled-ok
+```
+
+The smoke covers:
+
+- flag-off use rejects with `UnsupportedOperationException`;
+- flag-on open/enter/raw allocation/stats/leave/close lifecycle;
+- nested-region rejection;
+- inactive allocation rejection;
+- closed-handle enter and double-close rejection;
+- `epoch` convenience path with deterministic close/reset.
+
+Flag-off built-JDK baseline after patch:
+
+```text
+HOTSPOT_RIFT_JAVA=/Users/siyaoliu/rift/cache/openjdk-rift/build/rift-fastdebug/jdk/bin/java \
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-smoke-after-rift-20260517 \
+experimental/hotspot-rift/scripts/run_baseline_smoke.sh
+```
+
+Result: passed on 2026-05-17.
+
+| Mode | Records | Epoch size | Active timestamps | Internal elapsed ms | Checksum | Output | External real s | Max RSS MB |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `heap-gc` | `1000000` | `10000` | `16` | `109.222` | `7351360` | `1000000` | `0.82` | `150.2` |
+
+Interpretation:
+
+- Patch 1-3 prove the guarded VM control plane: flag, region handle lifecycle,
+  thread-current region state, raw arena accounting, and flag-off behavior.
+- This remains mechanism evidence only. It does not prove ordinary object
+  allocation, GC integration, barrier safety, or performance.
+
+## Rift VM Patch 4 Object Allocation Smoke
+
+Patch file:
+
+```text
+experimental/hotspot-rift/patches/02-interpreter-object-allocation.patch
+```
+
+Implemented in the OpenJDK worktree:
+
+- internal `RiftRegion.registerEligible(Class<?>)` test API;
+- eligibility validation for final/simple classes with primitive instance
+  fields only;
+- interpreter `_new` hook that tries region allocation when
+  `-XX:+UseRiftRegions` is enabled and the current Java thread has an active
+  Rift region;
+- fallback to normal heap allocation for unregistered classes in this
+  prototype, so incidental JDK allocations inside active regions do not break
+  the smoke;
+- region object allocation counter in the stats array at index `12`;
+- debug heap-membership hooks for this prototype so the interpreter can invoke
+  methods on region oops.
+
+Object smoke command:
+
+```text
+HOTSPOT_RIFT_JAVA=/Users/siyaoliu/rift/cache/openjdk-rift/build/rift-fastdebug/jdk/bin/java \
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-object-region-smoke-20260517 \
+experimental/hotspot-rift/scripts/run_object_region_smoke.sh
+```
+
+First correctness flags used by the smoke:
+
+```text
+-Xint -XX:+UnlockExperimentalVMOptions -XX:+UseRiftRegions
+-XX:+UseSerialGC -XX:-UseCompressedOops -XX:-UseCompactObjectHeaders
+```
+
+Result:
+
+```text
+object-enabled-ok
+```
+
+The smoke covers:
+
+- `PrimitiveRecord` eligibility registration succeeds;
+- reference-field and non-final classes reject at registration;
+- `new PrimitiveRecord(7, 11, 3.5)` allocates one object in the active region;
+- constructor execution and field stores produce checksum `21`;
+- active stats show nonzero region bytes and one object allocation;
+- close resets used bytes while retaining high-water/object-allocation stats;
+- unregistered classes heap-fallback in the prototype and do not increment the
+  region object allocation counter.
+
+Regression smokes after Patch 4:
+
+| Smoke | Output | Result |
+|---|---|---|
+| Region lifecycle | `/private/tmp/rift-hotspot-region-smoke-stable-20260517` | `disabled-ok`, `enabled-ok` |
+| Object allocation | `/private/tmp/rift-hotspot-object-region-smoke-stable-20260517` | `object-enabled-ok` |
+| Flag-off baseline | `/private/tmp/rift-hotspot-smoke-stable-after-object-20260517` | checksum `7351360`, output `1000000`, internal elapsed `89.707 ms`, external `0.66 s`, max RSS `158580736` bytes |
+
+Interpretation:
+
+- Patch 4 proves constructor-preserving redirection of a narrow `new` subset
+  into a VM-owned Rift region in interpreter mode.
+- It is mechanism evidence only. Region oops are not yet GC-scanned or barrier
+  protected, so tests must avoid safepoints/GC while region objects are live
+  and must not dereference region objects after close.
+- Unregistered-class heap fallback is a prototype convenience, not the final
+  safety policy for checked Rift lowering.
+
+## Patch 5 Safety Probe And Store Guard
+
+Attempted on 2026-05-17 and backed out before the stable checkpoint:
+
+- close-time heap scanning with `Universe::heap()->object_iterate`;
+- negative object-smoke tests for static, array, and heap-object retention of
+  a region object.
+
+Result:
+
+- the VM rebuild succeeded, but the object smoke crashed during the normal
+  close path before the negative tests could run;
+- with compressed class pointers enabled, fastdebug failed in
+  `compressedKlass.inline.hpp` while `RiftRegionHeapObjectClosure` was walking
+  heap objects;
+- with compressed class pointers disabled, the same close-time heap-iteration
+  approach segfaulted in the verifier closure.
+
+Interpretation:
+
+- ordinary `object_iterate` from `RiftRegion.close` is not a valid safety
+  mechanism; it can walk unparseable heap/TLAB state outside a safepoint and
+  trips existing HotSpot assumptions before it can report a clean error;
+- Patch 5 should use a real write/store barrier path or a safepoint VM
+  operation, not an ad hoc close-time heap scan;
+- the failed probe was removed from the current OpenJDK worktree, and the
+  stable object/lifecycle smokes pass again.
+
+Implemented after the failed scan:
+
+Patch file:
+
+```text
+experimental/hotspot-rift/patches/03-interpreter-store-guard.patch
+```
+
+Implemented in the OpenJDK worktree:
+
+- interpreter `do_oop_store` calls a Rift VM verifier before non-null oop
+  stores;
+- `RiftRegionRuntime::verify_oop_store` rejects storing a live region oop into
+  non-region memory;
+- interpreter `_new` is forced through the runtime allocation hook whenever
+  `-XX:+UseRiftRegions` is enabled, so resolved classes do not bypass the
+  region allocation hook via the normal TLAB fast path;
+- object smoke negative tests now use direct bytecodes, not lambdas, for
+  `putstatic`, `aastore`, and `putfield`.
+
+Validation commands:
+
+```text
+HOTSPOT_RIFT_DEVKIT=/Users/siyaoliu/rift/cache/openjdk-rift/build/devkit/Xcode26.5-MacOSX26 \
+  experimental/hotspot-rift/scripts/build_openjdk.sh
+
+HOTSPOT_RIFT_JAVA=/Users/siyaoliu/rift/cache/openjdk-rift/build/rift-fastdebug/jdk/bin/java \
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-object-region-smoke-patch5-slownew-20260517 \
+  experimental/hotspot-rift/scripts/run_object_region_smoke.sh
+
+HOTSPOT_RIFT_JAVA=/Users/siyaoliu/rift/cache/openjdk-rift/build/rift-fastdebug/jdk/bin/java \
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-region-smoke-patch5-slownew-20260517 \
+  experimental/hotspot-rift/scripts/run_region_smoke.sh
+
+HOTSPOT_RIFT_JAVA=/Users/siyaoliu/rift/cache/openjdk-rift/build/rift-fastdebug/jdk/bin/java \
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-smoke-patch5-slownew-20260517 \
+  experimental/hotspot-rift/scripts/run_baseline_smoke.sh
+```
+
+Validation results:
+
+| Smoke | Output | Result |
+|---|---|---|
+| Object allocation + store guard | `/private/tmp/rift-hotspot-object-region-smoke-patch5-slownew-20260517` | `object-enabled-ok` |
+| Region lifecycle | `/private/tmp/rift-hotspot-region-smoke-patch5-slownew-20260517` | `disabled-ok`, `enabled-ok` |
+| Flag-off baseline | `/private/tmp/rift-hotspot-smoke-patch5-slownew-20260517` | checksum `7351360`, output `1000000`, internal elapsed `123.329 ms`, external `0.47 s`, max RSS `158171136` bytes |
+| Stable rebuild after stale-use experiment backout | `/private/tmp/rift-hotspot-object-region-smoke-stable-after-stale-backout-20260517` | `object-enabled-ok` |
+| Stable lifecycle after stale-use experiment backout | `/private/tmp/rift-hotspot-region-smoke-stable-after-stale-backout-20260517` | `disabled-ok`, `enabled-ok` |
+| Stable flag-off baseline after stale-use experiment backout | `/private/tmp/rift-hotspot-smoke-stable-after-stale-backout-20260517` | checksum `7351360`, output `1000000`, internal elapsed `126.743 ms`, external `0.48 s`, max RSS `158973952` bytes |
+| Generic/container hiding smoke | `/private/tmp/rift-hotspot-object-region-smoke-generic-container-20260517` | `object-enabled-ok` |
+
+Patch 5 smoke coverage:
+
+- registered final primitive-field objects allocate in the active VM region in
+  interpreter mode;
+- constructor execution and primitive field stores still preserve the checksum;
+- unregistered classes still heap-fallback in this prototype;
+- storing a live region object into a static field is rejected;
+- storing a live region object into an object array is rejected;
+- storing a live region object into a heap object field is rejected.
+- storing a widened region object through a generic heap cell is rejected;
+- storing a live region object into `ArrayList`'s heap backing storage is
+  rejected in interpreter mode.
+
+Patch 5 limitations:
+
+- the guard is interpreter-only and currently implemented on AArch64 template
+  interpreter oop-store paths;
+- C1/C2, native/Unsafe/reflection stores, and compiled fast allocation paths
+  are not covered;
+- forcing `_new` through the runtime hook under `-XX:+UseRiftRegions` is a
+  correctness-first prototype choice, not a performance policy;
+- region objects are still not GC-scanned, so performance and broad safety
+  claims remain out of scope;
+- stale post-close object use, closure/generic hiding, and supported
+  region-to-heap bridge rules remain future work.
+
+Stale-use experiment:
+
+- A follow-up attempt added a `rift_oop_use` VM guard from the AArch64
+  interpreter receiver-load path in `TemplateTable::prepare_invoke`.
+- The VM rebuilt, but normal bootstrap/invoke execution crashed before the
+  smoke body ran. The first crash corrupted the interpreter return-state
+  selection; saving the obvious return-state register still left crashes in
+  `Klass::external_name()` while throwing an invoke-related VM error.
+- The invoke-load hook was backed out. The stable Patch 5 store-guard worktree
+  was rebuilt and the object/lifecycle/baseline smokes above passed.
+
+Interpretation:
+
+- stale post-close use needs a less invasive design than calling into the VM
+  from every interpreter receiver load;
+- candidate designs are a dedicated checked bytecode/helper emitted only by
+  Rift lowering, a debug-only verifier at explicit region API boundaries, or a
+  deeper barrier/deoptimization strategy after GC/safepoint integration;
+- the current accepted Patch 5 scope remains heap-retention rejection, not
+  post-close use rejection.
+
+## Next Required Step
+
+1. Extend Patch 5 safety beyond the interpreter store subset: stale post-close
+   use, escaping closures, generic hiding, native/Unsafe/reflection stores, and
+   C1/C2 barriers.
+2. Decide the first supported bridge/root rule for JVM region-to-heap
+   references before allowing reference fields.
+3. Add GC/safepoint integration before any region object may survive a
+   safepoint in a broader program.
+4. Keep compressed oops, compact object headers, C1/C2 allocation paths, and
+   performance claims out of scope until the safety story covers more than the
+   current interpreter subset.
