@@ -1,6 +1,6 @@
 # Current Rift Status
 
-Last updated: 2026-05-17 02:54 CEST
+Last updated: 2026-05-17 16:42 CEST
 
 Status: hot status file. Update this file for routine turn-by-turn progress
 instead of editing `docs/HANDOFF.md`, `docs/ROADMAP.md`,
@@ -11,7 +11,7 @@ instead of editing `docs/HANDOFF.md`, `docs/ROADMAP.md`,
 | Track | Current owner boundary | Latest status |
 |---|---|---|
 | Native backend | `scala-native-rift/nativelib/**`, `nscplugin/**`, `unit-tests/native/**`, `sandbox/**` | Scala Native remains the only validated performance backend. Native sandbox compile passed after portable prototype extraction. |
-| Portable backend | `scala-native-rift/experimental/portable-rift/**` | Pure-Scala backend facade prototype exists for JVM pool/arena, Scala.js pool, Wasm arena, and analysis-only models. |
+| Backend portability | parent branch `backend-portability` | JVM/HotSpot/Scala.js/Wasm portability docs, prototype evidence, and `experimental/**` patch exports are isolated on `backend-portability` at `065b521`. Keep `main` focused on Scala Native evidence unless backend results are intentionally promoted to presentation context. |
 | Benchmark search | parent `evidence/**` plus child sandbox result files | Broom q17 retained join/aggregate is now implemented and measured; real-input search remains focused on retained-object workloads because Immix keeps many parser/filter/count real streams low-GC. |
 | Presentation report | `docs/PERFORMANCE_EVALUATION_REPORT.md` and generated `docs/report.html` | Do not edit/regenerate unless presentation claims or tables change. |
 
@@ -37,10 +37,10 @@ instead of editing `docs/HANDOFF.md`, `docs/ROADMAP.md`,
 
 ## Immediate Next Choices
 
-1. If continuing portable work, add a tiny standalone or cross-build harness
-   under `experimental/portable-rift/**`.
-2. If continuing Native evidence, move from completed q17 to either shopper
-   JOIN-SELECT-JOIN as a separate Broom/Naiad shape or StreamFlex-style
-   retained event-correlation latency.
+1. If continuing backend portability, switch to `backend-portability` first;
+   do not mix HotSpot/JVM prototype churn into `main`.
+2. If continuing Native evidence, move from completed q17/shopper rows to
+   StreamFlex-style retained event-correlation latency or real retained-state
+   streaming candidates.
 3. If preparing presentation, update `PERFORMANCE_EVALUATION_REPORT.md` and
    regenerate `report.html`; otherwise leave them alone.

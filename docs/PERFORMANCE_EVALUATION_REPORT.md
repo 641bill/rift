@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-17 12:22 CEST
+Last updated: 2026-05-17 16:43 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -151,6 +151,15 @@ GC and `5.922 ms` region-op time; checked scoped is `53.35 s`, RSS
 Rift completes around `49-53 MB` RSS. This is standardized generated TPC-H
 benchmark input rather than real-world production data or an official audited
 TPC-H result.
+The shopper JOIN-SELECT-JOIN follow-up is now a separate completed
+Broom/Naiad-style row. It retains view/cart/purchase objects and selected
+intermediate candidate objects until timestamp close. At 20M records, natural
+heap is `10.41 s`, RSS `94.3 MB`, with `601.284 ms` L2 median timed GC inside
+`3507.557 ms`; checked Rift is `8.28 s`, RSS `20.3 MB`, and zero timed GC;
+checked scoped is `8.56 s`, RSS `20.6 MB`, and zero timed GC. Heap completes
+at `128M` but fails at `64M`/`32M`, while checked Rift completes around
+`20 MB`. This gives another retained-object throughput/GC/RSS/fixed-memory
+methodology row; it is not real-input proof.
 Same-shape/drop-anchor controls remain appendix/mechanism evidence; this row's
 paper-facing comparison is natural heap/GC versus checked Rift.
 
