@@ -1,7 +1,7 @@
 # Real-Input GC-Heavy Stream Benchmark Search
 
 Date: 2026-05-07
-Last updated: 2026-05-16 17:45 CEST
+Last updated: 2026-05-16 18:39 CEST
 
 Status: active Phase 6 search ledger. This file tracks public real-input
 stream/dataflow candidates before implementation work. It is deliberately a
@@ -63,6 +63,39 @@ max GC from `131.533 ms` to `58.455 ms`, but it is slower in L1
 (`30.29 s` versus heap `26.88 s`). Keep it as real-streaming-input
 RSS/fixed-memory/control evidence and park q3 unless heap caps or a more
 naturally retained session query exposes stronger pressure.
+The first active-window heap-cap follow-up found pressure but not a clean win:
+with `LOGHUB_LIVE_BUCKETS=16`, 1M HDFS q3 streaming lines, and a `256M` heap
+cap, heap slows to `21.34 s` external and `1989.577 ms` timed GC over
+`17` collections; at `128M` it fails. The checked scoped page-token row
+completes with matching checksum/output and zero timed GC at `17.87 s`, but
+RSS rises to about `694 MB`, so classify this as heap-cap/GC-pressure triage
+rather than an RSS win. The next LogHub step should be a more naturally
+retained session/join shape, not simply more active q3 page-token buckets.
+That retained-session follow-up has now been tried in
+`evidence/LOGHUB_RETAINED_SESSION_MATRIX.md`. It is a true HDFS
+streaming-file retained session/join row, but still not GC-heavy enough:
+session heap GC is `82.341 ms` inside `6595.172 ms`, and join heap GC is only
+`9.474 ms` inside `6837.810 ms`. Park it as real-streaming retained-object
+control evidence and keep searching for higher-cardinality retained state or
+transaction/graph/text epochs.
+
+2026-05-16 18:39 second search pass: the next real-input search should be more
+selective. Official/prior-work sources point to retained heap objects in
+stateful joins, keyed/session dictionaries, graph/text epochs, transaction
+batches, and heap-state windows as the GC-sensitive shape. Larger real log
+files alone have repeatedly produced parser/hash-dominated rows. The current
+ranked real-input actions are:
+
+| Rank | Action | Why this is next |
+|---:|---|---|
+| 1 | Larger StackExchange/StackOverflow text epochs | AskUbuntu already gives an RSS/fixed-memory win; larger text should increase retained token/top-k state without inventing a new workload. |
+| 2 | Larger SNAP/Twitter-style graph replay | LiveJournal is the strongest real graph row; SNAP Twitter-2010 is public and has the right shape, but its `1.468B` edges make it a disk/time-gated step. |
+| 3 | Higher-cardinality LogHub session/template dictionaries | Existing LogHub rows are parser-heavy; a useful next row must retain per-session/per-key objects long enough to stress heap. |
+| 4 | Alibaba-style machine/cluster trace for DSPBench Machine Outlier | DSPBench Machine Outlier is promising only if a larger real usage trace is pinned; Alibaba 2018 `machine_usage` is the plausible first slice, while the full trace is much larger. |
+| 5 | Theodolite/UCI retained window contributions | Use only if the query retains ordinary measurement/window contribution objects; primitive-only downsampling remains control evidence. |
+
+Do not spend another pass on simple parse/filter/count rows unless the row adds
+retained objects, heap caps, or latency/tail evidence.
 
 2026-05-11 local-data preflight: the cache currently has AskUbuntu for
 StackExchange text, HDFS/BGL/Spark/Windows for LogHub, Twitter ego and
@@ -101,7 +134,7 @@ modest/control row and move to the next candidate.
 | 5 | DSPBench Machine Outlier | Same DSPBench clone; bundled `machine-usage.csv` is only `1012` lines. | Machine usage anomaly scoring and alert windows. | Observation/profile/score/alert records. | Observation/window bucket; anomaly model on heap. | Source inspected; sample input is tiny. | Defer unless a larger public Alibaba machine-usage trace is pinned. |
 | 6 | DSPBench Bargain Index | Same DSPBench clone; bundled `stocks.csv` has `411` lines. | Parse quotes/trades, compute VWAP, join quotes with trade summaries, emit bargain records. | `Quote`, `Trade`, `VwapRecord`, `TradeSummary`, `BargainCandidate`. | Quote/trade window or day/interval boundary; summary table durable. | Source inspected; sample input is too small for headline real-input rows. | Do not implement first unless a larger public quote/trade stream is found. |
 | 7 | Real RIoTBench-style input | RIoTBench source clone at `cache/benchmark-data/riot-bench/source`, commit `c86414f7f926ed5ae0fab756bb3d82fbfb6e5bf7`; bundled SenML samples are tiny, so UCI MHEALTH (`1215745` rows) is used as the FIT-style real sensor source. | Parse sensor/health records, clean/filter, annotate, sliding-window statistics, anomaly output. | Sensor reading, cleaned reading, annotation, statistic contribution, anomaly records. | Sensor/window/session bucket; device metadata durable. | `RiotBenchRegionMatrix` now accepts `RIOTBENCH_INPUT_KIND=mhealth` and directory input; 20k smoke and 1M q1/q2 medians completed. | Park as provenance-clean real-input ceiling/control. MHEALTH q1/q2 have zero timed heap GC at 1M; q1 is near-tie with heap fastest, q2 gives a small SafeZone win. |
-| 8 | Richer LogHub template/session mining | LogHub BGL and HDFS v1 are local and measured. BGL has `4747963` lines; HDFS v1 has `11175629` lines from Zenodo v7. LogHub Spark is now local from Zenodo record `8196385`, with `3852` `.log` files and `33236604` total lines. LogHub Windows is also local from the same Zenodo record, with one `Windows.log` file, `114608388` lines, and `28012696901` bytes. | Parse log events, tokenize templates, infer block/session candidates, window template counts, and retained top-template summaries. | `LogEvent`, `TemplateToken`, `TemplateCandidate`, `SessionEvent`, `WindowSummary`, retained top-k/template candidates. | Log-line/template/session/window/epoch bucket; template dictionary and block index durable. | Implemented as `LogHubRegionMatrix` q1/q2/q3 and `LogHubTopTemplatesMatrix`; 20k smoke, 1M medians, HDFS q2 L1, HDFS top templates 1M x20 L1, HDFS top templates 5M x5 L1/L2, Spark top-template 20k/1M/5M rows, Windows top-template 20k/1M/5M rows, HDFS top-template `streaming-file` 1M rows, and HDFS q3 `streaming-file` 1M rows completed. | Keep as real-input modest throughput/RSS/tail evidence and the strongest current real retained top-k row. HDFS q2 remains a checked page/window RSS win with elapsed tie. HDFS top templates is better: reusable checked `EpochTopKByKey` at 5M lines x5 is `18.26 s`, RSS `92 MB`, versus retained heap `19.04 s`, RSS `504 MB`; L2 also removes heap's `62.421 ms` timed GC. The streaming-file top-template row upgrades the same shape to real-streaming-input evidence with checked top-k L1 `8.06 s`, RSS `12 MB`, versus retained heap `8.10 s`, RSS `76 MB`. The new HDFS q3 streaming-file row cuts RSS sharply (`130 MB` checked versus `862 MB` heap) and lowers GC tails, but loses L1 elapsed (`30.29 s` versus `26.88 s`). Spark and Windows top templates confirm the same retained top-k shape can remove more timed GC (`128.140 ms` Spark and `122.440 ms` Windows median at 5M), but L1 is only a modest elapsed win and RSS is tied/slightly worse at 5M. Still not flagship GC-heavy because file loading/query CPU remains a large share of process time. |
+| 8 | Richer LogHub template/session mining | LogHub BGL and HDFS v1 are local and measured. BGL has `4747963` lines; HDFS v1 has `11175629` lines from Zenodo v7. LogHub Spark is now local from Zenodo record `8196385`, with `3852` `.log` files and `33236604` total lines. LogHub Windows is also local from the same Zenodo record, with one `Windows.log` file, `114608388` lines, and `28012696901` bytes. | Parse log events, tokenize templates, infer block/session candidates, window template counts, and retained top-template summaries. | `LogEvent`, `TemplateToken`, `TemplateCandidate`, `SessionEvent`, `WindowSummary`, retained top-k/template candidates. | Log-line/template/session/window/epoch bucket; template dictionary and block index durable. | Implemented as `LogHubRegionMatrix` q1/q2/q3, `LogHubTopTemplatesMatrix`, and `LogHubRetainedSessionMatrix`; 20k smoke, 1M medians, HDFS q2 L1, HDFS top templates 1M x20 L1, HDFS top templates 5M x5 L1/L2, Spark top-template 20k/1M/5M rows, Windows top-template 20k/1M/5M rows, HDFS top-template `streaming-file` 1M rows, HDFS q3 `streaming-file` 1M rows, and HDFS retained session/join `streaming-file` 1M active-16 rows completed. | Keep as real-input modest throughput/RSS/tail evidence and the strongest current real retained top-k row. HDFS q2 remains a checked page/window RSS win with elapsed tie. HDFS top templates is better: reusable checked `EpochTopKByKey` at 5M lines x5 is `18.26 s`, RSS `92 MB`, versus retained heap `19.04 s`, RSS `504 MB`; L2 also removes heap's `62.421 ms` timed GC. The streaming-file top-template row upgrades the same shape to real-streaming-input evidence with checked top-k L1 `8.06 s`, RSS `12 MB`, versus retained heap `8.10 s`, RSS `76 MB`. The HDFS q3 streaming-file row cuts RSS sharply (`130 MB` checked versus `862 MB` heap) and lowers GC tails, but loses L1 elapsed (`30.29 s` versus `26.88 s`). The retained session/join follow-up is true streaming input and retains ordinary objects, but heap GC remains too small (`1.2%` session, about `0.1%` join), so park it as control evidence. Spark and Windows top templates confirm the same retained top-k shape can remove more timed GC (`128.140 ms` Spark and `122.440 ms` Windows median at 5M), but L1 is only a modest elapsed win and RSS is tied/slightly worse at 5M. Still not flagship GC-heavy because file loading/query CPU remains a large share of process time. |
 | 9 | Theodolite UC2 / UC4 local kernel | Theodolite source clone at `cache/benchmark-data/theodolite/source`, commit `dfa768a25eec3c3f5a57b7d4839a0c255fd6fa7d`. Real source paired for local rows: UCI Household Electric Power Consumption archive at `cache/benchmark-data/theodolite/real-power/household_power_consumption.zip`, SHA-256 `9f84b46ade8a2d8e1286ec4b2b6c2987a45a755c59f263be3b3b3d10dfbda3ff`; extracted text has `2075260` lines including header and `2049280` usable measurements in the current parser. | `q1-downsample` real measurements by group/window; `q2-hierarchical` measurement plus three hierarchy contribution records per line, without Kafka/Kubernetes. | Measurement records, hierarchy contribution records, aggregate outputs. | Epoch/window/group bucket; hierarchy/group arrays durable. | Implemented as `TheodolitePowerRegionMatrix`; 20k smoke, 1M q1/q2 rows, full local q2 L2, and full local q2 L1 rows completed. | Keep as real-input modest/control evidence. q1 is zero-GC. q2 creates visible heap GC: at 1M, heap is `133.198 ms` with `12.399 ms` median GC while checked scoped epoch is `129.511 ms` with zero GC; at full local input, L2 heap is `287.296 ms` with `20.354 ms` median GC while checked scoped is `288.495 ms` with zero GC. Strict L1 process time is tied/slightly positive for checked scoped (`5.45 s`, RSS `304 MB`) versus heap (`5.46 s`, RSS `307 MB`). Parser/file CPU dominates, so this is not the missing GC-heavy flagship. |
 | 10 | GDELT / security NDJSON logs | Public event/log streams; exact dataset not selected. | Byte-slice parse/project, enrichment, session/window counts, alert candidates. | Event records, field slices, enrichment records, alert/session/window contributions. | Line/session/window bucket; enrichment dictionary durable. | Not selected or downloaded. | Lower-priority public-log fallback after DSPBench/RIoTBench/LogHub. |
 
@@ -276,6 +309,20 @@ Decision: keep HDFS q2 as a real-input checked/modest-win regression row. It
 is stronger than the MHEALTH ceiling result and comparable to the best LogHub
 BGL rows, but it still does not satisfy the flagship GC-heavy gate because heap
 GC is only about 1-2% of elapsed.
+
+HDFS q3 active-window heap-cap follow-up:
+
+| Row | Heap/control | Checked row | Interpretation |
+|---|---:|---:|---|
+| HDFS q3 streaming 1M, active 16, `512M` heap | heap `17.87 s`, GC `136.507 ms`, RSS `540786688` | checked page-token `17.87 s`, GC `0`, RSS `693813248` | near tie; checked removes GC but uses higher RSS under this live-window shape. |
+| HDFS q3 streaming 1M, active 16, `256M` heap | heap `21.34 s`, GC `1989.577 ms`, `17` collections, RSS `272449536` | checked page-token same row above | heap-cap pressure appears; checked avoids GC slowdown but is not lower-RSS. |
+| HDFS q3 streaming 1M, active 16, `128M` heap | heap fails with out-of-heap | checked page-token completes | fixed-memory pressure exists, but the checked page-token live payload is too high for a clean memory win. |
+
+Decision: useful triage. It confirms that retained real log session/template
+objects can stress Scala Native heap under caps, but the current page-token q3
+topology pays high live region payload. The next attempt should use a
+Broom-like retained join/session topology or StreamFlex-style event-correlation
+shape where retained objects die at tighter logical boundaries.
 
 ## LogHub HDFS Top Templates Result
 

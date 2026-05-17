@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-16 17:45 CEST
+Last updated: 2026-05-17 02:28 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -122,8 +122,27 @@ The high-active-timestamp 1M variant raises heap RSS to `232-239 MB` while
 checked Rift stays near `53-56 MB` and is `24-33%` faster. Heap-cap follow-up:
 the high-active row completes at `256M` but fails at `128M` and `64M`; checked
 Rift completes with matching checksum/output at about `53-56 MB` total RSS.
-Next useful follow-up: add 1M/5M checked scoped rows only if the presentation
-needs the full scale curve for the safe backend comparison.
+The new 20M active-16 follow-up is stronger: aggregate heap `10.78 s`, RSS
+`236 MB`, L2 GC `953.153 ms` versus checked Rift `8.48 s`, RSS `53 MB`, GC
+`0 ms`; join heap `9.88 s`, RSS `438 MB`, L2 GC `486.649 ms` versus checked
+Rift `8.09 s`, RSS `57 MB`, GC `0 ms`. Heap completes at `512M` but fails at
+`384M` and `256M`; checked Rift completes at about `53-57 MB`. Use this as the
+current strongest Broom/Naiad-style retained-object row.
+
+Latest LogHub retained session/join triage:
+`LogHubRetainedSessionMatrix` and
+`sandbox/run_loghub_retained_session_matrix.sh` were added in the child repo,
+with synced evidence in `evidence/LOGHUB_RETAINED_SESSION_MATRIX.md`.
+Validation: `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next"
+compile` passed after adding the matrix. The 20k HDFS streaming-file smoke
+matched checksum/output across heap, checked Rift, and checked scoped. The 1M
+active-16 retained session/join row is true streaming input and retains
+ordinary objects, but it is not GC-heavy enough: session heap GC is
+`82.341 ms` inside `6595.172 ms`, and join heap GC is `9.474 ms` inside
+`6837.810 ms`. Park it as real-streaming retained-object control evidence.
+The next GC-heavy search step should target higher-cardinality retained
+state/joins, graph/text epochs, or transaction batches rather than simply
+larger LogHub parser-heavy rows.
 
 Latest GC-heavy benchmark investigation:
 `evidence/GC_HEAVY_BENCHMARK_INVESTIGATION.md` now records the 2026-05-15
@@ -138,6 +157,36 @@ Stancu/SPECjbb-style transaction batches. Resume the active plan by running
 selected `RIFT_REGION_REUSE_POLICY` application gates and then searching for
 these retained-object workloads; do not expect larger line counts alone to
 create GC pressure.
+The 2026-05-16 second search pass sharpened the next benchmark order after the
+Broom active-16 and LogHub retained-session results. Do not spend another
+iteration on simple real log parse/filter/count rows. The next GC-heavy
+candidate should be either a Broom/Naiad TPC-H-Q17/shopper-style retained
+join/dataflow row or a StreamFlex-style retained event-correlation /
+transaction-tracking latency row. For real input, prefer larger
+StackExchange/StackOverflow text, larger SNAP/Twitter graph replay,
+higher-cardinality LogHub session/template dictionaries, or Alibaba-style
+machine traces if provenance is clean. HiBench, BigDataBench, and Renaissance
+are useful workload catalogues, not headline systems to import wholesale.
+
+Latest Scala-level backend framing:
+`docs/SCALA_LEVEL_BACKEND_PLAN.md` now records the long-term backend split.
+The current validated system remains Scala Native, but the front-end Rift model
+is intended to be Scala-level: checked `epoch`/`window`/`page`/`transaction`
+topologies, capture/separation checking, active/closed handles, and explicit
+heap/region bridge handles should be portable. Future backend tracks are JVM
+(object pools/scoped arenas/reusable buffers/off-heap handles plus heap
+fallback), Scala.js (pooling/reuse), Wasm (linear-memory arenas), and
+analysis-only checking. Treat these as planned experiments, not current
+performance claims. This framing also explains why real-input GC-heavy proof
+may be hard under Scala Native Immix: Immix is a strong baseline, so Rift's
+clearest wins require retained transient object graphs, RSS/fixed-memory
+pressure, or latency/tail-sensitive workloads.
+`docs/IMMIX_REGION_COMPARISON.md` records the algorithmic justification:
+Scala Native Immix is a mostly-precise mark-region collector with bump-style
+allocation and block/line reclamation, so it can behave close to region
+allocation on short-lived object streams. Non-Native backend implementation
+belongs in the separate backend fork for now; this Scala Native fork should not
+grow JVM/Scala.js/Wasm prototype code during the current benchmark milestone.
 
 Latest throughput/RSS reuse-policy checkpoint:
 child implementation commit: `70672972c`
@@ -294,6 +343,33 @@ heap to about `14.5 MB` checked. L2 heap GC is only `26-31 ms` inside about
 `4.24 s`, so this is real-streaming-input RSS/fixed-memory evidence rather
 than a GC-heavy flagship. Heap completes at a `64M` cap, but remains slower
 and around `71 MB` RSS versus checked top-k around `14.5 MB`.
+
+Latest retained real-streaming heap-cap triage:
+HDFS `q3-template-session` was rerun as a true `streaming-file` row with
+`LOGHUB_LIVE_BUCKETS=16` to test whether more active timestamp/window state
+creates real heap pressure. At 1M lines, the `512M` heap row is `17.87 s`,
+L2 `8729.167 ms`, GC `136.507 ms`, and RSS `540786688`; the `256M` heap row
+slows to `21.34 s`, L2 `10725.843 ms`, GC `1989.577 ms` over `17`
+collections, and RSS `272449536`; the `128M` heap row fails out of heap. The
+checked scoped page-token row completes with the same checksum/output at
+`17.87 s`, L2 `8610.817 ms`, zero timed GC, and RSS `693813248`. Treat this as
+useful heap-cap/GC-pressure triage, not a clean RSS win: active-window retained
+objects can stress Scala Native heap, but the current page-token q3 topology
+has too much live region payload. Next real-input work should use a
+Broom-like retained join/session topology or StreamFlex-style event-correlation
+shape rather than simply increasing active LogHub q3 buckets.
+
+Latest next-benchmark follow-up:
+The next promising benchmark after LogHub q3 is the Broom/Naiad-style retained
+dataflow case, not another parser-heavy real-file row. A new 5M active-16
+follow-up is recorded in `evidence/BROOM_RETAINED_DATAFLOW_MATRIX.md`. L1
+final-clean aggregate is heap `2.84 s`, RSS `235880448`, versus checked Rift
+`2.06 s`, RSS `53248000`; join is heap `2.72 s`, RSS `362315776`, versus
+checked Rift `2.04 s`, RSS `56557568`. L2 shows material heap GC:
+aggregate `176.734 ms` GC on `869.384 ms` elapsed, and join `147.124 ms` GC
+on `791.787 ms` elapsed. Checked Rift removes timed GC with low region-op
+time (`4.524-5.578 ms`). This is now the strongest GC-heavy retained-object
+data-processing row to foreground while the real-input search continues.
 
 Latest unsafe no-zero lower-bound checkpoint:
 Child implementation commit: `c5fb808a7`

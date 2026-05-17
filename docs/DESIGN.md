@@ -2,7 +2,7 @@
 
 Status: active research design for the Scala Native fork.
 
-Last updated: 2026-05-11 15:36 CEST
+Last updated: 2026-05-16 19:31 CEST
 
 Active worktree: `/Users/siyaoliu/rift/scala-native-rift`
 
@@ -30,6 +30,29 @@ combines:
 - Region-shaped stream and collection libraries that make logical lifetimes
   visible to the allocator.
 - A mechanized core safety argument for containment and safe close/reset.
+
+Longer term, Rift should be understood as a Scala-level checked lifetime
+topology system with Scala Native as the first backend. The source concepts
+(`epoch`, `window`, `page`, `transaction`, `HeapRoot`, active/closed handles,
+and capture/separation checks) should be reusable by other Scala backends. What
+changes is the lowering:
+
+| Backend | Intended lowering |
+|---|---|
+| Scala Native | Real region slabs, backend-known checked allocation, bulk close/reset, and proof-gated initialization optimizations. |
+| JVM | Experimental object pools, scoped arenas for selected record-like classes, reusable buffers, off-heap/foreign-memory handles where practical, and normal heap fallback. |
+| Scala.js | Object pooling/reuse and analysis-guided allocation reduction. |
+| Wasm | Linear-memory arenas and bump/reset allocation. |
+| Analysis-only | Capture/separation checking with ordinary heap allocation. |
+
+This is now tracked in `docs/SCALA_LEVEL_BACKEND_PLAN.md`. The current
+validated implementation and benchmark evidence remain Scala Native only.
+Other backend tracks are planned experiments, not completed claims. The
+algorithmic reason Scala Native's heap baseline is strong is tracked in
+`docs/IMMIX_REGION_COMPARISON.md`: Immix is itself a mark-region collector with
+bump-style allocation and line/block reclamation, so Rift's clearest wins are
+expected when static lifetime topology avoids tracing retained transient object
+graphs or improves RSS/fixed-memory/tail behavior.
 
 The current implementation has only part of that system. The runtime path,
 compiler lowering, baseline corrections, benchmark harnesses, and DEBS scaffold

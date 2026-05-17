@@ -1,7 +1,7 @@
 # Real Streaming Input Matrix
 
 Date: 2026-05-11
-Last updated: 2026-05-16 17:45 CEST
+Last updated: 2026-05-16 18:20 CEST
 
 Status: started. This matrix records only rows that satisfy the
 `real-streaming-input` protocol: no full-input preload, incremental source
@@ -203,6 +203,70 @@ Interpretation:
 - Decision: keep as richer LogHub streaming session/template control evidence
   and park unless heap caps, latency, or a more naturally retained session
   workload exposes larger fixed-memory pressure.
+
+Active-window heap-cap follow-up:
+
+Command shape: `LOGHUB_INPUT_MODE=streaming-file`,
+`LOGHUB_LINES=1000000`, `LOGHUB_LINES_PER_BUCKET=25000`,
+`LOGHUB_LIVE_BUCKETS=16`, `LOGHUB_BENCHMARK_RUNS=1`, query
+`q3-template-session`. This is a triage row, not a final 3-run presentation
+median.
+
+| Mode | Heap cap | Status | L1 external s | L2 ms | GC ms | GC collections | RSS bytes | Checksum | Output |
+|---|---:|---|---:|---:|---:|---:|---:|---:|---:|
+| `gc-heap` | `512M` | ok | `17.87` | `8729.167` | `136.507` | `1` | `540786688` | `-7913633384189087996` | `283857` |
+| `gc-heap` | `256M` | ok | `21.34` | `10725.843` | `1989.577` | `17` | `272449536` | `-7913633384189087996` | `283857` |
+| `gc-heap` | `128M` | failed | `2.02` | n/a | n/a | n/a | `138838016` | n/a | n/a |
+| `checked-page-token` | uncapped | ok | `17.87` | `8610.817` | `0.000` | `0` | `693813248` | `-7913633384189087996` | `283857` |
+
+### LogHub HDFS Retained Session/Join, Streaming-File
+
+Implementation:
+
+- Matrix: `/Users/siyaoliu/rift/scala-native-rift/sandbox/src/main/scala-next/LogHubRetainedSessionMatrix.scala`
+- Mode: direct streaming-file input through `LOGHUB_SESSION_INPUT`
+- Source: `/Users/siyaoliu/rift/cache/benchmark-data/loghub/HDFS_1/HDFS.log`
+- Query: stream real HDFS log lines, derive session/join keys from the line,
+  allocate retained ordinary objects, and close epoch/session state after the
+  active-epoch boundary.
+- API/topology: natural heap, checked direct Rift epoch/streaming region, and
+  checked scoped backend.
+
+1M active-16 L2 triage:
+
+| Workload | Mode | L2 median ms | Median GC ms | Max GC ms | Runs with GC | Region op ms | Records | Bytes read | Checksum | Output |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| session | `heap-gc` | `6595.172` | `82.341` | `90.781` | `3/3` | `0.000` | `1000000` | `141557760` | `-4251312673673367471` | `831923` |
+| session | `checked-rift` | `6578.258` | `5.572` | `5.858` | `3/3` | `0.885` | `1000000` | `141557760` | `-4251312673673367471` | `831923` |
+| session | `checked-region-scoped` | `6997.852` | `63.979` | `67.797` | `3/3` | `0.000` | `1000000` | `141557760` | `-4251312673673367471` | `831923` |
+| join | `heap-gc` | `6837.810` | `9.474` | `13.881` | `3/3` | `0.000` | `1000000` | `141557760` | `4282190220497908364` | `0` |
+| join | `checked-rift` | `6927.376` | `6.731` | `7.516` | `3/3` | `1.624` | `1000000` | `141557760` | `4282190220497908364` | `0` |
+| join | `checked-region-scoped` | `6681.557` | `77.349` | `77.610` | `3/3` | `0.000` | `1000000` | `141557760` | `4282190220497908364` | `0` |
+
+Interpretation:
+
+- This is true `real-streaming-input`: the HDFS file is consumed incrementally
+  and no full parsed input is retained.
+- It retains ordinary session/join objects until an epoch boundary, but the
+  row is still not GC-heavy enough. Session heap GC is only about `1.2%` of
+  median L2 elapsed, and join heap GC is about `0.1%`.
+- Park it as retained streaming control evidence. The result supports the
+  investigation lesson that real input plus retained objects is not sufficient
+  if parsing, hashing, and query work dominate the full stream loop.
+
+Interpretation:
+
+- Increasing active windows exposes heap-cap pressure: the heap row slows
+  materially at `256M` because GC rises to about `1.99 s`, and it fails at
+  `128M`.
+- The checked page-token row completes with matching checksum/output and zero
+  timed heap GC, but the active-window configuration raises region RSS to about
+  `694 MB`. This is therefore a heap-cap/GC-pressure triage result, not a
+  clean RSS win.
+- Next action: do not keep scaling this exact page-token q3 path blindly.
+  Either add a retained session/join shape where region live payload is bounded
+  more tightly, or move to Broom/StreamFlex-style retained joins and event
+  correlation.
 
 ### GH Archive Byte-Slice q1/q2, Streaming-File
 

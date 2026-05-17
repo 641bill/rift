@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-16 17:45 CEST
+Last updated: 2026-05-17 02:28 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -81,11 +81,24 @@ RSS `13.0 MB`. The 1M active-16 variant confirms
 the high-live-state direction: heap RSS `232-239 MB`, checked RSS `53-56 MB`,
 and checked Rift is `24-33%` faster. The high-active heap-cap follow-up
 completes at `256M` but fails at `128M` and `64M`, while checked Rift
-completes with matching checksum/output at about `53-56 MB` total RSS. This
-should become the first Broom-style GC-heavy dataflow case study. Next:
-add 1M/5M checked scoped rows only if the presentation needs the full safe
-backend scale curve; keep retained heap/drop-anchor controls in appendix for
-causality, not as the headline comparison.
+completes with matching checksum/output at about `53-56 MB` total RSS. The
+new 20M active-16 follow-up is now the strongest Broom row: aggregate heap
+`10.78 s`, RSS `236 MB`, L2 GC `953.153 ms` versus checked Rift `8.48 s`,
+RSS `53 MB`, GC `0 ms`; join heap `9.88 s`, RSS `438 MB`, L2 GC
+`486.649 ms` versus checked Rift `8.09 s`, RSS `57 MB`, GC `0 ms`. Heap
+completes at `512M` but fails at `384M`/`256M`, while checked Rift completes
+with low RSS. Use this as the first Broom-style GC-heavy dataflow case study;
+keep retained heap/drop-anchor controls in appendix for causality, not as the
+headline comparison.
+
+Latest LogHub retained session/join triage:
+`evidence/LOGHUB_RETAINED_SESSION_MATRIX.md` adds a true HDFS streaming-file
+retained session/join benchmark. It validates the retained-object stream
+harness and matches checksums, but heap GC remains too small: session heap GC
+is `82.341 ms` inside `6595.172 ms`, and join heap GC is `9.474 ms` inside
+`6837.810 ms`. Park it as real-streaming control evidence. The next real-input
+search should prefer higher-cardinality retained state/joins, larger graph/text
+epochs, or transaction batches rather than parser-heavy LogHub variants.
 
 Latest GC-heavy benchmark investigation:
 `evidence/GC_HEAVY_BENCHMARK_INVESTIGATION.md` records the 2026-05-15
@@ -98,6 +111,40 @@ Spark/Flink-like high-cardinality keyed state, heap-state time-series windows,
 and Stancu/SPECjbb-style transaction batches. Rows that only read more bytes
 and update compact counters should remain ceiling/control evidence unless they
 show RSS, tail, fixed-memory, or material GC pressure.
+The 2026-05-16 second search pass keeps that conclusion and reorders the next
+work: first add one more prior-work-aligned retained dataflow shape
+(TPC-H-Q17-like or shopper-style JOIN-SELECT-JOIN), then add a
+StreamFlex-style retained event-correlation/transaction-tracking latency row.
+Real-input expansion should then focus on larger StackExchange/StackOverflow
+text, larger SNAP/Twitter graph replay, higher-cardinality LogHub
+session/template dictionaries, and Alibaba-style machine traces. HiBench,
+BigDataBench, and Renaissance should be used as workload catalogues for local
+Rift-shaped kernels, not as opaque distributed-framework headline runs.
+
+New long-term backend track:
+`docs/SCALA_LEVEL_BACKEND_PLAN.md` is now the roadmap anchor for making Rift a
+Scala-level checked lifetime topology system rather than only a Scala Native
+runtime experiment. Current evidence stays Scala Native. Future work should
+prototype backend-specific lowerings only after the Scala Native thesis story
+is stable:
+
+| Backend track | Roadmap status | Intended first experiment |
+|---|---|---|
+| Scala Native | Active / validated | Continue checked region runtime, no-zero proof, Broom/StreamFlex/Yak/Stancu evidence. |
+| JVM | Planned | Same `RiftRegion.epoch`-style API and checks; lower selected record-like classes to pools/arenas or reusable buffers, with normal heap fallback. |
+| Scala.js | Planned | Preserve API/checking and test object-pooling/reuse as an allocation-reduction backend. |
+| Wasm | Planned | Lower region-shaped data to linear-memory arenas and bump/reset allocation. |
+| Analysis-only | Planned | Enforce capture/separation rules but allocate normally; useful for safety portability. |
+
+Do not claim JVM/Scala.js/Wasm support until prototypes exist. The immediate
+reason to track these backends is conceptual: Scala Native Immix may remain a
+strong enough baseline that some public real-input streams are not GC-heavy,
+while the front-end safety/topology contribution should be portable.
+`docs/IMMIX_REGION_COMPARISON.md` now records the mechanism argument: Immix is
+already a mark-region collector with bump-style allocation and line/block
+reclamation, so it can hide GC pressure on short-lived parser/filter/count
+streams. Non-Native backend prototype code should remain in the separate
+backend fork until the current Scala Native benchmark story is stable.
 
 Latest throughput/RSS reuse-policy update:
 Child implementation commit: `70672972c`

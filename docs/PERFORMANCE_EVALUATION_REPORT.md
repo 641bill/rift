@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-16 17:45 CEST
+Last updated: 2026-05-16 19:31 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -52,6 +52,27 @@ Best safe region/backend rows are comparison rows. Same-shape retained/drop
 anchor, legacy checked, unsafe/rootless, and summary-only rows are mechanism
 appendix rows unless a table explicitly says otherwise.
 
+Scala-level backend outlook:
+The validated implementation in this report is Scala Native. That remains the
+only backend with runtime/compiler evidence. The broader design target is
+Scala-level: checked `epoch`, `window`, `page`, and `transaction` topologies,
+capture/separation checking, active/closed handles, and explicit `HeapRoot`
+bridges should be reusable across Scala backends. Future backend tracks are now
+recorded in `docs/SCALA_LEVEL_BACKEND_PLAN.md`: JVM lowering through pools,
+scoped arenas, reusable buffers, off-heap handles, and heap fallback; Scala.js
+through object pooling/reuse; Wasm through linear-memory arenas; and an
+analysis-only mode that checks lifetimes while allocating normally. These are
+planned experiments, not current performance claims. This framing is important
+because Scala Native Immix is a strong baseline: if public real-input streams
+remain parser/hash dominated and not strongly GC-heavy, the thesis can still
+separate the portable checked topology contribution from backend-specific
+allocation wins.
+The detailed algorithmic justification is in `docs/IMMIX_REGION_COMPARISON.md`:
+Immix is itself a mark-region collector with bump-style allocation and
+block/line reclamation, so simple short-lived stream objects may impose little
+visible GC pressure. Non-Native prototype work is intentionally out of scope
+for this Scala Native benchmark milestone.
+
 Latest clean final-selection headline sweep:
 `evidence/FINAL_SELECTION_HEADLINE_2026_05_06.md`.
 
@@ -89,6 +110,21 @@ about `13 MB` RSS.
 The 1M high-active-timestamp follow-up also gives fixed-memory evidence:
 heap completes at `256M` but fails at `128M` and `64M`, while checked Rift
 completes with matching checksum/output and about `53-56 MB` total RSS.
+The 5M high-active-timestamp follow-up is now the stronger GC-heavy variant:
+aggregate is heap `2.84 s`, RSS `235.9 MB`, versus checked Rift `2.06 s`,
+RSS `53.2 MB`; join is heap `2.72 s`, RSS `362.3 MB`, versus checked Rift
+`2.04 s`, RSS `56.6 MB`. L2 shows heap GC is a large share of the work loop:
+aggregate `176.734 ms` GC on `869.384 ms`, and join `147.124 ms` GC on
+`791.787 ms`. Checked Rift removes timed GC with only `4.524-5.578 ms` region
+op time.
+The 20M active-16 follow-up is stronger again. Aggregate is heap `10.78 s`,
+RSS `236 MB`, with `953.153 ms` median timed GC on `4235.563 ms` L2, versus
+checked Rift `8.48 s`, RSS `53 MB`, and zero timed GC. Join is heap
+`9.88 s`, RSS `438 MB`, with `486.649 ms` median timed GC on `3133.932 ms`,
+versus checked Rift `8.09 s`, RSS `57 MB`, and zero timed GC. Heap completes
+at a `512M` cap but fails at `384M` and `256M`; checked Rift completes
+uncapped at about `53-57 MB`. This is now the strongest Broom/Naiad-style
+retained-object throughput/GC/RSS/fixed-memory result.
 Same-shape/drop-anchor controls remain appendix/mechanism evidence; this row's
 paper-facing comparison is natural heap/GC versus checked Rift.
 
@@ -103,6 +139,13 @@ relative to the streaming parse/query loop (`26-31 ms` inside about `4.24 s`);
 checked rows report zero timed GC. Heap completes at a `64M` cap, so this is a
 real-streaming-input RSS/fixed-memory near-tie, not a GC-heavy throughput
 flagship.
+`evidence/LOGHUB_RETAINED_SESSION_MATRIX.md` adds a more natural retained
+session/join streaming-file triage over HDFS. It validates the retained object
+shape and matches checksums, but still parks as control evidence: session heap
+GC is `82.341 ms` inside `6595.172 ms`, and join heap GC is only `9.474 ms`
+inside `6837.810 ms`. This reinforces the main search lesson: real input and
+retained objects are necessary but not sufficient when parser/hash/query CPU
+dominates the stream loop.
 
 Latest clean prior-work runner sweep:
 `evidence/PRIOR_WORK_HEADLINE_SWEEP_2026_05_16.md` records a committed-tree

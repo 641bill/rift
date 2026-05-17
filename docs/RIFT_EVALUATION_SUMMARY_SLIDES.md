@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-16 15:20 CEST
+Last updated: 2026-05-16 19:31 CEST
 
 Status: markdown slide deck outline. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report,
@@ -26,15 +26,17 @@ Recommended talk order:
 6. Real-input Yak LiveJournal and AskUbuntu as checked epoch rows.
 7. Page-token stream evidence for page/window append workloads.
 8. ReML/MLKit PLDI-style comparison as a non-stream typed-region axis.
-9. Open work: streaming-input conversions, real-input GC-heavy search, and gated
-   rank/hash/median/join
-   operators.
+9. Scala-level backend outlook: Scala Native is validated now; JVM, Scala.js,
+   Wasm, and analysis-only are planned backend experiments for the same checked
+   topology model.
+10. Open work: streaming-input conversions, real-input GC-heavy search, and
+   gated rank/hash/median/join operators.
 
 Representative numbers to keep on slides:
 
 | Evidence class | Best current row | Interpretation |
 |---|---|---|
-| Prior-work-style retained dataflow | Broom retained timestamped aggregate 20M: checked Rift `3.59 s`, `13.6 MB` RSS, `0 ms` GC vs natural heap `5.27 s`, `75.8 MB`, L2 GC `410.002 ms`; checked scoped backend is `4.55 s`, `13.7 MB`. Timestamped join 20M: checked Rift `4.26 s`, `12.8 MB` vs heap `5.00 s`, `74.7 MB`, L2 GC `267.636 ms`; checked scoped backend is `4.52 s`, `13.0 MB`. | This is the Broom/Naiad-style headline comparison: natural heap/GC versus checked Rift on ordinary objects retained until notification/close, with the safe scoped backend shown as a comparison row. |
+| Prior-work-style retained dataflow | Broom active-16 aggregate 20M: checked Rift `8.48 s`, `53 MB` RSS, `0 ms` GC vs natural heap `10.78 s`, `236 MB`, L2 GC `953.153 ms` and max GC `2241.709 ms`; checked scoped backend is `11.51 s`, `54 MB`. Active-16 join 20M: checked Rift `8.09 s`, `57 MB` vs heap `9.88 s`, `438 MB`, L2 GC `486.649 ms`; checked scoped backend is `9.15 s`, `57 MB`. Heap completes at `512M` but fails at `384M`/`256M`. | This is the Broom/Naiad-style headline comparison: natural heap/GC versus checked Rift on ordinary objects retained until notification/close, with safe scoped backend and fixed-memory behavior shown as comparison axes. |
 | Retained-object memory management | Focused 1M retained: checked scoped `24.274 ms`, `0 ms` GC, `4.9 MB` RSS vs retained heap `36.233 ms`, `10.109 ms` GC, `21.3 MB` RSS. | Fair region-reclaim win: both sides retain ordinary objects until epoch close. |
 | Retained generated/preloaded stressor | GH Archive-shaped retained q2 L1: checked scoped `3.44 s`, `16 MB` RSS vs retained heap `4.62 s`, `147 MB` RSS for 20 x 1M iterations; L2 checked scoped `186.868 ms` vs retained heap `257.377 ms`, `77.208 ms` GC. | Strong retained memory/RSS win, but not real-input proof. |
 | Direct-summary lower bound | GH Archive-shaped q2 L1: heap direct-summary `1.36 s`; checked stream/scoped direct-summary `1.45/1.45 s`. DSPBench Fraud/Log q2 and LogHub q2/q3 now also have checked direct-summary counterparts within about `1-4%` of heap direct-summary, except LogHub q3's CPU-heavy row at about `2-3%`. | Symmetric topology lower bound: direct-summary is fast for heap and checked regions, but it is not a reclaim claim. |
@@ -60,10 +62,10 @@ evidence unless rerun under the current fair-evaluation protocol.
 
 ## Slide 1: One-Sentence Thesis
 
-Rift is a checked region system for Scala Native that tries to move
-epochal stream/data objects out of Immix and reclaim them in bulk, while using
-static capture/lifetime/rooting rules to avoid Yak-style barriers, escape
-tables, and blanket GC root registration.
+Rift is a Scala-level checked lifetime topology system, validated first on
+Scala Native, that moves epochal stream/data objects out of Immix and reclaims
+them in bulk while using static capture/lifetime/rooting rules to avoid
+Yak-style barriers, escape tables, and blanket GC root registration.
 
 ## Slide 2: The Design Target
 
@@ -76,6 +78,26 @@ tables, and blanket GC root registration.
 
 The goal is the same logical program for heap and Rift; only allocation
 placement and lifetime policy should differ.
+
+## Slide 2a: Backend Outlook
+
+| Backend | Current status | Intended lowering |
+|---|---|---|
+| Scala Native | validated implementation | real region allocator, bulk close/reset, proof-gated initialization optimizations |
+| JVM | planned experiment | checked API plus pools/arenas/reusable buffers/off-heap handles with heap fallback |
+| Scala.js | planned experiment | checked API plus object pooling/reuse where semantics allow |
+| Wasm | planned experiment | linear-memory arenas and bump/reset allocation |
+| analysis-only | planned experiment | capture/separation checks with ordinary heap allocation |
+
+Do not claim these non-Native backends as implemented. The presentation claim
+is that the front-end safety/topology model is portable, while allocation wins
+are backend-specific.
+
+Mechanism caveat: Immix is already a mark-region collector with bump-style
+allocation and line/block reclamation. This is why many real-input
+parser/filter/count rows show little GC pressure. Rift's clearest Native wins
+come from retained transient object graphs, RSS/fixed-memory pressure, or
+latency-tail-sensitive lifetimes.
 
 ## Slide 3: Evaluation And Measurement Contract
 

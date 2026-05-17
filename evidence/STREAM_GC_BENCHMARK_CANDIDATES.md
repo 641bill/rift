@@ -1,7 +1,7 @@
 # Stream GC Benchmark Candidates
 
 Date: 2026-05-01
-Last updated: 2026-05-15 17:36 CEST
+Last updated: 2026-05-16 18:39 CEST
 
 Status: benchmark-selection note for Phase 6. This is not a result pack.
 
@@ -10,6 +10,15 @@ Related investigation:
 literature/online follow-up on why many real streaming rows are not GC-heavy,
 where prior systems and practitioners see GC pressure, and which retained
 object workloads should be tried next.
+
+2026-05-16 second-pass update: after the Broom active-16 scaling and LogHub
+retained-session triage, the search direction is sharper. Keep simple
+parse/filter/count streams as controls. The next GC-heavy stream candidates
+must retain ordinary objects in keyed/window/session state or expose
+latency/tail pressure. HiBench, BigDataBench, and Renaissance are useful
+catalogues for standard workload names, but they should not replace local
+single-process Rift kernels unless their framework overhead is itself the
+research question.
 
 ## Decision
 
@@ -61,21 +70,32 @@ Sources:
 - RiverBench: https://riverbench.github.io/v/latest/
 - LogHub: https://github.com/logpai/loghub
 - LogHub dataset table: https://github.com/logpai/loghub/blob/master/docs/datasets.md
+- Spark tuning guide: https://spark.apache.org/docs/latest/tuning.html
+- Flink state backend documentation:
+  https://nightlies.apache.org/flink/flink-docs-stable/docs/ops/state/state_backends/
+- Broom HotOS paper:
+  https://www.usenix.org/system/files/conference/hotos15/hotos15-paper-gog.pdf
+- Yak OSDI page: https://www.usenix.org/conference/osdi16/technical-sessions/presentation/nguyen
+- SPECjbb2005: https://www.spec.org/jbb2005/
+- SNAP Twitter-2010: https://snap.stanford.edu/data/twitter-2010.html
+- Alibaba Cluster Trace: https://github.com/alibaba/clusterdata
+- TPC-H current specification:
+  https://www.tpc.org/tpc_documents_current_versions/current_specifications5.asp
 
 ## Candidate Ranking
 
 | Rank | Candidate | Why it fits Rift | First action |
 |---:|---|---|---|
-| 1 | DSPBench local-kernel subset | Broadest stream-processing benchmark family found in this pass: finance, telecom, sensor, social, and other applications; paper explicitly characterizes workload and memory occupation. Spike is modest/control; Fraud q2 is trusted-positive but checked-gated. | Heap-cap follow-up is complete and did not create a fixed-memory checked win; profile checked Fraud q2, then move to real RIoTBench/Theodolite if no safe checked path emerges. |
-| 2 | Real RIoTBench-style input | Actual RIoTBench uses real IoT observation streams, unlike our current generated probe. | Find/download a public CITY/FIT-style dataset, wire `RIOTBENCH_INPUT`, and rerun q1/q2 before changing operators. |
-| 3 | More LogHub / real log variants | Real BGL has now been tried and gives modest throughput/RSS/tail evidence, not a huge-GC case. Other LogHub datasets may still differ if they force richer parsing/template/session objects. | Keep BGL as baseline; only try HDFS/Thunderbird/Spark if the query materializes more objects than the current line/token/window path. |
-| 4 | NEXMark Beam-default expansion | Auction streams have generated event objects, joins, windows, and output objects with explicit window/session lifetimes. Q3 is the best new checked row; Q0/Q11 are trusted wins; Q1/Q8 remain useful profile rows. | Keep as active profile/regression evidence; do not claim exact Beam runner evidence. |
-| 5 | Theodolite local UC subset | Industrial IoT microservice benchmarks with load generators and UC1-UC4 stream shapes. | Port one local UC kernel only if DSPBench/real RIoTBench do not produce a stronger target; avoid Kubernetes/Kafka in headline memory runs. |
-| 6 | Yahoo-style ad stream | Ad-view pipelines match filter/project/campaign-lookup/window-count structure, but our 1M Q2 row does not beat heap. | Keep `YahooAdRegionMatrix` as a control; improve provenance/schema later, not as the next speed target. |
-| 7 | ShuffleBench / SH-Bench | Routing/shuffle to state-local aggregation may allocate many route/envelope objects. | Use only if we want a routing/object-envelope stress test; not a first region-lifetime case study. |
-| 8 | HiBench Streaming | Identity/repartition/stateful wordcount/fixed-window are easy to port and compare. | Use as simple controls; too small/simple for primary evidence. |
-| 9 | BigDataBench streaming / RiverBench RDF streaming | BigDataBench offers broad datasets; RiverBench offers real RDF stream datasets that may be parser/object heavy. | Keep as later workload catalogues; likely higher setup/parser/serialization noise. |
-| 10 | DaCapo / Renaissance / SPECjbb2015 | GC-heavy in places, but not stream-topology-first. | Deprioritized as primary Rift performance evidence. |
+| 1 | StreamFlex retained event-correlation / transaction-tracking / IDS | Closest stream-processing predecessor: stable state plus transient scoped objects, and the important axes are throughput, p95/p99/max latency, deadline misses, RSS, and GC pauses. | Extend `StreamFlexDesignMatrix` with retained event/session/capsule objects; keep BeamFormer/FilterBank as primitive controls. |
+| 2 | Broom/Naiad-style retained stream/dataflow join | The strongest GC-heavy signal so far comes from retained timestamp dictionaries; a TPC-H-Q17/shopper-like stream/dataflow shape is the most prior-work-aligned extension. | Add Q17-like retained join/aggregate and shopper JOIN-SELECT-JOIN rows; report natural heap/GC versus checked Rift first. |
+| 3 | Real StackExchange/StackOverflow text stream | AskUbuntu already gives true streaming RSS/fixed-memory evidence; larger text can increase retained token/top-k state. | Fetch or stage a larger provenance-clean Posts dump if disk/network allow; run direct epoch and reusable top-k rows. |
+| 4 | SNAP/Twitter graph edge stream | LiveJournal is the current real-input flagship and exactly matches epochal graph updates. | Preflight disk/time for larger SNAP/Twitter; stream edges through `RiftRegion.epoch`. |
+| 5 | Higher-cardinality LogHub retained sessions/templates | HDFS/Spark/Windows top-k rows show RSS wins, but parser/hash CPU dominates; a useful next row must retain more objects. | Build session/template dictionaries or windowed joins that retain per-key objects, not just line counters. |
+| 6 | DSPBench next retained kernels | Fraud/Log q2 are modest; Machine Outlier could work only with larger real traces. | Pin a larger Alibaba-style machine-usage trace before implementing Machine Outlier; otherwise pause DSPBench. |
+| 7 | Theodolite retained power windows | Industrial monitoring is a good stream-latency story, but current q2 is not GC-heavy. | Add retained measurement/window contribution objects only if the semantics require them; report latency/tails. |
+| 8 | HiBench / BigDataBench streaming catalogues | Standard workload names and generated/real data catalogues; useful for evaluation breadth. | Port retained SQL join/aggregate, stateful wordcount/top-k, or PageRank kernels locally; avoid opaque Spark/Flink runtime overhead. |
+| 9 | NEXMark Beam-default expansion | Generated auction streams have explicit event/window lifetimes and are useful stress/regression controls. | Keep Q3/Q8/Q9/Q11 as generated methodology evidence; do not claim real-input proof. |
+| 10 | DaCapo / Renaissance / SPECjbb2015 | Useful managed-runtime/GC background, but not stream-topology-first. | Keep Renaissance as optional general comparison and SPECjbb only through the Stancu/SPECjbb2005-style port. |
 
 ## Gates
 
