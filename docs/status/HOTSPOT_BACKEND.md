@@ -1,6 +1,6 @@
 # HotSpot Backend Status
 
-Last updated: 2026-05-17 16:42 CEST
+Last updated: 2026-05-17 17:09 CEST
 
 Status: hot status file for the custom HotSpot VM-fork track. This is separate
 from the portable JVM library prototype.
@@ -20,6 +20,30 @@ HotSpot backend work should not edit:
 - `scala-native-rift/sandbox/**`;
 - `scala-native-rift/experimental/portable-rift/**`, unless the change is a
   shared API/test harness update.
+
+## Branch Discipline
+
+This status file is backend-owned and may be updated on the
+`backend-portability` branch. To avoid conflicts with the Scala Native
+benchmark/report lane on `main`, HotSpot work should stay in:
+
+- `docs/HOTSPOT_REGION_BACKEND_PLAN.md`;
+- `docs/status/HOTSPOT_BACKEND.md`;
+- `evidence/HOTSPOT_REGION_BACKEND_STATUS.md`;
+- `experimental/hotspot-rift/**`.
+
+Do not edit these global presentation files from backend work unless the
+change is intentionally promoted as thesis-facing context:
+
+- `docs/PERFORMANCE_EVALUATION_REPORT.md`;
+- `docs/report.html`;
+- `evidence/EVALUATION_CLASSIFIED_SUMMARY.md`.
+
+Shared status files such as `docs/HANDOFF.md`, `docs/ROADMAP.md`, and
+`docs/status/CURRENT.md` should only receive short pointer updates from
+`main`, for example a branch name, backend status file path, and commit SHA.
+Detailed HotSpot progress belongs here and in
+`evidence/HOTSPOT_REGION_BACKEND_STATUS.md`.
 
 ## Current State
 

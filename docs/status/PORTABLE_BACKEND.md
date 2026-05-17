@@ -1,6 +1,6 @@
 # Portable Backend Status
 
-Last updated: 2026-05-17 12:10 CEST
+Last updated: 2026-05-17 17:09 CEST
 
 Status: hot status file for JVM/Scala.js/Wasm/analysis-only Rift experiments.
 This file may be updated frequently by the portable-backend fork.
@@ -24,6 +24,24 @@ Shared contract:
 
 - `docs/RIFT_PORTABLE_API_CONTRACT.md`
 - `docs/HOTSPOT_REGION_BACKEND_PLAN.md` for the separate VM-fork roadmap.
+
+## Branch Discipline
+
+Portable backend work is owned by the `backend-portability` branch. Routine
+updates should stay in:
+
+- `docs/SCALA_LEVEL_BACKEND_PLAN.md`;
+- `docs/RIFT_PORTABLE_API_CONTRACT.md`;
+- `docs/status/PORTABLE_BACKEND.md`;
+- `evidence/PORTABLE_BACKEND_PROTOTYPE.md`;
+- portable-specific `experimental/**` files.
+
+Do not update `docs/PERFORMANCE_EVALUATION_REPORT.md`, `docs/report.html`, or
+global evidence summaries from this track unless the result is being promoted
+to the presentation report. If a global status mention is needed, keep it to a
+one-paragraph pointer from `main` to this file and the current backend branch
+commit. Native benchmark/report work owns the detailed presentation narrative
+on `main`.
 
 ## Current Prototype
 

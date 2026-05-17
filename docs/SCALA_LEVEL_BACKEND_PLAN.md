@@ -1,7 +1,7 @@
 # Scala-Level Rift Backend Plan
 
 Date: 2026-05-16
-Last updated: 2026-05-17 12:10 CEST
+Last updated: 2026-05-17 17:09 CEST
 
 Status: planning document. This is not implemented backend evidence. It records
 the intended long-term split between Rift's Scala-level safety/topology model
@@ -63,6 +63,29 @@ can place arbitrary Scala objects in real regions.
 The fork ownership boundary and portable API contract are tracked in
 `docs/RIFT_PORTABLE_API_CONTRACT.md`. Prototype smoke evidence is recorded in
 `evidence/PORTABLE_BACKEND_PROTOTYPE.md`.
+
+## Branch And Document Discipline
+
+Backend portability work is isolated on the parent branch
+`backend-portability`. The branch owns backend-specific planning, status,
+prototype evidence, and experimental code:
+
+- `docs/SCALA_LEVEL_BACKEND_PLAN.md`;
+- `docs/HOTSPOT_REGION_BACKEND_PLAN.md`;
+- `docs/RIFT_PORTABLE_API_CONTRACT.md`;
+- `docs/status/HOTSPOT_BACKEND.md`;
+- `docs/status/PORTABLE_BACKEND.md`;
+- `evidence/HOTSPOT_REGION_BACKEND_STATUS.md`;
+- `evidence/PORTABLE_BACKEND_PROTOTYPE.md`;
+- `experimental/**`.
+
+The Scala Native evaluation/report lane on `main` owns
+`docs/PERFORMANCE_EVALUATION_REPORT.md`, `docs/report.html`, and global
+classified evidence summaries. Backend work should not edit those files unless
+there is an explicit decision to promote a stable backend result into the
+thesis-facing report. When a global summary must mention backend work, keep it
+as a short pointer to this branch, the relevant backend status file, and the
+current commit SHA. Detailed backend progress stays in backend-owned files.
 
 ## JVM Experiment Rules
 
