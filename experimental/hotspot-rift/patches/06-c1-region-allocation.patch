@@ -1,0 +1,39 @@
+diff --git a/src/hotspot/share/c1/c1_LIRGenerator.cpp b/src/hotspot/share/c1/c1_LIRGenerator.cpp
+index 341de0ac0c2..cd99203bd9d 100644
+--- a/src/hotspot/share/c1/c1_LIRGenerator.cpp
++++ b/src/hotspot/share/c1/c1_LIRGenerator.cpp
+@@ -655,7 +655,7 @@ void LIRGenerator::print_if_not_loaded(const NewInstance* new_instance) {
+ void LIRGenerator::new_instance(LIR_Opr dst, ciInstanceKlass* klass, bool is_unresolved, LIR_Opr scratch1, LIR_Opr scratch2, LIR_Opr scratch3, LIR_Opr scratch4, LIR_Opr klass_reg, CodeEmitInfo* info) {
+   klass2reg_with_patching(klass_reg, klass, info, is_unresolved);
+   // If klass is not loaded we do not know if the klass has finalizers:
+-  if (UseFastNewInstance && klass->is_loaded()
++  if (!UseRiftRegions && UseFastNewInstance && klass->is_loaded()
+       && !Klass::layout_helper_needs_slow_path(klass->layout_helper())) {
+
+     C1StubId stub_id = klass->is_initialized() ? C1StubId::fast_new_instance_id : C1StubId::fast_new_instance_init_check_id;
+diff --git a/src/hotspot/share/c1/c1_Runtime1.cpp b/src/hotspot/share/c1/c1_Runtime1.cpp
+index 7c41c09d378..040363c124f 100644
+--- a/src/hotspot/share/c1/c1_Runtime1.cpp
++++ b/src/hotspot/share/c1/c1_Runtime1.cpp
+@@ -60,6 +60,7 @@
+ #include "runtime/handles.inline.hpp"
+ #include "runtime/interfaceSupport.inline.hpp"
+ #include "runtime/javaCalls.hpp"
++#include "runtime/riftRegionRuntime.hpp"
+ #include "runtime/sharedRuntime.hpp"
+ #include "runtime/stackWatermarkSet.hpp"
+ #include "runtime/stubRoutines.hpp"
+@@ -387,7 +388,13 @@ JRT_ENTRY(void, Runtime1::new_instance(JavaThread* current, Klass* klass))
+   // make sure klass is initialized
+   h->initialize(CHECK);
+   // allocate instance and return via TLS
+-  oop obj = h->allocate_instance(CHECK);
++  oop obj = nullptr;
++  if (UseRiftRegions && RiftRegionRuntime::has_current_region(current)) {
++    obj = RiftRegionRuntime::allocate_instance(current, h, CHECK);
++  }
++  if (obj == nullptr) {
++    obj = h->allocate_instance(CHECK);
++  }
+   current->set_vm_result_oop(obj);
+ JRT_END

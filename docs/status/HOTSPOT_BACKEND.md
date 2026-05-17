@@ -1,6 +1,6 @@
 # HotSpot Backend Status
 
-Last updated: 2026-05-17 22:31 CEST
+Last updated: 2026-05-17 23:18 CEST
 
 Status: hot status file for the custom HotSpot VM-fork track. This is separate
 from the portable JVM library prototype.
@@ -74,13 +74,20 @@ Detailed HotSpot progress belongs here and in
   remembers closed region address ranges, rejects closed region objects through
   explicit verification and store guards, and prefers active ranges before
   closed ranges to avoid C-heap address-reuse false positives.
+- Patch 8 conservative C1 allocation is implemented and exported as
+  `experimental/hotspot-rift/patches/06-c1-region-allocation.patch`. When
+  `-XX:+UseRiftRegions` is enabled, C1 routes `new` through the C1 runtime
+  allocation stub instead of inline fast allocation; `Runtime1::new_instance`
+  then allocates eligible classes in the current Rift region and heap-fallbacks
+  unsupported classes.
 - `autoconf` was installed with Homebrew and preflight now passes for `git`,
   `bash`, `make`, `autoconf`, `clang`, Java `25.0.1`, and Homebrew.
 - OpenJDK was cloned into `/Users/siyaoliu/rift/cache/openjdk-rift`.
 - The worktree is on local branch `rift-jdk25` from `origin/jdk25`. The Rift
-  patch stack is currently OpenJDK commit `c455daa9cef` (`Add Rift verifyLive
-  VM hook`), with the Patch 1-6 base at `94e2a36f7b9` (`Prototype Rift region
-  backend`).
+  patch stack is currently OpenJDK commit `8cd8da1a443` (`Add C1 Rift region
+  allocation path`), with the Patch 7 base at `c455daa9cef` (`Add Rift
+  verifyLive VM hook`) and the Patch 1-6 base at `94e2a36f7b9` (`Prototype
+  Rift region backend`).
   It is pushed to the user fork remote
   `git@github.com:641bill/jdk.git` as branch `rift-jdk25`, tracking
   `rift-github/rift-jdk25`. `origin` remains
@@ -177,16 +184,29 @@ Detailed HotSpot progress belongs here and in
   `/private/tmp/rift-hotspot-smoke-patch7c-20260517`: checksum `7351360`,
   output `1000000`, internal elapsed `12.636 ms`, external `0.11 s` real,
   max RSS `88653824` bytes.
+- Patch 8 C1 allocation smoke passed at
+  `/private/tmp/rift-hotspot-c1-region-smoke-patch8-20260517` with
+  `c1-allocation-ok`. It warms `allocateOne`, enters an active Rift region,
+  allocates `10000` registered primitive-field records through C1, verifies
+  them while live, and checks the region object allocation counter.
+- Existing interpreter object smoke passed after Patch 8 at
+  `/private/tmp/rift-hotspot-object-region-smoke-patch8-20260517`.
+- Existing region lifecycle smoke passed after Patch 8 at
+  `/private/tmp/rift-hotspot-region-smoke-patch8-20260517`.
+- Flag-off built-JDK baseline smoke after Patch 8 passed at
+  `/private/tmp/rift-hotspot-smoke-patch8-20260517`: checksum `7351360`,
+  output `1000000`, internal elapsed `12.124 ms`, external `0.10 s` real,
+  max RSS `88752128` bytes.
 - Stock-JDK retained-object baseline smoke passed at
   `/private/tmp/rift-hotspot-smoke-20260517`.
 
 ## Next Step
 
-Extend the safety work beyond the current Patch 7 interpreter plus Unsafe/JNI
-and explicit API-boundary subset. The next work should cover C1/C2 compiled
-stores, native stores outside the guarded Unsafe/JNI entrypoints, explicit JVM
-bridge/root rules before allowing reference fields, and GC/safepoint
-integration. Automatic stale post-close use remains open: Patch 7 gives an
-explicit verifier that Rift lowering can call, not a general object-use
-barrier. Performance claims remain out of scope until GC/safepoint integration
-is designed.
+Extend the safety work beyond the current Patch 8 interpreter, C1 allocation,
+Unsafe/JNI, and explicit API-boundary subset. The next work should cover C1/C2
+compiled stores, C2 allocation, native stores outside the guarded Unsafe/JNI
+entrypoints, explicit JVM bridge/root rules before allowing reference fields,
+and GC/safepoint integration. Automatic stale post-close use remains open:
+Patch 7 gives an explicit verifier that Rift lowering can call, not a general
+object-use barrier. Performance claims remain out of scope until GC/safepoint
+integration is designed.

@@ -1,9 +1,9 @@
 # HotSpot Ordinary-Object Region Backend Plan
 
 Date: 2026-05-17
-Last updated: 2026-05-17 22:31 CEST
+Last updated: 2026-05-17 23:18 CEST
 
-Status: long-term VM-fork roadmap with Patch 1-7 implemented through a narrow
+Status: long-term VM-fork roadmap with Patch 1-8 implemented through a narrow
 interpreter-only object-allocation and store-guard prototype. Ordinary
 Scala/JVM object allocation into Rift regions now works only for explicitly
 registered, final/simple primitive-field classes under conservative VM flags.
@@ -11,8 +11,10 @@ The first store guards reject static, array, heap-object-field, reflective,
 Unsafe, MethodHandle setter, and anonymous-closure retention of live region
 objects in the currently covered interpreter/Unsafe/JNI subset. Patch 7 adds
 an explicit `verifyLive` API-boundary verifier for stale post-close objects.
-GC integration, C1/C2 fast paths, arrays as region allocations, reference
-fields inside region objects, automatic stale-use barriers, and broad
+Patch 8 adds conservative C1 allocation through the runtime stub for eligible
+records. GC integration, C1/C2 store barriers, C2 allocation, arrays as region
+allocations, reference fields inside region objects, automatic stale-use
+barriers, and broad
 bridge/root handling are still future work.
 
 ## Goal
@@ -174,7 +176,8 @@ Observed on 2026-05-17:
 - OpenJDK is cloned at `/Users/siyaoliu/rift/cache/openjdk-rift`;
 - the worktree uses local branch `rift-jdk25` from `origin/jdk25`;
 - the current Rift VM stack is committed locally as OpenJDK commit
-  `c455daa9cef` (`Add Rift verifyLive VM hook`), with the Patch 1-6 base at
+  `8cd8da1a443` (`Add C1 Rift region allocation path`), with the Patch 7 base
+  at `c455daa9cef` (`Add Rift verifyLive VM hook`) and the Patch 1-6 base at
   `94e2a36f7b9` (`Prototype Rift region backend`);
 - the OpenJDK worktree remote `rift-github` points at
   `git@github.com:641bill/jdk.git`, and branch `rift-jdk25` is pushed there
@@ -269,6 +272,18 @@ Observed on 2026-05-17:
   `/private/tmp/rift-hotspot-region-smoke-patch7c-20260517`;
 - flag-off baseline smoke after Patch 7 passes at
   `/private/tmp/rift-hotspot-smoke-patch7c-20260517`.
+- Patch 8 has been implemented and exported as
+  `experimental/hotspot-rift/patches/06-c1-region-allocation.patch`;
+- Patch 8 disables C1 inline fast allocation while `-XX:+UseRiftRegions` is
+  enabled and sends `new` through `Runtime1::new_instance`;
+- `Runtime1::new_instance` now allocates eligible classes into the active Rift
+  region when one exists and otherwise falls back to normal heap allocation;
+- the new C1 allocation smoke passes at
+  `/private/tmp/rift-hotspot-c1-region-smoke-patch8-20260517`;
+- interpreter object, region lifecycle, and flag-off baseline smokes pass
+  after Patch 8 at `/private/tmp/rift-hotspot-object-region-smoke-patch8-20260517`,
+  `/private/tmp/rift-hotspot-region-smoke-patch8-20260517`, and
+  `/private/tmp/rift-hotspot-smoke-patch8-20260517`.
 
 Patch 4 limitations:
 
@@ -306,11 +321,11 @@ Patch 5-6 accepted path:
   rejection, plus reflective, Unsafe, MethodHandle setter, and anonymous
   closure capture routes in the covered subset.
 
-Next concrete step: extend reference safety beyond the current interpreter plus
-Unsafe/JNI plus explicit verifier subset. Add tests and VM checks for C1/C2
-barriers, native stores outside the guarded entrypoints, supported
-region-to-heap bridges, and GC/safepoint behavior before making any JVM
-backend safety or performance claim. Patch 7 is an API-boundary stale-use
-verifier, not a general object-use barrier; automatic stale-use protection
-still needs a dedicated Rift lowering pattern or a deeper
+Next concrete step: extend reference safety beyond the current interpreter,
+C1 allocation, Unsafe/JNI, and explicit verifier subset. Add tests and VM
+checks for C1/C2 compiled stores, C2 allocation, native stores outside the
+guarded entrypoints, supported region-to-heap bridges, and GC/safepoint
+behavior before making any JVM backend safety or performance claim. Patch 7 is
+an API-boundary stale-use verifier, not a general object-use barrier; automatic
+stale-use protection still needs a dedicated Rift lowering pattern or a deeper
 barrier/deoptimization design after the GC/safepoint plan is clearer.

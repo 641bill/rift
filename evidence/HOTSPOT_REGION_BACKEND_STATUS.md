@@ -1,9 +1,9 @@
 # HotSpot Region Backend Status
 
 Date: 2026-05-17
-Last updated: 2026-05-17 22:31 CEST
+Last updated: 2026-05-17 23:18 CEST
 
-Status: VM-fork Patch 1-7 evidence. Patch 4 proves a narrow
+Status: VM-fork Patch 1-8 evidence. Patch 4 proves a narrow
 interpreter-only ordinary-object allocation prototype for explicitly
 registered final primitive-field classes. Patch 5 adds an interpreter oop-store
 guard that rejects heap retention of live region objects for static fields,
@@ -11,9 +11,11 @@ object arrays, and object fields in the supported subset. Patch 6 extends store
 guards to Unsafe/JNI object-store entrypoints used by reflection and low-level
 libraries. Patch 7 adds an explicit `verifyLive` VM hook for API-boundary
 stale-use checks and teaches store guards to reject closed region objects.
+Patch 8 adds conservative C1 allocation through the runtime allocation stub.
 This is still not a performance-ready JVM Rift backend because GC integration,
-C1/C2 paths, arrays as region allocations, reference fields inside region
-objects, and automatic broad post-close stale-use handling are not implemented.
+C1/C2 compiled store barriers, C2 allocation, arrays as region allocations,
+reference fields inside region objects, and automatic broad post-close
+stale-use handling are not implemented.
 
 ## Scaffold
 
@@ -123,6 +125,12 @@ Current branch and commit:
 
 ```text
 rift-jdk25
+8cd8da1a443 Add C1 Rift region allocation path
+```
+
+Patch 7 base commit:
+
+```text
 c455daa9cef Add Rift verifyLive VM hook
 ```
 
@@ -676,11 +684,75 @@ Patch 7 limitations:
   GC scanning, arrays, reference fields, and bridge/root rules remain future
   work.
 
+## Patch 8: C1 Region Allocation
+
+Patch file:
+
+`experimental/hotspot-rift/patches/06-c1-region-allocation.patch`
+
+Implementation:
+
+- C1 disables inline fast allocation while `-XX:+UseRiftRegions` is enabled;
+- C1 `new` bytecodes route through the existing `Runtime1::new_instance` stub;
+- `Runtime1::new_instance` asks `RiftRegionRuntime::allocate_instance` first
+  when the Java thread has an active Rift region;
+- unregistered or unsupported classes still fall back to normal heap
+  allocation in this prototype;
+- added `RiftHotSpotC1RegionAllocationSmoke` and
+  `experimental/hotspot-rift/scripts/run_c1_object_region_smoke.sh`.
+
+Validation commands:
+
+```text
+HOTSPOT_RIFT_DEVKIT=/Users/siyaoliu/rift/cache/openjdk-rift/build/devkit/Xcode26.5-MacOSX26 \
+  experimental/hotspot-rift/scripts/build_openjdk.sh
+
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-c1-region-smoke-patch8-20260517 \
+  experimental/hotspot-rift/scripts/run_c1_object_region_smoke.sh
+
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-object-region-smoke-patch8-20260517 \
+  experimental/hotspot-rift/scripts/run_object_region_smoke.sh
+
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-region-smoke-patch8-20260517 \
+  experimental/hotspot-rift/scripts/run_region_smoke.sh
+
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-smoke-patch8-20260517 \
+  experimental/hotspot-rift/scripts/run_baseline_smoke.sh
+```
+
+Validation results:
+
+| Smoke | Output | Result |
+|---|---|---|
+| C1 region allocation | `/private/tmp/rift-hotspot-c1-region-smoke-patch8-20260517` | `c1-allocation-ok` |
+| Interpreter object allocation + safety subset | `/private/tmp/rift-hotspot-object-region-smoke-patch8-20260517` | `object-enabled-ok` |
+| Region lifecycle | `/private/tmp/rift-hotspot-region-smoke-patch8-20260517` | `disabled-ok`, `enabled-ok` |
+| Flag-off baseline | `/private/tmp/rift-hotspot-smoke-patch8-20260517` | checksum `7351360`, output `1000000`, internal elapsed `12.124 ms`, external `0.10 s`, max RSS `88752128` bytes |
+
+Patch 8 smoke coverage:
+
+- the `allocateOne` helper is warmed and then run with C1-only compilation
+  settings;
+- inside an active Rift region, `10000` registered final primitive-field
+  records allocate through C1 into region memory;
+- active records pass `RiftRegion.verifyLive`;
+- region stats report `10000` object allocations and nonzero used bytes.
+
+Patch 8 limitations:
+
+- this is a correctness-first C1 route and disables C1 inline fast allocation
+  under `UseRiftRegions`;
+- C1 compiled stores are not guarded yet;
+- C2 allocation and C2 compiled stores are not covered;
+- GC/safepoint integration remains absent, so no JVM performance claim should
+  be made from this patch.
+
 ## Next Required Step
 
-1. Extend Patch 7 safety beyond the interpreter plus Unsafe/JNI plus explicit
-   verifier subset: C1/C2 barriers, native stores outside guarded entrypoints,
-   and automatic stale post-close use where required.
+1. Extend Patch 8 safety beyond the interpreter plus C1 allocation plus
+   Unsafe/JNI plus explicit verifier subset: C1/C2 compiled stores, C2
+   allocation, native stores outside guarded entrypoints, and automatic stale
+   post-close use where required.
 2. Decide the first supported bridge/root rule for JVM region-to-heap
    references before allowing reference fields.
 3. Add GC/safepoint integration before any region object may survive a

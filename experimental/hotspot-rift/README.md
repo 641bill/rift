@@ -1,8 +1,8 @@
 # HotSpot Rift Experiment
 
-Last updated: 2026-05-17 22:31 CEST
+Last updated: 2026-05-17 23:18 CEST
 
-Status: scaffold and exported Patch 1-7 artifacts for the custom HotSpot
+Status: scaffold and exported Patch 1-8 artifacts for the custom HotSpot
 VM-fork backend. This directory does not contain an OpenJDK checkout. It
 contains the scripts, patch notes, exported patches, and smoke tests used to
 create and validate one.
@@ -24,9 +24,11 @@ heap fallback.
 | `scripts/run_baseline_smoke.sh` | Run the Java smoke workload on a selected JDK. |
 | `scripts/run_region_smoke.sh` | Run active/closed handle and raw arena lifecycle smoke. |
 | `scripts/run_object_region_smoke.sh` | Run ordinary-object allocation and heap-retention rejection smoke. |
+| `scripts/run_c1_object_region_smoke.sh` | Run the conservative C1 region-allocation smoke. |
 | `tests/java/RiftHotSpotBaselineSmoke.java` | Baseline retained-object workload for stock/patched JDKs. |
 | `tests/java/RiftHotSpotRegionSmoke.java` | Region lifecycle smoke. |
 | `tests/java/RiftHotSpotObjectRegionSmoke.java` | Object-region allocation and store-guard smoke. |
+| `tests/java/RiftHotSpotC1RegionAllocationSmoke.java` | C1 allocation smoke for registered primitive-field records. |
 | `patches/README.md` | First HotSpot patch roadmap. |
 
 ## Default Locations
@@ -110,6 +112,13 @@ HOTSPOT_RIFT_JAVA=/Users/siyaoliu/rift/cache/openjdk-rift/build/rift-fastdebug/j
   experimental/hotspot-rift/scripts/run_object_region_smoke.sh
 ```
 
+Run C1 allocation smoke with a built JDK:
+
+```sh
+HOTSPOT_RIFT_JAVA=/Users/siyaoliu/rift/cache/openjdk-rift/build/rift-fastdebug/jdk/bin/java \
+  experimental/hotspot-rift/scripts/run_c1_object_region_smoke.sh
+```
+
 ## Claim Discipline
 
 The current patched HotSpot is a prototype. It proves a narrow interpreter-mode
@@ -118,5 +127,7 @@ classes, plus heap-retention rejection for the covered interpreter,
 Unsafe/JNI, reflection, MethodHandle, and closure-capture smoke routes. It does
 not yet prove broad JVM Rift safety or performance. Patch 7 adds an explicit
 `RiftRegion.verifyLive(Object)` test hook for API-boundary stale-use checks,
-but GC scanning, C1/C2 paths, reference fields, arrays as region allocations,
-bridge/root rules, and automatic arbitrary stale-use barriers remain open.
+and Patch 8 adds conservative C1 allocation through the runtime stub for
+eligible records. GC scanning, C1/C2 compiled store barriers, C2 allocation,
+reference fields, arrays as region allocations, bridge/root rules, and
+automatic arbitrary stale-use barriers remain open.
