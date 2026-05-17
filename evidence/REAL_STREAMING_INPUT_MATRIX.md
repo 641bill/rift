@@ -1,7 +1,7 @@
 # Real Streaming Input Matrix
 
 Date: 2026-05-11
-Last updated: 2026-05-17 23:38 CEST
+Last updated: 2026-05-17 23:47 CEST
 
 Status: started. This matrix records only rows that satisfy the
 `real-streaming-input` protocol: no full-input preload, incremental source
@@ -102,14 +102,25 @@ Implementation:
 | `checked-epoch-scoped` | `0.91` | `296.119` | `0.000` | `12943360` | `1000000` | `8501908365116000626` |
 | `checked-epoch-stream` | `0.90` | `294.197` | `0.000` | `12943360` | `1000000` | `8501908365116000626` |
 
+5M compressed-streaming scale-up:
+
+| Mode | L1 external s | L1 RSS bytes | L2 median ms | Median GC ms | Region op ms | Records | Checksum |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `gc-heap` | `6.74` | `41091072` | `2109.524` | `27.237` | `0.000` | `5000000` | `-1661295494911249805` |
+| `region-scoped-rooted` | `6.39` | `15122432` | `2075.720` | `0.000` | `0.000` | `5000000` | `-1661295494911249805` |
+| `checked-epoch-stream` | `6.42` | `15040512` | `2066.016` | `0.000` | `0.264` | `5000000` | `-1661295494911249805` |
+| `checked-epoch-scoped` | `6.23` | `15007744` | `2061.736` | `0.000` | `0.000` | `5000000` | `-1661295494911249805` |
+
 Interpretation:
 
 - This is a true `real-streaming-input` row: the XML file is consumed during
   the benchmark and no full replay token array is retained.
 - It is not GC-heavy at this scale. Heap median timed GC is `3.677 ms` on a
-  `301.923 ms` L2 loop, so parser/token scanning remains the dominant cost.
+  `301.923 ms` L2 loop at 1M and `27.237 ms` on a `2109.524 ms` L2 loop at
+  5M, so parser/token scanning remains the dominant cost.
 - Checked epoch rows still remove timed heap GC, reduce L1 RSS from about
-  `39.6 MB` to `13.0 MB`, and improve median L1 elapsed by about `5-6%`.
+  `39.6 MB` to `13.0 MB` at 1M and from about `41 MB` to `15 MB` at 5M,
+  while improving median L1 elapsed by about `5-8%`.
   Classify as
   modest real-streaming-input RSS/fixed-memory evidence, not as the flagship
   GC-heavy stream case study.
