@@ -37,6 +37,9 @@ safe_paths=(
   "$ROOT/cache/benchmark-data/loghub/Spark"
   "$ROOT/cache/benchmark-data/common-crawl/CC-MAIN-2026-17/CC-MAIN-20260410081153-20260410111153-00000.warc.wet"
   "$ROOT/cache/benchmark-data/common-crawl/CC-MAIN-2026-17/CC-MAIN-20260410081153-20260410111153-00000.warc.wat"
+  "$ROOT/cache/benchmark-data/common-crawl/CC-MAIN-2026-17/wet.paths.txt"
+  "$ROOT/cache/benchmark-data/common-crawl/CC-MAIN-2026-17/wat.paths.txt"
+  "$ROOT/cache/benchmark-data/common-crawl/CC-MAIN-2026-17/warc.paths.txt"
   "$ROOT/cache/benchmark-data/linear-road/test-data"
   "$ROOT/cache/benchmark-data/theodolite/real-power/household_power_consumption.txt"
 )
@@ -47,9 +50,30 @@ done
 if [[ "${RIFT_CLEAN_REGENERABLE:-0}" == "1" ]]; then
   echo
   echo "## Regenerable DBGEN TPC-H scale data"
+  echo "Broom Q17 can now generate temporary DBGEN part/lineitem tables per run"
+  echo "with BROOM_Q17_INPUT_MODE=tpch-dbgen, so cached TPC-H table directories"
+  echo "are optional."
   for path in "$ROOT/cache"/tpch-sf*; do
     say_action "$path"
   done
+fi
+
+if [[ "${RIFT_CLEAN_DERIVED_ARCHIVE_INPUTS:-0}" == "1" ]]; then
+  echo
+  echo "## Derived archive-member inputs"
+  echo "Delete these only after using the original compressed archive specs:"
+  echo "- YAK_TEXT_INPUT=7z:.../askubuntu.com.7z!Posts.xml"
+  echo "- RIOTBENCH_INPUT=zipdir:.../mhealth_dataset.zip!MHEALTHDATASET"
+  say_action "$ROOT/cache/benchmark-data/yak/stackexchange/askubuntu-Posts.xml.gz"
+  say_action "$ROOT/cache/benchmark-data/riot-bench/mhealth/MHEALTHDATASET"
+fi
+
+if [[ "${RIFT_CLEAN_DSPBENCH_SOURCE:-0}" == "1" ]]; then
+  echo
+  echo "## DSPBench expanded source checkout"
+  echo "Delete only after the pinned DSPBench source ZIP is present and runners"
+  echo "use zip:...!member specs."
+  say_action "$ROOT/cache/benchmark-data/dspbench/source"
 fi
 
 if [[ "${RIFT_CLEAN_TAXI:-0}" == "1" ]]; then
@@ -74,6 +98,8 @@ Useful follow-ups:
 
 - RIFT_CLEAN_DATA=1 scripts/cleanup-benchmark-data.sh
 - RIFT_CLEAN_DATA=1 RIFT_CLEAN_REGENERABLE=1 scripts/cleanup-benchmark-data.sh
+- RIFT_CLEAN_DATA=1 RIFT_CLEAN_DERIVED_ARCHIVE_INPUTS=1 scripts/cleanup-benchmark-data.sh
+- RIFT_CLEAN_DATA=1 RIFT_CLEAN_DSPBENCH_SOURCE=1 scripts/cleanup-benchmark-data.sh
 - RIFT_CLEAN_DATA=1 RIFT_CLEAN_TAXI=1 scripts/cleanup-benchmark-data.sh
 - RIFT_CLEAN_DATA=1 RIFT_CLEAN_OPENJDK=1 scripts/cleanup-benchmark-data.sh
 EOF

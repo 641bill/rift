@@ -45,6 +45,8 @@ Archive members can be streamed without extracting the full dataset:
 
 - tar.gz:/absolute/path/archive.tar.gz!member/path/in/archive
 - zip:/absolute/path/archive.zip!member/path/in/archive
+- 7z:/absolute/path/archive.7z!member/path/in/archive
+- zipdir:/absolute/path/archive.zip!directory/prefix
 
 Examples:
 
@@ -52,8 +54,10 @@ Examples:
 - tar.gz:/Users/siyaoliu/rift/cache/benchmark-data/loghub/HDFS_1.tar.gz!HDFS.log
 - tar.gz:/Users/siyaoliu/rift/cache/benchmark-data/loghub/BGL.tar.gz!BGL.log
 - zip:/Users/siyaoliu/rift/cache/benchmark-data/theodolite/real-power/household_power_consumption.zip!household_power_consumption.txt
-- /Users/siyaoliu/rift/cache/benchmark-data/yak/stackexchange/askubuntu-Posts.xml.gz
-- /Users/siyaoliu/rift/cache/tpch-sf1/lineitem.tbl.gz
+- 7z:/Users/siyaoliu/rift/cache/benchmark-data/yak/stackexchange/askubuntu.com.7z!Posts.xml
+- zip:/Users/siyaoliu/rift/cache/benchmark-data/dspbench/DSPBench-00c20da828faf2b960fdb697c61d34cb25461875.zip!DSPBench-00c20da828faf2b960fdb697c61d34cb25461875/dspbench-threads/data/credit-card.dat
+- zipdir:/Users/siyaoliu/rift/cache/benchmark-data/riot-bench/mhealth/mhealth_dataset.zip!MHEALTHDATASET
+- BROOM_Q17_INPUT_MODE=tpch-dbgen BROOM_TPCH_SCALE=1 zsh /Users/siyaoliu/rift/scala-native-rift/sandbox/run_broom_retained_dataflow_matrix.sh
 - /Users/siyaoliu/rift/cache/benchmark-data/debs2015/trip_data.7z
 - /Users/siyaoliu/rift/cache/benchmark-data/debs2015/trip_fare.7z
 EOF

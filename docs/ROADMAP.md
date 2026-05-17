@@ -1,9 +1,39 @@
 # Rift Roadmap
 
-Last updated: 2026-05-17 12:03 CEST
+Last updated: 2026-05-17 15:36 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
+
+Latest HotSpot backend checkpoint:
+The OpenJDK/HotSpot fork now has Patch 1-3 implemented and exported as
+`experimental/hotspot-rift/patches/01-rift-region-stubs.patch`. The macOS
+devkit is
+`/Users/siyaoliu/rift/cache/openjdk-rift/build/devkit/Xcode26.5-MacOSX26`;
+the patched fastdebug JDK is
+`/Users/siyaoliu/rift/cache/openjdk-rift/build/rift-fastdebug/jdk/bin/java`.
+The patch adds `-XX:+UseRiftRegions`, an internal
+`jdk.internal.rift.RiftRegion` test surface, `JavaThread` current-region state,
+active/closed handle checks, and a raw VM-owned bump/reset arena with stats.
+Region smoke passed at `/private/tmp/rift-hotspot-region-smoke-20260517`, and
+flag-off baseline smoke after patch passed at
+`/private/tmp/rift-hotspot-smoke-after-rift-20260517`. HotSpot work can now
+move to Patch 4: interpreter-only ordinary-object allocation for a narrow
+final/simple primitive-field class subset. This is still prototype VM backend
+work; Scala Native remains the validated performance backend.
+
+Latest benchmark-data footprint update:
+Extraction-free local input support now covers AskUbuntu `7z:` member
+streaming, RIoTBench/MHEALTH `zipdir:` streaming from the original UCI ZIP, and
+Broom Q17 temporary DBGEN generation via `BROOM_Q17_INPUT_MODE=tpch-dbgen`.
+That means cached TPC-H table directories, the derived AskUbuntu
+`Posts.xml.gz`, and extracted MHEALTH subject logs are no longer required for
+future runs once the archive-member specs are used. Cleanup remains opt-in
+through `scripts/cleanup-benchmark-data.sh`.
+DSPBench now follows the same extraction-free rule: `DSPBenchRegionMatrix` and
+the L4 profile sweep read Spike/Fraud/Log sample inputs from the pinned
+`GMAP/DSPBench` source ZIP with `zip:/archive!member` specs. The expanded
+checkout has been removed after archive-backed validation.
 
 Latest report/HTML normalization:
 `docs/PERFORMANCE_EVALUATION_REPORT.md` is the normalized narrative source for
@@ -156,15 +186,33 @@ is stable:
 | Backend track | Roadmap status | Intended first experiment |
 |---|---|---|
 | Scala Native | Active / validated | Continue checked region runtime, no-zero proof, Broom/StreamFlex/Yak/Stancu evidence. |
-| JVM | Planned | Same `RiftRegion.epoch`-style API and checks; lower selected record-like classes to pools/arenas or reusable buffers, with normal heap fallback. |
+| JVM library | Prototype | Same `RiftRegion.epoch`-style API and checks; lower selected record-like classes to pools/arenas or reusable buffers, with normal heap fallback. |
+| HotSpot VM fork | Planned | Allocate ordinary JVM object layouts in VM-known Rift region memory and bulk-close them when capture/separation checks prove safety. |
 | Scala.js | Planned | Preserve API/checking and test object-pooling/reuse as an allocation-reduction backend. |
 | Wasm | Planned | Lower region-shaped data to linear-memory arenas and bump/reset allocation. |
 | Analysis-only | Planned | Enforce capture/separation rules but allocate normally; useful for safety portability. |
 
-Do not claim JVM/Scala.js/Wasm support until prototypes exist. The immediate
-reason to track these backends is conceptual: Scala Native Immix may remain a
-strong enough baseline that some public real-input streams are not GC-heavy,
-while the front-end safety/topology contribution should be portable.
+Do not claim Scala.js/Wasm support until prototypes exist, and do not claim
+ordinary-object JVM regions until a HotSpot fork demonstrates them. The
+immediate reason to track these backends is conceptual: Scala Native Immix may
+remain a strong enough baseline that some public real-input streams are not
+GC-heavy, while the front-end safety/topology contribution should be portable.
+The ordinary-object JVM plan is now explicitly a VM research track in
+`docs/HOTSPOT_REGION_BACKEND_PLAN.md`, separate from the portable JVM library
+prototype. A credible first HotSpot milestone is: VM-known region memory,
+normal object layout allocation, checked rejection of heap-retains-region and
+use-after-close, bulk close without tracing every object, and one
+retained-object benchmark showing lower GC/RSS/tail behavior than natural
+heap/GC.
+The first execution scaffold is now present under
+`experimental/hotspot-rift/**`. Follow-up: `autoconf` is installed, OpenJDK is
+cloned on branch `rift-jdk25` at commit
+`6c48f4ed707bf0b15f9b6098de30db8aae6fa40f`, the Xcode-derived devkit builds a
+JDK 25 fastdebug image, and Patch 1-3 now proves the guarded VM control plane:
+`UseRiftRegions`, internal region entrypoints, thread-current region state,
+active/closed handles, raw arena stats, and flag-off baseline behavior. The
+next HotSpot action is Patch 4 ordinary-object allocation for a narrow
+interpreter-only eligible class subset.
 `docs/IMMIX_REGION_COMPARISON.md` now records the mechanism argument: Immix is
 already a mark-region collector with bump-style allocation and line/block
 reclamation, so it can hide GC pressure on short-lived parser/filter/count

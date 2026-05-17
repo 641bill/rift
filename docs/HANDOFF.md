@@ -1,13 +1,31 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-17 13:45 CEST
+Last updated: 2026-05-17 15:36 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
 
 Active implementation branch for this update:
 `feature/rift`
+
+Latest HotSpot backend checkpoint:
+Patch 1-3 of the custom HotSpot fork is implemented and exported as
+`experimental/hotspot-rift/patches/01-rift-region-stubs.patch`. The patch adds
+the guarded experimental `-XX:+UseRiftRegions` flag, internal
+`jdk.internal.rift.RiftRegion` test surface, `JavaThread` current-region state,
+active/closed region handle checks, and a VM-owned raw bump/reset arena with
+stats. The patched JDK 25 fastdebug image builds at
+`/Users/siyaoliu/rift/cache/openjdk-rift/build/rift-fastdebug/jdk/bin/java`.
+Region smoke passed at `/private/tmp/rift-hotspot-region-smoke-20260517`
+(`disabled-ok`, `enabled-ok`), and flag-off retained-object baseline smoke
+after the patch passed at `/private/tmp/rift-hotspot-smoke-after-rift-20260517`
+with checksum `7351360`, output `1000000`, internal elapsed `109.222 ms`,
+external `0.82 s` real, and max RSS `157515776` bytes. This is VM control-plane
+evidence only: no ordinary JVM `new` bytecode is redirected yet. Next HotSpot
+step is Patch 4, interpreter-only allocation for eligible final/simple
+primitive-field classes under `-Xint -XX:+UseSerialGC -XX:-UseCompressedOops
+-XX:-UseCompactObjectHeaders`.
 
 Latest data-footprint cleanup:
 `evidence/DATA_FOOTPRINT_AND_STREAMING_PLAN.md` records the local benchmark
@@ -28,6 +46,36 @@ now accepts `.log.gz`. New helper scripts:
 `scripts/benchmark-data-footprint.sh` lists large local inputs, and
 `scripts/cleanup-benchmark-data.sh` dry-runs deletion of extracted duplicates;
 set `RIFT_CLEAN_DATA=1` only when intentionally deleting.
+
+Latest extraction-free input wiring:
+`BenchmarkInputSupport` now also supports `7z:/archive!member` input specs and
+`zipdir:/archive.zip!directory` expansion for multi-file ZIP datasets. The
+AskUbuntu Yak text row can therefore stream the original StackExchange archive
+directly with
+`YAK_TEXT_INPUT='7z:/Users/siyaoliu/rift/cache/benchmark-data/yak/stackexchange/askubuntu.com.7z!Posts.xml'`,
+and RIoTBench/MHEALTH can stream the original ZIP with
+`RIOTBENCH_INPUT='zipdir:/Users/siyaoliu/rift/cache/benchmark-data/riot-bench/mhealth/mhealth_dataset.zip!MHEALTHDATASET'`.
+The Broom Q17 runner now supports `BROOM_Q17_INPUT_MODE=tpch-dbgen`, which
+generates DBGEN `part.tbl` and `lineitem.tbl` into a temporary directory before
+the timed benchmark process, streams those generated tables through the
+existing TPC-H file mode, and deletes the temporary files after each matrix
+case. Validation smokes passed for Broom q17 DBGEN temp input, Yak AskUbuntu
+`7z:` streaming, and RIoTBench MHEALTH `zipdir:` input. The remaining derived
+copies can be removed later with:
+`RIFT_CLEAN_DATA=1 RIFT_CLEAN_REGENERABLE=1 scripts/cleanup-benchmark-data.sh`
+for cached TPC-H tables, and
+`RIFT_CLEAN_DATA=1 RIFT_CLEAN_DERIVED_ARCHIVE_INPUTS=1 scripts/cleanup-benchmark-data.sh`
+for AskUbuntu `Posts.xml.gz` plus extracted MHEALTH logs.
+
+DSPBench source-footprint update:
+The expanded `GMAP/DSPBench` checkout has been replaced for benchmark input
+purposes by the pinned source archive
+`/Users/siyaoliu/rift/cache/benchmark-data/dspbench/DSPBench-00c20da828faf2b960fdb697c61d34cb25461875.zip`.
+`DSPBenchRegionMatrix` and the L4 profile sweep now default to
+`zip:/archive!member` specs for Spike `sensors.dat`, Fraud `credit-card.dat`,
+and Log Processing `http-server.log`. Archive-backed smokes passed for Spike,
+Fraud, and Log q0; a post-delete Fraud q0 smoke also passed. The old expanded
+checkout was removed, leaving only the `380M` source ZIP.
 
 Latest report/HTML normalization:
 `docs/PERFORMANCE_EVALUATION_REPORT.md` remains the presentation source and
@@ -2260,8 +2308,9 @@ at full-file scale.
 Latest real-input benchmark-search checkpoint:
 `evidence/REAL_INPUT_BENCHMARK_SEARCH.md` now tracks the next flagship search
 for a real GC-heavy stream benchmark. The immediate candidate family is
-DSPBench, not another DEBS/TableRank tuning pass. `GMAP/DSPBench` is cloned in
-ignored cache at `/Users/siyaoliu/rift/cache/benchmark-data/dspbench/source`,
+DSPBench, not another DEBS/TableRank tuning pass. `GMAP/DSPBench` is stored in
+ignored cache as the pinned archive
+`/Users/siyaoliu/rift/cache/benchmark-data/dspbench/DSPBench-00c20da828faf2b960fdb697c61d34cb25461875.zip`,
 commit `00c20da828faf2b960fdb697c61d34cb25461875`. The first local
 single-process Spike Detection matrix is implemented in
 `scala-native-rift/sandbox/src/main/scala-next/DSPBenchRegionMatrix.scala`

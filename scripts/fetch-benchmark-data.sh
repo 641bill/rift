@@ -5,6 +5,7 @@ ROOT="${RIFT_ROOT:-/Users/siyaoliu/rift}"
 DATA_ROOT="${RIFT_BENCH_DATA_ROOT:-$ROOT/cache/benchmark-data}"
 MANIFEST="$DATA_ROOT/MANIFEST.md"
 BEAM_VERSION="${RIFT_BEAM_VERSION:-2.73.0}"
+DSPBENCH_COMMIT="${RIFT_DSPBENCH_COMMIT:-00c20da828faf2b960fdb697c61d34cb25461875}"
 
 mkdir -p "$DATA_ROOT"
 
@@ -29,10 +30,16 @@ extract_benchmark_data_enabled() {
 }
 
 bytes() {
-  if [[ -d "$1" ]]; then
+  local path="$1"
+  if [[ "$path" == *:*"!"* ]]; then
+    path="${path#*:}"
+    path="${path%%!*}"
+  fi
+
+  if [[ -d "$path" ]]; then
     printf 'directory'
-  elif [[ -e "$1" ]]; then
-    wc -c < "$1" | tr -d ' '
+  elif [[ -e "$path" ]]; then
+    wc -c < "$path" | tr -d ' '
   else
     printf 'missing'
   fi
@@ -261,16 +268,23 @@ fetch_theodolite() {
 
 fetch_dspbench() {
   if [[ "${RIFT_FETCH_DSPBENCH_SOURCE:-0}" != "1" ]]; then
-    echo "skip     DSPBench source; set RIFT_FETCH_DSPBENCH_SOURCE=1 to clone it"
+    echo "skip     DSPBench source archive; set RIFT_FETCH_DSPBENCH_SOURCE=1 to fetch it"
     return
   fi
 
-  local dir="$DATA_ROOT/dspbench/source"
-  if [[ -d "$dir/.git" ]]; then
-    echo "present  $dir"
+  local archive="$DATA_ROOT/dspbench/DSPBench-$DSPBENCH_COMMIT.zip"
+  fetch "https://github.com/GMAP/DSPBench/archive/${DSPBENCH_COMMIT}.zip" "$archive"
+
+  if [[ "${RIFT_FETCH_DSPBENCH_CLONE:-0}" == "1" ]]; then
+    local dir="$DATA_ROOT/dspbench/source"
+    if [[ -d "$dir/.git" ]]; then
+      echo "present  $dir"
+    else
+      mkdir -p "$(dirname "$dir")"
+      git clone --depth 1 https://github.com/GMAP/DSPBench.git "$dir"
+    fi
   else
-    mkdir -p "$(dirname "$dir")"
-    git clone --depth 1 https://github.com/GMAP/DSPBench.git "$dir"
+    echo "archive  $archive; set RIFT_FETCH_DSPBENCH_CLONE=1 only if the expanded checkout is needed"
   fi
 }
 
@@ -376,10 +390,12 @@ EOF
   record "SNAP Twitter-2010 graph" "$DATA_ROOT/yak/snap/twitter-2010.txt.gz" "https://snap.stanford.edu/data/twitter-2010.html"
   record "Stack Overflow Posts archive" "$DATA_ROOT/yak/stackexchange/stackoverflow.com-Posts.7z" "https://archive.org/download/stackexchange"
   record "Theodolite source clone" "$DATA_ROOT/theodolite/source" "https://github.com/cau-se/theodolite"
-  record "DSPBench source clone" "$DATA_ROOT/dspbench/source" "https://github.com/GMAP/DSPBench"
-  record "DSPBench Spike Detection sample" "$DATA_ROOT/dspbench/source/dspbench-threads/data/sensors.dat" "https://github.com/GMAP/DSPBench"
-  record "DSPBench Fraud Detection sample" "$DATA_ROOT/dspbench/source/dspbench-threads/data/credit-card.dat" "https://github.com/GMAP/DSPBench"
-  record "DSPBench Bargain Index sample" "$DATA_ROOT/dspbench/source/dspbench-threads/data/stocks.csv" "https://github.com/GMAP/DSPBench"
+  record "DSPBench source archive" "$DATA_ROOT/dspbench/DSPBench-$DSPBENCH_COMMIT.zip" "https://github.com/GMAP/DSPBench/archive/$DSPBENCH_COMMIT.zip"
+  record "DSPBench source clone, optional expanded checkout" "$DATA_ROOT/dspbench/source" "https://github.com/GMAP/DSPBench"
+  record "DSPBench Spike Detection archive member" "zip:$DATA_ROOT/dspbench/DSPBench-$DSPBENCH_COMMIT.zip!DSPBench-$DSPBENCH_COMMIT/dspbench-threads/data/sensors.dat" "https://github.com/GMAP/DSPBench"
+  record "DSPBench Fraud Detection archive member" "zip:$DATA_ROOT/dspbench/DSPBench-$DSPBENCH_COMMIT.zip!DSPBench-$DSPBENCH_COMMIT/dspbench-threads/data/credit-card.dat" "https://github.com/GMAP/DSPBench"
+  record "DSPBench Log Processing archive member" "zip:$DATA_ROOT/dspbench/DSPBench-$DSPBENCH_COMMIT.zip!DSPBench-$DSPBENCH_COMMIT/dspbench-spark/data/logprocessing/http-server.log" "https://github.com/GMAP/DSPBench"
+  record "DSPBench Bargain Index archive member" "zip:$DATA_ROOT/dspbench/DSPBench-$DSPBENCH_COMMIT.zip!DSPBench-$DSPBENCH_COMMIT/dspbench-threads/data/stocks.csv" "https://github.com/GMAP/DSPBench"
   record "RIoTBench source clone" "$DATA_ROOT/riot-bench/source" "https://github.com/dream-lab/riot-bench"
   record "RIoTBench bundled SYS SenML sample" "$DATA_ROOT/riot-bench/source/modules/tasks/src/main/resources/SYS_sample_data_senml.csv" "https://github.com/dream-lab/riot-bench"
   record "RIoTBench bundled TAXI SenML sample" "$DATA_ROOT/riot-bench/source/modules/tasks/src/main/resources/TAXI_sample_data_senml.csv" "https://github.com/dream-lab/riot-bench"

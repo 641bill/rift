@@ -1,7 +1,7 @@
 # Benchmark Data Sources
 
 Date: 2026-05-01
-Last updated: 2026-05-17 13:05 CEST
+Last updated: 2026-05-17 15:08 CEST
 
 Local data root:
 `/Users/siyaoliu/rift/cache/benchmark-data`
@@ -18,7 +18,9 @@ an extracted copy is explicitly needed. Benchmark inputs using
 archive members with:
 
 - `tar.gz:/absolute/path/archive.tar.gz!member/path`;
-- `zip:/absolute/path/archive.zip!member/path`.
+- `zip:/absolute/path/archive.zip!member/path`;
+- `7z:/absolute/path/archive.7z!member/path`;
+- `zipdir:/absolute/path/archive.zip!directory/prefix`.
 
 The current disk inventory and cleanup plan is in
 `evidence/DATA_FOOTPRINT_AND_STREAMING_PLAN.md`.
@@ -55,14 +57,15 @@ The current disk inventory and cleanup plan is in
 | SNAP Twitter ego graph | `/Users/siyaoliu/rift/cache/benchmark-data/yak/snap/twitter_combined.txt.gz` | 10634845 | Real SNAP Twitter ego-network combined edge list. Used for the first `YakRegionMatrix graphreal` row. SHA-256: `d9f99b0e6a53b9204b8c215f41b3c10fb99a1e1e783858c012b06d0d3d4bd129`. |
 | SNAP LiveJournal graph | `/Users/siyaoliu/rift/cache/benchmark-data/yak/snap/soc-LiveJournal1.txt.gz` | 259619239 | Real SNAP LiveJournal directed social graph, `68993777` edge-list lines. Used for larger `YakRegionMatrix graphreal` rows. SHA-256: `d7bcd5a87b88c896c35fdb9611e804c3f4033c39b58c4c9ea3ba53c680d516d8`. |
 | Stack Exchange AskUbuntu archive | `/Users/siyaoliu/rift/cache/benchmark-data/yak/stackexchange/askubuntu.com.7z` | 1071610861 | Public Stack Exchange data dump site archive, fetched from Internet Archive for Yak-style real text/top-word replay. SHA-256: `59632526b760472f0345347d30f478975a5a3c88206598d1420bb69b9ae5df4e`. |
-| Stack Exchange AskUbuntu Posts XML | `/Users/siyaoliu/rift/cache/benchmark-data/yak/stackexchange/askubuntu-Posts.xml` | 1400891844 | Extracted `Posts.xml` from `askubuntu.com.7z`, `945113` lines. Used by `YakRegionMatrix topwordreal` to tokenize real title/body text into replayed epoch-local word records. |
+| Stack Exchange AskUbuntu Posts XML, derived gzip | `/Users/siyaoliu/rift/cache/benchmark-data/yak/stackexchange/askubuntu-Posts.xml.gz` | 374724384 | Derived gzip copy of `Posts.xml` from `askubuntu.com.7z`, `945113` lines. Optional now that `YakRegionMatrix topwordreal` can stream `7z:/Users/siyaoliu/rift/cache/benchmark-data/yak/stackexchange/askubuntu.com.7z!Posts.xml`. |
 | Theodolite source clone | `/Users/siyaoliu/rift/cache/benchmark-data/theodolite/source` | directory | Ignored local clone of `cau-se/theodolite`; inspected commit `dfa768a25eec3c3f5a57b7d4839a0c255fd6fa7d`. Theodolite provides official UC2/UC4 stream benchmark methodology and load generators, but no static real input file in the repo. |
 | UCI Household Electric Power Consumption archive | `/Users/siyaoliu/rift/cache/benchmark-data/theodolite/real-power/household_power_consumption.zip` | 20640916 | Public real household power-meter trace used as the real-input source for `TheodolitePowerRegionMatrix`. SHA-256: `9f84b46ade8a2d8e1286ec4b2b6c2987a45a755c59f263be3b3b3d10dfbda3ff`. |
 | UCI Household Electric Power Consumption text | `/Users/siyaoliu/rift/cache/benchmark-data/theodolite/real-power/household_power_consumption.txt` | 132960755 | Extracted semicolon-separated power trace, `2075260` lines including header. The current Theodolite-style parser loads `2049280` usable records after skipping missing values. |
-| DSPBench source clone | `/Users/siyaoliu/rift/cache/benchmark-data/dspbench/source` | directory | Ignored local clone of `GMAP/DSPBench` for real-input stream benchmark triage; inspected commit `00c20da828faf2b960fdb697c61d34cb25461875`. |
+| DSPBench source archive | `/Users/siyaoliu/rift/cache/benchmark-data/dspbench/DSPBench-00c20da828faf2b960fdb697c61d34cb25461875.zip` | 398741181 | Pinned `GMAP/DSPBench` GitHub source archive for real-input stream benchmark triage. SHA-256: `aba3711861cb2f663b0e184cac794df32de0dcd71e05a4b4a5d0e03cc49a33a5`. The runners now stream `sensors.dat`, `credit-card.dat`, and `http-server.log` with `zip:/archive!member` specs, so the expanded checkout is optional. |
+| DSPBench source clone, optional | `/Users/siyaoliu/rift/cache/benchmark-data/dspbench/source` | removed | Optional expanded checkout of `GMAP/DSPBench` at commit `00c20da828faf2b960fdb697c61d34cb25461875`; removed after archive-backed smokes passed. |
 | RIoTBench source clone | `/Users/siyaoliu/rift/cache/benchmark-data/riot-bench/source` | directory | Ignored local clone of `dream-lab/riot-bench`; inspected commit `c86414f7f926ed5ae0fab756bb3d82fbfb6e5bf7`. |
 | UCI MHEALTH archive | `/Users/siyaoliu/rift/cache/benchmark-data/riot-bench/mhealth/mhealth_dataset.zip` | 75503476 | Public MHEALTH sensor dataset used as the RIoTBench FIT-style real-input candidate. SHA-256: `16ad0ce709f3f00df18f348610d15bce0884b79e2143f57f446493673f02b8e0`. |
-| UCI MHEALTH extracted logs | `/Users/siyaoliu/rift/cache/benchmark-data/riot-bench/mhealth/MHEALTHDATASET` | directory | Ten real subject logs, `1215745` total rows, `216M` extracted. |
+| UCI MHEALTH extracted logs, derived gzip | `/Users/siyaoliu/rift/cache/benchmark-data/riot-bench/mhealth/MHEALTHDATASET` | directory | Ten real subject logs, `1215745` total rows, now stored as derived `.log.gz` files. Optional now that `RiotBenchRegionMatrix` can stream the original ZIP with `zipdir:/Users/siyaoliu/rift/cache/benchmark-data/riot-bench/mhealth/mhealth_dataset.zip!MHEALTHDATASET`. |
 
 All downloaded `.gz` files passed `gzip -t`. The Linear Road and LogHub
 tarballs were checked with `tar -tzf` or successfully extracted. The Apache
@@ -158,8 +161,9 @@ Those directories are also ignored by git.
   `TheodolitePowerRegionMatrix`, so those rows are real-input
   Theodolite-style methodology evidence rather than official Theodolite
   artifact reproduction.
-- DSPBench source has now been cloned into ignored cache, and Spike Detection
-  plus Fraud Detection are wired into `DSPBenchRegionMatrix`. The bundled
+- DSPBench source is now stored as a pinned GitHub source ZIP in ignored cache,
+  and Spike Detection, Fraud Detection, and Log Processing are wired into
+  `DSPBenchRegionMatrix` with `zip:/archive!member` specs. The bundled
   `dspbench-threads` data includes `sensors.dat` (`79999` usable lines in the
   local parser), `credit-card.dat` (`185000` lines), and `stocks.csv`
   (`411` lines). Treat replayed rows as real-record replay, not fresh
@@ -199,13 +203,17 @@ The first wiring pass is now implemented in the Scala Native sandbox:
   real LogHub `.log` files. First validated input:
   `/Users/siyaoliu/rift/cache/benchmark-data/loghub/BGL/BGL.log`.
 - `DSPBenchRegionMatrix` now runs Spike Detection q0/q1/q2 over
-  `/Users/siyaoliu/rift/cache/benchmark-data/dspbench/source/dspbench-threads/data/sensors.dat`.
+  `zip:/Users/siyaoliu/rift/cache/benchmark-data/dspbench/DSPBench-00c20da828faf2b960fdb697c61d34cb25461875.zip!DSPBench-00c20da828faf2b960fdb697c61d34cb25461875/dspbench-threads/data/sensors.dat`.
   It also runs Fraud Detection q0/q1/q2 over
-  `/Users/siyaoliu/rift/cache/benchmark-data/dspbench/source/dspbench-threads/data/credit-card.dat`.
-  Fraud q2 is the strongest DSPBench real-input row so far, but checked scoped
-  page-token remains speed-gated.
-- `RiotBenchRegionMatrix` now accepts `RIOTBENCH_INPUT_KIND=mhealth` and a
-  directory path:
-  `/Users/siyaoliu/rift/cache/benchmark-data/riot-bench/mhealth/MHEALTHDATASET`.
+  `zip:/Users/siyaoliu/rift/cache/benchmark-data/dspbench/DSPBench-00c20da828faf2b960fdb697c61d34cb25461875.zip!DSPBench-00c20da828faf2b960fdb697c61d34cb25461875/dspbench-threads/data/credit-card.dat`
+  and Log Processing over the archive member
+  `dspbench-spark/data/logprocessing/http-server.log`. Fraud q2 is the
+  strongest DSPBench real-input row so far, but checked scoped page-token
+  remains speed-gated.
+- `RiotBenchRegionMatrix` now accepts `RIOTBENCH_INPUT_KIND=mhealth` with
+  either the derived directory path
+  `/Users/siyaoliu/rift/cache/benchmark-data/riot-bench/mhealth/MHEALTHDATASET`
+  or the extraction-free original archive spec
+  `zipdir:/Users/siyaoliu/rift/cache/benchmark-data/riot-bench/mhealth/mhealth_dataset.zip!MHEALTHDATASET`.
   It preloads up to `RIOTBENCH_EVENTS` real MHEALTH sensor rows from the
-  subject logs.
+  subject logs before running the local q1/q2 kernels.

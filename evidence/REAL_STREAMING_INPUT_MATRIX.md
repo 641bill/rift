@@ -1,7 +1,7 @@
 # Real Streaming Input Matrix
 
 Date: 2026-05-11
-Last updated: 2026-05-16 18:20 CEST
+Last updated: 2026-05-17 14:12 CEST
 
 Status: started. This matrix records only rows that satisfy the
 `real-streaming-input` protocol: no full-input preload, incremental source
@@ -15,7 +15,10 @@ Implementation:
 
 - Matrix: `/Users/siyaoliu/rift/scala-native-rift/sandbox/src/main/scala-next/YakRegionMatrix.scala`
 - Mode: `YAK_TEXT_INPUT_MODE=streaming-file`
-- Source: `/Users/siyaoliu/rift/cache/benchmark-data/yak/stackexchange/askubuntu-Posts.xml`
+- Source: `7z:/Users/siyaoliu/rift/cache/benchmark-data/yak/stackexchange/askubuntu.com.7z!Posts.xml`
+  for new extraction-free runs; older rows used the derived
+  `/Users/siyaoliu/rift/cache/benchmark-data/yak/stackexchange/askubuntu-Posts.xml`
+  or `.gz` copy from the same archive.
 - Query: stream Stack Exchange `Posts.xml` lines, scan `Title` and `Body`
   attributes, tokenize ASCII words into epoch-local `WordRecord` objects, and
   compute per-epoch top-word checksums.
