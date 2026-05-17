@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-17 03:21 CEST
+Last updated: 2026-05-17 12:03 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -138,10 +138,16 @@ and zero timed GC. Heap caps down to `256M` complete, so the q17 claim is
 throughput, GC, and RSS rather than fixed-memory failure.
 The q17 matrix now also supports DBGEN/TPC-H file-backed input through
 `BROOM_Q17_INPUT_MODE=tpch-file`, `BROOM_TPCH_PART_INPUT`, and
-`BROOM_TPCH_LINEITEM_INPUT`. A tiny fixture smoke passed with matching
-checksum/output across heap, checked Rift, and checked scoped. Full DBGEN
-scale rows are pending local `part.tbl`/`lineitem.tbl` files, and DBGEN remains
-standardized generated benchmark input rather than real-world production data.
+`BROOM_TPCH_LINEITEM_INPUT`. The file-backed mode retains all DBGEN lineitems
+until timestamp close, then applies the Q17 selected-part and below-average
+filters. A tiny fixture smoke passed, then SF0.1 was generated locally from
+the public `electrum/tpch-dbgen` mirror. At SF0.1 (`600572` lineitems),
+natural heap is `5.57 s`, RSS `257.5 MB`, with `59.210 ms` L2 median timed
+GC; checked Rift is `5.15 s`, RSS `50.9 MB`, with `38.075 ms` L2 median timed
+GC and `0.468 ms` region-op time; checked scoped is `5.22 s`, RSS `51.1 MB`.
+Heap completes at `128M` but fails at `64M`, while checked Rift completes at
+about `51 MB` RSS. This is standardized generated benchmark input rather than
+real-world production data, and SF1/full TPC-H rows remain pending.
 Same-shape/drop-anchor controls remain appendix/mechanism evidence; this row's
 paper-facing comparison is natural heap/GC versus checked Rift.
 

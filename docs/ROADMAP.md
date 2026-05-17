@@ -1,6 +1,6 @@
 # Rift Roadmap
 
-Last updated: 2026-05-17 03:21 CEST
+Last updated: 2026-05-17 12:03 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
@@ -98,15 +98,17 @@ inside `4781.079 ms` L2; checked Rift is `9.67 s`, RSS `49.9 MB`, and zero
 timed GC; checked scoped is `13.02 s`, RSS `50.3 MB`, and zero timed GC. Heap
 caps down to `256M` complete, so q17 is throughput/GC/RSS evidence rather than
 fixed-memory failure evidence. The q17 matrix now also has a DBGEN/TPC-H
-file-backed mode from child `4d0d8d5e6`
+file-backed mode from child `3ae71c636`
 (`BROOM_Q17_INPUT_MODE=tpch-file`) that reads `part.tbl` and `lineitem.tbl`
-incrementally. A tiny fixture smoke passed with matching checksum/output
-across heap, checked Rift, and checked scoped; full DBGEN scale rows are
-pending because no local `part.tbl`/`lineitem.tbl` files are currently present
-under the Rift workspace. Mark the TPC-H-Q17-like generated slice complete;
-keep exact DBGEN-backed scale as pending input-provenance work, and
-keep shopper JOIN-SELECT-JOIN as a separate future Broom/Naiad candidate only
-if another retained dataflow shape is needed.
+incrementally, retains all lineitems until timestamp close, and then applies
+the Q17 filters. A tiny fixture smoke passed with matching checksum/output,
+and the SF0.1 follow-up generated `20000` part rows and `600572` lineitem rows
+from the public `electrum/tpch-dbgen` mirror. At SF0.1, checked Rift is
+`5.15 s` and `50.9 MB` RSS versus heap `5.57 s` and `257.5 MB`; heap completes
+at `128M` but fails at `64M`. Mark the TPC-H-Q17-like generated slice
+complete; keep SF1/full DBGEN-backed scale as pending input-provenance work,
+and keep shopper JOIN-SELECT-JOIN as a separate future Broom/Naiad candidate
+only if another retained dataflow shape is needed.
 
 Latest LogHub retained session/join triage:
 `evidence/LOGHUB_RETAINED_SESSION_MATRIX.md` adds a true HDFS streaming-file

@@ -1,7 +1,7 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-17 03:21 CEST
+Last updated: 2026-05-17 12:03 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
@@ -130,8 +130,9 @@ Rift `8.09 s`, RSS `57 MB`, GC `0 ms`. Heap completes at `512M` but fails at
 current strongest Broom/Naiad-style retained-object row.
 
 Latest Broom q17 retained dataflow update:
-Child implementation commit: `4d0d8d5e6`
-(`Add TPC-H file-backed q17 mode`), building on generated q17 commit
+Child implementation commit: `3ae71c636`
+(`Retain all lineitems in TPC-H q17 file mode`), building on
+`4d0d8d5e6` (`Add TPC-H file-backed q17 mode`) and generated q17 commit
 `ed7e6f57a`.
 `BroomRetainedDataflowMatrix` now also supports `q17`, `tpch-q17`, and
 `q17-retained`. This is a deterministic generated TPC-H-Q17-like methodology
@@ -150,12 +151,19 @@ not fixed-memory failure evidence. The 2026-05-17 follow-up adds an optional
 DBGEN/TPC-H file-backed input mode:
 `BROOM_Q17_INPUT_MODE=tpch-file`,
 `BROOM_TPCH_PART_INPUT=/path/to/part.tbl`, and
-`BROOM_TPCH_LINEITEM_INPUT=/path/to/lineitem.tbl`. A tiny `/private/tmp`
-fixture smoke matched checksum/output across heap, checked Rift, and checked
-scoped with checksum `-3582489220934111213` and output count `1`. No full
-DBGEN `part.tbl`/`lineitem.tbl` is currently present under the Rift workspace,
-so scale rows are pending local DBGEN files. Shopper JOIN-SELECT-JOIN remains
-a separate future Broom/Naiad shape if another retained dataflow row is needed.
+`BROOM_TPCH_LINEITEM_INPUT=/path/to/lineitem.tbl`. The corrected file-backed
+mode retains all lineitems until timestamp close and only then applies the Q17
+selected-part/below-average filters. A tiny `/private/tmp` fixture smoke
+matched checksum/output across heap, checked Rift, and checked scoped with
+checksum `-3582489220934111213` and output count `1`. The follow-up generated
+SF0.1 from the public `electrum/tpch-dbgen` mirror: `part.tbl` has `20000`
+rows and `lineitem.tbl` has `600572` rows. At SF0.1, heap is `5.57 s`, RSS
+`257.5 MB`, L2 GC `59.210 ms`; checked Rift is `5.15 s`, RSS `50.9 MB`, L2
+GC `38.075 ms`, region-op `0.468 ms`; checked scoped is `5.22 s`, RSS
+`51.1 MB`. Heap completes at `128M` but fails at `64M`, while checked Rift
+completes around `51 MB` RSS. SF1/full TPC-H remains pending. Shopper
+JOIN-SELECT-JOIN remains a separate future Broom/Naiad shape if another
+retained dataflow row is needed.
 
 Latest LogHub retained session/join triage:
 `LogHubRetainedSessionMatrix` and

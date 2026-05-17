@@ -1,7 +1,7 @@
 # GC-Heavy Data Processing Benchmark Investigation
 
 Date: 2026-05-15
-Last updated: 2026-05-17 03:21 CEST
+Last updated: 2026-05-17 12:03 CEST
 
 Status: literature and online-investigation note. This is not a benchmark
 result pack. It records where GC pressure is expected in stream/data-processing
@@ -124,12 +124,18 @@ next shape instead of being bundled into the q17 slice.
 `BROOM_Q17_INPUT_MODE=tpch-file` with `BROOM_TPCH_PART_INPUT` and
 `BROOM_TPCH_LINEITEM_INPUT`. The parser uses DBGEN/TPC-H `part.tbl` fields
 `p_partkey`, `p_brand`, `p_container` and `lineitem.tbl` fields `l_partkey`,
-`l_quantity`, and `l_extendedprice`, with the default Q17 filter
-`Brand#23` / `MED BOX`. A tiny fixture smoke passed across heap, checked Rift,
-and checked scoped with matching checksum/output. This closes the code path for
-standardized DBGEN input, but not the evidence row: no full local
-`part.tbl`/`lineitem.tbl` was found under the Rift workspace, so scale
-benchmarking remains pending input provenance.
+`l_quantity`, and `l_extendedprice`. The corrected file-backed mode retains
+all lineitems until timestamp close, matching the generated retained-Q17
+shape, and applies selected-part/below-average filters only at close. A tiny
+fixture smoke passed across heap, checked Rift, and checked scoped with
+matching checksum/output. The first DBGEN scale row uses SF0.1 from the public
+`electrum/tpch-dbgen` mirror: `20000` part rows and `600572` lineitem rows.
+Using QGEN's `Brand#13` / `SM PKG` parameters, checked Rift is `5.15 s` and
+`50.9 MB` RSS versus heap `5.57 s` and `257.5 MB`; L2 heap GC is
+`59.210 ms`, checked Rift L2 GC is `38.075 ms`, and checked Rift region-op is
+`0.468 ms`. Heap completes at `128M` but fails at `64M`. This is now
+standardized DBGEN-generated evidence, but not real-world input and not yet
+SF1/full TPC-H.
 
 2026-05-16 19:31 backend implication: it is plausible that many public
 real-input rows will not become strongly GC-heavy under Scala Native Immix.
