@@ -1,11 +1,12 @@
 # HotSpot Patch Roadmap
 
-Last updated: 2026-05-17 16:42 CEST
+Last updated: 2026-05-17 17:27 CEST
 
 This directory holds patch notes and exported patches for the HotSpot
-ordinary-object Rift backend. Patch 1-5 are now exported. Patch 4 is a narrow
+ordinary-object Rift backend. Patch 1-6 are now exported. Patch 4 is a narrow
 interpreter-only object-allocation prototype; Patch 5 adds the first
-interpreter store guard. This is still not a complete safe JVM Rift backend.
+interpreter store guard; Patch 6 extends store checks to Unsafe/JNI paths used
+by reflection. This is still not a complete safe JVM Rift backend.
 
 ## Patch 0: Build Baseline
 
@@ -129,10 +130,47 @@ Implementation note:
   tried and removed. It crashed outside a safepoint, so Patch 5 should be built
   on real store/barrier hooks or an explicit safepoint VM operation.
 - The accepted Patch 5 implementation is an interpreter-only store guard, not a
-  full HotSpot barrier implementation. C1/C2, native/Unsafe/reflection stores,
+  full HotSpot barrier implementation. C1/C2, some native/reflection routes,
   stale post-close object use, and GC scanning remain future work.
 - A follow-up stale-use experiment that called a VM verifier from the generic
   AArch64 interpreter receiver-load path was tried and backed out. It crashed
   normal bootstrap/invoke execution, so stale-use checking should use a
   dedicated Rift lowering helper, explicit API-boundary verifier, or deeper
   barrier/deoptimization design instead.
+
+## Patch 6: Unsafe/JNI Store Guards
+
+Patch file:
+
+`04-unsafe-jni-store-guard.patch`
+
+Implemented:
+
+- `Unsafe.putReference` and `Unsafe.putReferenceVolatile` verify live Rift
+  region oops before storing;
+- JNI `SetObjectField` and `SetStaticObjectField` verify live Rift region oops
+  before storing;
+- the object-region smoke now covers reflective `Field.set`,
+  `Unsafe.putReference`, `MethodHandle` setter, and anonymous closure capture
+  retention attempts.
+
+Validation:
+
+- patched fastdebug OpenJDK image builds;
+- `experimental/hotspot-rift/scripts/run_object_region_smoke.sh` passes at
+  `/private/tmp/rift-hotspot-object-region-smoke-patch6c-20260517` with
+  `object-enabled-ok`;
+- the Patch 1-3 region smoke still passes at
+  `/private/tmp/rift-hotspot-region-smoke-patch6b-20260517`;
+- flag-off built-JDK baseline smoke still passes at
+  `/private/tmp/rift-hotspot-smoke-patch6-20260517`.
+
+Implementation note:
+
+- A pre-Patch-6 probe showed that reflective `Field.set` could retain a region
+  object and then crash fastdebug verification because the heap contained a
+  non-heap region oop. Patch 6 closes that route through the Unsafe/JNI store
+  entrypoints used by the reflective path.
+- This is still not a complete store-barrier design. C1/C2 compiled stores,
+  native code outside these entrypoints, reflection routes not backed by these
+  calls, stale post-close object use, and GC scanning remain future work.

@@ -1,13 +1,15 @@
 # HotSpot Region Backend Status
 
 Date: 2026-05-17
-Last updated: 2026-05-17 16:42 CEST
+Last updated: 2026-05-17 17:27 CEST
 
-Status: VM-fork Patch 1-5 evidence. Patch 4 proves a narrow
+Status: VM-fork Patch 1-6 evidence. Patch 4 proves a narrow
 interpreter-only ordinary-object allocation prototype for explicitly
 registered final primitive-field classes. Patch 5 adds an interpreter oop-store
 guard that rejects heap retention of live region objects for static fields,
-object arrays, and object fields in the supported subset. This is still not a
+object arrays, and object fields in the supported subset. Patch 6 extends store
+guards to Unsafe/JNI object-store entrypoints used by reflection and low-level
+libraries. This is still not a
 performance-ready JVM Rift backend because GC integration, C1/C2 paths, arrays
 as region allocations, reference fields inside region objects, and broad
 post-close stale-use handling are not implemented.
@@ -481,14 +483,14 @@ Patch 5 limitations:
 
 - the guard is interpreter-only and currently implemented on AArch64 template
   interpreter oop-store paths;
-- C1/C2, native/Unsafe/reflection stores, and compiled fast allocation paths
-  are not covered;
+- C1/C2, native stores outside the guarded entrypoints, and compiled fast
+  allocation paths are not covered;
 - forcing `_new` through the runtime hook under `-XX:+UseRiftRegions` is a
   correctness-first prototype choice, not a performance policy;
 - region objects are still not GC-scanned, so performance and broad safety
   claims remain out of scope;
-- stale post-close object use, closure/generic hiding, and supported
-  region-to-heap bridge rules remain future work.
+- stale post-close object use and supported region-to-heap bridge rules remain
+  future work.
 
 Stale-use experiment:
 
@@ -511,11 +513,84 @@ Interpretation:
 - the current accepted Patch 5 scope remains heap-retention rejection, not
   post-close use rejection.
 
+## Patch 6: Unsafe/JNI Store Guards
+
+Patch file:
+
+`experimental/hotspot-rift/patches/04-unsafe-jni-store-guard.patch`
+
+Implementation:
+
+- `Unsafe.putReference` and `Unsafe.putReferenceVolatile` now call
+  `RiftRegionRuntime::verify_oop_store` before storing;
+- JNI `SetObjectField` and JNI `SetStaticObjectField` now call the same
+  verifier before storing;
+- the object-region smoke now tests reflective `Field.set`,
+  `Unsafe.putReference`, `MethodHandle` setter, and anonymous closure capture
+  retention attempts.
+
+Pre-patch finding:
+
+- Extending the smoke first showed that reflective `Field.set` could store a
+  live Rift region object into a heap holder. The Java assertion then left the
+  illegal heap-to-region reference live, and fastdebug verification aborted
+  because the heap contained an oop outside the Java heap. This is the exact
+  safety hole Patch 6 closes for the reflected/Unsafe route.
+
+Validation commands:
+
+```text
+HOTSPOT_RIFT_DEVKIT=/Users/siyaoliu/rift/cache/openjdk-rift/build/devkit/Xcode26.5-MacOSX26 \
+  experimental/hotspot-rift/scripts/build_openjdk.sh
+
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-object-region-smoke-patch6c-20260517 \
+  experimental/hotspot-rift/scripts/run_object_region_smoke.sh
+
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-region-smoke-patch6b-20260517 \
+  experimental/hotspot-rift/scripts/run_region_smoke.sh
+
+HOTSPOT_RIFT_OUT_DIR=/private/tmp/rift-hotspot-smoke-patch6-20260517 \
+  experimental/hotspot-rift/scripts/run_baseline_smoke.sh
+```
+
+Validation results:
+
+| Smoke | Output | Result |
+|---|---|---|
+| Object allocation + interpreter/Unsafe/JNI store guards | `/private/tmp/rift-hotspot-object-region-smoke-patch6c-20260517` | `object-enabled-ok` |
+| Region lifecycle | `/private/tmp/rift-hotspot-region-smoke-patch6b-20260517` | `disabled-ok`, `enabled-ok` |
+| Flag-off baseline | `/private/tmp/rift-hotspot-smoke-patch6-20260517` | checksum `7351360`, output `1000000`, internal elapsed `11.938 ms`, external `0.10 s`, max RSS `88489984` bytes |
+
+Patch 6 smoke coverage:
+
+- registered final primitive-field objects allocate in the active VM region in
+  interpreter mode;
+- direct `putstatic`, `aastore`, and `putfield` heap retention is rejected;
+- widened generic-cell retention and `ArrayList.add` retention are rejected;
+- reflective `Field.set` retention is rejected through the Unsafe/JNI guarded
+  path;
+- direct reflective access to `jdk.internal.misc.Unsafe.putReference` retention
+  is rejected;
+- `MethodHandle` setter retention is rejected in the current `-Xint` smoke;
+- anonymous closure capture of a live region object is rejected in the current
+  `-Xint` smoke.
+
+Patch 6 limitations:
+
+- C1/C2 compiled stores are not covered;
+- native code that stores object references outside the guarded Unsafe/JNI
+  entrypoints is not covered;
+- region object arrays, reference fields inside region objects, and
+  region-to-heap bridge/root rules are still unsupported;
+- stale post-close object use is still unsupported;
+- region oops are still not GC-scanned, so performance and broad safety claims
+  remain out of scope.
+
 ## Next Required Step
 
-1. Extend Patch 5 safety beyond the interpreter store subset: stale post-close
-   use, escaping closures, generic hiding, native/Unsafe/reflection stores, and
-   C1/C2 barriers.
+1. Extend Patch 6 safety beyond the interpreter plus Unsafe/JNI store subset:
+   C1/C2 barriers, native stores outside guarded entrypoints, and stale
+   post-close use.
 2. Decide the first supported bridge/root rule for JVM region-to-heap
    references before allowing reference fields.
 3. Add GC/safepoint integration before any region object may survive a

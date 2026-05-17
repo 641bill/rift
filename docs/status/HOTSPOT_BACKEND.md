@@ -1,6 +1,6 @@
 # HotSpot Backend Status
 
-Last updated: 2026-05-17 17:09 CEST
+Last updated: 2026-05-17 17:27 CEST
 
 Status: hot status file for the custom HotSpot VM-fork track. This is separate
 from the portable JVM library prototype.
@@ -63,6 +63,11 @@ Detailed HotSpot progress belongs here and in
   live region object into non-region memory. The object smoke now rejects
   static field, object-array, and heap-object-field retention of a region
   object.
+- Patch 6 Unsafe/JNI store-guard safety is implemented and exported as
+  `experimental/hotspot-rift/patches/04-unsafe-jni-store-guard.patch`.
+  It guards `Unsafe.putReference`, `Unsafe.putReferenceVolatile`, JNI
+  `SetObjectField`, and JNI `SetStaticObjectField`. This closes the first
+  reflective `Field.set` retention hole found by the extended object smoke.
 - `autoconf` was installed with Homebrew and preflight now passes for `git`,
   `bash`, `make`, `autoconf`, `clang`, Java `25.0.1`, and Homebrew.
 - OpenJDK was cloned into `/Users/siyaoliu/rift/cache/openjdk-rift`.
@@ -137,15 +142,28 @@ Detailed HotSpot progress belongs here and in
   The interpreter store guard rejects a region object widened to `Object` and
   stored through a generic heap cell, and rejects `ArrayList.add` retention in
   the current `-Xint` subset.
+- Patch 6 object smoke passed at
+  `/private/tmp/rift-hotspot-object-region-smoke-patch6c-20260517` with
+  `object-enabled-ok`. The smoke now rejects reflective `Field.set`,
+  `Unsafe.putReference`, `MethodHandle` setter, and anonymous closure capture
+  retention attempts in addition to the Patch 5 direct/generic/container
+  cases.
+- Existing region lifecycle smoke passed after Patch 6 at
+  `/private/tmp/rift-hotspot-region-smoke-patch6b-20260517`.
+- Flag-off built-JDK baseline smoke after Patch 6 passed at
+  `/private/tmp/rift-hotspot-smoke-patch6-20260517`: checksum `7351360`,
+  output `1000000`, internal elapsed `11.938 ms`, external `0.10 s` real,
+  max RSS `88489984` bytes.
 - Stock-JDK retained-object baseline smoke passed at
   `/private/tmp/rift-hotspot-smoke-20260517`.
 
 ## Next Step
 
-Extend the safety work beyond the current Patch 5 interpreter subset. The next
-work should cover closure/generic hiding, native/Unsafe/reflection stores,
-C1/C2 barriers, and an explicit JVM bridge/root rule before allowing reference
-fields. Stale post-close use remains open, but the generic receiver-load VM
-hook is not viable as implemented; prefer a dedicated Rift lowering helper,
-API-boundary verifier, or deeper barrier/deoptimization design. Performance
-claims remain out of scope until GC/safepoint integration is designed.
+Extend the safety work beyond the current Patch 6 interpreter plus Unsafe/JNI
+subset. The next work should cover C1/C2 compiled stores, native stores outside
+the guarded Unsafe/JNI entrypoints, explicit JVM bridge/root rules before
+allowing reference fields, and GC/safepoint integration. Stale post-close use
+remains open, but the generic receiver-load VM hook is not viable as
+implemented; prefer a dedicated Rift lowering helper, API-boundary verifier, or
+deeper barrier/deoptimization design. Performance claims remain out of scope
+until GC/safepoint integration is designed.

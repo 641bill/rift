@@ -1,5 +1,10 @@
 import java.util.Arrays;
 import java.util.ArrayList;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import jdk.internal.rift.RiftRegion;
 
 public final class RiftHotSpotObjectRegionSmoke {
@@ -45,6 +50,10 @@ public final class RiftHotSpotObjectRegionSmoke {
         checkObjectFieldRetentionRejected();
         checkGenericHeapRetentionRejected();
         checkArrayListRetentionRejected();
+        checkReflectionRetentionRejected();
+        checkUnsafeRetentionRejected();
+        checkMethodHandleRetentionRejected();
+        checkAnonymousClosureRetentionRejected();
         System.out.println("object-enabled-ok");
     }
 
@@ -162,6 +171,122 @@ public final class RiftHotSpotObjectRegionSmoke {
         }
     }
 
+    private static void checkReflectionRetentionRejected() {
+        long handle = RiftRegion.open(4096);
+        RiftRegion.enter(handle);
+        try {
+            PrimitiveRecord record = new PrimitiveRecord(6, 7L, 8.0d);
+            Holder holder = new Holder();
+            Field field = Holder.class.getDeclaredField("value");
+            field.setAccessible(true);
+            try {
+                field.set(holder, record);
+                throw new AssertionError("reflective Field.set retention should fail");
+            } catch (Throwable rejected) {
+                requireRetentionRejection(rejected, "reflective Field.set retention");
+            }
+        } catch (NoSuchFieldException e) {
+            throw new AssertionError(e);
+        } finally {
+            RiftRegion.leave(handle);
+            RiftRegion.close(handle);
+        }
+    }
+
+    private static void checkUnsafeRetentionRejected() {
+        long handle = RiftRegion.open(4096);
+        RiftRegion.enter(handle);
+        try {
+            PrimitiveRecord record = new PrimitiveRecord(7, 8L, 9.0d);
+            Holder holder = new Holder();
+            Object unsafe = unsafe();
+            Field field = Holder.class.getDeclaredField("value");
+            Method objectFieldOffset = unsafe.getClass().getMethod("objectFieldOffset", Field.class);
+            Method putReference = unsafe.getClass().getMethod("putReference", Object.class, long.class, Object.class);
+            long offset = ((Long) objectFieldOffset.invoke(unsafe, field)).longValue();
+            try {
+                putReference.invoke(unsafe, holder, offset, record);
+                throw new AssertionError("Unsafe.putReference retention should fail");
+            } catch (Throwable rejected) {
+                requireRetentionRejection(rejected, "Unsafe.putReference retention");
+            }
+        } catch (NoSuchFieldException | NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+            throw new AssertionError(e);
+        } finally {
+            RiftRegion.leave(handle);
+            RiftRegion.close(handle);
+        }
+    }
+
+    private static Object unsafe() {
+        try {
+            Class<?> klass = Class.forName("jdk.internal.misc.Unsafe");
+            Field field = klass.getDeclaredField("theUnsafe");
+            field.setAccessible(true);
+            return field.get(null);
+        } catch (ClassNotFoundException | NoSuchFieldException | IllegalAccessException e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    private static void checkMethodHandleRetentionRejected() {
+        long handle = RiftRegion.open(4096);
+        RiftRegion.enter(handle);
+        try {
+            PrimitiveRecord record = new PrimitiveRecord(8, 9L, 10.0d);
+            Holder holder = new Holder();
+            MethodHandle setter = MethodHandles.lookup().findSetter(Holder.class, "value", Object.class);
+            try {
+                setter.invoke(holder, record);
+                throw new AssertionError("MethodHandle setter retention should fail");
+            } catch (Throwable rejected) {
+                requireRetentionRejection(rejected, "MethodHandle setter retention");
+            }
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            throw new AssertionError(e);
+        } finally {
+            RiftRegion.leave(handle);
+            RiftRegion.close(handle);
+        }
+    }
+
+    private static void checkAnonymousClosureRetentionRejected() {
+        long handle = RiftRegion.open(4096);
+        RiftRegion.enter(handle);
+        try {
+            PrimitiveRecord record = new PrimitiveRecord(9, 10L, 11.0d);
+            try {
+                Runnable closure = new Runnable() {
+                    private final Object captured = record;
+
+                    public void run() {
+                        if (captured == null) {
+                            throw new AssertionError("captured");
+                        }
+                    }
+                };
+                closure.run();
+                throw new AssertionError("anonymous closure retention should fail");
+            } catch (IllegalStateException expected) {
+                // expected
+            }
+        } finally {
+            RiftRegion.leave(handle);
+            RiftRegion.close(handle);
+        }
+    }
+
+    private static void requireRetentionRejection(Throwable thrown, String label) {
+        Throwable cursor = thrown;
+        while (cursor != null) {
+            if (cursor instanceof IllegalStateException) {
+                return;
+            }
+            cursor = cursor.getCause();
+        }
+        throw new AssertionError(label + " failed with unexpected exception", thrown);
+    }
+
     private static void expectIllegalArgument(Runnable body, String label) {
         try {
             body.run();
@@ -228,5 +353,4 @@ public final class RiftHotSpotObjectRegionSmoke {
             this.value = value;
         }
     }
-
 }

@@ -21,5 +21,6 @@ mkdir -p "${OUT_DIR}/classes"
   -XX:-UseCompressedOops \
   -XX:-UseCompactObjectHeaders \
   --add-exports java.base/jdk.internal.rift=ALL-UNNAMED \
+  --add-opens java.base/jdk.internal.misc=ALL-UNNAMED \
   -cp "${OUT_DIR}/classes" \
   RiftHotSpotObjectRegionSmoke

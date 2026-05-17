@@ -1,10 +1,11 @@
 # HotSpot Rift Experiment
 
-Last updated: 2026-05-17 15:15 CEST
+Last updated: 2026-05-17 17:27 CEST
 
-Status: scaffold for the custom HotSpot VM-fork backend. This directory does
-not contain an OpenJDK checkout. It contains the scripts, patch notes, and smoke
-tests used to create and validate one.
+Status: scaffold and exported Patch 1-6 artifacts for the custom HotSpot
+VM-fork backend. This directory does not contain an OpenJDK checkout. It
+contains the scripts, patch notes, exported patches, and smoke tests used to
+create and validate one.
 
 ## Goal
 
@@ -21,7 +22,11 @@ heap fallback.
 | `scripts/create_macosx_devkit.sh` | Create an OpenJDK macOS devkit from a local `Xcode.app`. |
 | `scripts/build_openjdk.sh` | Configure and build a fastdebug JDK from that worktree. |
 | `scripts/run_baseline_smoke.sh` | Run the Java smoke workload on a selected JDK. |
+| `scripts/run_region_smoke.sh` | Run active/closed handle and raw arena lifecycle smoke. |
+| `scripts/run_object_region_smoke.sh` | Run ordinary-object allocation and heap-retention rejection smoke. |
 | `tests/java/RiftHotSpotBaselineSmoke.java` | Baseline retained-object workload for stock/patched JDKs. |
+| `tests/java/RiftHotSpotRegionSmoke.java` | Region lifecycle smoke. |
+| `tests/java/RiftHotSpotObjectRegionSmoke.java` | Object-region allocation and store-guard smoke. |
 | `patches/README.md` | First HotSpot patch roadmap. |
 
 ## Default Locations
@@ -98,7 +103,19 @@ HOTSPOT_RIFT_JAVA=/Users/siyaoliu/rift/cache/openjdk-rift/build/rift-fastdebug/j
   experimental/hotspot-rift/scripts/run_baseline_smoke.sh
 ```
 
+Run object-region smoke with a built JDK:
+
+```sh
+HOTSPOT_RIFT_JAVA=/Users/siyaoliu/rift/cache/openjdk-rift/build/rift-fastdebug/jdk/bin/java \
+  experimental/hotspot-rift/scripts/run_object_region_smoke.sh
+```
+
 ## Claim Discipline
 
-Until a patched HotSpot exists, this directory provides only scaffold and
-baseline JVM evidence. It does not prove ordinary-object Rift regions.
+The current patched HotSpot is a prototype. It proves a narrow interpreter-mode
+ordinary-object allocation path for explicitly registered final primitive-field
+classes, plus heap-retention rejection for the covered interpreter,
+Unsafe/JNI, reflection, MethodHandle, and closure-capture smoke routes. It does
+not yet prove broad JVM Rift safety or performance: GC scanning, C1/C2 paths,
+reference fields, arrays as region allocations, bridge/root rules, and
+post-close stale-use handling remain open.

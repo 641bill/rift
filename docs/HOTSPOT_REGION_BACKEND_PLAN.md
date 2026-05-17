@@ -1,16 +1,18 @@
 # HotSpot Ordinary-Object Region Backend Plan
 
 Date: 2026-05-17
-Last updated: 2026-05-17 16:42 CEST
+Last updated: 2026-05-17 17:27 CEST
 
-Status: long-term VM-fork roadmap with Patch 1-5 implemented through a narrow
+Status: long-term VM-fork roadmap with Patch 1-6 implemented through a narrow
 interpreter-only object-allocation and store-guard prototype. Ordinary
 Scala/JVM object allocation into Rift regions now works only for explicitly
 registered, final/simple primitive-field classes under conservative VM flags.
-The first interpreter store guard rejects static, array, and heap-object-field
-retention of live region objects. GC integration, C1/C2 fast paths, arrays as
-region allocations, reference fields inside region objects, stale post-close
-object use, and broad bridge/root handling are still future work.
+The first store guards reject static, array, heap-object-field, reflective,
+Unsafe, MethodHandle setter, and anonymous-closure retention of live region
+objects in the currently covered interpreter/Unsafe/JNI subset. GC integration,
+C1/C2 fast paths, arrays as region allocations, reference fields inside region
+objects, stale post-close object use, and broad bridge/root handling are still
+future work.
 
 ## Goal
 
@@ -223,6 +225,21 @@ Observed on 2026-05-17:
   `/private/tmp/rift-hotspot-object-region-smoke-generic-container-20260517`,
   covering widened generic-cell retention and `ArrayList.add` retention in the
   interpreter subset.
+- Patch 6 has been implemented and exported as
+  `experimental/hotspot-rift/patches/04-unsafe-jni-store-guard.patch`;
+- a pre-Patch-6 probe showed reflective `Field.set` could retain a live Rift
+  region object in heap state and then crash fastdebug verification;
+- Patch 6 adds checks to `Unsafe.putReference`,
+  `Unsafe.putReferenceVolatile`, JNI `SetObjectField`, and JNI
+  `SetStaticObjectField`;
+- `experimental/hotspot-rift/scripts/run_object_region_smoke.sh` now passes at
+  `/private/tmp/rift-hotspot-object-region-smoke-patch6c-20260517`, covering
+  reflective `Field.set`, `Unsafe.putReference`, `MethodHandle` setter, and
+  anonymous closure capture retention attempts;
+- region lifecycle smoke passes after Patch 6 at
+  `/private/tmp/rift-hotspot-region-smoke-patch6b-20260517`;
+- flag-off baseline smoke after Patch 6 passes at
+  `/private/tmp/rift-hotspot-smoke-patch6-20260517`.
 - a stale post-close use experiment using an AArch64 interpreter
   receiver-load VM hook was tried and backed out after crashing normal
   bootstrap/invoke execution. The stable Patch 5 worktree was rebuilt and
@@ -255,19 +272,22 @@ Patch 5 false start:
 - the next safety implementation should use store/barrier hooks or an explicit
   safepoint VM operation.
 
-Patch 5 accepted path:
+Patch 5-6 accepted path:
 
 - interpreter `do_oop_store` now calls `RiftRegionRuntime::verify_oop_store`
   before non-null oop stores;
+- Unsafe/JNI object-store entrypoints now call the same verifier before
+  storing;
 - live region oops stored into non-region memory throw
   `IllegalStateException`;
 - direct smoke tests cover `putstatic`, `aastore`, and `putfield` retention
-  rejection.
+  rejection, plus reflective, Unsafe, MethodHandle setter, and anonymous
+  closure capture routes in the covered subset.
 
-Next concrete step: extend reference safety beyond the current interpreter
-subset. Add tests and VM checks for escaping closures, generic hiding,
-native/Unsafe/reflection stores, C1/C2 barriers, and supported region-to-heap
-bridges before making any JVM backend safety or performance claim. For stale
-post-close use, avoid the generic interpreter receiver-load hook; use a
-dedicated Rift lowering helper, explicit API-boundary verifier, or a deeper
-barrier/deoptimization design after the GC/safepoint plan is clearer.
+Next concrete step: extend reference safety beyond the current interpreter plus
+Unsafe/JNI subset. Add tests and VM checks for C1/C2 barriers, native stores
+outside the guarded entrypoints, supported region-to-heap bridges, and
+GC/safepoint behavior before making any JVM backend safety or performance
+claim. For stale post-close use, avoid the generic interpreter receiver-load
+hook; use a dedicated Rift lowering helper, explicit API-boundary verifier, or
+a deeper barrier/deoptimization design after the GC/safepoint plan is clearer.

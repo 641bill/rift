@@ -1,0 +1,72 @@
+diff --git a/src/hotspot/share/prims/jni.cpp b/src/hotspot/share/prims/jni.cpp
+index 228244bbd05..39f30913b65 100644
+--- a/src/hotspot/share/prims/jni.cpp
++++ b/src/hotspot/share/prims/jni.cpp
+@@ -81,6 +81,7 @@
+ #include "runtime/jfieldIDWorkaround.hpp"
+ #include "runtime/jniHandles.inline.hpp"
+ #include "runtime/reflection.hpp"
++#include "runtime/riftRegionRuntime.hpp"
+ #include "runtime/safepointVerifiers.hpp"
+ #include "runtime/sharedRuntime.hpp"
+ #include "runtime/signature.hpp"
+@@ -1880,7 +1881,11 @@ JNI_ENTRY_NO_PRESERVE(void, jni_SetObjectField(JNIEnv *env, jobject obj, jfieldI
+     field_value.l = value;
+     o = JvmtiExport::jni_SetField_probe(thread, obj, o, k, fieldID, false, JVM_SIGNATURE_CLASS, (jvalue *)&field_value);
+   }
+-  HeapAccess<ON_UNKNOWN_OOP_REF>::oop_store_at(o, offset, JNIHandles::resolve(value));
++  oop value_oop = JNIHandles::resolve(value);
++  if (UseRiftRegions) {
++    RiftRegionRuntime::verify_oop_store(value_oop, cast_from_oop<address>(o) + offset, CHECK);
++  }
++  HeapAccess<ON_UNKNOWN_OOP_REF>::oop_store_at(o, offset, value_oop);
+   HOTSPOT_JNI_SETOBJECTFIELD_RETURN();
+ JNI_END
+
+@@ -2073,7 +2078,12 @@ JNI_ENTRY(void, jni_SetStaticObjectField(JNIEnv *env, jclass clazz, jfieldID fie
+     field_value.l = value;
+     JvmtiExport::jni_SetField_probe(thread, nullptr, nullptr, id->holder(), fieldID, true, JVM_SIGNATURE_CLASS, (jvalue *)&field_value);
+   }
+-  id->holder()->java_mirror()->obj_field_put(id->offset(), JNIHandles::resolve(value));
++  oop value_oop = JNIHandles::resolve(value);
++  oop mirror = id->holder()->java_mirror();
++  if (UseRiftRegions) {
++    RiftRegionRuntime::verify_oop_store(value_oop, cast_from_oop<address>(mirror) + id->offset(), CHECK);
++  }
++  mirror->obj_field_put(id->offset(), value_oop);
+   HOTSPOT_JNI_SETSTATICOBJECTFIELD_RETURN();
+ JNI_END
+
+diff --git a/src/hotspot/share/prims/unsafe.cpp b/src/hotspot/share/prims/unsafe.cpp
+index a6300e81468..a19935b7899 100644
+--- a/src/hotspot/share/prims/unsafe.cpp
++++ b/src/hotspot/share/prims/unsafe.cpp
+@@ -49,6 +49,7 @@
+ #include "runtime/jniHandles.inline.hpp"
+ #include "runtime/orderAccess.hpp"
+ #include "runtime/reflection.hpp"
++#include "runtime/riftRegionRuntime.hpp"
+ #include "runtime/sharedRuntime.hpp"
+ #include "runtime/stubRoutines.hpp"
+ #include "runtime/threadSMR.hpp"
+@@ -277,6 +278,10 @@ UNSAFE_ENTRY(void, Unsafe_PutReference(JNIEnv *env, jobject unsafe, jobject obj,
+   oop x = JNIHandles::resolve(x_h);
+   oop p = JNIHandles::resolve(obj);
+   assert_field_offset_sane(p, offset);
++  if (UseRiftRegions) {
++    address dst = p == nullptr ? reinterpret_cast<address>(static_cast<intptr_t>(offset)) : cast_from_oop<address>(p) + offset;
++    RiftRegionRuntime::verify_oop_store(x, dst, CHECK);
++  }
+   HeapAccess<ON_UNKNOWN_OOP_REF>::oop_store_at(p, offset, x);
+ } UNSAFE_END
+
+@@ -291,6 +296,10 @@ UNSAFE_ENTRY(void, Unsafe_PutReferenceVolatile(JNIEnv *env, jobject unsafe, jobj
+   oop x = JNIHandles::resolve(x_h);
+   oop p = JNIHandles::resolve(obj);
+   assert_field_offset_sane(p, offset);
++  if (UseRiftRegions) {
++    address dst = p == nullptr ? reinterpret_cast<address>(static_cast<intptr_t>(offset)) : cast_from_oop<address>(p) + offset;
++    RiftRegionRuntime::verify_oop_store(x, dst, CHECK);
++  }
+   HeapAccess<MO_SEQ_CST | ON_UNKNOWN_OOP_REF>::oop_store_at(p, offset, x);
+ } UNSAFE_END
