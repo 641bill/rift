@@ -1,72 +1,13 @@
 # Real Streaming Input Matrix
 
 Date: 2026-05-11
-Last updated: 2026-05-17 17:45 CEST
+Last updated: 2026-05-17 14:12 CEST
 
 Status: started. This matrix records only rows that satisfy the
 `real-streaming-input` protocol: no full-input preload, incremental source
 replay, bounded active state, and matching checksum/output counts.
 
 ## Implemented Rows
-
-### Theodolite Retained UC4 Hierarchy Windows, Streaming-File
-
-Implementation:
-
-- Matrix: `/Users/siyaoliu/rift/scala-native-rift/sandbox/src/main/scala-next/TheodolitePowerRegionMatrix.scala`
-- Mode: `THEODOLITE_POWER_INPUT_MODE=streaming-file`
-- Source:
-  `zip:/Users/siyaoliu/rift/cache/benchmark-data/theodolite/real-power/household_power_consumption.zip!household_power_consumption.txt`
-- Query: `q3-retained-uc4`, a local Theodolite UC4-style hierarchy/window
-  aggregation over real UCI power-meter records.
-- Object shape: one retained measurement plus twelve retained hierarchy
-  contribution objects per usable record; durable aggregate arrays remain
-  heap/control metadata.
-- API/topology: checked `RiftRegion.epoch` stream and checked scoped epoch;
-  this is not exact Theodolite artifact reproduction.
-
-20k smoke:
-
-All heap, checked stream, checked scoped, and rooted scoped rows matched
-checksum `-2895454912458695581` and output count `6176`.
-
-1M candidate row:
-
-| Mode | L1 external s | L1 RSS bytes | L2 median ms | Median GC ms | Max GC ms | Runs with GC | Records | Checksum | Output |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `heap-immix` | `9.42` | `183566336` | `2712.028` | `376.791` | `393.169` | `3/3` | `1000000` | `5496025699187626461` | `61760` |
-| `checked-epoch-stream` | `7.77` | `31064064` | `2143.809` | `38.516` | `41.907` | `3/3` | `1000000` | `5496025699187626461` | `61760` |
-| `checked-epoch-scoped` | `7.99` | `31113216` | `2189.232` | `43.837` | `48.301` | `3/3` | `1000000` | `5496025699187626461` | `61760` |
-| `region-scoped-rooted` | `8.21` | `31129600` | `2299.931` | `44.424` | `49.323` | `3/3` | `1000000` | `5496025699187626461` | `61760` |
-
-Full local row:
-
-| Mode | L1 external s | L1 RSS bytes | L2 median ms | Median GC ms | Max GC ms | Runs with GC | Records | Checksum | Output |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `heap-immix` | `16.85` | `207077376` | `4504.438` | `335.309` | `482.380` | `3/3` | `2049280` | `6053646443718331766` | `126608` |
-| `checked-epoch-stream` | `14.06` | `26607616` | `3769.962` | `31.570` | `33.884` | `3/3` | `2049280` | `6053646443718331766` | `126608` |
-| `checked-epoch-scoped` | `14.88` | `26689536` | `3865.198` | `39.062` | `54.579` | `3/3` | `2049280` | `6053646443718331766` | `126608` |
-| `region-scoped-rooted` | `15.54` | `26640384` | `4104.244` | `37.961` | `37.991` | `3/3` | `2049280` | `6053646443718331766` | `126608` |
-
-Heap-cap follow-up:
-
-| Mode | Heap cap | Status | L1 external s | RSS bytes | Checksum | Output |
-|---|---:|---|---:|---:|---:|---:|
-| `heap-immix` | uncapped | completed | `16.85` | `207077376` | `6053646443718331766` | `126608` |
-| `heap-immix` | `128M` | completed | `17.90` | `138821632` | `6053646443718331766` | `126608` |
-| `heap-immix` | `64M` | failed | `9.87` | `72204288` | n/a | n/a |
-| `checked-epoch-stream` | `64M` | completed | `14.27` | `26591232` | `6053646443718331766` | `126608` |
-
-Interpretation:
-
-- This is the strongest current true `real-streaming-input` retained-object
-  row. The input remains compressed, is streamed through an archive-member
-  reader, and no full parsed input array is retained.
-- Heap GC is material in L2 and the L1 process RSS gap is large. Checked Rift
-  wins throughput, RSS, and fixed-memory behavior.
-- The checked rows still show small timed GC because the stream source,
-  archive reader, and runtime control path allocate normal heap objects; the
-  region-managed retained hierarchy objects are bulk-reclaimed.
 
 ### Yak AskUbuntu Topwordreal, Streaming-File
 
