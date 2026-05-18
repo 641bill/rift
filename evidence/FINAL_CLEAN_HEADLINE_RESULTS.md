@@ -1,7 +1,7 @@
 # Final-Clean Headline Results
 
 Date: 2026-05-09
-Last updated: 2026-05-18 12:55 CEST
+Last updated: 2026-05-18 16:22 CEST
 
 Status: L1 runner support exists for the first representative binaries. One
 focused retained-epoch L1 row has been collected from clean child commit
@@ -49,7 +49,8 @@ Child `a6c5ad70a` and the follow-up 10M rerun add the named Wikimedia retained
 clickstream-session workload in `LogHubRetainedSessionMatrix`. The 1M row is
 recorded in `evidence/LOGHUB_RETAINED_SESSION_MATRIX.md`; the 5M and 10M
 scale-up L1 rows are recorded below as real-streaming retained clickstream
-evidence.
+evidence. The full-file one-run rows are also recorded below as provisional
+full-input feasibility, not a replacement for the 10M x3 report-grade median.
 Child `d1fd16a64` adds ReML/MLKit-shaped Tier 2 ports for `logic`, `ray`, and
 `tsp`; their first report-grade L1/L2 rows are recorded below.
 Child `cd08f23d4` adds Yak `topwordreal` over the real Stack Exchange
@@ -306,6 +307,9 @@ for those 20 iterations.
 | Wikimedia retained clickstream-session 10M x3 | real-streaming-input Wikimedia clickstream gzip replay | natural heap retained session | natural heap baseline | `heap-gc` | 1 process x 3 streaming replays | `62.52 s` total (`20840 ms/iter`) | `62.52 s` | `62.52 s` | `1796128768 bytes` | checksum `8006060730683441349`, output `9323019`, bytes read `478782687` | L1 10M natural heap baseline; matching L2 heap median GC is `851.023 ms`, max GC `885.434 ms`, and heap caps fail at `1G`, `768M`, and `512M`. |
 | Wikimedia retained clickstream-session 10M x3 | real-streaming-input Wikimedia clickstream gzip replay | checked retained epoch | framework API / retained-object memory-management | `checked-rift` | 1 process x 3 streaming replays | `59.37 s` total (`19790 ms/iter`) | `59.37 s` | `59.37 s` | `138412032 bytes` | checksum `8006060730683441349`, output `9323019`, bytes read `478782687` | L1 checked Rift is `5.0%` faster and about `92%` lower RSS than heap; matching L2 is `19635.995 ms`, GC `96.069 ms`, region op `24.329 ms`, versus heap `20103.863 ms`, GC `851.023 ms`; checked rows pass under a `64M` GC heap cap. |
 | Wikimedia retained clickstream-session 10M x3 | real-streaming-input Wikimedia clickstream gzip replay | checked scoped retained epoch | safe checked backend comparison | `checked-region-scoped` | 1 process x 3 streaming replays | `62.33 s` total (`20777 ms/iter`) | `62.33 s` | `62.33 s` | `138706944 bytes` | checksum `8006060730683441349`, output `9323019`, bytes read `478782687` | Safe checked scoped comparison row: large RSS/fixed-memory win and near-tie L1 elapsed, but slower than checked Rift in L2 (`21396.025 ms`) with higher timed normal-heap GC. |
+| Wikimedia retained clickstream-session full-file one-run | real-streaming-input Wikimedia clickstream gzip replay | natural heap retained session | natural heap baseline / full-input feasibility | `heap-gc` | 1 process x 1 streaming replay | `74.23 s` total | `74.23 s` | `74.23 s` | `2298707968 bytes` | checksum `3903090754337931261`, output `33529413`, bytes read `1710959642` | Provisional full-file feasibility over all `35862259` rows; matching L2 heap is `72750.014 ms`, GC `7122.811 ms`, RSS `2571665408 bytes`. |
+| Wikimedia retained clickstream-session full-file one-run | real-streaming-input Wikimedia clickstream gzip replay | checked retained epoch | framework API / retained-object memory-management / full-input feasibility | `checked-rift` | 1 process x 1 streaming replay | `69.87 s` total | `69.87 s` | `69.87 s` | `136265728 bytes` | checksum `3903090754337931261`, output `33529413`, bytes read `1710959642` | Provisional full-file checked row: `5.9%` faster and about `94%` lower RSS than heap; matching L2 is `71149.579 ms`, GC `318.165 ms`, region op `79.786 ms`. Keep 10M x3 as report-grade until full-file repeats exist. |
+| Wikimedia retained clickstream-session full-file one-run | real-streaming-input Wikimedia clickstream gzip replay | checked scoped retained epoch | safe checked backend comparison / full-input feasibility | `checked-region-scoped` | 1 process x 1 streaming replay | `76.83 s` total | `76.83 s` | `76.83 s` | `136593408 bytes` | checksum `3903090754337931261`, output `33529413`, bytes read `1710959642` | Provisional full-file safe scoped comparison row: large RSS win, but slower than heap/checked Rift; matching L2 is `76156.741 ms`, GC `5582.325 ms`. |
 | LogHub HDFS q2 1M x3 | real HDFS file-backed stream | page/window token | natural heap baseline | `heap-immix` | 3 processes x 3 iterations | `25.60 s` total (`8533 ms/iter`) | `25.58 s` | `25.75 s` | `408649728 bytes` | checksum `-4515648042024502814`, output `41` | L1 natural heap baseline; process loads 1M HDFS lines and runs q2 three times |
 | LogHub HDFS q2 1M x3 | real HDFS file-backed stream | scoped page/window token | safe rooted baseline | `safezone-improved-32k` | 3 processes x 3 iterations | `25.35 s` total (`8450 ms/iter`) | `25.33 s` | `25.39 s` | `79003648 bytes` | checksum `-4515648042024502814`, output `41` | L1 rooted scoped RSS win with near-tie elapsed |
 | LogHub HDFS q2 1M x3 | real HDFS file-backed stream | checked scoped page-token | framework API / RSS win | `rift-checked-safezone-page-token` | 3 processes x 3 iterations | `25.56 s` total (`8520 ms/iter`) | `25.56 s` | `25.58 s` | `79036416 bytes` | checksum `-4515648042024502814`, output `41` | L1 checked page/window row essentially ties heap elapsed and cuts RSS by about 81%; L2 row remains the GC interpretation source |

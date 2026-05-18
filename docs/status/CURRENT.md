@@ -1,6 +1,6 @@
 # Current Rift Status
 
-Last updated: 2026-05-18 16:01 CEST
+Last updated: 2026-05-18 16:22 CEST
 
 Status: hot status file. Update this file for routine turn-by-turn progress
 instead of editing `docs/HANDOFF.md`, `docs/ROADMAP.md`,
@@ -83,6 +83,13 @@ instead of editing `docs/HANDOFF.md`, `docs/ROADMAP.md`,
   `1G`, `768M`, and `512M`; checked Rift and checked scoped pass under a
   `64M` GC heap cap. This is now report-grade real-streaming retained
   clickstream throughput/RSS/GC/fixed-memory scale-up evidence.
+- Wikimedia retained clickstream-session full-file feasibility:
+  one-run L1 checked Rift `69.87 s`, RSS `136 MB`, versus heap `74.23 s`,
+  RSS `2.30 GB`; one-run L2 checked Rift `71149.579 ms`, GC `318.165 ms`,
+  region op `79.786 ms`, versus heap `72750.014 ms`, GC `7122.811 ms`.
+  This processed all `35862259` compressed rows with matching checksum/output.
+  Keep the 10M x3 row as the report-grade median until the full-file row is
+  repeated.
 - Real-streaming evidence is now consolidated in the compact representative
   table at the top of `evidence/REAL_STREAMING_INPUT_MATRIX.md`: Theodolite
   retained UC4, LogHub Spark retained session, Wikimedia retained clickstream,
@@ -102,8 +109,8 @@ instead of editing `docs/HANDOFF.md`, `docs/ROADMAP.md`,
    do not mix HotSpot/JVM prototype churn into `main`.
 2. If continuing Native evidence, the current local compressed real-streaming
    ladder is mostly classified, and the Wikimedia named clickstream-session row
-   now has a 10M 3-run median. The next useful step is either a cautious
-   full-file Wikimedia feasibility pass, or a provenance/disk preflight for
-   truly larger StackOverflow/Twitter-2010 data.
+   now has a 10M 3-run median plus one-run full-file feasibility. The next
+   useful step is either a full-file 3-run median if machine time allows, or a
+   provenance/disk preflight for truly larger StackOverflow/Twitter-2010 data.
 3. If preparing presentation, update `PERFORMANCE_EVALUATION_REPORT.md` and
    regenerate `report.html`; otherwise leave them alone.

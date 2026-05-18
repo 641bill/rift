@@ -1,7 +1,7 @@
 # Real Streaming Input Matrix
 
 Date: 2026-05-11
-Last updated: 2026-05-18 16:01 CEST
+Last updated: 2026-05-18 16:22 CEST
 
 Status: started. This matrix records only rows that satisfy the
 `real-streaming-input` protocol: no full-input preload, incremental source
@@ -18,7 +18,7 @@ only.
 |---|---|---:|---:|---:|---:|---|---|---|
 | Theodolite retained UC4 hierarchy | UCI power trace from `zip:...!household_power_consumption.txt`, retained hierarchy-window contributions | `16.85 s`, `207 MB` | `checked-epoch-stream`: `14.06 s`, `27 MB` | `335.309 ms` / `482.380 ms` | `31.570 ms` / n/a | heap passes `128M`, fails `64M`; checked stream passes `64M` | checksum `6053646443718331766`, output `126608` | Strongest real-streaming retained-object row: throughput, RSS, GC, and fixed-memory evidence; not exact Theodolite artifact reproduction. |
 | LogHub Spark retained session | Spark logs from `tar.gzcat:.../Spark.tar.gz`, retained active sessions | `27.62 s`, `391 MB` | `checked-region-scoped`: `19.85 s`, `73 MB`; `checked-rift`: `20.30 s`, `73 MB` | `140.639 ms` / `169.764 ms` | `checked-rift`: `14.407 ms` / `1.121 ms` | heap passes `256M`, fails `128M`; checked rows complete near `73 MB` | checksum `-1938898183938054371`, output `770310` | Real-streaming retained-session RSS/fixed-memory and throughput evidence; heap GC is about `2.1%`, so not a GC-time flagship. |
-| Wikimedia enwiki retained clickstream | Clickstream TSV from `clickstream-enwiki-2026-03.tsv.gz`, named clickstream-session workload | 1M `6.50 s`, `784 MB`; 5M `28.77 s`, `1.54 GB`; 10M x3 `62.52 s`, `1.80 GB` | 1M `checked-rift`: `5.81 s`, `138 MB`; 5M `checked-rift`: `27.86 s`, `138 MB`; 10M x3 `checked-rift`: `59.37 s`, `138 MB` | 1M `150.157 ms` / `178.978 ms`; 5M `334.176 ms` / `1066.487 ms`; 10M x3 `851.023 ms` / `885.434 ms` | 1M `9.237 ms` / `1.871 ms`; 5M `46.492 ms` / `10.699 ms`; 10M x3 `96.069 ms` / `24.329 ms` | 1M heap fails `512M`; 5M and 10M heap fail `1G`, `768M`, and `512M`; checked rows pass `64M` | 10M checksum `8006060730683441349`, output `9323019` | Real-streaming retained clickstream throughput/RSS/GC/fixed-memory evidence; 10M is now report-grade 3-run scale-up evidence. Local named workload over public Wikimedia data, not an official Wikimedia benchmark artifact. |
+| Wikimedia enwiki retained clickstream | Clickstream TSV from `clickstream-enwiki-2026-03.tsv.gz`, named clickstream-session workload | 1M `6.50 s`, `784 MB`; 5M `28.77 s`, `1.54 GB`; 10M x3 `62.52 s`, `1.80 GB`; full one-run `74.23 s`, `2.30 GB` | 1M `checked-rift`: `5.81 s`, `138 MB`; 5M `checked-rift`: `27.86 s`, `138 MB`; 10M x3 `checked-rift`: `59.37 s`, `138 MB`; full one-run `69.87 s`, `136 MB` | 1M `150.157 ms` / `178.978 ms`; 5M `334.176 ms` / `1066.487 ms`; 10M x3 `851.023 ms` / `885.434 ms`; full one-run `7122.811 ms` / `7122.811 ms` | 1M `9.237 ms` / `1.871 ms`; 5M `46.492 ms` / `10.699 ms`; 10M x3 `96.069 ms` / `24.329 ms`; full one-run `318.165 ms` / `79.786 ms` | 1M heap fails `512M`; 5M and 10M heap fail `1G`, `768M`, and `512M`; checked rows pass `64M` | 10M checksum `8006060730683441349`, output `9323019`; full checksum `3903090754337931261`, output `33529413` | Real-streaming retained clickstream throughput/RSS/GC/fixed-memory evidence; 10M is report-grade 3-run scale-up evidence. Full-file one-run strengthens feasibility over all `35862259` compressed rows but needs repeat before replacing the 10M median. Local named workload over public Wikimedia data, not an official Wikimedia benchmark artifact. |
 | Yak LiveJournal graph replay | SNAP LiveJournal edges from `soc-LiveJournal1.txt.gz`, epoch edge updates | `18.32 s`, `577 MB` | `checked-epoch-scoped`: `17.15 s`, `102 MB` | `165.387 ms` / n/a | `checked-epoch-stream`: `0.000 ms` / `2.869 ms` | heap passes `128M`, fails `64M`; checked epoch rows pass `64M` and `32M` | checksum `-5977224669223427032` | Real-streaming graph RSS/fixed-memory and throughput evidence; heap GC is about `2.6%`, so not a GC-time flagship. |
 | AskUbuntu topword stream | Stack Exchange posts from `7z:...!Posts.xml`, epoch word records | `6.74 s`, `41 MB` | `checked-epoch-scoped`: `6.23 s`, `15 MB` | `27.237 ms` / n/a | `0.000 ms` / `0.000 ms` | heap caps not needed; low-RSS checked row already stable | checksum `-1661295494911249805`, records `5000000` | Modest real-streaming text RSS/fixed-memory and elapsed evidence; parser/token scanning dominates and heap GC is about `1.3%`. |
 
@@ -238,6 +238,14 @@ Heap-cap probes:
 | `checked-rift` | `59.37` | `138412032` | `19635.995` | `96.069` | `96.128` | `24.329` | `8006060730683441349` | `9323019` |
 | `checked-region-scoped` | `62.33` | `138706944` | `21396.025` | `1490.661` | `1525.790` | `0.000` | `8006060730683441349` | `9323019` |
 
+Full local file feasibility, one-run:
+
+| Mode | L1 external s | L1 RSS bytes | L2 median ms | Median GC ms | Max GC ms | Region op ms | Checksum | Output |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `heap-gc` | `74.23` | `2298707968` | `72750.014` | `7122.811` | `7122.811` | `0.000` | `3903090754337931261` | `33529413` |
+| `checked-rift` | `69.87` | `136265728` | `71149.579` | `318.165` | `318.165` | `79.786` | `3903090754337931261` | `33529413` |
+| `checked-region-scoped` | `76.83` | `136593408` | `76156.741` | `5582.325` | `5582.325` | `0.000` | `3903090754337931261` | `33529413` |
+
 Interpretation:
 
 - This is now a named retained clickstream workload rather than a generic
@@ -262,6 +270,13 @@ Interpretation:
   region-op, versus heap `20103.863 ms` with `851.023 ms` timed GC. Heap
   fails at `1G`, `768M`, and `512M`; checked rows pass under a `64M` GC heap
   cap.
+- The full-file one-run feasibility pass processes all `35862259` compressed
+  rows with matching checksum/output. Checked Rift is L1 `69.87 s`, RSS
+  `136 MB`, versus heap `74.23 s`, RSS `2.30 GB`; L2 checked Rift is
+  `71149.579 ms` with `318.165 ms` GC and `79.786 ms` region-op, versus heap
+  `72750.014 ms` with `7122.811 ms` timed GC. Treat this as stronger
+  full-input feasibility evidence, but keep the 10M x3 row as the report-grade
+  median until the full-file row is repeated.
 
 ### Yak LiveJournal Graphreal, Streaming-File
 
