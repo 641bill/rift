@@ -243,10 +243,10 @@ SUMMARY_CARDS = [
         "tone": "win",
     },
     {
-        "label": "Best real-input result",
-        "value": "16.12s vs 18.79s",
-        "detail": "Yak LiveJournal graph replay: checked epoch scoped beats the garbage-collected heap and cuts resident memory.",
-        "claim": "Real-input throughput + RSS win",
+        "label": "Real streaming retained",
+        "value": "5.81s vs 6.50s",
+        "detail": "Wikimedia retained clickstream-session: checked Rift beats the garbage-collected heap and cuts resident memory on a compressed streaming input.",
+        "claim": "Throughput + RSS + GC win",
         "tone": "win",
     },
 ]
@@ -531,6 +531,13 @@ RESULT_ROWS = [
         "Current presentation-facing stream/application sweep; DSPBench remains modest/control, and Theodolite is throughput/GC-positive but not an RSS win in the selected addendum.",
     ],
     [
+        "Real streaming retained state",
+        "Theodolite UC4 retained hierarchy windows and Wikimedia retained clickstream-session over compressed public inputs.",
+        "Theodolite checked stream `14.06s`, `26.6 MB`; Wikimedia checked Rift `5.81s`, `138 MB`.",
+        "Theodolite heap `16.85s`, `207 MB`; Wikimedia heap `6.50s`, `784 MB`.",
+        "Positive real-streaming retained-object evidence: both rows improve throughput, RSS, GC, and fixed-memory behavior. These are local named kernels, not exact prior-system artifacts.",
+    ],
+    [
         "Real log top-k",
         "LogHub HDFS top templates, real HDFS logs, 1M x20.",
         "Checked top-k scoped API: `4.88s`, RSS about `28 MB`.",
@@ -551,6 +558,8 @@ REAL_INPUT_ROWS = [
     ["Yak LiveJournal", "Real SNAP graph input", "Strong checked epoch time and RSS win", "Flagship real-input row."],
     ["AskUbuntu topwordreal", "Real Stack Exchange text", "Checked epoch time/RSS win", "First real text/top-word row; not exact Yak/Hadoop."],
     ["LogHub HDFS top templates", "Real LogHub HDFS logs", "Modest time win and large RSS reduction", "Promising reusable top-k API row."],
+    ["Wikimedia clickstream-session", "Real compressed Wikimedia clickstream TSV", "Checked Rift time/RSS/GC/fixed-memory win", "Named retained streaming row; not official Wikimedia artifact."],
+    ["Theodolite retained UC4", "Real UCI household power trace", "Checked stream time/RSS/GC/fixed-memory win", "Strongest real streaming time-series retained row."],
     ["LogHub HDFS q3 streaming", "Real streaming HDFS logs", "Large RSS reduction, slower elapsed", "Template/session control row; parser/query CPU dominates."],
     ["LogHub HDFS q2", "Real LogHub HDFS logs", "Elapsed tie, strong RSS reduction", "Useful page/window control."],
     ["GH Archive", "Real NDJSON events", "Small time/RSS wins; parser CPU dominates", "Useful but not GC-heavy enough yet."],
@@ -560,7 +569,7 @@ REAL_INPUT_ROWS = [
 
 
 LIMITATIONS = [
-    "The best GC-heavy page/window stream result is still generated, so it demonstrates a workload regime rather than a real-data case study.",
+    "The best GC-heavy page/window token result is still generated, so that operator evidence demonstrates a workload regime rather than a real-data case study.",
     "Some real inputs are dominated by parsing, hashing, or query CPU, so removing GC does not automatically produce large elapsed-time wins.",
     "Unsafe/rootless region modes are useful lower bounds but are not user-facing safety claims.",
     "Rank, median, hash-join, and table-heavy operators still need focused API gates before they can support application claims.",
@@ -571,7 +580,7 @@ LIMITATIONS = [
 OPEN_WORK_ROWS = [
     ["Finalize L1 rows", "Finish final-clean headline runs for the selected representative API wins."],
     ["Gate throughput policies", "Run selected application L1/L2 gates for cache-large before promoting it beyond focused allocator evidence."],
-    ["Find a stronger real stream input", "LogHub q3 streaming is now parked as RSS/control evidence; continue with larger text/graph streams, retained sessions, Theodolite traces, and DSPBench kernels."],
+    ["Scale real retained streams", "Use Wikimedia and Theodolite as current positive cases; next try larger/full-input Wikimedia scale checks, richer LogHub sessions, and larger StackExchange/SNAP streams."],
     ["Extend StreamFlex design rows", "Scale the stable/transient/capsule matrix and add object-retained BeamFormer/FilterBank variants only if they remain fair same-shape controls."],
     ["Complete ReML/MLKit table", "Separate paper-reported, exact artifact rerun, and Scala Native port evidence."],
     ["Gate complex operators", "Only headline rank/hash/median/join after natural heap, same-shape heap, retained controls, and focused 1M API gates."],
@@ -959,7 +968,7 @@ def render_results_table() -> str:
         ["Result", "Workload", "Best checked row", "Baseline/control", "Interpretation"],
         rows,
         "Table 3. Representative results under the normalized comparison rules.",
-        "The current story is strongest for retained timestamped dataflow, epochal graph/dataflow/transaction shapes, and generated page/window pressure; real streaming rows are currently more often RSS/control evidence than flagship GC-heavy throughput proof.",
+        "The current story is strongest for retained timestamped dataflow, epochal graph/dataflow/transaction shapes, generated page/window pressure, and two named real-streaming retained-state rows; many other real streams remain RSS/control evidence.",
     )
 
 
@@ -969,7 +978,7 @@ def render_real_input_table() -> str:
         ["Benchmark", "Input", "Current result", "Report status"],
         rows,
         "Table 4. Real-input evidence status.",
-        "Real datasets are not automatically GC-heavy. The strongest real row is LiveJournal; several others are useful RSS or ceiling controls.",
+        "Real datasets are not automatically GC-heavy. The strongest real rows are LiveJournal for graph epochs, Theodolite UC4 for retained time-series, and Wikimedia clickstream-session for retained clickstream state; several others are useful RSS or ceiling controls.",
     )
 
 

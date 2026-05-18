@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-17 02:54 CEST
+Last updated: 2026-05-18 12:22 CEST
 
 Status: markdown slide deck outline. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report,
@@ -52,6 +52,7 @@ Representative numbers to keep on slides:
 | Generated page/window stressor | Clean selected stream sweep Common Crawl-shaped q1/q2, 1M x3: checked Rift page-token `16.04/16.36 s`, checked SafeZone-backed page-token `16.63/16.70 s` vs heap `22.55/21.41 s`; L2 heap GC is `1595.727/1593.068 ms` while checked page-token is `19.665/21.673 ms`. | Strong generated stream-object pressure win; not real-input proof. |
 | Selected stream/application sweep | NEXMark checked Rift is best/tied-best on q3/q8/q9/q11; generated LogHub q2/q3 checked scoped epoch is `2.46/10.32 s` vs heap `3.63/11.22 s`; generated LogHub top templates checked scoped top-k is `1.39 s` vs heap `2.03 s`; DSPBench real file-backed rows are modest/control evidence; Theodolite q2 selected addendum checked stream is `4.58 s` vs heap `5.13 s`. | Current presentation-facing stream sweep; Theodolite addendum is a real-streaming throughput/GC win but not an RSS win in this selected rerun. |
 | Modest real-input page/window/time-series | GH Archive byte-slice q1/q2 L1 checked scoped page-token `12.89/12.87 s`, `101/102 MB` RSS vs heap `13.17/13.18 s`, `265/244 MB`; LogHub HDFS q2 L1 checked scoped page-token `25.56 s`, `79 MB` RSS vs heap `25.60 s`, `409 MB` RSS; DSPBench Log q2 L1 checked `8.79 s`, `47.6 MB` vs heap `8.89 s`, `308 MB`; Theodolite real power q2 optimized checked stream `3.80 s`, `15.9 MB` vs heap `4.33 s`, `75.3 MB`. | Real-input stream wins are mostly RSS/tail/modest-throughput because parser/query CPU dominates and heap GC is small. Theodolite also confirms handle-backed allocation transfers to a real streaming epoch row. |
+| Real-streaming retained-object case studies | Theodolite retained UC4 full local stream: checked Rift stream `14.06 s`, `26.6 MB` RSS vs heap `16.85 s`, `207 MB`, L2 heap GC `335.309 ms`, heap fails at `64M`. Wikimedia retained clickstream-session 1M: checked Rift `5.81 s`, `138 MB` RSS vs heap `6.50 s`, `784 MB`, L2 heap GC `150.157 ms`, heap fails at `512M`. | These are the current positive real-streaming retained-state rows. They are local named kernels over public compressed inputs, not exact prior-system artifacts. |
 | Real-preloaded retained top-k | L1 LogHub HDFS 1M x20 after hot-path pass: reusable `EpochTopKByKey` checked scoped `4.88 s`, `28 MB` RSS vs retained heap `5.52 s`, `205 MB` RSS; 5M x5 scale-up is `18.26 s`, `92 MB` RSS vs retained heap `19.04 s`, `504 MB`. | First retained top-k API gate has L1 real-input confirmation and strong RSS win; report-facing API overhead is about `1.7%` at 1M x20 and the 5M row keeps a modest throughput/RSS win. |
 | Real streaming-input retained top-k | LogHub HDFS `streaming-file` 1M: reusable checked scoped `EpochTopKByKey` L1 `8.06 s`, `12 MB` RSS vs retained heap/drop-anchor `8.10 s`, `76 MB`; L2 checked `2697.653 ms`, GC `0 ms` vs heap `2765.068 ms`, GC `32.681 ms`. | First true streaming-input row: the HDFS file is consumed inside each run with no parsed total-input arrays. This is retained-object/RSS streaming evidence, not yet a huge-GC flagship. |
 
@@ -353,17 +354,17 @@ deadline misses. They can move in different directions.
 |---|---|
 | current Rift HP loses to improved SafeZone on linked/prior rows | learn from SafeZone internals. |
 | TableRank/rank/fold fail 1M gates | do not use them in app claims yet. |
-| real WET/WAT/Wikimedia/Linear Road/RIoTBench-MHEALTH mostly heap-fastest or median-GC-zero; GH Archive/LogHub/DSPBench are modest wins | current real inputs are not GC-heavy enough for representative claims, though HDFS q2 and other page-token/log rows are useful controls. |
+| real WET/WAT/old preloaded Wikimedia counter/Linear Road/RIoTBench-MHEALTH mostly heap-fastest or median-GC-zero; GH Archive/LogHub/DSPBench are modest wins | Many public stream rows are parser/query dominated and remain controls. The retained-state exceptions are Theodolite UC4 and Wikimedia clickstream-session. |
 | pipeline surrogate heap wins | CPU-bound workloads are not Rift targets. |
 
 ## Slide 13: Benchmark Ladder
 
 Next realistic GC-heavy search:
 
-1. Theodolite UC2/UC4-style industrial energy over a real power-meter trace;
-2. larger provenance-clean machine/security traces such as LogHub Spark/Windows, GDELT, or public SOC/NDJSON logs;
-3. larger/multiple real Common Crawl WET/WAT shards;
-4. GH Archive, LogHub, DSPBench, and RIoTBench/MHEALTH as modest-win or ceiling controls;
+1. larger/full-input Wikimedia clickstream scale checks if disk/time allow;
+2. richer LogHub/Spark/Windows session/template joins over compressed archives;
+3. larger provenance-clean StackExchange/SNAP/Twitter/security traces;
+4. Theodolite UC4 and Wikimedia clickstream as positive retained-stream case studies, with GH Archive, DSPBench, and RIoTBench/MHEALTH as modest-win or ceiling controls;
 5. NEXMark Q3/Q8/Q9/Q11 as generated controls;
 6. exact MLKit/ReML source benchmark reproduction as a non-stream typed-region axis.
 
@@ -372,8 +373,9 @@ favors SafeZone-backed page-token, but heap still reports zero timed GC.
 RIoTBench/MHEALTH fixes one IoT provenance gap but is also zero-GC at 1M.
 Theodolite source is cloned, but its official load generator is simulated
 smart-meter input; use it as methodology unless paired with real energy data.
-GH Archive is now the strongest real-input modest-win candidate, but not the
-missing GC-heavy proof. The 8-hour preloaded
+Theodolite retained UC4 and Wikimedia retained clickstream-session are now the
+positive real-streaming retained-state candidates. GH Archive remains a useful
+parser/RSS control rather than the missing GC-heavy proof. The 8-hour preloaded
 oracle row has heap winning uncapped median by growing to about `1.7 GB`, but
 the same q1 shape under a `1G` heap cap makes checked SafeZone-backed
 page-token faster than heap. The legacy file-backed q1/q2 rows showed RSS/

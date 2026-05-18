@@ -791,7 +791,7 @@ pre code {
         </div>
       </div>
       <aside class="hero-panel" aria-label="Report metadata">
-        <div class="panel-row"><span>Generated</span><strong>2026-05-17 17:47 CEST</strong></div>
+        <div class="panel-row"><span>Generated</span><strong>2026-05-18 12:27 CEST</strong></div>
         <div class="panel-row"><span>Source</span><strong>docs/PERFORMANCE_EVALUATION_REPORT.md</strong></div>
         <div class="panel-row"><span>Audience</span><strong>External systems / PL reader</strong></div>
         <div class="panel-row"><span>Headline rule</span><strong>Clean total time and RSS first</strong></div>
@@ -831,10 +831,10 @@ pre code {
   <div><span class="tag tag-win">Throughput + GC + RSS win</span></div>
 </article>
 <article class="metric-card metric-win">
-  <div class="metric-label">Best real-input result</div>
-  <div class="metric-value">16.12s vs 18.79s</div>
-  <p>Yak LiveJournal graph replay: checked epoch scoped beats the garbage-collected heap and cuts resident memory.</p>
-  <div><span class="tag tag-win">Real-input throughput + RSS win</span></div>
+  <div class="metric-label">Real streaming retained</div>
+  <div class="metric-value">5.81s vs 6.50s</div>
+  <p>Wikimedia retained clickstream-session: checked Rift beats the garbage-collected heap and cuts resident memory on a compressed streaming input.</p>
+  <div><span class="tag tag-win">Throughput + RSS + GC win</span></div>
 </article>
 </div>
   <p class="so-what"><strong>So what?</strong> The project has a clear systems question, a checked-region prototype, and two kinds of current wins: real-input epoch wins and controlled memory-management wins.</p>
@@ -1466,6 +1466,13 @@ pre code {
 <td>Current presentation-facing stream/application sweep; DSPBench remains modest/control, and Theodolite is throughput/GC-positive but not an RSS win in the selected addendum.</td>
 </tr>
 <tr>
+<td>Real streaming retained state</td>
+<td>Theodolite UC4 retained hierarchy windows and Wikimedia retained clickstream-session over compressed public inputs.</td>
+<td>Theodolite checked stream <code>14.06s</code>, <code>26.6 MB</code>; Wikimedia checked Rift <code>5.81s</code>, <code>138 MB</code>.</td>
+<td>Theodolite heap <code>16.85s</code>, <code>207 MB</code>; Wikimedia heap <code>6.50s</code>, <code>784 MB</code>.</td>
+<td>Positive real-streaming retained-object evidence: both rows improve throughput, RSS, GC, and fixed-memory behavior. These are local named kernels, not exact prior-system artifacts.</td>
+</tr>
+<tr>
 <td>Real log top-k</td>
 <td>LogHub HDFS top templates, real HDFS logs, 1M x20.</td>
 <td>Checked top-k scoped API: <code>4.88s</code>, RSS about <code>28 MB</code>.</td>
@@ -1480,7 +1487,7 @@ pre code {
 <td>A useful streaming RSS/fixed-memory control, but not a throughput win: parser/template/session CPU dominates.</td>
 </tr>
 </tbody></table></div>
-  <p class="so-what"><strong>So what?</strong> The current story is strongest for retained timestamped dataflow, epochal graph/dataflow/transaction shapes, and generated page/window pressure; real streaming rows are currently more often RSS/control evidence than flagship GC-heavy throughput proof.</p>
+  <p class="so-what"><strong>So what?</strong> The current story is strongest for retained timestamped dataflow, epochal graph/dataflow/transaction shapes, generated page/window pressure, and two named real-streaming retained-state rows; many other real streams remain RSS/control evidence.</p>
 </figure>
     </section>
 
@@ -1521,6 +1528,18 @@ pre code {
 <td>Promising reusable top-k API row.</td>
 </tr>
 <tr>
+<td>Wikimedia clickstream-session</td>
+<td>Real compressed Wikimedia clickstream TSV</td>
+<td>Checked Rift time/RSS/GC/fixed-memory win</td>
+<td>Named retained streaming row; not official Wikimedia artifact.</td>
+</tr>
+<tr>
+<td>Theodolite retained UC4</td>
+<td>Real UCI household power trace</td>
+<td>Checked stream time/RSS/GC/fixed-memory win</td>
+<td>Strongest real streaming time-series retained row.</td>
+</tr>
+<tr>
 <td>LogHub HDFS q3 streaming</td>
 <td>Real streaming HDFS logs</td>
 <td>Large RSS reduction, slower elapsed</td>
@@ -1551,7 +1570,7 @@ pre code {
 <td>Ceiling/control, not a flagship result.</td>
 </tr>
 </tbody></table></div>
-  <p class="so-what"><strong>So what?</strong> Real datasets are not automatically GC-heavy. The strongest real row is LiveJournal; several others are useful RSS or ceiling controls.</p>
+  <p class="so-what"><strong>So what?</strong> Real datasets are not automatically GC-heavy. The strongest real rows are LiveJournal for graph epochs, Theodolite UC4 for retained time-series, and Wikimedia clickstream-session for retained clickstream state; several others are useful RSS or ceiling controls.</p>
 </figure>
     </section>
 
@@ -1561,7 +1580,7 @@ pre code {
       <figure class="figure-block">
   <figcaption>Figure 6. What these results do not prove yet.</figcaption>
   <ul class="limitations-list">
-<li>The best GC-heavy page/window stream result is still generated, so it demonstrates a workload regime rather than a real-data case study.</li>
+<li>The best GC-heavy page/window token result is still generated, so that operator evidence demonstrates a workload regime rather than a real-data case study.</li>
 <li>Some real inputs are dominated by parsing, hashing, or query CPU, so removing GC does not automatically produce large elapsed-time wins.</li>
 <li>Unsafe/rootless region modes are useful lower bounds but are not user-facing safety claims.</li>
 <li>Rank, median, hash-join, and table-heavy operators still need focused API gates before they can support application claims.</li>
@@ -1600,8 +1619,8 @@ pre code {
 <td>Run selected application L1/L2 gates for cache-large before promoting it beyond focused allocator evidence.</td>
 </tr>
 <tr>
-<td>Find a stronger real stream input</td>
-<td>LogHub q3 streaming is now parked as RSS/control evidence; continue with larger text/graph streams, retained sessions, Theodolite traces, and DSPBench kernels.</td>
+<td>Scale real retained streams</td>
+<td>Use Wikimedia and Theodolite as current positive cases; next try larger/full-input Wikimedia scale checks, richer LogHub sessions, and larger StackExchange/SNAP streams.</td>
 </tr>
 <tr>
 <td>Extend StreamFlex design rows</td>
