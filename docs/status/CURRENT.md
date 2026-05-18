@@ -1,6 +1,6 @@
 # Current Rift Status
 
-Last updated: 2026-05-18 15:45 CEST
+Last updated: 2026-05-18 16:01 CEST
 
 Status: hot status file. Update this file for routine turn-by-turn progress
 instead of editing `docs/HANDOFF.md`, `docs/ROADMAP.md`,
@@ -76,13 +76,13 @@ instead of editing `docs/HANDOFF.md`, `docs/ROADMAP.md`,
   checked scoped pass under a `64M` GC heap cap. Classify this as 5M
   scale-up RSS/fixed-memory and GC-tail evidence, with only a modest L1
   throughput win and essentially tied L2 loop throughput.
-- Wikimedia retained clickstream-session 10M feasibility:
-  one-run L1 checked Rift `19.96 s`, RSS `136 MB`, versus heap `24.23 s`,
-  RSS `1.16 GB`; one-run L2 checked Rift `19716.840 ms`, GC `99.708 ms`,
-  region op `31.049 ms`, versus heap `22877.820 ms`, GC `4058.998 ms`.
-  Heap caps fail at `1G`, `768M`, and `512M`; checked Rift and checked scoped
-  pass under a `64M` GC heap cap. This is promising material-GC scale-up
-  evidence, but it needs a 3-run rerun before becoming a final median.
+- Wikimedia retained clickstream-session 10M 3-run scale-up:
+  L1 checked Rift `59.37 s`, RSS `138 MB`, versus heap `62.52 s`,
+  RSS `1.80 GB`; L2 checked Rift `19635.995 ms`, GC `96.069 ms`, region op
+  `24.329 ms`, versus heap `20103.863 ms`, GC `851.023 ms`. Heap caps fail at
+  `1G`, `768M`, and `512M`; checked Rift and checked scoped pass under a
+  `64M` GC heap cap. This is now report-grade real-streaming retained
+  clickstream throughput/RSS/GC/fixed-memory scale-up evidence.
 - Real-streaming evidence is now consolidated in the compact representative
   table at the top of `evidence/REAL_STREAMING_INPUT_MATRIX.md`: Theodolite
   retained UC4, LogHub Spark retained session, Wikimedia retained clickstream,
@@ -90,7 +90,7 @@ instead of editing `docs/HANDOFF.md`, `docs/ROADMAP.md`,
   with L1 elapsed/RSS, L2 GC/region interpretation, heap-cap status,
   checksum/output, and allowed claim.
 - `docs/PERFORMANCE_EVALUATION_REPORT.md`, `docs/RIFT_EVALUATION_SUMMARY_SLIDES.md`,
-  and generated `docs/report.html` now include the Wikimedia 5M scale-up in
+  and generated `docs/report.html` include the Wikimedia scale-up in
   presentation-facing summaries, not only in the raw evidence files.
 - Previous checked suites also passed:
   `RiftRegionCheckedCompilerTest` `141/141`,
@@ -102,9 +102,8 @@ instead of editing `docs/HANDOFF.md`, `docs/ROADMAP.md`,
    do not mix HotSpot/JVM prototype churn into `main`.
 2. If continuing Native evidence, the current local compressed real-streaming
    ladder is mostly classified, and the Wikimedia named clickstream-session row
-   now has a promising 10M one-run feasibility result. The next useful step is
-   a 10M 3-run L1/L2 median rerun for this row before attempting the full
-   35.8M-row file, or a provenance/disk preflight for truly larger
-   StackOverflow/Twitter-2010 data.
+   now has a 10M 3-run median. The next useful step is either a cautious
+   full-file Wikimedia feasibility pass, or a provenance/disk preflight for
+   truly larger StackOverflow/Twitter-2010 data.
 3. If preparing presentation, update `PERFORMANCE_EVALUATION_REPORT.md` and
    regenerate `report.html`; otherwise leave them alone.
