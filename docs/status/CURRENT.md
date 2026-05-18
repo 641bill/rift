@@ -1,6 +1,6 @@
 # Current Rift Status
 
-Last updated: 2026-05-18 16:22 CEST
+Last updated: 2026-05-18 16:45 CEST
 
 Status: hot status file. Update this file for routine turn-by-turn progress
 instead of editing `docs/HANDOFF.md`, `docs/ROADMAP.md`,
@@ -99,6 +99,12 @@ instead of editing `docs/HANDOFF.md`, `docs/ROADMAP.md`,
 - `docs/PERFORMANCE_EVALUATION_REPORT.md`, `docs/RIFT_EVALUATION_SUMMARY_SLIDES.md`,
   and generated `docs/report.html` include the Wikimedia scale-up in
   presentation-facing summaries, not only in the raw evidence files.
+- `docs/MEMORY_MODE_TAXONOMY.md` and `docs/PERFORMANCE_EVALUATION_REPORT.md`
+  now explicitly distinguish region memory lifetime from program reachability:
+  summary-on-append rows allocate in a region but do not retain prior records
+  for later traversal, retained epochs store objects behind an epoch-local or
+  safely cleared bucket anchor, and page/window/bucket tokens are
+  operator-managed dynamic child epochs.
 - Previous checked suites also passed:
   `RiftRegionCheckedCompilerTest` `141/141`,
   `RiftRegionCheckedTest` `65/65`.

@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-18 16:22 CEST
+Last updated: 2026-05-18 16:45 CEST
 
 Status: presentation-ready working report. This document is the single
 high-level artifact to read before presenting or planning the next engineering
@@ -306,6 +306,24 @@ natural heap, direct epoch, retained epoch/drop-anchor, page/window token,
 summary-only lower bound, and same-API backend choices. It also adds a table
 separating what Rift enforces today from design vocabulary borrowed from prior
 work.
+
+Topology clarification:
+region lifetime and program reachability are separate ideas. Allocating an
+object inside `RiftRegion.epoch { ... }` means its memory is reclaimed at epoch
+close; it does not mean the program can rediscover that object later unless the
+reference is stored somewhere. A record that is allocated, immediately used to
+update `checksum` or `counters`, and never stored is a summary-on-append shape.
+The source local can be used while it remains in lexical scope, but previous
+records are not reachable by later loop iterations. A retained epoch stores the
+record in an epoch/window/session structure such as a bucket list, so later code
+inside the same lifetime can traverse it. If the bucket itself is epoch-local,
+the bucket and records die together at close; if a durable heap/control bucket
+temporarily anchors region records, the checked path must clear that anchor
+before close or reject the escaping reference. Page/window/bucket tokens should
+be read as operator-managed dynamic child epochs: the operator maps keys and
+timestamps to many active region lifetimes, closes expired buckets
+independently, and exposes restricted tokens rather than letting user code
+manage every overlapping epoch directly.
 
 Latest profile-guided backend cleanup:
 child `450465743` caches Rift allocation-stats mode per opened region. The

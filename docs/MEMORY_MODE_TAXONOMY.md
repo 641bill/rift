@@ -1,7 +1,7 @@
 # Rift Memory Mode Taxonomy
 
 Date: 2026-05-03
-Last updated: 2026-05-08 17:52 CEST
+Last updated: 2026-05-18 16:45 CEST
 
 Status: canonical reporting-name contract for future reports and benchmark
 tables. Older benchmark labels and code symbols remain accepted as aliases
@@ -55,6 +55,61 @@ checked shapes over the same backend:
 | `page-token` | Operator-owned page/event/bucket append path; fastest when data naturally belongs to page/window buckets, not a universal checked topology. |
 | `transaction` | Batch of operations committed/exported at a transaction boundary. |
 | `region-list` | Linked object topology where a whole list/list-of-lists region dies together. |
+
+## Region Lifetime Versus Program Reachability
+
+Region allocation controls when memory is reclaimed. It does not by itself
+make every allocated object discoverable later in the program.
+
+```scala
+RiftRegion.epoch {
+  val event = alloc(Event(...))
+  checksum += event.value
+  counters(event.key) += 1
+}
+```
+
+In source terms, `event` can be used again while the local variable remains in
+scope. But if the program never stores that reference in an epoch-local
+structure, later records in the same epoch cannot find earlier events again.
+The object memory is still reclaimed at epoch close, but the logical query has
+already consumed the event.
+
+```scala
+RiftRegion.epoch {
+  val event = alloc(Event(...))
+  bucket.head = event :: bucket.head
+}
+```
+
+This is a retained-object epoch shape. The bucket anchor points to the event,
+so later code in the same epoch can traverse the bucket and revisit all
+retained events. If `bucket` is epoch-local, the bucket and events die
+together at epoch close. If `bucket` is durable heap/control state, the checked
+API must clear the region-object anchor before close or reject the reference;
+durable state may keep only safe summaries, primitive metadata, or explicit
+bridge/root handles.
+
+Use `retained epoch` in result interpretation only for the second kind of
+program: ordinary objects remain reachable from an epoch/window/session
+structure until the lifetime boundary. Use `summary-only` when the program
+updates durable primitive summaries on append and does not retain the records
+for later traversal.
+
+## User-Managed Epochs Versus Operator-Managed Tokens
+
+Page/window/bucket-token regions are best understood as operator-managed
+dynamic child epochs. They are still regions, but the owner is different.
+
+| Shape | Owner of lifetime boundary | Typical use | Safety/optimization consequence |
+|---|---|---|---|
+| Direct epoch | User/program opens and closes one explicit scope. | Batch, transaction, graph superstep, one processing epoch. | Simple API and strong bulk close; best when the boundary is obvious. |
+| Overlapping direct epochs | User/program or a manager opens many scopes and closes each independently. | Manually managed keyed windows or sessions. | Requires map key/time to epoch, stale-append checks, close scheduling, and escape prevention. |
+| Page/window/bucket token | Framework/operator owns the many child regions and gives user code restricted append/use tokens. | Streaming windows, pages, event buckets, keyed session buckets. | The operator can centralize stale-token checks, close expired buckets independently, and remove hot-path checks inside operator-owned code once probes prove the invariant. |
+
+So page/window/bucket regions are not a fundamentally different memory idea
+from epochs. They are a framework-owned discipline for many overlapping
+epoch-like lifetimes.
 
 User-facing design target:
 
