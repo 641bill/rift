@@ -1,6 +1,6 @@
 # Current Rift Status
 
-Last updated: 2026-05-18 03:49 CEST
+Last updated: 2026-05-18 14:54 CEST
 
 Status: hot status file. Update this file for routine turn-by-turn progress
 instead of editing `docs/HANDOFF.md`, `docs/ROADMAP.md`,
@@ -68,12 +68,23 @@ instead of editing `docs/HANDOFF.md`, `docs/ROADMAP.md`,
   at `512M`; checked rows pass at `128M` and `64M`. Use this as
   real-streaming retained clickstream throughput/RSS/GC/fixed-memory evidence
   over public Wikimedia data, not an official Wikimedia benchmark artifact.
+- Wikimedia retained clickstream-session 5M scale-up:
+  L1 checked Rift `27.86 s`, RSS `138 MB`, versus heap `28.77 s`,
+  RSS `1.54 GB`; L2 checked Rift `9486.647 ms`, GC `46.492 ms`, region op
+  `10.699 ms`, versus heap `9459.416 ms`, GC `334.176 ms`, max GC
+  `1066.487 ms`. Heap caps fail at `1G`, `768M`, and `512M`; checked Rift and
+  checked scoped pass under a `64M` GC heap cap. Classify this as 5M
+  scale-up RSS/fixed-memory and GC-tail evidence, with only a modest L1
+  throughput win and essentially tied L2 loop throughput.
 - Real-streaming evidence is now consolidated in the compact representative
   table at the top of `evidence/REAL_STREAMING_INPUT_MATRIX.md`: Theodolite
   retained UC4, LogHub Spark retained session, Wikimedia retained clickstream,
   Yak LiveJournal streaming graph, and AskUbuntu streaming text are classified
   with L1 elapsed/RSS, L2 GC/region interpretation, heap-cap status,
   checksum/output, and allowed claim.
+- `docs/PERFORMANCE_EVALUATION_REPORT.md`, `docs/RIFT_EVALUATION_SUMMARY_SLIDES.md`,
+  and generated `docs/report.html` now include the Wikimedia 5M scale-up in
+  presentation-facing summaries, not only in the raw evidence files.
 - Previous checked suites also passed:
   `RiftRegionCheckedCompilerTest` `141/141`,
   `RiftRegionCheckedTest` `65/65`.
@@ -83,11 +94,10 @@ instead of editing `docs/HANDOFF.md`, `docs/ROADMAP.md`,
 1. If continuing backend portability, switch to `backend-portability` first;
    do not mix HotSpot/JVM prototype churn into `main`.
 2. If continuing Native evidence, the current local compressed real-streaming
-   ladder is mostly classified, and the Wikimedia generic triage row now has a
-   named clickstream-session workload. The next useful step is either a
-   larger/full-input Wikimedia scale check, a provenance/disk preflight for
-   truly larger StackOverflow/Twitter-2010 data, or a second named retained
-   LogHub/Wikimedia operator if the presentation needs another real-streaming
-   row.
+   ladder is mostly classified, and the Wikimedia named clickstream-session row
+   now has a 5M scale-up. The next useful step is either a full-input
+   Wikimedia feasibility pass, a provenance/disk preflight for truly larger
+   StackOverflow/Twitter-2010 data, or a second named retained LogHub/Wikimedia
+   operator if the presentation needs another real-streaming row.
 3. If preparing presentation, update `PERFORMANCE_EVALUATION_REPORT.md` and
    regenerate `report.html`; otherwise leave them alone.

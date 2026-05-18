@@ -1,7 +1,7 @@
 # Real Streaming Input Matrix
 
 Date: 2026-05-11
-Last updated: 2026-05-18 03:49 CEST
+Last updated: 2026-05-18 12:55 CEST
 
 Status: started. This matrix records only rows that satisfy the
 `real-streaming-input` protocol: no full-input preload, incremental source
@@ -18,7 +18,7 @@ only.
 |---|---|---:|---:|---:|---:|---|---|---|
 | Theodolite retained UC4 hierarchy | UCI power trace from `zip:...!household_power_consumption.txt`, retained hierarchy-window contributions | `16.85 s`, `207 MB` | `checked-epoch-stream`: `14.06 s`, `27 MB` | `335.309 ms` / `482.380 ms` | `31.570 ms` / n/a | heap passes `128M`, fails `64M`; checked stream passes `64M` | checksum `6053646443718331766`, output `126608` | Strongest real-streaming retained-object row: throughput, RSS, GC, and fixed-memory evidence; not exact Theodolite artifact reproduction. |
 | LogHub Spark retained session | Spark logs from `tar.gzcat:.../Spark.tar.gz`, retained active sessions | `27.62 s`, `391 MB` | `checked-region-scoped`: `19.85 s`, `73 MB`; `checked-rift`: `20.30 s`, `73 MB` | `140.639 ms` / `169.764 ms` | `checked-rift`: `14.407 ms` / `1.121 ms` | heap passes `256M`, fails `128M`; checked rows complete near `73 MB` | checksum `-1938898183938054371`, output `770310` | Real-streaming retained-session RSS/fixed-memory and throughput evidence; heap GC is about `2.1%`, so not a GC-time flagship. |
-| Wikimedia enwiki retained clickstream | Clickstream TSV from `clickstream-enwiki-2026-03.tsv.gz`, named clickstream-session workload | `6.50 s`, `784 MB` | `checked-rift`: `5.81 s`, `138 MB` | `150.157 ms` / `178.978 ms` | `9.237 ms` / `1.871 ms` | heap fails `512M` and below; checked rows pass `128M` and `64M` | checksum `250002331971566003`, output `922453` | Real-streaming retained clickstream throughput/RSS/GC/fixed-memory evidence; local named workload over public Wikimedia data, not an official Wikimedia benchmark artifact. |
+| Wikimedia enwiki retained clickstream | Clickstream TSV from `clickstream-enwiki-2026-03.tsv.gz`, named clickstream-session workload | 1M `6.50 s`, `784 MB`; 5M `28.77 s`, `1.54 GB` | 1M `checked-rift`: `5.81 s`, `138 MB`; 5M `checked-rift`: `27.86 s`, `138 MB` | 1M `150.157 ms` / `178.978 ms`; 5M `334.176 ms` / `1066.487 ms` | 1M `9.237 ms` / `1.871 ms`; 5M `46.492 ms` / `10.699 ms` | 1M heap fails `512M`; 5M heap fails `1G`, `768M`, and `512M`; checked rows pass `64M` | 5M checksum `-5539074761685310486`, output `4649530` | Real-streaming retained clickstream throughput/RSS/GC/fixed-memory evidence; 5M strengthens RSS/fixed-memory and GC-tail evidence, while L2 loop throughput is essentially tied. Local named workload over public Wikimedia data, not an official Wikimedia benchmark artifact. |
 | Yak LiveJournal graph replay | SNAP LiveJournal edges from `soc-LiveJournal1.txt.gz`, epoch edge updates | `18.32 s`, `577 MB` | `checked-epoch-scoped`: `17.15 s`, `102 MB` | `165.387 ms` / n/a | `checked-epoch-stream`: `0.000 ms` / `2.869 ms` | heap passes `128M`, fails `64M`; checked epoch rows pass `64M` and `32M` | checksum `-5977224669223427032` | Real-streaming graph RSS/fixed-memory and throughput evidence; heap GC is about `2.6%`, so not a GC-time flagship. |
 | AskUbuntu topword stream | Stack Exchange posts from `7z:...!Posts.xml`, epoch word records | `6.74 s`, `41 MB` | `checked-epoch-scoped`: `6.23 s`, `15 MB` | `27.237 ms` / n/a | `0.000 ms` / `0.000 ms` | heap caps not needed; low-RSS checked row already stable | checksum `-1661295494911249805`, records `5000000` | Modest real-streaming text RSS/fixed-memory and elapsed evidence; parser/token scanning dominates and heap GC is about `1.3%`. |
 
@@ -27,7 +27,8 @@ Current ranking:
 - Strongest real-streaming retained-object row: Theodolite retained UC4.
 - Strongest log/session fixed-memory row: LogHub Spark retained session.
 - Strongest compressed graph-stream row: Yak LiveJournal graph replay.
-- Named retained clickstream row now promoted: Wikimedia clickstream-session.
+- Named retained clickstream row now promoted and scale-checked to 5M:
+  Wikimedia clickstream-session.
 - Useful low-pressure control: AskUbuntu text topword.
 
 ## Implemented Rows
@@ -159,7 +160,8 @@ Implementation:
   TSV lines. It derives session keys from source article, target article, and
   link kind, uses click count as the value, retains ordinary session events
   plus per-key aggregate entries, and closes epoch-local state in bulk.
-- Configuration: `records=1000000`, `records_per_epoch=25000`,
+- Configuration: `records=1000000` and 5M scale-up,
+  `records_per_epoch=25000`,
   `active_epochs=16`, `key_space=262144`, workload
   `wikimedia-clickstream-session`.
 
@@ -192,6 +194,24 @@ Heap-cap probes:
 | `checked-rift` | `64M` | pass | `5.81` | `137854976` | cap inherited through `GC_MAXIMUM_HEAP_SIZE` |
 | `checked-region-scoped` | `64M` | pass | `6.55` | `138067968` | cap inherited through `GC_MAXIMUM_HEAP_SIZE` |
 
+5M rows:
+
+| Mode | L1 external s | L1 RSS bytes | L2 median ms | Median GC ms | Max GC ms | Region op ms | Checksum | Output |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `heap-gc` | `28.77` | `1539489792` | `9459.416` | `334.176` | `1066.487` | `0.000` | `-5539074761685310486` | `4649530` |
+| `checked-rift` | `27.86` | `138412032` | `9486.647` | `46.492` | `46.991` | `10.699` | `-5539074761685310486` | `4649530` |
+| `checked-region-scoped` | `30.23` | `140886016` | `10156.911` | `733.741` | `740.655` | `0.000` | `-5539074761685310486` | `4649530` |
+
+5M heap-cap probes:
+
+| Mode | Heap cap | Status | L1 external s | RSS bytes | Notes |
+|---|---:|---|---:|---:|---|
+| `heap-gc` | `1G` | fail | `7.63` | `831127552` | OOM in heap array allocation |
+| `heap-gc` | `768M` | fail | `3.48` | `527319040` | OOM in heap array allocation |
+| `heap-gc` | `512M` | fail | `1.83` | `374325248` | OOM in heap array allocation |
+| `checked-rift` | `64M` | pass | `9.37` | `136101888` | cap inherited through `GC_MAXIMUM_HEAP_SIZE` |
+| `checked-region-scoped` | `64M` | pass | `10.49` | `136298496` | cap inherited through `GC_MAXIMUM_HEAP_SIZE` |
+
 Interpretation:
 
 - This is now a named retained clickstream workload rather than a generic
@@ -204,6 +224,12 @@ Interpretation:
   passes the material-GC gate.
 - Heap fails even at `512M`, while checked rows complete under `128M` and
   `64M` external heap caps.
+- The 5M scale-up keeps L1 checked Rift slightly faster (`27.86 s` versus
+  heap `28.77 s`) and cuts RSS from `1.54 GB` to `138 MB`. Its L2 timed loop
+  is essentially tied with heap, but heap max GC grows to `1066.487 ms` and
+  heap fails at `1G`, `768M`, and `512M`, while checked Rift completes under a
+  `64M` GC heap cap. Use the 5M row primarily as scale-up RSS/fixed-memory and
+  GC-tail evidence.
 
 ### Yak LiveJournal Graphreal, Streaming-File
 

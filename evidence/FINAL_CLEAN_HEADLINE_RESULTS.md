@@ -1,7 +1,7 @@
 # Final-Clean Headline Results
 
 Date: 2026-05-09
-Last updated: 2026-05-17 12:22 CEST
+Last updated: 2026-05-18 12:55 CEST
 
 Status: L1 runner support exists for the first representative binaries. One
 focused retained-epoch L1 row has been collected from clean child commit
@@ -45,6 +45,10 @@ Child working tree after `0a042b920` adds `LOGHUB_TOP_INPUT_MODE=streaming-file`
 for the first real streaming-input top-template rows; those candidate L1 rows
 are recorded below and should be treated as first streaming-input evidence
 until committed.
+Child `e269b9af5` adds the named Wikimedia retained clickstream-session
+workload in `LogHubRetainedSessionMatrix`. The 1M row is recorded in
+`evidence/LOGHUB_RETAINED_SESSION_MATRIX.md`; the 5M scale-up L1 rows are
+recorded below as RSS/fixed-memory and GC-tail evidence.
 Child `d1fd16a64` adds ReML/MLKit-shaped Tier 2 ports for `logic`, `ray`, and
 `tsp`; their first report-grade L1/L2 rows are recorded below.
 Child `cd08f23d4` adds Yak `topwordreal` over the real Stack Exchange
@@ -295,6 +299,9 @@ for those 20 iterations.
 | LogHub top templates HDFS streaming-file 1M x3 | real-streaming-input HDFS replay | retained epoch/drop-anchor | retained-object memory-management | `heap-retained-drop-anchor` | 1 process x 3 streaming replays | `8.10 s` total (`2700 ms/iter`) | `8.10 s` | `8.10 s` | `75595776 bytes` | checksum `4142347521733569598`, output `1280`, bytes read `141557760` | First streaming-input retained heap/drop-anchor control; no parsed total-input arrays. |
 | LogHub top templates HDFS streaming-file 1M x3 | real-streaming-input HDFS replay | checked retained epoch | framework API / retained-object memory-management | `checked-scoped-epoch-retained-no-traverse` | 1 process x 3 streaming replays | `8.02 s` total (`2673 ms/iter`) | `8.02 s` | `8.02 s` | `12189696 bytes` | checksum `4142347521733569598`, output `1280`, bytes read `141557760` | First checked scoped retained streaming-input row; L2 checked `2672.825 ms`, GC `0 ms`. |
 | LogHub top templates HDFS streaming-file 1M x3 | real-streaming-input HDFS replay | reusable checked `EpochTopKByKey` | framework API / retained-object memory-management | `checked-scoped-epoch-topk-retained-no-traverse` | 1 process x 3 streaming replays | `8.06 s` total (`2687 ms/iter`) | `8.06 s` | `8.06 s` | `12173312 bytes` | checksum `4142347521733569598`, output `1280`, bytes read `141557760` | First reusable checked top-k streaming-input row: slight L1 win over retained heap and about `84%` lower RSS; matching L2 row removes heap's `32.681 ms` median GC. |
+| Wikimedia retained clickstream-session 5M x3 | real-streaming-input Wikimedia clickstream gzip replay | natural heap retained session | natural heap baseline | `heap-gc` | 1 process x 3 streaming replays | `28.77 s` total (`9590 ms/iter`) | `28.77 s` | `28.77 s` | `1539489792 bytes` | checksum `-5539074761685310486`, output `4649530`, bytes read `238801641` | L1 5M natural heap baseline; matching L2 heap median GC is `334.176 ms`, max GC `1066.487 ms`, and heap caps fail at `1G`, `768M`, and `512M`. |
+| Wikimedia retained clickstream-session 5M x3 | real-streaming-input Wikimedia clickstream gzip replay | checked retained epoch | framework API / retained-object memory-management | `checked-rift` | 1 process x 3 streaming replays | `27.86 s` total (`9287 ms/iter`) | `27.86 s` | `27.86 s` | `138412032 bytes` | checksum `-5539074761685310486`, output `4649530`, bytes read `238801641` | L1 checked Rift is `3.2%` faster and about `91%` lower RSS than heap; matching L2 is essentially tied with heap but cuts median/max GC to `46.492/46.991 ms` and passes under a `64M` GC heap cap. |
+| Wikimedia retained clickstream-session 5M x3 | real-streaming-input Wikimedia clickstream gzip replay | checked scoped retained epoch | safe checked backend comparison | `checked-region-scoped` | 1 process x 3 streaming replays | `30.23 s` total (`10077 ms/iter`) | `30.23 s` | `30.23 s` | `140886016 bytes` | checksum `-5539074761685310486`, output `4649530`, bytes read `238801641` | Safe checked scoped comparison row: RSS/fixed-memory positive but slower than heap/checked Rift at 5M; matching L2 reports high normal-heap timed GC, so this is not the best 5M backend. |
 | LogHub HDFS q2 1M x3 | real HDFS file-backed stream | page/window token | natural heap baseline | `heap-immix` | 3 processes x 3 iterations | `25.60 s` total (`8533 ms/iter`) | `25.58 s` | `25.75 s` | `408649728 bytes` | checksum `-4515648042024502814`, output `41` | L1 natural heap baseline; process loads 1M HDFS lines and runs q2 three times |
 | LogHub HDFS q2 1M x3 | real HDFS file-backed stream | scoped page/window token | safe rooted baseline | `safezone-improved-32k` | 3 processes x 3 iterations | `25.35 s` total (`8450 ms/iter`) | `25.33 s` | `25.39 s` | `79003648 bytes` | checksum `-4515648042024502814`, output `41` | L1 rooted scoped RSS win with near-tie elapsed |
 | LogHub HDFS q2 1M x3 | real HDFS file-backed stream | checked scoped page-token | framework API / RSS win | `rift-checked-safezone-page-token` | 3 processes x 3 iterations | `25.56 s` total (`8520 ms/iter`) | `25.56 s` | `25.58 s` | `79036416 bytes` | checksum `-4515648042024502814`, output `41` | L1 checked page/window row essentially ties heap elapsed and cuts RSS by about 81%; L2 row remains the GC interpretation source |

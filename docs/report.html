@@ -791,7 +791,7 @@ pre code {
         </div>
       </div>
       <aside class="hero-panel" aria-label="Report metadata">
-        <div class="panel-row"><span>Generated</span><strong>2026-05-18 12:27 CEST</strong></div>
+        <div class="panel-row"><span>Generated</span><strong>2026-05-18 14:54 CEST</strong></div>
         <div class="panel-row"><span>Source</span><strong>docs/PERFORMANCE_EVALUATION_REPORT.md</strong></div>
         <div class="panel-row"><span>Audience</span><strong>External systems / PL reader</strong></div>
         <div class="panel-row"><span>Headline rule</span><strong>Clean total time and RSS first</strong></div>
@@ -832,9 +832,9 @@ pre code {
 </article>
 <article class="metric-card metric-win">
   <div class="metric-label">Real streaming retained</div>
-  <div class="metric-value">5.81s vs 6.50s</div>
-  <p>Wikimedia retained clickstream-session: checked Rift beats the garbage-collected heap and cuts resident memory on a compressed streaming input.</p>
-  <div><span class="tag tag-win">Throughput + RSS + GC win</span></div>
+  <div class="metric-value">27.86s vs 28.77s</div>
+  <p>Wikimedia retained clickstream-session 5M: checked Rift keeps RSS near 138 MB while heap reaches 1.54 GB and fails under a 1G cap.</p>
+  <div><span class="tag tag-win">RSS + fixed-memory + GC-tail win</span></div>
 </article>
 </div>
   <p class="so-what"><strong>So what?</strong> The project has a clear systems question, a checked-region prototype, and two kinds of current wins: real-input epoch wins and controlled memory-management wins.</p>
@@ -1468,9 +1468,9 @@ pre code {
 <tr>
 <td>Real streaming retained state</td>
 <td>Theodolite UC4 retained hierarchy windows and Wikimedia retained clickstream-session over compressed public inputs.</td>
-<td>Theodolite checked stream <code>14.06s</code>, <code>26.6 MB</code>; Wikimedia checked Rift <code>5.81s</code>, <code>138 MB</code>.</td>
-<td>Theodolite heap <code>16.85s</code>, <code>207 MB</code>; Wikimedia heap <code>6.50s</code>, <code>784 MB</code>.</td>
-<td>Positive real-streaming retained-object evidence: both rows improve throughput, RSS, GC, and fixed-memory behavior. These are local named kernels, not exact prior-system artifacts.</td>
+<td>Theodolite checked stream <code>14.06s</code>, <code>26.6 MB</code>; Wikimedia 5M checked Rift <code>27.86s</code>, <code>138 MB</code>.</td>
+<td>Theodolite heap <code>16.85s</code>, <code>207 MB</code>; Wikimedia 5M heap <code>28.77s</code>, <code>1.54 GB</code>.</td>
+<td>Positive real-streaming retained-object evidence: Theodolite improves throughput/RSS/GC, while Wikimedia 5M is strongest as RSS/fixed-memory/GC-tail scale-up evidence. These are local named kernels, not exact prior-system artifacts.</td>
 </tr>
 <tr>
 <td>Real log top-k</td>
@@ -1530,7 +1530,7 @@ pre code {
 <tr>
 <td>Wikimedia clickstream-session</td>
 <td>Real compressed Wikimedia clickstream TSV</td>
-<td>Checked Rift time/RSS/GC/fixed-memory win</td>
+<td>1M checked Rift time/RSS/GC win; 5M RSS/fixed-memory/GC-tail scale-up</td>
 <td>Named retained streaming row; not official Wikimedia artifact.</td>
 </tr>
 <tr>

@@ -244,9 +244,9 @@ SUMMARY_CARDS = [
     },
     {
         "label": "Real streaming retained",
-        "value": "5.81s vs 6.50s",
-        "detail": "Wikimedia retained clickstream-session: checked Rift beats the garbage-collected heap and cuts resident memory on a compressed streaming input.",
-        "claim": "Throughput + RSS + GC win",
+        "value": "27.86s vs 28.77s",
+        "detail": "Wikimedia retained clickstream-session 5M: checked Rift keeps RSS near 138 MB while heap reaches 1.54 GB and fails under a 1G cap.",
+        "claim": "RSS + fixed-memory + GC-tail win",
         "tone": "win",
     },
 ]
@@ -533,9 +533,9 @@ RESULT_ROWS = [
     [
         "Real streaming retained state",
         "Theodolite UC4 retained hierarchy windows and Wikimedia retained clickstream-session over compressed public inputs.",
-        "Theodolite checked stream `14.06s`, `26.6 MB`; Wikimedia checked Rift `5.81s`, `138 MB`.",
-        "Theodolite heap `16.85s`, `207 MB`; Wikimedia heap `6.50s`, `784 MB`.",
-        "Positive real-streaming retained-object evidence: both rows improve throughput, RSS, GC, and fixed-memory behavior. These are local named kernels, not exact prior-system artifacts.",
+        "Theodolite checked stream `14.06s`, `26.6 MB`; Wikimedia 5M checked Rift `27.86s`, `138 MB`.",
+        "Theodolite heap `16.85s`, `207 MB`; Wikimedia 5M heap `28.77s`, `1.54 GB`.",
+        "Positive real-streaming retained-object evidence: Theodolite improves throughput/RSS/GC, while Wikimedia 5M is strongest as RSS/fixed-memory/GC-tail scale-up evidence. These are local named kernels, not exact prior-system artifacts.",
     ],
     [
         "Real log top-k",
@@ -558,7 +558,7 @@ REAL_INPUT_ROWS = [
     ["Yak LiveJournal", "Real SNAP graph input", "Strong checked epoch time and RSS win", "Flagship real-input row."],
     ["AskUbuntu topwordreal", "Real Stack Exchange text", "Checked epoch time/RSS win", "First real text/top-word row; not exact Yak/Hadoop."],
     ["LogHub HDFS top templates", "Real LogHub HDFS logs", "Modest time win and large RSS reduction", "Promising reusable top-k API row."],
-    ["Wikimedia clickstream-session", "Real compressed Wikimedia clickstream TSV", "Checked Rift time/RSS/GC/fixed-memory win", "Named retained streaming row; not official Wikimedia artifact."],
+    ["Wikimedia clickstream-session", "Real compressed Wikimedia clickstream TSV", "1M checked Rift time/RSS/GC win; 5M RSS/fixed-memory/GC-tail scale-up", "Named retained streaming row; not official Wikimedia artifact."],
     ["Theodolite retained UC4", "Real UCI household power trace", "Checked stream time/RSS/GC/fixed-memory win", "Strongest real streaming time-series retained row."],
     ["LogHub HDFS q3 streaming", "Real streaming HDFS logs", "Large RSS reduction, slower elapsed", "Template/session control row; parser/query CPU dominates."],
     ["LogHub HDFS q2", "Real LogHub HDFS logs", "Elapsed tie, strong RSS reduction", "Useful page/window control."],
