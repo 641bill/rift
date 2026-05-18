@@ -1,6 +1,6 @@
 # Current Rift Status
 
-Last updated: 2026-05-18 14:54 CEST
+Last updated: 2026-05-18 15:45 CEST
 
 Status: hot status file. Update this file for routine turn-by-turn progress
 instead of editing `docs/HANDOFF.md`, `docs/ROADMAP.md`,
@@ -76,6 +76,13 @@ instead of editing `docs/HANDOFF.md`, `docs/ROADMAP.md`,
   checked scoped pass under a `64M` GC heap cap. Classify this as 5M
   scale-up RSS/fixed-memory and GC-tail evidence, with only a modest L1
   throughput win and essentially tied L2 loop throughput.
+- Wikimedia retained clickstream-session 10M feasibility:
+  one-run L1 checked Rift `19.96 s`, RSS `136 MB`, versus heap `24.23 s`,
+  RSS `1.16 GB`; one-run L2 checked Rift `19716.840 ms`, GC `99.708 ms`,
+  region op `31.049 ms`, versus heap `22877.820 ms`, GC `4058.998 ms`.
+  Heap caps fail at `1G`, `768M`, and `512M`; checked Rift and checked scoped
+  pass under a `64M` GC heap cap. This is promising material-GC scale-up
+  evidence, but it needs a 3-run rerun before becoming a final median.
 - Real-streaming evidence is now consolidated in the compact representative
   table at the top of `evidence/REAL_STREAMING_INPUT_MATRIX.md`: Theodolite
   retained UC4, LogHub Spark retained session, Wikimedia retained clickstream,
@@ -95,9 +102,9 @@ instead of editing `docs/HANDOFF.md`, `docs/ROADMAP.md`,
    do not mix HotSpot/JVM prototype churn into `main`.
 2. If continuing Native evidence, the current local compressed real-streaming
    ladder is mostly classified, and the Wikimedia named clickstream-session row
-   now has a 5M scale-up. The next useful step is either a full-input
-   Wikimedia feasibility pass, a provenance/disk preflight for truly larger
-   StackOverflow/Twitter-2010 data, or a second named retained LogHub/Wikimedia
-   operator if the presentation needs another real-streaming row.
+   now has a promising 10M one-run feasibility result. The next useful step is
+   a 10M 3-run L1/L2 median rerun for this row before attempting the full
+   35.8M-row file, or a provenance/disk preflight for truly larger
+   StackOverflow/Twitter-2010 data.
 3. If preparing presentation, update `PERFORMANCE_EVALUATION_REPORT.md` and
    regenerate `report.html`; otherwise leave them alone.
