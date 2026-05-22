@@ -357,34 +357,6 @@ figure {
   font-size: 0.82rem;
   font-weight: 800;
 }
-.topology-board {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 44px minmax(0, 1fr);
-  gap: 14px;
-  align-items: stretch;
-  margin-top: 22px;
-  min-width: 0;
-  max-width: 100%;
-  overflow: hidden;
-}
-.topology-lane {
-  display: grid;
-  gap: 14px;
-  min-height: 250px;
-  padding: 20px;
-  border: 1px solid var(--line);
-  border-radius: 20px;
-  background: var(--paper-soft);
-  min-width: 0;
-  overflow-wrap: anywhere;
-  word-break: normal;
-}
-.topology-heap {
-  background: linear-gradient(180deg, #fff7e6, white);
-}
-.topology-region {
-  background: linear-gradient(180deg, #eaf7ef, white);
-}
 .lane-heading {
   color: #334155;
   font-size: 0.82rem;
@@ -423,65 +395,11 @@ figure {
   background: #dbeafe;
   color: #1e3a8a;
 }
-.topology-arrow {
-  display: grid;
-  place-items: center;
-  color: var(--accent-dark);
-  font-size: 2.3rem;
-  font-weight: 850;
-}
-.topology-card-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
-  gap: 14px;
-  margin-top: 16px;
-  min-width: 0;
-  max-width: 100%;
-  overflow: hidden;
-}
-.topology-card {
-  display: grid;
-  gap: 10px;
-  padding: 18px;
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  background: white;
-  min-width: 0;
-  max-width: 100%;
-  overflow: hidden;
-  overflow-wrap: anywhere;
-  word-break: normal;
-}
-.topology-card p {
-  font-size: 0.95rem;
-  min-width: 0;
-  overflow-wrap: anywhere;
-  word-break: normal;
-}
-.topology-card p strong {
-  color: var(--ink);
-}
-.topology-card code,
-.paper-figure code,
-.topology-lane code {
+.paper-figure code {
   white-space: normal;
   overflow-wrap: anywhere;
   word-break: normal;
 }
-.topology-label {
-  color: var(--muted);
-  font-size: 0.75rem;
-  font-weight: 850;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  min-width: 0;
-  overflow-wrap: anywhere;
-  word-break: normal;
-}
-.topology-win { border-color: #b8dec6; background: linear-gradient(180deg, var(--green-soft), white); }
-.topology-method { border-color: #c4d5f4; background: linear-gradient(180deg, var(--blue-soft), white); }
-.topology-warn { border-color: #ead099; background: linear-gradient(180deg, var(--amber-soft), white); }
-.topology-control { background: linear-gradient(180deg, #f1f5f9, white); }
 .paper-figure-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
@@ -716,15 +634,8 @@ pre code {
   .context-grid,
   .flow-grid,
   .paper-figure-grid,
-  .topology-card-grid,
   .evidence-list {
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
-  }
-  .topology-board {
-    grid-template-columns: 1fr;
-  }
-  .topology-arrow {
-    transform: rotate(90deg);
   }
 }
 @media (max-width: 640px) {
@@ -738,7 +649,6 @@ pre code {
   .context-grid,
   .flow-grid,
   .paper-figure-grid,
-  .topology-card-grid,
   .evidence-list {
     grid-template-columns: 1fr;
   }
@@ -762,8 +672,8 @@ pre code {
 <a href="#background">Background</a>
 <a href="#question">Question</a>
 <a href="#approach">Approach</a>
-<a href="#topologies">Topologies</a>
 <a href="#design">Design</a>
+<a href="#region-inference">Inference</a>
 <a href="#evaluation">Evaluation</a>
 <a href="#results">Results</a>
 <a href="#limitations">Limitations</a>
@@ -779,7 +689,7 @@ pre code {
         <h1>Can checked regions make stream processing cheaper than garbage collection?</h1>
         <div class="thesis-strip">
           <span>One-sentence thesis</span>
-          <p>This project asks whether a Scala Native system can use statically checked regions to reclaim stream-processing objects in bulk, avoiding garbage collection work without giving up memory safety.</p>
+          <p>Rift asks whether Scala Native programs can use statically checked lifetime boundaries and capture-directed inference to move proven epoch/page/window objects out of Immix, reclaim them in bulk, and keep all unproven allocations on the GC heap.</p>
         </div>
         <p class="hero-lede">
           A self-contained 10-minute research presentation for systems and
@@ -791,7 +701,7 @@ pre code {
         </div>
       </div>
       <aside class="hero-panel" aria-label="Report metadata">
-        <div class="panel-row"><span>Generated</span><strong>2026-05-18 16:54 CEST</strong></div>
+        <div class="panel-row"><span>Generated</span><strong>2026-05-22 09:02 CEST</strong></div>
         <div class="panel-row"><span>Source</span><strong>docs/PERFORMANCE_EVALUATION_REPORT.md</strong></div>
         <div class="panel-row"><span>Audience</span><strong>External systems / PL reader</strong></div>
         <div class="panel-row"><span>Headline rule</span><strong>Clean total time and RSS first</strong></div>
@@ -805,36 +715,36 @@ pre code {
         The prototype shows that checked region APIs can beat the garbage-
         collected heap when a workload has explicit epoch, transaction, page,
         or window lifetimes. The strongest evidence is not "regions always
-        win"; it is that the right checked topology can remove GC reclaim work
-        and reduce resident memory without resorting to unsafe manual memory
-        management.
+        win"; it is that a checked lifetime/API path can remove GC reclaim
+        work and reduce resident memory without resorting to unsafe manual
+        memory management.
       </p>
       <figure class="figure-block">
   <figcaption>Figure 1. Executive summary cards. Read these as the whole talk in four claims.</figcaption>
   <div class="summary-grid">
 <article class="metric-card metric-method">
   <div class="metric-label">Problem</div>
-  <div class="metric-value">GC overhead in structured streams</div>
-  <p>Many dataflow programs allocate short-lived or epoch-local records whose lifetimes are visible at the operator boundary.</p>
-  <div><span class="tag tag-method">Systems + PL motivation</span></div>
+  <div class="metric-value">Immix is strong, but lifetimes are visible</div>
+  <p>Rift targets rows where stream/dataflow objects share an epoch, page, window, transaction, or retained-query lifetime.</p>
+  <div><span class="tag tag-method">Systems + PL target</span></div>
 </article>
 <article class="metric-card metric-method">
   <div class="metric-label">Prototype</div>
-  <div class="metric-value">Checked stream regions</div>
-  <p>Rift adds checked epoch and page/window APIs on top of Scala Native runtime allocation backends.</p>
-  <div><span class="tag tag-method">Static safety plus region allocation</span></div>
+  <div class="metric-value">Checked regions + inference</div>
+  <p>Scala Native runtime regions, checked APIs, NIR lowering, diagnostics, and conservative heap fallback are implemented.</p>
+  <div><span class="tag tag-method">Working implementation</span></div>
 </article>
 <article class="metric-card metric-win">
-  <div class="metric-label">Prior-work-style result</div>
-  <div class="metric-value">3.59s vs 5.27s</div>
-  <p>Broom/Naiad-style timestamped aggregate: natural heap/GC versus checked Rift, with retained ordinary objects and bulk epoch close.</p>
-  <div><span class="tag tag-win">Throughput + GC + RSS win</span></div>
+  <div class="metric-label">Latest retained result</div>
+  <div class="metric-value">862ms vs 1071ms</div>
+  <p>Broom aggregate 10M in the latest current-state matrix: checked Rift removes timed GC and cuts RSS from 148.7 MB to 16.4 MB.</p>
+  <div><span class="tag tag-win">Retained dataflow win</span></div>
 </article>
 <article class="metric-card metric-win">
-  <div class="metric-label">Real streaming retained</div>
-  <div class="metric-value">59.37s vs 62.52s</div>
-  <p>Wikimedia retained clickstream-session 10M x3: checked Rift keeps RSS near 138 MB while heap reaches 1.80 GB and fails under a 1G cap.</p>
-  <div><span class="tag tag-win">Throughput + RSS + GC win</span></div>
+  <div class="metric-label">Latest real/local rows</div>
+  <div class="metric-value">274s vs 306s</div>
+  <p>DSPBench Log q2 10M file-backed replay: checked Rift page-token beats Immix and SafeZone while reducing timed GC.</p>
+  <div><span class="tag tag-win">Real/local stream win</span></div>
 </article>
 </div>
   <p class="so-what"><strong>So what?</strong> The project has a clear systems question, a checked-region prototype, and two kinds of current wins: real-input epoch wins and controlled memory-management wins.</p>
@@ -904,7 +814,7 @@ pre code {
       </div>
       <p>
         The report therefore distinguishes memory-management wins from
-        algorithmic or topology wins. If a result depends on summarizing data
+        algorithmic or API-shape wins. If a result depends on summarizing data
         early or avoiding object retention entirely, it is useful but it is not
         reported as a GC-reclaim win.
       </p>
@@ -935,278 +845,16 @@ pre code {
 </article>
 <article class="flow-card">
   <div class="flow-number">3</div>
-  <h3>Lower to fast backends</h3>
-  <p>The prototype lowers checked APIs to Rift streaming regions or SafeZone-family scoped allocation backends.</p>
+  <h3>Select safe backends</h3>
+  <p>The user-facing system is Rift; checked stream and checked scoped rows are backend choices selected by API shape and evidence.</p>
 </article>
 <article class="flow-card">
   <div class="flow-number">4</div>
   <h3>Compare fairly</h3>
-  <p>Benchmarks include natural heap baselines, same-shape heap controls, and retained-object controls before making memory-management claims.</p>
+  <p>Headline rows compare natural heap/GC against checked Rift with the same logical program. Mechanism controls stay in appendix tables.</p>
 </article>
 </div>
   <p class="so-what"><strong>So what?</strong> The contribution is not a benchmark rewrite; it is a checked API plus backend lowering and a fair comparison protocol.</p>
-</figure>
-    </section>
-
-    <section id="topologies" class="section">
-      <div class="section-kicker">Topology story</div>
-      <h2>The central choice is the lifetime boundary, not the operator name</h2>
-      <p>
-        Prior work wins by separating temporary data from durable control state.
-        Rift should be read the same way: epoch, page/window, and retained
-        controls are different ways to expose when ordinary objects die. The
-        reusable API is important because it lets the backend exploit that
-        boundary without unsafe manual memory management. The figures below
-        are Rift's current evaluation topologies; borrowed concepts are
-        included only when they describe what Rift enforces or what remains
-        future design vocabulary.
-      </p>
-      <figure class="figure-block">
-  <figcaption>Figure 4. Rift topology atlas.</figcaption>
-  <div class="paper-figure-grid">
-<article class="paper-figure">
-  <h3>Natural heap topology</h3>
-  <svg viewBox="0 0 360 260" role="img" aria-label="Natural heap topology with temporary and durable objects mixed in one heap">
-    <defs>
-      <marker id="heapScanArrow" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
-        <path d="M0,0 L0,6 L7,3 z" fill="#475569"></path>
-      </marker>
-    </defs>
-    <rect x="28" y="28" width="304" height="178" rx="20" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="2"></rect>
-    <text x="143" y="55" class="svg-title">Immix heap</text>
-    <circle cx="76" cy="96" r="13" fill="#7e57c2"></circle><text x="72" y="101" class="node-text">C</text>
-    <circle cx="122" cy="142" r="13" fill="#1f78b4"></circle><text x="118" y="147" class="node-text">r</text>
-    <circle cx="170" cy="94" r="13" fill="#1f78b4"></circle><text x="166" y="99" class="node-text">r</text>
-    <circle cx="218" cy="146" r="13" fill="#1f78b4"></circle><text x="214" y="151" class="node-text">r</text>
-    <circle cx="270" cy="100" r="13" fill="#7e57c2"></circle><text x="266" y="105" class="node-text">T</text>
-    <path d="M65 184 C118 217, 236 217, 292 184" fill="none" stroke="#475569" stroke-width="3" stroke-dasharray="7 6" marker-end="url(#heapScanArrow)"></path>
-    <text x="72" y="232" class="svg-legend">temporary and durable objects share one heap</text>
-    <text x="72" y="248" class="svg-legend">GC later traces dead records</text>
-  </svg>
-  <p>This is the baseline: durable control objects and short-lived records are mixed. The collector finds dead temporary objects later.</p>
-</article>
-<article class="paper-figure">
-  <h3>Direct epoch topology</h3>
-  <svg viewBox="0 0 360 260" role="img" aria-label="Direct epoch topology with durable heap state and repeated epoch regions">
-    <defs>
-      <marker id="epochArrow" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
-        <path d="M0,0 L0,6 L7,3 z" fill="#238443"></path>
-      </marker>
-    </defs>
-    <rect x="22" y="24" width="316" height="54" rx="16" fill="#f1f5f9" stroke="#cbd5e1"></rect>
-    <text x="64" y="57" class="svg-title">heap: durable tables and counters</text>
-    <rect x="30" y="116" width="84" height="68" rx="16" fill="#e8f5ec" stroke="#8fc49c" stroke-width="2"></rect>
-    <rect x="138" y="116" width="84" height="68" rx="16" fill="#e8f5ec" stroke="#8fc49c" stroke-width="2"></rect>
-    <rect x="246" y="116" width="84" height="68" rx="16" fill="#e8f5ec" stroke="#8fc49c" stroke-width="2"></rect>
-    <text x="52" y="145" class="svg-title">epoch 1</text>
-    <text x="160" y="145" class="svg-title">epoch 2</text>
-    <text x="268" y="145" class="svg-title">epoch 3</text>
-    <circle cx="57" cy="166" r="7" fill="#1f78b4"></circle><circle cx="75" cy="166" r="7" fill="#1f78b4"></circle><circle cx="93" cy="166" r="7" fill="#1f78b4"></circle>
-    <circle cx="165" cy="166" r="7" fill="#1f78b4"></circle><circle cx="183" cy="166" r="7" fill="#1f78b4"></circle><circle cx="201" cy="166" r="7" fill="#1f78b4"></circle>
-    <circle cx="273" cy="166" r="7" fill="#1f78b4"></circle><circle cx="291" cy="166" r="7" fill="#1f78b4"></circle><circle cx="309" cy="166" r="7" fill="#1f78b4"></circle>
-    <path d="M114 150 L137 150" stroke="#238443" stroke-width="4" marker-end="url(#epochArrow)"></path>
-    <path d="M222 150 L245 150" stroke="#238443" stroke-width="4" marker-end="url(#epochArrow)"></path>
-    <text x="47" y="222" class="svg-legend">open → allocate → update durable state → close</text>
-    <text x="47" y="240" class="svg-legend">graph, dataflow, stream, and transaction rows</text>
-  </svg>
-  <p>Each batch or transaction gets one checked region. Durable state remains on heap; temporary records die when the epoch closes.</p>
-</article>
-<article class="paper-figure">
-  <h3>StreamFlex stable / transient / capsule topology</h3>
-  <svg viewBox="0 0 360 260" role="img" aria-label="StreamFlex design topology with stable heap state, transient period region, and bounded capsule export">
-    <defs>
-      <marker id="capsuleArrow" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
-        <path d="M0,0 L0,6 L7,3 z" fill="#238443"></path>
-      </marker>
-    </defs>
-    <rect x="24" y="24" width="312" height="50" rx="15" fill="#f1f5f9" stroke="#cbd5e1"></rect>
-    <text x="68" y="55" class="svg-title">heap stable state</text>
-    <rect x="32" y="111" width="154" height="76" rx="18" fill="#e8f5ec" stroke="#8fc49c" stroke-width="2"></rect>
-    <text x="58" y="139" class="svg-title">transient region</text>
-    <circle cx="62" cy="164" r="7" fill="#1f78b4"></circle><circle cx="84" cy="164" r="7" fill="#1f78b4"></circle><circle cx="106" cy="164" r="7" fill="#1f78b4"></circle><circle cx="128" cy="164" r="7" fill="#1f78b4"></circle><circle cx="150" cy="164" r="7" fill="#1f78b4"></circle>
-    <rect x="228" y="117" width="94" height="64" rx="16" fill="#dbeafe" stroke="#93b4e8" stroke-width="2"></rect>
-    <text x="246" y="143" class="svg-title">capsule</text>
-    <text x="241" y="163" class="svg-legend">bounded export</text>
-    <path d="M186 150 L227 150" stroke="#238443" stroke-width="4" marker-end="url(#capsuleArrow)"></path>
-    <path d="M275 117 C275 88, 216 76, 180 75" fill="none" stroke="#238443" stroke-width="3" marker-end="url(#capsuleArrow)"></path>
-    <text x="38" y="218" class="svg-legend">packet → feature → decision objects live in period</text>
-    <text x="38" y="236" class="svg-legend">export capsule values, then close region</text>
-  </svg>
-  <p>This is the new StreamFlex-design row: stable state is durable, transient objects die by period, and capsules make transfer explicit.</p>
-</article>
-<article class="paper-figure">
-  <h3>Retained epoch drop-anchor</h3>
-  <svg viewBox="0 0 360 260" role="img" aria-label="Retained epoch topology with heap and region both retaining records until close">
-    <defs>
-      <marker id="dropArrow" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
-        <path d="M0,0 L0,6 L7,3 z" fill="#238443"></path>
-      </marker>
-    </defs>
-    <rect x="28" y="36" width="304" height="50" rx="14" fill="#f1f5f9" stroke="#cbd5e1"></rect>
-    <text x="90" y="67" class="svg-title">bucket anchor</text>
-    <circle cx="72" cy="142" r="15" fill="#1f78b4"></circle><text x="68" y="148" class="node-text">r</text>
-    <circle cx="126" cy="142" r="15" fill="#1f78b4"></circle><text x="122" y="148" class="node-text">r</text>
-    <circle cx="180" cy="142" r="15" fill="#1f78b4"></circle><text x="176" y="148" class="node-text">r</text>
-    <circle cx="234" cy="142" r="15" fill="#1f78b4"></circle><text x="230" y="148" class="node-text">r</text>
-    <path d="M87 142 L110 142" stroke="#334155" stroke-width="3" marker-end="url(#dropArrow)"></path>
-    <path d="M141 142 L164 142" stroke="#334155" stroke-width="3" marker-end="url(#dropArrow)"></path>
-    <path d="M195 142 L218 142" stroke="#334155" stroke-width="3" marker-end="url(#dropArrow)"></path>
-    <path d="M180 86 L180 122" stroke="#238443" stroke-width="4" marker-end="url(#dropArrow)"></path>
-    <rect x="268" y="122" width="54" height="40" rx="10" fill="#e8f5ec" stroke="#8fc49c"></rect>
-    <text x="282" y="147" class="svg-title">close</text>
-    <text x="43" y="208" class="svg-legend">heap: drop anchor, GC reclaims later</text>
-    <text x="43" y="228" class="svg-legend">region: clear anchor, close now; no scan</text>
-  </svg>
-  <p>This is the fair memory-management test: both sides retain ordinary objects until close; only reclaim differs.</p>
-</article>
-<article class="paper-figure">
-  <h3>Page / window token topology</h3>
-  <svg viewBox="0 0 360 260" role="img" aria-label="Page and window token topology with parent metadata and child bucket regions">
-    <defs>
-      <marker id="tokenArrow" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
-        <path d="M0,0 L0,6 L7,3 z" fill="#238443"></path>
-      </marker>
-    </defs>
-    <rect x="24" y="26" width="312" height="58" rx="16" fill="#f1f5f9" stroke="#cbd5e1"></rect>
-    <text x="66" y="61" class="svg-title">parent bucket table</text>
-    <rect x="32" y="124" width="82" height="68" rx="16" fill="#e8f5ec" stroke="#8fc49c" stroke-width="2"></rect>
-    <rect x="139" y="124" width="82" height="68" rx="16" fill="#e8f5ec" stroke="#8fc49c" stroke-width="2"></rect>
-    <rect x="246" y="124" width="82" height="68" rx="16" fill="#e8f5ec" stroke="#8fc49c" stroke-width="2"></rect>
-    <text x="51" y="148" class="svg-title">bucket</text>
-    <text x="158" y="148" class="svg-title">current</text>
-    <text x="268" y="148" class="svg-title">future</text>
-    <circle cx="58" cy="171" r="6" fill="#1f78b4"></circle><circle cx="76" cy="171" r="6" fill="#1f78b4"></circle><circle cx="94" cy="171" r="6" fill="#1f78b4"></circle>
-    <circle cx="165" cy="171" r="6" fill="#1f78b4"></circle><circle cx="183" cy="171" r="6" fill="#1f78b4"></circle><circle cx="201" cy="171" r="6" fill="#1f78b4"></circle>
-    <circle cx="273" cy="171" r="6" fill="#1f78b4"></circle><circle cx="291" cy="171" r="6" fill="#1f78b4"></circle><circle cx="309" cy="171" r="6" fill="#1f78b4"></circle>
-    <path d="M180 84 L180 123" stroke="#238443" stroke-width="4" marker-end="url(#tokenArrow)"></path>
-    <path d="M73 124 C68 104, 92 91, 132 84" fill="none" stroke="#238443" stroke-width="3" stroke-dasharray="6 5" marker-end="url(#tokenArrow)"></path>
-    <text x="44" y="220" class="svg-legend">token caches child region for hot append</text>
-    <text x="44" y="238" class="svg-legend">close expired buckets independently</text>
-  </svg>
-  <p>This is the Common Crawl/log-style shape: parent metadata lives longer; each page/window bucket owns many records.</p>
-</article>
-<article class="paper-figure">
-  <h3>Summary-only topology</h3>
-  <svg viewBox="0 0 360 260" role="img" aria-label="Summary-only topology where records are not retained until close">
-    <defs>
-      <marker id="sumArrow" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
-        <path d="M0,0 L0,6 L7,3 z" fill="#238443"></path>
-      </marker>
-    </defs>
-    <rect x="28" y="34" width="92" height="56" rx="15" fill="#e8f5ec" stroke="#8fc49c"></rect>
-    <text x="47" y="67" class="svg-title">record</text>
-    <rect x="142" y="34" width="92" height="56" rx="15" fill="#e8f5ec" stroke="#8fc49c"></rect>
-    <text x="161" y="67" class="svg-title">record</text>
-    <rect x="256" y="34" width="72" height="56" rx="15" fill="#e8f5ec" stroke="#8fc49c"></rect>
-    <text x="273" y="67" class="svg-title">...</text>
-    <rect x="82" y="144" width="196" height="62" rx="16" fill="#f9d778" stroke="#c28a18"></rect>
-    <text x="112" y="171" class="svg-title">primitive summary</text>
-    <text x="138" y="192" class="svg-legend">counts / sums / sketches</text>
-    <path d="M74 91 L138 143" stroke="#238443" stroke-width="4" marker-end="url(#sumArrow)"></path>
-    <path d="M188 91 L188 143" stroke="#238443" stroke-width="4" marker-end="url(#sumArrow)"></path>
-    <path d="M288 91 L232 143" stroke="#238443" stroke-width="4" marker-end="url(#sumArrow)"></path>
-    <text x="42" y="230" class="svg-legend">fast for heap and regions; not a reclaim claim</text>
-  </svg>
-  <p>Records do not survive to the close boundary. This can be the right processing topology, but it is not evidence that region reclaim beat GC.</p>
-</article>
-<article class="paper-figure">
-  <h3>Backend choice under the same API</h3>
-  <svg viewBox="0 0 360 260" role="img" aria-label="Same checked API can lower to scoped or streaming region backends">
-    <defs>
-      <marker id="backendArrow" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
-        <path d="M0,0 L0,6 L7,3 z" fill="#238443"></path>
-      </marker>
-    </defs>
-    <rect x="78" y="26" width="204" height="48" rx="16" fill="#dbeafe" stroke="#93b4e8"></rect>
-    <text x="114" y="56" class="svg-title">checked API shape</text>
-    <rect x="30" y="122" width="132" height="70" rx="16" fill="#e8f5ec" stroke="#8fc49c"></rect>
-    <text x="58" y="151" class="svg-title">scoped/rooted</text>
-    <text x="59" y="171" class="svg-legend">SafeZone-backed</text>
-    <rect x="198" y="122" width="132" height="70" rx="16" fill="#e8f5ec" stroke="#8fc49c"></rect>
-    <text x="226" y="151" class="svg-title">stream/reset</text>
-    <text x="230" y="171" class="svg-legend">Rift backend</text>
-    <path d="M136 75 L96 121" stroke="#238443" stroke-width="4" marker-end="url(#backendArrow)"></path>
-    <path d="M224 75 L264 121" stroke="#238443" stroke-width="4" marker-end="url(#backendArrow)"></path>
-    <text x="42" y="226" class="svg-legend">same topology, different backend mechanics</text>
-    <text x="42" y="244" class="svg-legend">rootless rows are lower-bound controls</text>
-  </svg>
-  <p>The topology is what the program expresses. The backend is how that topology is implemented and optimized.</p>
-</article>
-</div>
-<div class="topology-board">
-<div class="topology-lane topology-heap">
-  <div class="lane-heading">GC heap view</div>
-  <div class="memory-stack">
-    <div class="memory-cell durable">durable control state</div>
-    <div class="memory-cell temp">temporary stream objects</div>
-    <div class="memory-cell temp">window / epoch records</div>
-    <div class="memory-cell durable">global metadata</div>
-  </div>
-  <p>GC must later rediscover which temporary objects died.</p>
-</div>
-<div class="topology-arrow" aria-hidden="true">→</div>
-<div class="topology-lane topology-region">
-  <div class="lane-heading">Rift lifetime view</div>
-  <div class="memory-split">
-    <div class="heap-box">heap: durable control metadata</div>
-    <div class="region-box">region: epoch / page / window objects</div>
-    <div class="close-box">bulk close/reset at boundary</div>
-  </div>
-  <p>Static checks make the boundary safe enough for bulk reclaim.</p>
-</div>
-</div>
-<div class="topology-card-grid">
-<article class="topology-card topology-neutral">
-  <div class="topology-label">baseline</div>
-  <h3>Natural heap</h3>
-  <p>Objects flow into the Scala Native Immix heap; GC later discovers which are dead.</p>
-  <p><strong>Strategy:</strong> No annotations; temporary stream objects share the heap with durable state.</p>
-  <div><span class="tag tag-neutral">Practical default baseline</span></div>
-</article>
-<article class="topology-card topology-win">
-  <div class="topology-label">memory-management test</div>
-  <h3>Retained epoch</h3>
-  <p>Heap and region both materialize records and retain them until an epoch boundary.</p>
-  <p><strong>Strategy:</strong> Heap drops an anchor; Rift bulk-closes the epoch.</p>
-  <div><span class="tag tag-win">Cleanest GC-vs-region reclaim comparison</span></div>
-</article>
-<article class="topology-card topology-win">
-  <div class="topology-label">batch / graph / transaction</div>
-  <h3>Direct epoch</h3>
-  <p>A batch, graph step, dataflow epoch, or transaction owns temporary records and scratch objects.</p>
-  <p><strong>Strategy:</strong> Use <code>RiftRegion.epoch { ... }</code>; keep durable tables on heap.</p>
-  <div><span class="tag tag-win">Best current general Rift topology</span></div>
-</article>
-<article class="topology-card topology-method">
-  <div class="topology-label">stream buckets</div>
-  <h3>Page / window token</h3>
-  <p>A page, event group, or time window owns many short-lived records.</p>
-  <p><strong>Strategy:</strong> Operator-owned bucket lookup/close removes hot-path checks.</p>
-  <div><span class="tag tag-method">Generated stream-object pressure win</span></div>
-</article>
-<article class="topology-card topology-win">
-  <div class="topology-label">StreamFlex design</div>
-  <h3>Stable / transient / capsule</h3>
-  <p>Durable filter state stays on heap; each period owns transient stream objects.</p>
-  <p><strong>Strategy:</strong> Checked epochs hold transient data; capsules mark transfer boundaries.</p>
-  <div><span class="tag tag-win">Throughput and tail-latency evidence</span></div>
-</article>
-<article class="topology-card topology-warn">
-  <div class="topology-label">topology lower bound</div>
-  <h3>Summary-only</h3>
-  <p>Records update primitive summaries on append and do not survive to close.</p>
-  <p><strong>Strategy:</strong> Run heap and checked counterparts; classify as operator/topology evidence.</p>
-  <div><span class="tag tag-warn">Not a reclaim claim</span></div>
-</article>
-<article class="topology-card topology-control">
-  <div class="topology-label">backend potential</div>
-  <h3>Unsafe / trusted lower bound</h3>
-  <p>Rootless or trusted region modes remove safety/root bookkeeping that the final user-facing system must justify statically.</p>
-  <p><strong>Strategy:</strong> Use only as an internal control, never as the safe final system.</p>
-  <div><span class="tag tag-control">Optimization lower bound</span></div>
-</article>
-</div>
-  <p class="so-what"><strong>So what?</strong> These are the actual shapes used in the evaluation. A result should say which topology it uses before claiming a memory-management win.</p>
 </figure>
     </section>
 
@@ -1234,14 +882,14 @@ pre code {
   <p>For streams where a page, record group, or time bucket owns many short-lived records that can be closed together.</p>
 </article>
 <article class="feature-card">
-  <h3>Retained-object control</h3>
-  <div class="api-chip"><code>heap retained/drop-anchor vs checked retained</code></div>
-  <p>Both sides materialize and retain ordinary objects until the boundary. This isolates GC reclaim from algorithmic shortcut wins.</p>
+  <h3>Retained-object query</h3>
+  <div class="api-chip"><code>natural heap vs checked retained regions</code></div>
+  <p>The natural program materializes ordinary objects until a boundary; checked Rift places those data-path objects in regions and keeps durable control state on heap.</p>
 </article>
 <article class="feature-card">
   <h3>Backend selection</h3>
-  <div class="api-chip"><code>checked-region-scoped or checked-region-stream</code></div>
-  <p>The user-facing API is checked; the runtime backend can be selected by evidence. Unsafe rootless modes are lower-bound controls only.</p>
+  <div class="api-chip"><code>fastest safe backend for the shape</code></div>
+  <p>Checked scoped and checked stream are implementation choices under the Rift umbrella. If scoped wins, profile it and improve the Rift backend rather than presenting a separate system.</p>
 </article>
 <article class="feature-card">
   <h3>StreamFlex design</h3>
@@ -1254,7 +902,7 @@ pre code {
   <p>Opt-in slab reuse policies trade resident memory budget for lower allocator bookkeeping. The cache-large policy is currently a focused allocator win, not a default application claim.</p>
 </article>
 </div>
-  <p class="so-what"><strong>So what?</strong> Different workloads need different lifetimes. The API should expose epoch, page/window, and retained-object shapes instead of forcing one region topology everywhere.</p>
+  <p class="so-what"><strong>So what?</strong> Different workloads need different lifetimes. The API should expose epoch, page/window, and retained-object shapes instead of forcing one allocation style everywhere.</p>
 </figure>
       <figure class="figure-block">
   <figcaption>Table 1. What Rift actually enforces today versus design vocabulary.</figcaption>
@@ -1271,8 +919,8 @@ pre code {
 </tr>
 <tr>
 <td>Actually implemented/evaluated now</td>
-<td>Natural heap, same-shape heap controls, retained epoch/drop-anchor, direct <code>RiftRegion.epoch</code>, page/window token, checked scoped backend, checked stream backend, and unsafe/trusted lower bounds.</td>
-<td>These are the topologies shown in the atlas and used in the evidence tables.</td>
+<td>Natural heap, checked <code>RiftRegion.epoch</code>, page/window token, checked scoped backend, checked stream backend, plus appendix-only same-shape/drop-anchor/summary/control modes.</td>
+<td>Headline rows use natural heap versus checked Rift. Backend and mechanism controls explain why a row wins or loses.</td>
 </tr>
 <tr>
 <td>Defensive/runtime today</td>
@@ -1285,7 +933,95 @@ pre code {
 <td>Use as proof/design vocabulary until measurements justify adding API complexity.</td>
 </tr>
 </tbody></table></div>
-  <p class="so-what"><strong>So what?</strong> The figures should be read as the actual evaluation topologies. Prior-work ideas like active/closed capabilities are useful only when marked as future design vocabulary.</p>
+  <p class="so-what"><strong>So what?</strong> Prior-work ideas like active/closed capabilities are useful only when marked as future design vocabulary.</p>
+</figure>
+    </section>
+
+    <section id="region-inference" class="section">
+      <div class="section-kicker">Region inference</div>
+      <h2>Proven allocations move to regions; unproven allocations stay on the heap</h2>
+      <p>
+        Rift's inference is ReML/MLKit-inspired, but it is currently a
+        capture-directed placement system. The compiler uses expected captured
+        types, owner-token arguments, framework boundaries, and local
+        method/effect summaries to find a concrete checked runtime owner. When
+        that proof is missing, the allocation remains on the Immix heap.
+      </p>
+      <figure class="figure-block">
+  <figcaption>Table 2. Region inference implemented today.</figcaption>
+  <div class="table-scroll"><table class="data-table">
+<thead><tr>
+<th>Implemented inference slice</th>
+<th>Current status</th>
+</tr></thead><tbody>
+<tr>
+<td>Expected-type local placement</td>
+<td><code>val x: T^{r} = new T(...)</code> lowers into the checked region when <code>r</code> has a runtime owner term.</td>
+</tr>
+<tr>
+<td>Branch/match placement</td>
+<td>All paths can allocate into a checked region when they prove the same owner.</td>
+</tr>
+<tr>
+<td>Method/effect summaries</td>
+<td>Direct, returned-local, forwarding, branch/match, and selected local factory summaries are implemented.</td>
+</tr>
+<tr>
+<td>Owner-token call sites</td>
+<td>Arguments to checked owner-token methods can be placed through the actual runtime owner argument.</td>
+</tr>
+<tr>
+<td>Framework/operator owners</td>
+<td>Page-token, epoch-buffer, buffer, priority-queue, rank/table, and retained helpers recover the operator-owned region.</td>
+</tr>
+<tr>
+<td>Synthetic allocations</td>
+<td><code>Some</code>, <code>Option.apply</code>, <code>None</code>, <code>Tuple2</code>-<code>Tuple22</code>, arrays, generic cells, and wrapper records are covered in owner-proven shapes.</td>
+</tr>
+<tr>
+<td>Closure placement</td>
+<td>Nonescaping closure objects and narrow captured-owner closure-body allocations are covered.</td>
+</tr>
+<tr>
+<td>Diagnostics</td>
+<td><code>-P:scalanative:riftInferReport</code> reports region, heap, unknown, and rejected placement decisions.</td>
+</tr>
+</tbody></table></div>
+  <p class="so-what"><strong>So what?</strong> The compiler places allocations only when it can recover a concrete checked runtime owner; all ambiguous cases stay on the heap.</p>
+</figure>
+<figure class="figure-block">
+  <figcaption>Table 3. Region inference still missing.</figcaption>
+  <div class="table-scroll"><table class="data-table">
+<thead><tr>
+<th>Remaining inference track</th>
+<th>Next work</th>
+</tr></thead><tbody>
+<tr>
+<td>Closure/effect summaries</td>
+<td>Finish escaping-safe closures, closure-body effects, hidden owner capture, and lambda environment rewriting.</td>
+</tr>
+<tr>
+<td>Type-only owner recovery</td>
+<td>Recover a runtime owner when <code>T^{r}</code> has a unique owner term; otherwise keep heap fallback.</td>
+</tr>
+<tr>
+<td>General callee summaries</td>
+<td>Support more callees, forwarding wrappers, helper libraries, and selected framework boundaries.</td>
+</tr>
+<tr>
+<td>Polymorphic safety</td>
+<td>Stay conservative across virtual dispatch, mutation, callbacks, exceptions, erased generics, and generic containers.</td>
+</tr>
+<tr>
+<td>Boxes and libraries</td>
+<td>Handle primitive boxes, boxed keys, iterators, collection nodes, strings, buffers, and parser helpers.</td>
+</tr>
+<tr>
+<td>Evidence</td>
+<td>Keep expanding positive allocation-stat tests and negative safety tests before relaxing runtime checks.</td>
+</tr>
+</tbody></table></div>
+  <p class="so-what"><strong>So what?</strong> The remaining work is broader effect summaries and library coverage, not relaxing safety for unknown owners.</p>
 </figure>
     </section>
 
@@ -1318,7 +1054,7 @@ pre code {
 </tr>
 <tr>
 <td>Yak</td>
-<td>App time, GC time/count, epoch topology, peak RSS.</td>
+<td>App time, GC time/count, epoch boundary, peak RSS.</td>
 <td>LiveJournal graph replay and AskUbuntu/topword epoch rows.</td>
 </tr>
 <tr>
@@ -1364,7 +1100,7 @@ pre code {
 </tr>
 <tr>
 <td>Presentation audit</td>
-<td>Representative rows are checked for L1 elapsed/RSS, L2 GC/region interpretation, input type, topology/API, comparison class, and allowed claim.</td>
+<td>Representative rows are checked for L1 elapsed/RSS, L2 GC/region interpretation, input type, API/workload shape, comparison class, and allowed claim.</td>
 <td>Prevents stale L2-only, legacy, or lower-bound rows from being mistaken for final evidence.</td>
 </tr>
 <tr>
@@ -1384,110 +1120,122 @@ pre code {
 
     <section id="results" class="section">
       <div class="section-kicker">Main results</div>
-      <h2>The important numbers fit on one table</h2>
+      <h2>The important numbers are split by evidence class</h2>
       <p>
-        The strongest current story has six representative rows: one real
-        graph workload, one controlled retained-object reclaim test, two
-        prior-work-shaped methodology groups, one generated high-allocation
-        stream stressor, one StreamFlex-design reproduction, and one real log
-        top-k workload.
+        The latest numbers are separated by evidence class. Real/local input
+        rows show what happens on public or bundled files; generated,
+        methodology, and microbenchmark rows isolate memory-management shapes
+        and runtime/API overhead.
       </p>
       <figure class="figure-block">
-  <figcaption>Table 3. Representative results under the normalized comparison rules.</figcaption>
+  <figcaption>Table 4. Latest real/local input results.</figcaption>
   <div class="table-scroll"><table class="data-table">
 <thead><tr>
 <th>Result</th>
 <th>Workload</th>
 <th>Best checked row</th>
-<th>Baseline/control</th>
+<th>Immix heap</th>
 <th>Interpretation</th>
 </tr></thead><tbody>
 <tr>
-<td>Broom-style retained dataflow</td>
-<td>Timestamped aggregate/join with ordinary records retained until notify/close.</td>
-<td>Checked Rift aggregate/join: <code>3.59 / 4.26s</code>.</td>
-<td>Natural heap/GC: <code>5.27 / 5.00s</code>.</td>
-<td>Prior-work-style headline: natural heap versus checked Rift, with material GC removal, about 82-83% lower RSS, and a checked scoped backend comparison row.</td>
+<td>DSPBench Fraud q2</td>
+<td>Real bundled DSPBench credit-card file replayed to 10M events.</td>
+<td>Checked page-token: <code>187882.928 ms</code>; checked SafeZone page-token: <code>186988.431 ms</code>.</td>
+<td>Immix heap: <code>208405.569 ms</code>.</td>
+<td>Real/local stream win; SafeZone backend is slightly best for this row.</td>
 </tr>
 <tr>
-<td>DBGEN Q17 retained dataflow</td>
-<td>TPC-H DBGEN SF1 <code>part.tbl</code> and <code>lineitem.tbl</code>; all lineitems are retained until timestamp close, then Q17 filters run.</td>
-<td>Checked Rift: <code>51.47s</code>, RSS about <code>49 MB</code>; checked scoped: <code>53.35s</code>, RSS about <code>49 MB</code>.</td>
-<td>Natural heap/GC: <code>55.44s</code>, RSS about <code>433 MB</code>; heap fails at <code>128M</code>.</td>
-<td>Standardized generated TPC-H input evidence: modest throughput win, large RSS/fixed-memory win, not official audited TPC-H or real-world input.</td>
+<td>DSPBench Log q2</td>
+<td>Real bundled DSPBench HTTP log file replayed to 10M events.</td>
+<td>Checked page-token: <code>273860.718 ms</code>, GC <code>24816.086 ms</code>.</td>
+<td>Immix heap: <code>306392.943 ms</code>, GC <code>57338.467 ms</code>.</td>
+<td>Real/local stream win where checked Rift also beats the checked SafeZone row.</td>
 </tr>
 <tr>
-<td>Real graph replay</td>
-<td>Yak LiveJournal, real SNAP graph input, 50M replayed edges.</td>
-<td>Checked epoch scoped: <code>16.12s</code>, RSS about <code>612 MB</code>.</td>
-<td>GC heap: <code>18.79s</code>, RSS about <code>2.77 GB</code>.</td>
-<td>The strongest real-input result: epoch regions improve both time and memory footprint.</td>
-</tr>
-<tr>
-<td>Real text top-word</td>
-<td>Stack Exchange AskUbuntu <code>Posts.xml</code>, 10M real tokens x5.</td>
-<td>Checked epoch scoped: <code>3.86s</code>, RSS about <code>94 MB</code>.</td>
-<td>GC heap: <code>4.19s</code>, RSS about <code>428 MB</code>.</td>
-<td>First real text/top-word row: direct checked epoch wins; reusable top-k is lower-RSS but still slower than direct epoch.</td>
-</tr>
-<tr>
-<td>Mechanism reclaim control</td>
-<td>Focused retained-epoch matrix, 1M ordinary records x20.</td>
-<td>Checked scoped retained/drop-anchor: <code>0.47s</code>.</td>
-<td>Heap retained/drop-anchor: <code>0.70s</code>.</td>
-<td>Appendix/control evidence: both sides retain objects until close, isolating the reclaim mechanism.</td>
-</tr>
-<tr>
-<td>Prior-work-shaped dataflow</td>
-<td>SELECT / AGGREGATE / JOIN, 1M documents x20.</td>
-<td>Checked epoch scoped: <code>0.38 / 0.69 / 0.39s</code>.</td>
-<td>GC heap: <code>0.62 / 1.10 / 0.55s</code>.</td>
-<td>The epoch API generalizes beyond one benchmark to dataflow-style operators.</td>
-</tr>
-<tr>
-<td>Generated object-pressure stream</td>
-<td>Common Crawl WET-shaped generated q1/q2, 1M pages.</td>
-<td>Checked page-token stream: <code>16.04 / 16.36s</code>.</td>
-<td>GC heap: <code>22.55 / 21.41s</code>.</td>
-<td>Clean selected-streams sweep: strong checked page/window win with about 1.6s heap GC removed in L2, but generated, not real-data proof.</td>
-</tr>
-<tr>
-<td>StreamFlex design reproduction</td>
-<td>Stable heap state, transient period objects, bounded capsules, 1M generated events.</td>
-<td>Checked epoch scoped: <code>1.27s</code>, RSS about <code>7.9 MB</code>.</td>
-<td>Heap same-shape: <code>1.52s</code>, RSS about <code>12.4 MB</code>.</td>
-<td>Rift-native StreamFlex design row: throughput win, GC reduction in L2, and pressure-latency tail/deadline wins.</td>
-</tr>
-<tr>
-<td>Selected stream sweep</td>
-<td>NEXMark q3/q8/q9/q11, GH Archive, LogHub, and DSPBench selected rows.</td>
-<td>NEXMark checked wins/ties; LogHub q2/q3 checked epoch: <code>2.46 / 10.32s</code>.</td>
-<td>LogHub heap: <code>3.63 / 11.22s</code>; Theodolite q2 checked stream: <code>4.58s</code> vs heap <code>5.13s</code>.</td>
-<td>Current presentation-facing stream/application sweep; DSPBench remains modest/control, and Theodolite is throughput/GC-positive but not an RSS win in the selected addendum.</td>
-</tr>
-<tr>
-<td>Real streaming retained state</td>
-<td>Theodolite UC4 retained hierarchy windows and Wikimedia retained clickstream-session over compressed public inputs.</td>
-<td>Theodolite checked stream <code>14.06s</code>, <code>26.6 MB</code>; Wikimedia 10M x3 checked Rift <code>59.37s</code>, <code>138 MB</code>.</td>
-<td>Theodolite heap <code>16.85s</code>, <code>207 MB</code>; Wikimedia 10M x3 heap <code>62.52s</code>, <code>1.80 GB</code>.</td>
-<td>Positive real-streaming retained-object evidence: both rows improve throughput, RSS, GC, and fixed-memory behavior. These are local named kernels, not exact prior-system artifacts.</td>
-</tr>
-<tr>
-<td>Real log top-k</td>
-<td>LogHub HDFS top templates, real HDFS logs, 1M x20.</td>
-<td>Checked top-k scoped API: <code>4.88s</code>, RSS about <code>28 MB</code>.</td>
-<td>Retained heap: <code>5.52s</code>, RSS about <code>205 MB</code>.</td>
-<td>A reusable top-k API can keep most of the retained-region benefit on real logs.</td>
-</tr>
-<tr>
-<td>Real streaming log session</td>
-<td>LogHub HDFS q3 template/session, 1M streaming lines x3.</td>
-<td>Checked page-token: <code>30.29s</code>, RSS about <code>130 MB</code>.</td>
-<td>GC heap: <code>26.88s</code>, RSS about <code>862 MB</code>.</td>
-<td>A useful streaming RSS/fixed-memory control, but not a throughput win: parser/template/session CPU dominates.</td>
+<td>Theodolite q2 real time series</td>
+<td>UCI household-power streaming-file row, 2,049,280 records.</td>
+<td>Checked stream: <code>2160.896 ms</code>, RSS <code>80.4 MB</code>.</td>
+<td>Immix heap: <code>2256.219 ms</code>, RSS <code>147.9 MB</code>.</td>
+<td>Real time-series modest time win with clear RSS and GC reduction.</td>
 </tr>
 </tbody></table></div>
-  <p class="so-what"><strong>So what?</strong> The current story is strongest for retained timestamped dataflow, epochal graph/dataflow/transaction shapes, generated page/window pressure, and two named real-streaming retained-state rows; many other real streams remain RSS/control evidence.</p>
+  <p class="so-what"><strong>So what?</strong> These rows use local/public input files or bundled real benchmark data; they are separated from generated and methodology stressors.</p>
+</figure>
+      <figure class="figure-block">
+  <figcaption>Table 5. Latest generated, methodology, and microbenchmark results.</figcaption>
+  <div class="table-scroll"><table class="data-table">
+<thead><tr>
+<th>Result</th>
+<th>Workload</th>
+<th>Best checked row</th>
+<th>Immix heap</th>
+<th>Interpretation</th>
+</tr></thead><tbody>
+<tr>
+<td>Broom retained aggregate/join</td>
+<td>Timestamped retained aggregate and join records, 10M events.</td>
+<td>Checked Rift: <code>862.143 / 896.583 ms</code>, RSS <code>16.4 / 15.1 MB</code>.</td>
+<td>Immix heap: <code>1071.498 / 1043.463 ms</code>, RSS <code>148.7 / 76.9 MB</code>.</td>
+<td>Retained dataflow win: checked Rift removes timed GC and cuts RSS substantially.</td>
+</tr>
+<tr>
+<td>StreamFlexDesign</td>
+<td>Stable heap state plus transient period objects and capsule transfer, 10M events.</td>
+<td>Checked stream throughput: <code>3800.585 ms</code>; pressure-latency misses <code>4</code>.</td>
+<td>Immix heap throughput: <code>5138.231 ms</code>; pressure-latency misses <code>72</code>.</td>
+<td>Stream lifetime win: checked periods reduce GC and deadline/tail pressure.</td>
+</tr>
+<tr>
+<td>Common Crawl-shaped q1/q2</td>
+<td>Generated WET-shaped tokenization and domain-window stressors, 10M pages.</td>
+<td>Checked page-token: <code>46491.537 / 46094.232 ms</code>.</td>
+<td>Immix heap: <code>70410.059 / 67398.152 ms</code>.</td>
+<td>Generated object-pressure win: page/window objects share clear lifetimes; not real-input proof.</td>
+</tr>
+<tr>
+<td>Generated LogHub q2/q3</td>
+<td>Window-count and template/session log-shaped generated queries, 10M events.</td>
+<td>Checked epoch stream: <code>2600.244 / 26291.412 ms</code>.</td>
+<td>Immix heap: <code>6677.914 / 32867.576 ms</code>.</td>
+<td>Strong stream/operator win; q3 still has large query/session CPU.</td>
+</tr>
+<tr>
+<td>SPECjbb2005-style port</td>
+<td>Clean-room transaction-lifetime workload, 10M transactions.</td>
+<td>Checked epoch stream: <code>1231.076 ms</code>, GC <code>0.593 ms</code>.</td>
+<td>Immix heap: <code>1674.726 ms</code>, GC <code>206.437 ms</code>.</td>
+<td>Prior-work-style transaction win, not official SPECjbb2005 certification.</td>
+</tr>
+<tr>
+<td>NEXMark generated queries</td>
+<td>Generated Beam-default q3/q8/q9/q11 stream methodology rows.</td>
+<td>Checked q3/q8/q9/q11: <code>2591 / 4157 / 7929 / 2188 ms</code>.</td>
+<td>Immix heap: <code>2848 / 4432 / 8790 / 2217 ms</code>.</td>
+<td>Checked beats heap on these rows, but q9 favors the scoped/SafeZone backend.</td>
+</tr>
+<tr>
+<td>GH Archive-shaped q1/q2</td>
+<td>Generated/preloaded GH Archive-shaped event rows, 10M events.</td>
+<td>Checked page-token: <code>3822.250 / 3842.741 ms</code>.</td>
+<td>Immix heap: <code>3975.523 / 3848.235 ms</code>.</td>
+<td>Honest control: q1 small win, q2 tie; parser/query floor dominates.</td>
+</tr>
+<tr>
+<td>Object allocation and append</td>
+<td>Primitive-field object allocation and append-window microbenchmarks.</td>
+<td>Checked allocation <code>161.281 ms</code>; append-window <code>252.007 ms</code>.</td>
+<td>Immix allocation <code>263.639 ms</code>; append-window <code>338.362 ms</code>.</td>
+<td>Runtime/API overhead wins after GC removal; checked SafeZone is still the lower-overhead substrate for pure allocation.</td>
+</tr>
+<tr>
+<td>Window fold</td>
+<td>Checked fold/traversal microbenchmark, 10M objects.</td>
+<td>Checked Rift: <code>930.973 ms</code>.</td>
+<td>Immix heap: <code>898.906 ms</code>.</td>
+<td>Negative control: traversal/API overhead can exceed removed GC and remains an optimization target.</td>
+</tr>
+</tbody></table></div>
+  <p class="so-what"><strong>So what?</strong> These rows test memory-management shape, prior-work axes, or runtime/API overhead; they are useful evidence but not real-input proof.</p>
 </figure>
     </section>
 
@@ -1501,7 +1249,7 @@ pre code {
         not the dominant cost.
       </p>
       <figure class="figure-block">
-  <figcaption>Table 4. Real-input evidence status.</figcaption>
+  <figcaption>Table 6. Additional real-input evidence status.</figcaption>
   <div class="table-scroll"><table class="data-table">
 <thead><tr>
 <th>Benchmark</th>
@@ -1510,67 +1258,43 @@ pre code {
 <th>Report status</th>
 </tr></thead><tbody>
 <tr>
+<td>DSPBench Fraud q2</td>
+<td>Bundled real credit-card file replayed to 10M events</td>
+<td>Checked page-token is about 10% faster than Immix</td>
+<td>Real/local stream win; SafeZone backend slightly best.</td>
+</tr>
+<tr>
+<td>DSPBench Log q2</td>
+<td>Bundled real HTTP log file replayed to 10M events</td>
+<td>Checked page-token beats Immix and checked SafeZone</td>
+<td>Strongest latest real/local DSPBench row.</td>
+</tr>
+<tr>
+<td>Theodolite q2</td>
+<td>UCI household-power streaming-file input</td>
+<td>Checked stream modestly faster, with lower RSS and GC</td>
+<td>Real time-series row in latest matrix.</td>
+</tr>
+<tr>
+<td>Wikimedia clickstream-session</td>
+<td>Compressed public Wikimedia clickstream TSV</td>
+<td>Prior 10M x3 checked Rift throughput/RSS/GC/fixed-memory win</td>
+<td>Named retained streaming row; not official Wikimedia artifact.</td>
+</tr>
+<tr>
 <td>Yak LiveJournal</td>
 <td>Real SNAP graph input</td>
-<td>Strong checked epoch time and RSS win</td>
-<td>Flagship real-input row.</td>
+<td>Prior checked epoch time and RSS win</td>
+<td>Real graph replay evidence.</td>
 </tr>
 <tr>
 <td>AskUbuntu topwordreal</td>
 <td>Real Stack Exchange text</td>
-<td>Checked epoch time/RSS win</td>
-<td>First real text/top-word row; not exact Yak/Hadoop.</td>
-</tr>
-<tr>
-<td>LogHub HDFS top templates</td>
-<td>Real LogHub HDFS logs</td>
-<td>Modest time win and large RSS reduction</td>
-<td>Promising reusable top-k API row.</td>
-</tr>
-<tr>
-<td>Wikimedia clickstream-session</td>
-<td>Real compressed Wikimedia clickstream TSV</td>
-<td>10M x3 checked Rift throughput/RSS/GC/fixed-memory win</td>
-<td>Named retained streaming row; not official Wikimedia artifact.</td>
-</tr>
-<tr>
-<td>Theodolite retained UC4</td>
-<td>Real UCI household power trace</td>
-<td>Checked stream time/RSS/GC/fixed-memory win</td>
-<td>Strongest real streaming time-series retained row.</td>
-</tr>
-<tr>
-<td>LogHub HDFS q3 streaming</td>
-<td>Real streaming HDFS logs</td>
-<td>Large RSS reduction, slower elapsed</td>
-<td>Template/session control row; parser/query CPU dominates.</td>
-</tr>
-<tr>
-<td>LogHub HDFS q2</td>
-<td>Real LogHub HDFS logs</td>
-<td>Elapsed tie, strong RSS reduction</td>
-<td>Useful page/window control.</td>
-</tr>
-<tr>
-<td>GH Archive</td>
-<td>Real NDJSON events</td>
-<td>Small time/RSS wins; parser CPU dominates</td>
-<td>Useful but not GC-heavy enough yet.</td>
-</tr>
-<tr>
-<td>DSPBench Fraud/Log q2</td>
-<td>Real bundled DSPBench files</td>
-<td>Modest/control rows; checked page-token reduces L2 GC</td>
-<td>Not a flagship GC-heavy stream row.</td>
-</tr>
-<tr>
-<td>Common Crawl WET/WAT</td>
-<td>Real archive shards</td>
-<td>Current real rows are GC-light</td>
-<td>Ceiling/control, not a flagship result.</td>
+<td>Prior checked epoch time/RSS win</td>
+<td>Real text/top-word evidence; not exact Yak/Hadoop.</td>
 </tr>
 </tbody></table></div>
-  <p class="so-what"><strong>So what?</strong> Real datasets are not automatically GC-heavy. The strongest real rows are LiveJournal for graph epochs, Theodolite UC4 for retained time-series, and Wikimedia clickstream-session for retained clickstream state; several others are useful RSS or ceiling controls.</p>
+  <p class="so-what"><strong>So what?</strong> Real datasets are not automatically GC-heavy. The current real/local positives are DSPBench Log/Fraud and Theodolite q2 in the latest matrix, plus earlier retained Wikimedia, LiveJournal, and AskUbuntu case studies; parser/query-heavy rows remain controls.</p>
 </figure>
     </section>
 
@@ -1580,11 +1304,11 @@ pre code {
       <figure class="figure-block">
   <figcaption>Figure 6. What these results do not prove yet.</figcaption>
   <ul class="limitations-list">
-<li>The best GC-heavy page/window token result is still generated, so that operator evidence demonstrates a workload regime rather than a real-data case study.</li>
-<li>Some real inputs are dominated by parsing, hashing, or query CPU, so removing GC does not automatically produce large elapsed-time wins.</li>
-<li>Unsafe/rootless region modes are useful lower bounds but are not user-facing safety claims.</li>
-<li>Rank, median, hash-join, and table-heavy operators still need focused API gates before they can support application claims.</li>
-<li>The ReML/MLKit comparison table is still being assembled; cross-language raw wall-clock comparisons will be treated as contextual, not definitive.</li>
+<li>The latest full matrix was a dirty working-tree engineering run; rerun from a clean committed tree before treating the exact numbers as publication evidence.</li>
+<li>Rift is not full ReML/MLKit inference yet: broad closure/effect summaries, hidden/type-only owner recovery, primitive boxes, and library summaries remain open.</li>
+<li>Some rows are dominated by parsing, hashing, traversal, or query CPU, so removing GC does not guarantee an elapsed-time win.</li>
+<li>Unsafe/rootless rows remain lower-bound controls, not user-facing safety claims.</li>
+<li>Runtime checks stay unless compiler/runtime probes prove active-handle, stale-token, owner, and close-order invariants.</li>
 </ul>
   <p class="so-what"><strong>So what?</strong> The prototype has encouraging evidence, but the final claim should stay narrower than 'regions always beat GC'.</p>
 </figure>
@@ -1604,38 +1328,34 @@ pre code {
         </p>
       </div>
       <figure class="figure-block">
-  <figcaption>Table 5. Work remaining before a final paper-style evaluation.</figcaption>
+  <figcaption>Table 7. Work remaining before a final paper-style evaluation.</figcaption>
   <div class="table-scroll"><table class="data-table">
 <thead><tr>
 <th>Open track</th>
 <th>Next action</th>
 </tr></thead><tbody>
 <tr>
-<td>Finalize L1 rows</td>
-<td>Finish final-clean headline runs for the selected representative API wins.</td>
+<td>Clean final matrix</td>
+<td>Rerun the latest selected matrix from a clean committed tree and promote only validated rows.</td>
 </tr>
 <tr>
-<td>Gate throughput policies</td>
-<td>Run selected application L1/L2 gates for cache-large before promoting it beyond focused allocator evidence.</td>
+<td>Closure/effect summaries</td>
+<td>Finish escaping-closure summaries, hidden owner capture, type-only owner recovery, and lambda environment rewriting.</td>
 </tr>
 <tr>
-<td>Scale real retained streams</td>
-<td>Use Wikimedia and Theodolite as current positive cases; next try larger/full-input Wikimedia scale checks, richer LogHub sessions, and larger StackExchange/SNAP streams.</td>
+<td>Library inference</td>
+<td>Handle primitive boxes, boxed keys, iterators, collection nodes, strings, buffers, parser helpers, wrappers, and erased generic paths.</td>
 </tr>
 <tr>
-<td>Extend StreamFlex design rows</td>
-<td>Scale the stable/transient/capsule matrix and add object-retained BeamFormer/FilterBank variants only if they remain fair same-shape controls.</td>
+<td>Runtime overhead</td>
+<td>Reduce fold/traversal/capsule work, token/handle plumbing, and object init/zeroing only under proof-gated invariants.</td>
 </tr>
 <tr>
-<td>Complete ReML/MLKit table</td>
-<td>Separate paper-reported, exact artifact rerun, and Scala Native port evidence.</td>
-</tr>
-<tr>
-<td>Gate complex operators</td>
-<td>Only headline rank/hash/median/join after natural heap, same-shape heap, retained controls, and focused 1M API gates.</td>
+<td>Mechanized proof</td>
+<td>Complete the core containment, heap-root, owner-token, and close/reset safety argument.</td>
 </tr>
 </tbody></table></div>
-  <p class="so-what"><strong>So what?</strong> The next work is about finalizing evidence quality and extending real inputs, not adding benchmark-specific shortcuts.</p>
+  <p class="so-what"><strong>So what?</strong> The next work is about clean evidence, broader inference, proof-gated overhead removal, and library coverage, not benchmark-specific shortcuts.</p>
 </figure>
     </section>
 

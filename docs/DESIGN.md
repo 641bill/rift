@@ -2,7 +2,7 @@
 
 Status: active research design for the Scala Native fork.
 
-Last updated: 2026-05-16 19:31 CEST
+Last updated: 2026-05-21 07:48 CEST
 
 Active worktree: `/Users/siyaoliu/rift/scala-native-rift`
 
@@ -53,6 +53,127 @@ algorithmic reason Scala Native's heap baseline is strong is tracked in
 bump-style allocation and line/block reclamation, so Rift's clearest wins are
 expected when static lifetime topology avoids tracing retained transient object
 graphs or improves RSS/fixed-memory/tail behavior.
+
+### Automatic Region Placement Inference
+
+Rift can grow a ReML-style automatic placement track for Scala Native, but it
+should be staged rather than presented as already solved. ReML/MLKit infer
+regions for a functional language with an ML-style type/effect discipline.
+Scala adds mutable objects, subtyping, arrays, virtual dispatch, closures,
+generics erased to runtime classes, and mixed heap/region references, so the
+safe path is incremental:
+
+The detailed lineage/evaluation note is
+[`docs/REGION_INFERENCE_LINEAGE.md`](REGION_INFERENCE_LINEAGE.md). The short
+version is: Rift is ReML/MLKit-inspired, but capture-checking-native and
+stream/dataflow-oriented. It should not be described as a full Tofte/Talpin,
+MLKit, or ReML whole-program inference implementation yet.
+
+1. **Explicit lifetime, inferred allocation placement.** Inside a checked
+   `epoch`, `window`, `page`, or `transaction`, the compiler may lower ordinary
+   `new T(...)` to region allocation when capture/separation checks prove the
+   object does not escape the lifetime. Non-proven allocations stay on the GC
+   heap.
+2. **Framework boundary inference.** For checked Rift operators, the compiler
+   can use operator signatures to infer that data-path records are epoch/window
+   local while durable control state remains heap allocated.
+3. **Effect summaries for methods and closures.** Methods, lambdas, and generic
+   helpers can carry summaries such as "returns heap value", "returns value
+   captured by current region", or "does not retain argument"; this is the
+   Scala analogue of ReML-style region effects.
+4. **Whole-program or whole-module inference.** Only after the local and
+   framework-guided cases are reliable should Rift attempt broader inference of
+   lifetime boundaries or automatic migration of allocation sites.
+
+This keeps the user-facing story compatible with prior work: the headline
+program remains the natural heap object shape, and the checked Rift version has
+the same semantics, but the compiler can remove explicit `alloc(...)` calls
+where it can prove that a normal `new` allocation is region-local. The first
+implemented slices are intentionally narrow. Direct `new T(...)` sites are
+lowered into Rift regions when the expected type is captured by an explicit
+checked `ScopedRegion` or `OpenStreamingRegion`. Immutable local direct `new`
+values can also be inferred when a captured val/assignment or checked
+`RegionList` prepend call supplies a unique region owner. A first method
+summary slice also handles direct `new` returned from a method with an explicit
+runtime checked-region parameter, such as
+`def make(using r: RiftRegion.ScopedRegion^): T^{r} = new T(...)`, and the
+returned-local form
+`def make(using r: RiftRegion.ScopedRegion^): T^{r} = { val x = new T(...); x }`.
+The returned-local method case is validated for both scoped regions and direct
+epoch/open-streaming regions. Simple branch-returned direct allocation, such
+as `if p then new T(...) else new T(...)`, is also covered when all returned
+allocations share the explicit checked region result owner. Branch-returned
+local allocations, such as
+`if p then { val x = new T(...); x } else { val y = new T(...); y }`, are also
+covered under the same explicit checked-region-parameter rule. Simple
+match-returned direct and local allocations are now covered under that rule as
+well. Captured return
+owners that only mention an outer region stay on the heap for now, because the
+method body has no runtime region handle. Explicit
+owner-token buffer append calls can now infer immutable local direct or
+block-final `new` values for checked `ObjectBuffer` and `RegionBuffer`,
+including `region.append(...)` extension syntax. The owner-token slice also
+covers direct and block-final inline construction at scoped checked
+list/buffer boundaries, such as
+`prependRegionList(region, list, new T(...))`,
+`RiftRegion.append(region, buffer, new T(...))`, and
+`region.append(buffer, { ...; new T(...) })`; this covers both fixed
+`ObjectBuffer` and growable `RegionBuffer` append paths. Scoped checked priority-queue owner-token
+calls can now infer immutable local direct `new` values plus direct and
+block-final inline `new` value arguments for `RegionPriorityQueue`,
+`RegionIndexedPriorityQueue`, and `RegionLongIndexedPriorityQueue` push/put
+boundaries, with runtime allocation stats proving placement. The first
+page/window child-owner slice is validated for locals returned by selected
+checked child-region helpers such as `pageTokenAppendRegionFor`,
+`pageTokenMapFilterRegionFor`, and `pageTokenCountByKeyRegionFor`, so a
+bucket-local record can use ordinary `new` when its expected type is captured
+by that local child owner. Parent `StreamingRegion` remains excluded from
+generic
+allocation-owner inference. Captured
+`Some(...)` factory allocation is validated through exact `Some` and widened
+`Option` expected types; tuple factory allocation is validated for
+reference-only `TupleN(...)` arities 2 through 22, with `Tuple2(...)`/tuple
+literal syntax as the base proof point and Tuple3 as the first higher-arity
+proof point. These shapes are covered as local region-owned values and as
+direct or returned-local method-returned values from explicit checked
+region-parameter methods, including returned-local `Option = Some(...)` and
+returned-local tuple factories. The narrow `None` follow-up validates static
+empty `Option` values and `if flag then Some(new T(...)) else None` optional
+flows for local expected types and explicit checked region-parameter method
+results without allocating for the `None` branch. The null-preserving
+`Option.apply(...)` follow-up validates local, method-returned, owner-token
+method-argument, and region-owned array-store forms: null stays `None`, while
+non-null direct payloads allocate the `Some` branch in the checked region.
+The region-owned array-store path now also covers closure objects for direct
+inline closures and selected immutable local closure aliases when the array
+element type carries the checked owner. Unrooted heap captures remain rejected;
+this is closure-object placement at a proven owner boundary, not full
+closure/effect inference. Checked owner-token containers now have the same
+bounded closure-object proof for `ObjectBuffer`, `RegionBuffer`, and ordinary
+`RegionPriorityQueue` value stores; inline and selected immutable local
+closure values can be placed when the value type carries the owner, while
+unrooted heap captures remain rejected. Checked stream-window rank/table-rank
+APIs now have the same bounded closure-object proof for inline and selected
+immutable local closure values typed as `Function1[...]^{stream}`; this remains
+explicit framework-owner placement, not broad stream topology or closure/effect
+inference.
+A narrow local generic object
+slice is also
+validated: `Cell[T^{region}]^{region} = new Cell[T^{region}](value)` is
+placed in the checked region when the expected type and value argument prove
+the same owner, while widened `AnyRef` escape and unrooted dynamic heap
+metadata are rejected. The same generic cell shape is validated through direct
+and returned-local explicit checked region-parameter method factories. Broader
+container
+flow, stream-window rank/table-rank operators, and automatic page/window child
+placement beyond explicit child-region locals remain explicit. Generic parent
+`StreamingRegion` captures are not inferred yet because page/window operators
+need child-bucket placement rather than parent-stream placement. Dynamic heap
+metadata still requires `HeapRoot`. `-P:scalanative:riftInferReport` emits
+opt-in placement diagnostics for `Region`, `Unknown`, and `Rejected`
+decisions. Diagnostics should explain why an allocation stayed on the heap,
+especially for heap retention, closure escape, outer-retains-inner,
+ReML-style generic hiding, and mutable heap metadata hazards.
 
 The current implementation has only part of that system. The runtime path,
 compiler lowering, baseline corrections, benchmark harnesses, and DEBS scaffold

@@ -1,7 +1,7 @@
 # Real Streaming Input Matrix
 
 Date: 2026-05-11
-Last updated: 2026-05-18 16:22 CEST
+Last updated: 2026-05-20 12:00 CEST
 
 Status: started. This matrix records only rows that satisfy the
 `real-streaming-input` protocol: no full-input preload, incremental source
@@ -62,6 +62,21 @@ checksum `-2895454912458695581` and output count `6176`.
 | `checked-epoch-stream` | `7.77` | `31064064` | `2143.809` | `38.516` | `41.907` | `3/3` | `1000000` | `5496025699187626461` | `61760` |
 | `checked-epoch-scoped` | `7.99` | `31113216` | `2189.232` | `43.837` | `48.301` | `3/3` | `1000000` | `5496025699187626461` | `61760` |
 | `region-scoped-rooted` | `8.21` | `31129600` | `2299.931` | `44.424` | `49.323` | `3/3` | `1000000` | `5496025699187626461` | `61760` |
+
+2026-05-20 mutator-parity follow-up:
+
+- Source: `/Users/siyaoliu/rift/cache/theodolite-loopshape-1m-20260520`.
+- Change: checked streaming epoch callback now uses local primitive
+  accumulators and returns a primitive-only outcome, removing sampled
+  `IntRef`/`LongRef` callback parameters from the checked Rift profile.
+- L2 follow-up rows, with one warmup and three measured runs, all matched
+  checksum `5496025699187626461` and output `61760`:
+
+| Mode | L2 median ms | Median GC ms | Max GC ms | RSS bytes | Region op ms | Region objects |
+|---|---:|---:|---:|---:|---:|---:|
+| `heap-immix` | `2464.646` | `282.408` | `369.951` | `257802240` | `0.000` | `0` |
+| `checked-epoch-stream` | `2049.682` | `41.666` | `44.700` | `196739072` | `1.305` | `13000000` |
+| `checked-epoch-scoped` | `2061.617` | `40.000` | `40.060` | `196788224` | `0.000` | `0` |
 
 Full local row:
 

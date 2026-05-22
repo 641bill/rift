@@ -203,8 +203,8 @@ NAV = [
     ("background", "Background"),
     ("question", "Question"),
     ("approach", "Approach"),
-    ("topologies", "Topologies"),
     ("design", "Design"),
+    ("region-inference", "Inference"),
     ("evaluation", "Evaluation"),
     ("results", "Results"),
     ("limitations", "Limitations"),
@@ -214,39 +214,40 @@ NAV = [
 
 
 THESIS = (
-    "This project asks whether a Scala Native system can use statically checked "
-    "regions to reclaim stream-processing objects in bulk, avoiding garbage "
-    "collection work without giving up memory safety."
+    "Rift asks whether Scala Native programs can use statically checked "
+    "lifetime boundaries and capture-directed inference to move proven "
+    "epoch/page/window objects out of Immix, reclaim them in bulk, and keep "
+    "all unproven allocations on the GC heap."
 )
 
 
 SUMMARY_CARDS = [
     {
         "label": "Problem",
-        "value": "GC overhead in structured streams",
-        "detail": "Many dataflow programs allocate short-lived or epoch-local records whose lifetimes are visible at the operator boundary.",
-        "claim": "Systems + PL motivation",
+        "value": "Immix is strong, but lifetimes are visible",
+        "detail": "Rift targets rows where stream/dataflow objects share an epoch, page, window, transaction, or retained-query lifetime.",
+        "claim": "Systems + PL target",
         "tone": "method",
     },
     {
         "label": "Prototype",
-        "value": "Checked stream regions",
-        "detail": "Rift adds checked epoch and page/window APIs on top of Scala Native runtime allocation backends.",
-        "claim": "Static safety plus region allocation",
+        "value": "Checked regions + inference",
+        "detail": "Scala Native runtime regions, checked APIs, NIR lowering, diagnostics, and conservative heap fallback are implemented.",
+        "claim": "Working implementation",
         "tone": "method",
     },
     {
-        "label": "Prior-work-style result",
-        "value": "3.59s vs 5.27s",
-        "detail": "Broom/Naiad-style timestamped aggregate: natural heap/GC versus checked Rift, with retained ordinary objects and bulk epoch close.",
-        "claim": "Throughput + GC + RSS win",
+        "label": "Latest retained result",
+        "value": "862ms vs 1071ms",
+        "detail": "Broom aggregate 10M in the latest current-state matrix: checked Rift removes timed GC and cuts RSS from 148.7 MB to 16.4 MB.",
+        "claim": "Retained dataflow win",
         "tone": "win",
     },
     {
-        "label": "Real streaming retained",
-        "value": "59.37s vs 62.52s",
-        "detail": "Wikimedia retained clickstream-session 10M x3: checked Rift keeps RSS near 138 MB while heap reaches 1.80 GB and fails under a 1G cap.",
-        "claim": "Throughput + RSS + GC win",
+        "label": "Latest real/local rows",
+        "value": "274s vs 306s",
+        "detail": "DSPBench Log q2 10M file-backed replay: checked Rift page-token beats Immix and SafeZone while reducing timed GC.",
+        "claim": "Real/local stream win",
         "tone": "win",
     },
 ]
@@ -285,7 +286,7 @@ PRIOR_WORK_METRIC_ROWS = [
     ],
     [
         "Yak",
-        "App time, GC time/count, epoch topology, peak RSS.",
+        "App time, GC time/count, epoch boundary, peak RSS.",
         "LiveJournal graph replay and AskUbuntu/topword epoch rows.",
     ],
     [
@@ -304,8 +305,8 @@ PRIOR_WORK_METRIC_ROWS = [
 APPROACH_STEPS = [
     ("Expose lifetimes", "Programmers use checked APIs such as epoch and page/window regions to state where stream objects should die."),
     ("Check safety", "Compiler/runtime tests reject escaping region references, stale tokens, and unsafe mixed heap-region references."),
-    ("Lower to fast backends", "The prototype lowers checked APIs to Rift streaming regions or SafeZone-family scoped allocation backends."),
-    ("Compare fairly", "Benchmarks include natural heap baselines, same-shape heap controls, and retained-object controls before making memory-management claims."),
+    ("Select safe backends", "The user-facing system is Rift; checked stream and checked scoped rows are backend choices selected by API shape and evidence."),
+    ("Compare fairly", "Headline rows compare natural heap/GC against checked Rift with the same logical program. Mechanism controls stay in appendix tables."),
 ]
 
 
@@ -321,14 +322,14 @@ DESIGN_CARDS = [
         "body": "For streams where a page, record group, or time bucket owns many short-lived records that can be closed together.",
     },
     {
-        "title": "Retained-object control",
-        "api": "heap retained/drop-anchor vs checked retained",
-        "body": "Both sides materialize and retain ordinary objects until the boundary. This isolates GC reclaim from algorithmic shortcut wins.",
+        "title": "Retained-object query",
+        "api": "natural heap vs checked retained regions",
+        "body": "The natural program materializes ordinary objects until a boundary; checked Rift places those data-path objects in regions and keeps durable control state on heap.",
     },
     {
         "title": "Backend selection",
-        "api": "checked-region-scoped or checked-region-stream",
-        "body": "The user-facing API is checked; the runtime backend can be selected by evidence. Unsafe rootless modes are lower-bound controls only.",
+        "api": "fastest safe backend for the shape",
+        "body": "Checked scoped and checked stream are implementation choices under the Rift umbrella. If scoped wins, profile it and improve the Rift backend rather than presenting a separate system.",
     },
     {
         "title": "StreamFlex design",
@@ -343,65 +344,26 @@ DESIGN_CARDS = [
 ]
 
 
-TOPOLOGY_CARDS = [
-    {
-        "title": "Natural heap",
-        "label": "baseline",
-        "shape": "Objects flow into the Scala Native Immix heap; GC later discovers which are dead.",
-        "strategy": "No annotations; temporary stream objects share the heap with durable state.",
-        "claim": "Practical default baseline",
-        "tone": "neutral",
-    },
-    {
-        "title": "Retained epoch",
-        "label": "memory-management test",
-        "shape": "Heap and region both materialize records and retain them until an epoch boundary.",
-        "strategy": "Heap drops an anchor; Rift bulk-closes the epoch.",
-        "claim": "Cleanest GC-vs-region reclaim comparison",
-        "tone": "win",
-    },
-    {
-        "title": "Direct epoch",
-        "label": "batch / graph / transaction",
-        "shape": "A batch, graph step, dataflow epoch, or transaction owns temporary records and scratch objects.",
-        "strategy": "Use `RiftRegion.epoch { ... }`; keep durable tables on heap.",
-        "claim": "Best current general Rift topology",
-        "tone": "win",
-    },
-    {
-        "title": "Page / window token",
-        "label": "stream buckets",
-        "shape": "A page, event group, or time window owns many short-lived records.",
-        "strategy": "Operator-owned bucket lookup/close removes hot-path checks.",
-        "claim": "Generated stream-object pressure win",
-        "tone": "method",
-    },
-    {
-        "title": "Stable / transient / capsule",
-        "label": "StreamFlex design",
-        "shape": "Durable filter state stays on heap; each period owns transient stream objects.",
-        "strategy": "Checked epochs hold transient data; capsules mark transfer boundaries.",
-        "claim": "Throughput and tail-latency evidence",
-        "tone": "win",
-    },
-    {
-        "title": "Summary-only",
-        "label": "topology lower bound",
-        "shape": "Records update primitive summaries on append and do not survive to close.",
-        "strategy": "Run heap and checked counterparts; classify as operator/topology evidence.",
-        "claim": "Not a reclaim claim",
-        "tone": "warn",
-    },
-    {
-        "title": "Unsafe / trusted lower bound",
-        "label": "backend potential",
-        "shape": "Rootless or trusted region modes remove safety/root bookkeeping that the final user-facing system must justify statically.",
-        "strategy": "Use only as an internal control, never as the safe final system.",
-        "claim": "Optimization lower bound",
-        "tone": "control",
-    },
+INFERENCE_DONE_ROWS = [
+    ["Expected-type local placement", "`val x: T^{r} = new T(...)` lowers into the checked region when `r` has a runtime owner term."],
+    ["Branch/match placement", "All paths can allocate into a checked region when they prove the same owner."],
+    ["Method/effect summaries", "Direct, returned-local, forwarding, branch/match, and selected local factory summaries are implemented."],
+    ["Owner-token call sites", "Arguments to checked owner-token methods can be placed through the actual runtime owner argument."],
+    ["Framework/operator owners", "Page-token, epoch-buffer, buffer, priority-queue, rank/table, and retained helpers recover the operator-owned region."],
+    ["Synthetic allocations", "`Some`, `Option.apply`, `None`, `Tuple2`-`Tuple22`, arrays, generic cells, and wrapper records are covered in owner-proven shapes."],
+    ["Closure placement", "Nonescaping closure objects and narrow captured-owner closure-body allocations are covered."],
+    ["Diagnostics", "`-P:scalanative:riftInferReport` reports region, heap, unknown, and rejected placement decisions."],
 ]
 
+
+INFERENCE_LEFT_ROWS = [
+    ["Closure/effect summaries", "Finish escaping-safe closures, closure-body effects, hidden owner capture, and lambda environment rewriting."],
+    ["Type-only owner recovery", "Recover a runtime owner when `T^{r}` has a unique owner term; otherwise keep heap fallback."],
+    ["General callee summaries", "Support more callees, forwarding wrappers, helper libraries, and selected framework boundaries."],
+    ["Polymorphic safety", "Stay conservative across virtual dispatch, mutation, callbacks, exceptions, erased generics, and generic containers."],
+    ["Boxes and libraries", "Handle primitive boxes, boxed keys, iterators, collection nodes, strings, buffers, and parser helpers."],
+    ["Evidence", "Keep expanding positive allocation-stat tests and negative safety tests before relaxing runtime checks."],
+]
 
 EVALUATION_ROWS = [
     [
@@ -426,7 +388,7 @@ EVALUATION_ROWS = [
     ],
     [
         "Presentation audit",
-        "Representative rows are checked for L1 elapsed/RSS, L2 GC/region interpretation, input type, topology/API, comparison class, and allowed claim.",
+        "Representative rows are checked for L1 elapsed/RSS, L2 GC/region interpretation, input type, API/workload shape, comparison class, and allowed claim.",
         "Prevents stale L2-only, legacy, or lower-bound rows from being mistaken for final evidence.",
     ],
     [
@@ -450,8 +412,8 @@ ENFORCED_ROWS = [
     ],
     [
         "Actually implemented/evaluated now",
-        "Natural heap, same-shape heap controls, retained epoch/drop-anchor, direct `RiftRegion.epoch`, page/window token, checked scoped backend, checked stream backend, and unsafe/trusted lower bounds.",
-        "These are the topologies shown in the atlas and used in the evidence tables.",
+        "Natural heap, checked `RiftRegion.epoch`, page/window token, checked scoped backend, checked stream backend, plus appendix-only same-shape/drop-anchor/summary/control modes.",
+        "Headline rows use natural heap versus checked Rift. Backend and mechanism controls explain why a row wins or loses.",
     ],
     [
         "Defensive/runtime today",
@@ -466,124 +428,123 @@ ENFORCED_ROWS = [
 ]
 
 
+REAL_RESULT_ROWS = [
+    [
+        "DSPBench Fraud q2",
+        "Real bundled DSPBench credit-card file replayed to 10M events.",
+        "Checked page-token: `187882.928 ms`; checked SafeZone page-token: `186988.431 ms`.",
+        "Immix heap: `208405.569 ms`.",
+        "Real/local stream win; SafeZone backend is slightly best for this row.",
+    ],
+    [
+        "DSPBench Log q2",
+        "Real bundled DSPBench HTTP log file replayed to 10M events.",
+        "Checked page-token: `273860.718 ms`, GC `24816.086 ms`.",
+        "Immix heap: `306392.943 ms`, GC `57338.467 ms`.",
+        "Real/local stream win where checked Rift also beats the checked SafeZone row.",
+    ],
+    [
+        "Theodolite q2 real time series",
+        "UCI household-power streaming-file row, 2,049,280 records.",
+        "Checked stream: `2160.896 ms`, RSS `80.4 MB`.",
+        "Immix heap: `2256.219 ms`, RSS `147.9 MB`.",
+        "Real time-series modest time win with clear RSS and GC reduction.",
+    ],
+]
+
+
 RESULT_ROWS = [
     [
-        "Broom-style retained dataflow",
-        "Timestamped aggregate/join with ordinary records retained until notify/close.",
-        "Checked Rift aggregate/join: `3.59 / 4.26s`.",
-        "Natural heap/GC: `5.27 / 5.00s`.",
-        "Prior-work-style headline: natural heap versus checked Rift, with material GC removal, about 82-83% lower RSS, and a checked scoped backend comparison row.",
+        "Broom retained aggregate/join",
+        "Timestamped retained aggregate and join records, 10M events.",
+        "Checked Rift: `862.143 / 896.583 ms`, RSS `16.4 / 15.1 MB`.",
+        "Immix heap: `1071.498 / 1043.463 ms`, RSS `148.7 / 76.9 MB`.",
+        "Retained dataflow win: checked Rift removes timed GC and cuts RSS substantially.",
     ],
     [
-        "DBGEN Q17 retained dataflow",
-        "TPC-H DBGEN SF1 `part.tbl` and `lineitem.tbl`; all lineitems are retained until timestamp close, then Q17 filters run.",
-        "Checked Rift: `51.47s`, RSS about `49 MB`; checked scoped: `53.35s`, RSS about `49 MB`.",
-        "Natural heap/GC: `55.44s`, RSS about `433 MB`; heap fails at `128M`.",
-        "Standardized generated TPC-H input evidence: modest throughput win, large RSS/fixed-memory win, not official audited TPC-H or real-world input.",
+        "StreamFlexDesign",
+        "Stable heap state plus transient period objects and capsule transfer, 10M events.",
+        "Checked stream throughput: `3800.585 ms`; pressure-latency misses `4`.",
+        "Immix heap throughput: `5138.231 ms`; pressure-latency misses `72`.",
+        "Stream lifetime win: checked periods reduce GC and deadline/tail pressure.",
     ],
     [
-        "Real graph replay",
-        "Yak LiveJournal, real SNAP graph input, 50M replayed edges.",
-        "Checked epoch scoped: `16.12s`, RSS about `612 MB`.",
-        "GC heap: `18.79s`, RSS about `2.77 GB`.",
-        "The strongest real-input result: epoch regions improve both time and memory footprint.",
+        "Common Crawl-shaped q1/q2",
+        "Generated WET-shaped tokenization and domain-window stressors, 10M pages.",
+        "Checked page-token: `46491.537 / 46094.232 ms`.",
+        "Immix heap: `70410.059 / 67398.152 ms`.",
+        "Generated object-pressure win: page/window objects share clear lifetimes; not real-input proof.",
     ],
     [
-        "Real text top-word",
-        "Stack Exchange AskUbuntu `Posts.xml`, 10M real tokens x5.",
-        "Checked epoch scoped: `3.86s`, RSS about `94 MB`.",
-        "GC heap: `4.19s`, RSS about `428 MB`.",
-        "First real text/top-word row: direct checked epoch wins; reusable top-k is lower-RSS but still slower than direct epoch.",
+        "Generated LogHub q2/q3",
+        "Window-count and template/session log-shaped generated queries, 10M events.",
+        "Checked epoch stream: `2600.244 / 26291.412 ms`.",
+        "Immix heap: `6677.914 / 32867.576 ms`.",
+        "Strong stream/operator win; q3 still has large query/session CPU.",
     ],
     [
-        "Mechanism reclaim control",
-        "Focused retained-epoch matrix, 1M ordinary records x20.",
-        "Checked scoped retained/drop-anchor: `0.47s`.",
-        "Heap retained/drop-anchor: `0.70s`.",
-        "Appendix/control evidence: both sides retain objects until close, isolating the reclaim mechanism.",
+        "SPECjbb2005-style port",
+        "Clean-room transaction-lifetime workload, 10M transactions.",
+        "Checked epoch stream: `1231.076 ms`, GC `0.593 ms`.",
+        "Immix heap: `1674.726 ms`, GC `206.437 ms`.",
+        "Prior-work-style transaction win, not official SPECjbb2005 certification.",
     ],
     [
-        "Prior-work-shaped dataflow",
-        "SELECT / AGGREGATE / JOIN, 1M documents x20.",
-        "Checked epoch scoped: `0.38 / 0.69 / 0.39s`.",
-        "GC heap: `0.62 / 1.10 / 0.55s`.",
-        "The epoch API generalizes beyond one benchmark to dataflow-style operators.",
+        "NEXMark generated queries",
+        "Generated Beam-default q3/q8/q9/q11 stream methodology rows.",
+        "Checked q3/q8/q9/q11: `2591 / 4157 / 7929 / 2188 ms`.",
+        "Immix heap: `2848 / 4432 / 8790 / 2217 ms`.",
+        "Checked beats heap on these rows, but q9 favors the scoped/SafeZone backend.",
     ],
     [
-        "Generated object-pressure stream",
-        "Common Crawl WET-shaped generated q1/q2, 1M pages.",
-        "Checked page-token stream: `16.04 / 16.36s`.",
-        "GC heap: `22.55 / 21.41s`.",
-        "Clean selected-streams sweep: strong checked page/window win with about 1.6s heap GC removed in L2, but generated, not real-data proof.",
+        "GH Archive-shaped q1/q2",
+        "Generated/preloaded GH Archive-shaped event rows, 10M events.",
+        "Checked page-token: `3822.250 / 3842.741 ms`.",
+        "Immix heap: `3975.523 / 3848.235 ms`.",
+        "Honest control: q1 small win, q2 tie; parser/query floor dominates.",
     ],
     [
-        "StreamFlex design reproduction",
-        "Stable heap state, transient period objects, bounded capsules, 1M generated events.",
-        "Checked epoch scoped: `1.27s`, RSS about `7.9 MB`.",
-        "Heap same-shape: `1.52s`, RSS about `12.4 MB`.",
-        "Rift-native StreamFlex design row: throughput win, GC reduction in L2, and pressure-latency tail/deadline wins.",
+        "Object allocation and append",
+        "Primitive-field object allocation and append-window microbenchmarks.",
+        "Checked allocation `161.281 ms`; append-window `252.007 ms`.",
+        "Immix allocation `263.639 ms`; append-window `338.362 ms`.",
+        "Runtime/API overhead wins after GC removal; checked SafeZone is still the lower-overhead substrate for pure allocation.",
     ],
     [
-        "Selected stream sweep",
-        "NEXMark q3/q8/q9/q11, GH Archive, LogHub, and DSPBench selected rows.",
-        "NEXMark checked wins/ties; LogHub q2/q3 checked epoch: `2.46 / 10.32s`.",
-        "LogHub heap: `3.63 / 11.22s`; Theodolite q2 checked stream: `4.58s` vs heap `5.13s`.",
-        "Current presentation-facing stream/application sweep; DSPBench remains modest/control, and Theodolite is throughput/GC-positive but not an RSS win in the selected addendum.",
-    ],
-    [
-        "Real streaming retained state",
-        "Theodolite UC4 retained hierarchy windows and Wikimedia retained clickstream-session over compressed public inputs.",
-        "Theodolite checked stream `14.06s`, `26.6 MB`; Wikimedia 10M x3 checked Rift `59.37s`, `138 MB`.",
-        "Theodolite heap `16.85s`, `207 MB`; Wikimedia 10M x3 heap `62.52s`, `1.80 GB`.",
-        "Positive real-streaming retained-object evidence: both rows improve throughput, RSS, GC, and fixed-memory behavior. These are local named kernels, not exact prior-system artifacts.",
-    ],
-    [
-        "Real log top-k",
-        "LogHub HDFS top templates, real HDFS logs, 1M x20.",
-        "Checked top-k scoped API: `4.88s`, RSS about `28 MB`.",
-        "Retained heap: `5.52s`, RSS about `205 MB`.",
-        "A reusable top-k API can keep most of the retained-region benefit on real logs.",
-    ],
-    [
-        "Real streaming log session",
-        "LogHub HDFS q3 template/session, 1M streaming lines x3.",
-        "Checked page-token: `30.29s`, RSS about `130 MB`.",
-        "GC heap: `26.88s`, RSS about `862 MB`.",
-        "A useful streaming RSS/fixed-memory control, but not a throughput win: parser/template/session CPU dominates.",
+        "Window fold",
+        "Checked fold/traversal microbenchmark, 10M objects.",
+        "Checked Rift: `930.973 ms`.",
+        "Immix heap: `898.906 ms`.",
+        "Negative control: traversal/API overhead can exceed removed GC and remains an optimization target.",
     ],
 ]
 
 
 REAL_INPUT_ROWS = [
-    ["Yak LiveJournal", "Real SNAP graph input", "Strong checked epoch time and RSS win", "Flagship real-input row."],
-    ["AskUbuntu topwordreal", "Real Stack Exchange text", "Checked epoch time/RSS win", "First real text/top-word row; not exact Yak/Hadoop."],
-    ["LogHub HDFS top templates", "Real LogHub HDFS logs", "Modest time win and large RSS reduction", "Promising reusable top-k API row."],
-    ["Wikimedia clickstream-session", "Real compressed Wikimedia clickstream TSV", "10M x3 checked Rift throughput/RSS/GC/fixed-memory win", "Named retained streaming row; not official Wikimedia artifact."],
-    ["Theodolite retained UC4", "Real UCI household power trace", "Checked stream time/RSS/GC/fixed-memory win", "Strongest real streaming time-series retained row."],
-    ["LogHub HDFS q3 streaming", "Real streaming HDFS logs", "Large RSS reduction, slower elapsed", "Template/session control row; parser/query CPU dominates."],
-    ["LogHub HDFS q2", "Real LogHub HDFS logs", "Elapsed tie, strong RSS reduction", "Useful page/window control."],
-    ["GH Archive", "Real NDJSON events", "Small time/RSS wins; parser CPU dominates", "Useful but not GC-heavy enough yet."],
-    ["DSPBench Fraud/Log q2", "Real bundled DSPBench files", "Modest/control rows; checked page-token reduces L2 GC", "Not a flagship GC-heavy stream row."],
-    ["Common Crawl WET/WAT", "Real archive shards", "Current real rows are GC-light", "Ceiling/control, not a flagship result."],
+    ["DSPBench Fraud q2", "Bundled real credit-card file replayed to 10M events", "Checked page-token is about 10% faster than Immix", "Real/local stream win; SafeZone backend slightly best."],
+    ["DSPBench Log q2", "Bundled real HTTP log file replayed to 10M events", "Checked page-token beats Immix and checked SafeZone", "Strongest latest real/local DSPBench row."],
+    ["Theodolite q2", "UCI household-power streaming-file input", "Checked stream modestly faster, with lower RSS and GC", "Real time-series row in latest matrix."],
+    ["Wikimedia clickstream-session", "Compressed public Wikimedia clickstream TSV", "Prior 10M x3 checked Rift throughput/RSS/GC/fixed-memory win", "Named retained streaming row; not official Wikimedia artifact."],
+    ["Yak LiveJournal", "Real SNAP graph input", "Prior checked epoch time and RSS win", "Real graph replay evidence."],
+    ["AskUbuntu topwordreal", "Real Stack Exchange text", "Prior checked epoch time/RSS win", "Real text/top-word evidence; not exact Yak/Hadoop."],
 ]
 
 
 LIMITATIONS = [
-    "The best GC-heavy page/window token result is still generated, so that operator evidence demonstrates a workload regime rather than a real-data case study.",
-    "Some real inputs are dominated by parsing, hashing, or query CPU, so removing GC does not automatically produce large elapsed-time wins.",
-    "Unsafe/rootless region modes are useful lower bounds but are not user-facing safety claims.",
-    "Rank, median, hash-join, and table-heavy operators still need focused API gates before they can support application claims.",
-    "The ReML/MLKit comparison table is still being assembled; cross-language raw wall-clock comparisons will be treated as contextual, not definitive.",
+    "The latest full matrix was a dirty working-tree engineering run; rerun from a clean committed tree before treating the exact numbers as publication evidence.",
+    "Rift is not full ReML/MLKit inference yet: broad closure/effect summaries, hidden/type-only owner recovery, primitive boxes, and library summaries remain open.",
+    "Some rows are dominated by parsing, hashing, traversal, or query CPU, so removing GC does not guarantee an elapsed-time win.",
+    "Unsafe/rootless rows remain lower-bound controls, not user-facing safety claims.",
+    "Runtime checks stay unless compiler/runtime probes prove active-handle, stale-token, owner, and close-order invariants.",
 ]
 
 
 OPEN_WORK_ROWS = [
-    ["Finalize L1 rows", "Finish final-clean headline runs for the selected representative API wins."],
-    ["Gate throughput policies", "Run selected application L1/L2 gates for cache-large before promoting it beyond focused allocator evidence."],
-    ["Scale real retained streams", "Use Wikimedia and Theodolite as current positive cases; next try larger/full-input Wikimedia scale checks, richer LogHub sessions, and larger StackExchange/SNAP streams."],
-    ["Extend StreamFlex design rows", "Scale the stable/transient/capsule matrix and add object-retained BeamFormer/FilterBank variants only if they remain fair same-shape controls."],
-    ["Complete ReML/MLKit table", "Separate paper-reported, exact artifact rerun, and Scala Native port evidence."],
-    ["Gate complex operators", "Only headline rank/hash/median/join after natural heap, same-shape heap, retained controls, and focused 1M API gates."],
+    ["Clean final matrix", "Rerun the latest selected matrix from a clean committed tree and promote only validated rows."],
+    ["Closure/effect summaries", "Finish escaping-closure summaries, hidden owner capture, type-only owner recovery, and lambda environment rewriting."],
+    ["Library inference", "Handle primitive boxes, boxed keys, iterators, collection nodes, strings, buffers, parser helpers, wrappers, and erased generic paths."],
+    ["Runtime overhead", "Reduce fold/traversal/capsule work, token/handle plumbing, and object init/zeroing only under proof-gated invariants."],
+    ["Mechanized proof", "Complete the core containment, heap-root, owner-token, and close/reset safety argument."],
 ]
 
 
@@ -667,7 +628,7 @@ def render_design_cards() -> str:
     return figure_block(
         "Figure 5. User-facing checked APIs and controls.",
         "\n".join(parts),
-        "Different workloads need different lifetimes. The API should expose epoch, page/window, and retained-object shapes instead of forcing one region topology everywhere.",
+        "Different workloads need different lifetimes. The API should expose epoch, page/window, and retained-object shapes instead of forcing one allocation style everywhere.",
     )
 
 
@@ -955,7 +916,41 @@ def render_enforced_table() -> str:
         ["Status", "What it means", "Use in the report"],
         rows,
         "Table 1. What Rift actually enforces today versus design vocabulary.",
-        "The figures should be read as the actual evaluation topologies. Prior-work ideas like active/closed capabilities are useful only when marked as future design vocabulary.",
+        "Prior-work ideas like active/closed capabilities are useful only when marked as future design vocabulary.",
+    )
+
+
+def render_region_inference() -> str:
+    done_rows = [[esc(a), inline_markdown(b)] for a, b in INFERENCE_DONE_ROWS]
+    left_rows = [[esc(a), inline_markdown(b)] for a, b in INFERENCE_LEFT_ROWS]
+    return "\n".join(
+        [
+            render_table_block(
+                ["Implemented inference slice", "Current status"],
+                done_rows,
+                "Table 2. Region inference implemented today.",
+                "The compiler places allocations only when it can recover a concrete checked runtime owner; all ambiguous cases stay on the heap.",
+            ),
+            render_table_block(
+                ["Remaining inference track", "Next work"],
+                left_rows,
+                "Table 3. Region inference still missing.",
+                "The remaining work is broader effect summaries and library coverage, not relaxing safety for unknown owners.",
+            ),
+        ]
+    )
+
+
+def render_real_results_table() -> str:
+    rows = [
+        [esc(a), inline_markdown(b), inline_markdown(c), inline_markdown(d), esc(e)]
+        for a, b, c, d, e in REAL_RESULT_ROWS
+    ]
+    return render_table_block(
+        ["Result", "Workload", "Best checked row", "Immix heap", "Interpretation"],
+        rows,
+        "Table 4. Latest real/local input results.",
+        "These rows use local/public input files or bundled real benchmark data; they are separated from generated and methodology stressors.",
     )
 
 
@@ -965,10 +960,10 @@ def render_results_table() -> str:
         for a, b, c, d, e in RESULT_ROWS
     ]
     return render_table_block(
-        ["Result", "Workload", "Best checked row", "Baseline/control", "Interpretation"],
+        ["Result", "Workload", "Best checked row", "Immix heap", "Interpretation"],
         rows,
-        "Table 3. Representative results under the normalized comparison rules.",
-        "The current story is strongest for retained timestamped dataflow, epochal graph/dataflow/transaction shapes, generated page/window pressure, and two named real-streaming retained-state rows; many other real streams remain RSS/control evidence.",
+        "Table 5. Latest generated, methodology, and microbenchmark results.",
+        "These rows test memory-management shape, prior-work axes, or runtime/API overhead; they are useful evidence but not real-input proof.",
     )
 
 
@@ -977,8 +972,8 @@ def render_real_input_table() -> str:
     return render_table_block(
         ["Benchmark", "Input", "Current result", "Report status"],
         rows,
-        "Table 4. Real-input evidence status.",
-        "Real datasets are not automatically GC-heavy. The strongest real rows are LiveJournal for graph epochs, Theodolite UC4 for retained time-series, and Wikimedia clickstream-session for retained clickstream state; several others are useful RSS or ceiling controls.",
+        "Table 6. Additional real-input evidence status.",
+        "Real datasets are not automatically GC-heavy. The current real/local positives are DSPBench Log/Fraud and Theodolite q2 in the latest matrix, plus earlier retained Wikimedia, LiveJournal, and AskUbuntu case studies; parser/query-heavy rows remain controls.",
     )
 
 
@@ -987,8 +982,8 @@ def render_open_work() -> str:
     return render_table_block(
         ["Open track", "Next action"],
         rows,
-        "Table 5. Work remaining before a final paper-style evaluation.",
-        "The next work is about finalizing evidence quality and extending real inputs, not adding benchmark-specific shortcuts.",
+        "Table 7. Work remaining before a final paper-style evaluation.",
+        "The next work is about clean evidence, broader inference, proof-gated overhead removal, and library coverage, not benchmark-specific shortcuts.",
     )
 
 
@@ -1062,9 +1057,9 @@ def build_html(source: Path, markdown: str, title: str) -> str:
         The prototype shows that checked region APIs can beat the garbage-
         collected heap when a workload has explicit epoch, transaction, page,
         or window lifetimes. The strongest evidence is not "regions always
-        win"; it is that the right checked topology can remove GC reclaim work
-        and reduce resident memory without resorting to unsafe manual memory
-        management.
+        win"; it is that a checked lifetime/API path can remove GC reclaim
+        work and reduce resident memory without resorting to unsafe manual
+        memory management.
       </p>
       {render_summary_cards()}
     </section>
@@ -1111,7 +1106,7 @@ def build_html(source: Path, markdown: str, title: str) -> str:
       </div>
       <p>
         The report therefore distinguishes memory-management wins from
-        algorithmic or topology wins. If a result depends on summarizing data
+        algorithmic or API-shape wins. If a result depends on summarizing data
         early or avoiding object retention entirely, it is useful but it is not
         reported as a GC-reclaim win.
       </p>
@@ -1130,22 +1125,6 @@ def build_html(source: Path, markdown: str, title: str) -> str:
       {render_approach_steps()}
     </section>
 
-    <section id="topologies" class="section">
-      <div class="section-kicker">Topology story</div>
-      <h2>The central choice is the lifetime boundary, not the operator name</h2>
-      <p>
-        Prior work wins by separating temporary data from durable control state.
-        Rift should be read the same way: epoch, page/window, and retained
-        controls are different ways to expose when ordinary objects die. The
-        reusable API is important because it lets the backend exploit that
-        boundary without unsafe manual memory management. The figures below
-        are Rift's current evaluation topologies; borrowed concepts are
-        included only when they describe what Rift enforces or what remains
-        future design vocabulary.
-      </p>
-      {render_topology_story()}
-    </section>
-
     <section id="design" class="section">
       <div class="section-kicker">Key design idea</div>
       <h2>Use static safety to remove runtime memory bookkeeping</h2>
@@ -1158,6 +1137,19 @@ def build_html(source: Path, markdown: str, title: str) -> str:
       </p>
       {render_design_cards()}
       {render_enforced_table()}
+    </section>
+
+    <section id="region-inference" class="section">
+      <div class="section-kicker">Region inference</div>
+      <h2>Proven allocations move to regions; unproven allocations stay on the heap</h2>
+      <p>
+        Rift's inference is ReML/MLKit-inspired, but it is currently a
+        capture-directed placement system. The compiler uses expected captured
+        types, owner-token arguments, framework boundaries, and local
+        method/effect summaries to find a concrete checked runtime owner. When
+        that proof is missing, the allocation remains on the Immix heap.
+      </p>
+      {render_region_inference()}
     </section>
 
     <section id="evaluation" class="section">
@@ -1175,14 +1167,14 @@ def build_html(source: Path, markdown: str, title: str) -> str:
 
     <section id="results" class="section">
       <div class="section-kicker">Main results</div>
-      <h2>The important numbers fit on one table</h2>
+      <h2>The important numbers are split by evidence class</h2>
       <p>
-        The strongest current story has six representative rows: one real
-        graph workload, one controlled retained-object reclaim test, two
-        prior-work-shaped methodology groups, one generated high-allocation
-        stream stressor, one StreamFlex-design reproduction, and one real log
-        top-k workload.
+        The latest numbers are separated by evidence class. Real/local input
+        rows show what happens on public or bundled files; generated,
+        methodology, and microbenchmark rows isolate memory-management shapes
+        and runtime/API overhead.
       </p>
+      {render_real_results_table()}
       {render_results_table()}
     </section>
 
@@ -1595,34 +1587,6 @@ figure {
   font-size: 0.82rem;
   font-weight: 800;
 }
-.topology-board {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 44px minmax(0, 1fr);
-  gap: 14px;
-  align-items: stretch;
-  margin-top: 22px;
-  min-width: 0;
-  max-width: 100%;
-  overflow: hidden;
-}
-.topology-lane {
-  display: grid;
-  gap: 14px;
-  min-height: 250px;
-  padding: 20px;
-  border: 1px solid var(--line);
-  border-radius: 20px;
-  background: var(--paper-soft);
-  min-width: 0;
-  overflow-wrap: anywhere;
-  word-break: normal;
-}
-.topology-heap {
-  background: linear-gradient(180deg, #fff7e6, white);
-}
-.topology-region {
-  background: linear-gradient(180deg, #eaf7ef, white);
-}
 .lane-heading {
   color: #334155;
   font-size: 0.82rem;
@@ -1661,65 +1625,11 @@ figure {
   background: #dbeafe;
   color: #1e3a8a;
 }
-.topology-arrow {
-  display: grid;
-  place-items: center;
-  color: var(--accent-dark);
-  font-size: 2.3rem;
-  font-weight: 850;
-}
-.topology-card-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
-  gap: 14px;
-  margin-top: 16px;
-  min-width: 0;
-  max-width: 100%;
-  overflow: hidden;
-}
-.topology-card {
-  display: grid;
-  gap: 10px;
-  padding: 18px;
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  background: white;
-  min-width: 0;
-  max-width: 100%;
-  overflow: hidden;
-  overflow-wrap: anywhere;
-  word-break: normal;
-}
-.topology-card p {
-  font-size: 0.95rem;
-  min-width: 0;
-  overflow-wrap: anywhere;
-  word-break: normal;
-}
-.topology-card p strong {
-  color: var(--ink);
-}
-.topology-card code,
-.paper-figure code,
-.topology-lane code {
+.paper-figure code {
   white-space: normal;
   overflow-wrap: anywhere;
   word-break: normal;
 }
-.topology-label {
-  color: var(--muted);
-  font-size: 0.75rem;
-  font-weight: 850;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  min-width: 0;
-  overflow-wrap: anywhere;
-  word-break: normal;
-}
-.topology-win { border-color: #b8dec6; background: linear-gradient(180deg, var(--green-soft), white); }
-.topology-method { border-color: #c4d5f4; background: linear-gradient(180deg, var(--blue-soft), white); }
-.topology-warn { border-color: #ead099; background: linear-gradient(180deg, var(--amber-soft), white); }
-.topology-control { background: linear-gradient(180deg, #f1f5f9, white); }
 .paper-figure-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
@@ -1954,15 +1864,8 @@ pre code {
   .context-grid,
   .flow-grid,
   .paper-figure-grid,
-  .topology-card-grid,
   .evidence-list {
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
-  }
-  .topology-board {
-    grid-template-columns: 1fr;
-  }
-  .topology-arrow {
-    transform: rotate(90deg);
   }
 }
 @media (max-width: 640px) {
@@ -1976,7 +1879,6 @@ pre code {
   .context-grid,
   .flow-grid,
   .paper-figure-grid,
-  .topology-card-grid,
   .evidence-list {
     grid-template-columns: 1fr;
   }

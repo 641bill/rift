@@ -1,7 +1,7 @@
 # Rift Memory Mode Taxonomy
 
 Date: 2026-05-03
-Last updated: 2026-05-18 16:45 CEST
+Last updated: 2026-05-18 17:41 CEST
 
 Status: canonical reporting-name contract for future reports and benchmark
 tables. Older benchmark labels and code symbols remain accepted as aliases
@@ -41,6 +41,28 @@ programming model and backend without exposing old implementation labels.
 The project name remains Rift, but the descriptive system concept for
 presentation is **checked stream regions**: safe APIs and reusable operators on
 top of a choice of region backends.
+
+## Headline Comparison Contract
+
+Use this model when reading presentation tables:
+
+- `gc-heap` is the natural framework/program object shape on the normal Scala
+  Native GC heap.
+- Checked Rift rows keep the same logical program, output, operator semantics,
+  and lifetime boundary, but allocate short-lived data-path objects in checked
+  regions while durable control state remains on the heap.
+- `checked-region-stream`, `checked-region-scoped`, `checked-page-token`, and
+  checked epoch/topology rows are all Rift rows when they are reached through
+  the checked API. They differ by topology/backend, not by being separate
+  competing systems.
+- Presentation should select the fastest safe checked backend for the
+  API/topology as the headline Rift row. If checked scoped wins, it is still a
+  Rift backend result; profile it to either improve the Rift streaming backend
+  or record that scoped lowering is the right automatic selection for that
+  shape.
+- Same-shape heap controls, summary-on-append lower bounds, legacy checked
+  rows, and unsafe/rootless rows belong in mechanism or appendix tables unless
+  they are explicitly the object of the comparison.
 
 ## Topology Names
 

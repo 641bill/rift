@@ -12,6 +12,9 @@ Claude_output/
 .conductor/
 .metals/
 .vscode/
+scripts/__pycache__/
+experimental/**/.bsp/
+experimental/**/.scala-build/
 
 # large data
 trip_data/

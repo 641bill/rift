@@ -1,513 +1,174 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-18 16:01 CEST
+Last updated: 2026-05-22 08:54 CEST
 
-Status: markdown slide deck outline. Use
-`docs/PERFORMANCE_EVALUATION_REPORT.md` as the source report,
-`docs/BENCHMARK_CATALOG.md` for benchmark definitions, and
-`evidence/EVALUATION_CLASSIFIED_SUMMARY.md` for the classified result table.
-Use `docs/FAIR_EVALUATION_PROTOCOL.md` for the evaluation contract,
-`evidence/MEASUREMENT_OVERHEAD_PROTOCOL.md` for measurement levels, and
-`evidence/OPERATOR_GATE_STATUS.md` when discussing why rank/top-k/median and
-join operators remain gated.
+Status: final talk-outline slide source. Use
+`docs/PERFORMANCE_EVALUATION_REPORT.md` as the main narrative report and
+`docs/report.html` as the generated presentation artifact.
 
-Recommended talk order:
+## Slide 1: Thesis
 
-1. Problem and design target.
-2. Comparison classes: natural heap, same-shape heap, summary-only topology,
-   retained-object drop-anchor, best checked topology, unsafe/trusted lower
-   bound.
-3. Measurement levels: L1 final-clean headline versus L2 stats, L3
-   diagnostics, and L4 external profiles.
-4. Direct `RiftRegion.epoch { ... }` as the reusable checked topology for
-   batch/epoch workloads.
-5. Retained-object evidence as the fair memory-management comparison.
-6. Real-input Yak LiveJournal and AskUbuntu as checked epoch rows.
-7. Page-token stream evidence for page/window append workloads.
-8. ReML/MLKit PLDI-style comparison as a non-stream typed-region axis.
-9. Scala-level backend outlook: Scala Native is validated now; JVM, Scala.js,
-   Wasm, and analysis-only are planned backend experiments for the same checked
-   topology model.
-10. Open work: streaming-input conversions, real-input GC-heavy search, and
-   gated rank/hash/median/join operators.
+Rift is a checked region-memory system for Scala Native that moves proven
+epoch/page/window/transaction-local objects out of Immix and reclaims them in
+bulk, while preserving heap fallback for unproven Scala code.
 
-Representative numbers to keep on slides:
+## Slide 2: Why This Is Hard
 
-| Evidence class | Best current row | Interpretation |
-|---|---|---|
-| Prior-work-style retained dataflow | Broom active-16 aggregate 20M: checked Rift `8.48 s`, `53 MB` RSS, `0 ms` GC vs natural heap `10.78 s`, `236 MB`, L2 GC `953.153 ms` and max GC `2241.709 ms`; checked scoped backend is `11.51 s`, `54 MB`. Active-16 join 20M: checked Rift `8.09 s`, `57 MB` vs heap `9.88 s`, `438 MB`, L2 GC `486.649 ms`; checked scoped backend is `9.15 s`, `57 MB`. Heap completes at `512M` but fails at `384M`/`256M`. | This is the Broom/Naiad-style headline comparison: natural heap/GC versus checked Rift on ordinary objects retained until notification/close, with safe scoped backend and fixed-memory behavior shown as comparison axes. |
-| Prior-work-style q17 retained join/aggregate | Broom q17 active-16 20M: checked Rift `9.67 s`, `50 MB` RSS, `0 ms` GC vs natural heap `14.45 s`, `232 MB`, L2 GC `1370.380 ms`; checked scoped backend is `13.02 s`, `50 MB`. DBGEN SF1 file-backed Q17: checked Rift `51.47 s`, `48.7 MB` vs heap `55.44 s`, `433.3 MB`; heap fails at `128M`. | TPC-H-Q17-like retained dataflow shape with deterministic generated and DBGEN-generated `Part`/`LineItem` records. This is throughput/GC/RSS methodology evidence, not exact TPC-H audit or real-input proof. |
-| Retained-object memory management | Focused 1M retained: checked scoped `24.274 ms`, `0 ms` GC, `4.9 MB` RSS vs retained heap `36.233 ms`, `10.109 ms` GC, `21.3 MB` RSS. | Fair region-reclaim win: both sides retain ordinary objects until epoch close. |
-| Retained generated/preloaded stressor | GH Archive-shaped retained q2 L1: checked scoped `3.44 s`, `16 MB` RSS vs retained heap `4.62 s`, `147 MB` RSS for 20 x 1M iterations; L2 checked scoped `186.868 ms` vs retained heap `257.377 ms`, `77.208 ms` GC. | Strong retained memory/RSS win, but not real-input proof. |
-| Direct-summary lower bound | GH Archive-shaped q2 L1: heap direct-summary `1.36 s`; checked stream/scoped direct-summary `1.45/1.45 s`. DSPBench Fraud/Log q2 and LogHub q2/q3 now also have checked direct-summary counterparts within about `1-4%` of heap direct-summary, except LogHub q3's CPU-heavy row at about `2-3%`. | Symmetric topology lower bound: direct-summary is fast for heap and checked regions, but it is not a reclaim claim. |
-| Real-input checked epoch | SNAP LiveJournal 50M: checked epoch scoped `2008.320 ms`, `0 ms` GC, `2.11 GB` RSS vs heap `2958.659 ms`, `400.484 ms` GC, `3.91 GB` RSS. | Strongest real-input prior-work-shaped row; local graph replay, not exact Yak/GraphChi. |
-| Real-input text checked epoch | AskUbuntu `topwordreal` 20M x5: checked epoch scoped `7.16 s`, `174 MB` RSS vs heap `7.77 s`, `986 MB`; L2 checked `432.824 ms`, `0 ms` GC vs heap `511.485 ms`, `33.471 ms` GC. | First real text/top-word row; local Yak/Hadoop-shaped replay, not exact Yak/Hadoop. Reusable top-k is an RSS win but trails direct epoch and heap elapsed at 20M. |
-| Reusable Dataflow epoch | SELECT/AGGREGATE/JOIN: checked epoch scoped `19.691/34.676/19.762 ms` vs heap `27.775/50.837/30.387 ms`. | Direct epoch covers the full Broom-style operator family. |
-| StreamFlex/Stancu epoch | L1 StreamFlex throughput `0.58 s` vs heap `0.79 s`; L1 Stancu `0.57 s` vs heap `0.85 s`. | Direct epoch supersedes older TransactionRegion/EpochBuffer rows for shared batch lifetimes. |
-| StreamFlex design reproduction | All-optimizations L1 StreamFlexDesign throughput, 20M x3: optimized checked stream `19.25 s`, legacy checked stream `21.32 s`, checked scoped `23.41 s` vs heap `30.90 s`; L2 pressure-latency: checked scoped fastest and checked stream has `0` misses. | Rift-native stable/transient/capsule design reproduction; the default checked stream label now carries handle-backed allocation. Not exact Ovm artifact evidence. |
-| StreamIt BeamFormer/FilterBank controls | 3-run L1 control: heap `15.00 s`, checked scoped `15.23 s`, checked stream `15.56 s`; L2 confirms FilterBank is zero-GC and BeamFormer is compute/array dominated. | Primitive DSP kernels are StreamFlex-axis controls, not GC-heavy Rift wins. |
-| L4/profile-guided allocation lesson | Dataflow `EpochFold` samples show fold-table lookup/probing, cursor traversal, Rift allocator/stat paths, and `checkOpen`; direct epoch is mostly tight loop plus allocation/zeroing. Yak LiveJournal samples file parsing, while generated graphstep isolates epoch-body allocation/object construction/zeroing. The first allocator cleanup removes sampled page-size/padding helpers and improves 10M graphstep checked scoped from `181.341 ms` to `167.164 ms`; object allocation cleanup improves 5M checked Rift allocation from `76.345 ms` to `69.912 ms`; zeroing attribution shows 5M handle-backed checked Rift zeroes `4,198,392` objects / `134 MB` and skips zeroing for `801,608` objects / `25.7 MB`; experimental reusable-slab bulk-zeroing improves 5M handle-backed allocation `68.692 -> 65.228 ms`, 10M `144.067 -> 138.078 ms`, StreamFlexDesign 20M `19.51 -> 18.91 s`, Common Crawl-shaped q2 `10.00 -> 9.22 s`, and Theodolite real power q2 `3.94 -> 3.60 s` but raises Theodolite RSS `15.9 -> 24.9 MB`. High-water prefix zeroing, TLS/local-only zeroing, and static pool-cap release were rejected; pool cap zero was `78.603 ms` at 5M and did not reduce Theodolite RSS. The unsafe no-zero lower-bound row improves focused handle-backed checked Rift `71.320 -> 65.196 ms` at 5M and `155.947 -> 142.769 ms` at 10M with matching checksum/RSS. The first proof-gated no-zero lowering now makes normal handle-backed checked Rift reach that ceiling on primitive-field records: 5M `65.528 ms`, 10M `139.832 ms`, all objects zero-skipped; page-token sanity remains positive at 1M (`24.975 ms` vs legacy `26.495 ms` and heap `35.918 ms`). The remaining-path audit now includes LogHub generated q2/q3 direct epoch: optimized checked `192.452/1794.369 ms` vs legacy `222.544/1837.885 ms`. | Use profiles and L2 counters to guide optimization, not headline timing. Bulk-zeroing preserves zero semantics but moves work to close/reset and can touch more resident pages, so it remains workload-selective experimental evidence. Unsafe no-zero is a ceiling only; proof-gated no-zero is safe only for the local definitely-initialized primitive-field record pattern. |
-| SPECjbb2005-workload port | L1 8 warehouses x20: checked epoch scoped `2.21 s` vs heap `2.64 s` and rooted scoped `2.48 s`; 4-warehouse handle-backed follow-up: optimized checked stream `0.27 s`, legacy `0.30 s`, rooted scoped `0.34 s`, heap `0.64 s`; local Stancu probe default checked epoch `28.554 ms` vs legacy `29.687 ms`. | Clean-room Scala Native port strengthens the Stancu/SPECjbb transaction-lifetime story; the checked stream row now uses handle-backed allocation. Not official SPECjbb2005. |
-| Generated page/window stressor | Clean selected stream sweep Common Crawl-shaped q1/q2, 1M x3: checked Rift page-token `16.04/16.36 s`, checked SafeZone-backed page-token `16.63/16.70 s` vs heap `22.55/21.41 s`; L2 heap GC is `1595.727/1593.068 ms` while checked page-token is `19.665/21.673 ms`. | Strong generated stream-object pressure win; not real-input proof. |
-| Selected stream/application sweep | NEXMark checked Rift is best/tied-best on q3/q8/q9/q11; generated LogHub q2/q3 checked scoped epoch is `2.46/10.32 s` vs heap `3.63/11.22 s`; generated LogHub top templates checked scoped top-k is `1.39 s` vs heap `2.03 s`; DSPBench real file-backed rows are modest/control evidence; Theodolite q2 selected addendum checked stream is `4.58 s` vs heap `5.13 s`. | Current presentation-facing stream sweep; Theodolite addendum is a real-streaming throughput/GC win but not an RSS win in this selected rerun. |
-| Modest real-input page/window/time-series | GH Archive byte-slice q1/q2 L1 checked scoped page-token `12.89/12.87 s`, `101/102 MB` RSS vs heap `13.17/13.18 s`, `265/244 MB`; LogHub HDFS q2 L1 checked scoped page-token `25.56 s`, `79 MB` RSS vs heap `25.60 s`, `409 MB` RSS; DSPBench Log q2 L1 checked `8.79 s`, `47.6 MB` vs heap `8.89 s`, `308 MB`; Theodolite real power q2 optimized checked stream `3.80 s`, `15.9 MB` vs heap `4.33 s`, `75.3 MB`. | Real-input stream wins are mostly RSS/tail/modest-throughput because parser/query CPU dominates and heap GC is small. Theodolite also confirms handle-backed allocation transfers to a real streaming epoch row. |
-| Real-streaming retained-object case studies | Theodolite retained UC4 full local stream: checked Rift stream `14.06 s`, `26.6 MB` RSS vs heap `16.85 s`, `207 MB`, L2 heap GC `335.309 ms`, heap fails at `64M`. Wikimedia retained clickstream-session: 10M x3 checked Rift `59.37 s`, `138 MB` RSS vs heap `62.52 s`, `1.80 GB`; L2 checked Rift GC `96.069 ms` vs heap `851.023 ms`; heap fails at `1G`. | These are the current positive real-streaming retained-state rows. They are local named kernels over public compressed inputs, not exact prior-system artifacts. |
-| Real-preloaded retained top-k | L1 LogHub HDFS 1M x20 after hot-path pass: reusable `EpochTopKByKey` checked scoped `4.88 s`, `28 MB` RSS vs retained heap `5.52 s`, `205 MB` RSS; 5M x5 scale-up is `18.26 s`, `92 MB` RSS vs retained heap `19.04 s`, `504 MB`. | First retained top-k API gate has L1 real-input confirmation and strong RSS win; report-facing API overhead is about `1.7%` at 1M x20 and the 5M row keeps a modest throughput/RSS win. |
-| Real streaming-input retained top-k | LogHub HDFS `streaming-file` 1M: reusable checked scoped `EpochTopKByKey` L1 `8.06 s`, `12 MB` RSS vs retained heap/drop-anchor `8.10 s`, `76 MB`; L2 checked `2697.653 ms`, GC `0 ms` vs heap `2765.068 ms`, GC `32.681 ms`. | First true streaming-input row: the HDFS file is consumed inside each run with no parsed total-input arrays. This is retained-object/RSS streaming evidence, not yet a huge-GC flagship. |
-
-Slide-level rule: summary-only/direct-aggregate rows are topology/operator
-lower bounds. Retained heap versus retained checked epoch is the fair
-memory-management story. Dirty checkpoints, old SafeZone root-mode-0 rows,
-legacy parser rows, and gated DEBS/TableRank/rank rows are not slide headline
-evidence unless rerun under the current fair-evaluation protocol.
-
-## Slide 1: One-Sentence Thesis
-
-Rift is a Scala-level checked lifetime topology system, validated first on
-Scala Native, that moves epochal stream/data objects out of Immix and reclaims
-them in bulk while using static capture/lifetime/rooting rules to avoid
-Yak-style barriers, escape tables, and blanket GC root registration.
-
-## Slide 2: The Design Target
-
-| Keep on heap | Put in regions |
+| Issue | Rift answer |
 |---|---|
-| durable control metadata | page/batch/window records |
-| unpredictable lifetime state | token/event/output scratch objects |
-| global/static metadata | child-bucket object graphs |
-| explicitly rooted heap values | epoch-local query intermediates |
+| Scala has mutable objects, subtyping, arrays, erased generics, closures, and virtual dispatch. | Heap fallback remains the default. Region placement requires a proven runtime owner. |
+| Region bugs are use-after-free bugs. | Capture/separation checking, active handles, owner tokens, `HeapRoot`, and negative safety tests. |
+| Immix is already strong. | Focus on retained transient graphs, RSS/fixed-memory pressure, and GC-tail-sensitive lifetimes. |
 
-The goal is the same logical program for heap and Rift; only allocation
-placement and lifetime policy should differ.
+## Slide 3: System Shape
 
-## Slide 2a: Backend Outlook
-
-| Backend | Current status | Intended lowering |
-|---|---|---|
-| Scala Native | validated implementation | real region allocator, bulk close/reset, proof-gated initialization optimizations |
-| JVM | planned experiment | checked API plus pools/arenas/reusable buffers/off-heap handles with heap fallback |
-| Scala.js | planned experiment | checked API plus object pooling/reuse where semantics allow |
-| Wasm | planned experiment | linear-memory arenas and bump/reset allocation |
-| analysis-only | planned experiment | capture/separation checks with ordinary heap allocation |
-
-Do not claim these non-Native backends as implemented. The presentation claim
-is that the front-end safety/topology model is portable, while allocation wins
-are backend-specific.
-
-Mechanism caveat: Immix is already a mark-region collector with bump-style
-allocation and line/block reclamation. This is why many real-input
-parser/filter/count rows show little GC pressure. Rift's clearest Native wins
-come from retained transient object graphs, RSS/fixed-memory pressure, or
-latency-tail-sensitive lifetimes.
-
-## Slide 3: Evaluation And Measurement Contract
-
-| Topic | Rule |
+| Layer | What it does |
 |---|---|
-| headline system evidence | must use reusable checked framework APIs, not benchmark-local manual arrays |
-| memory-management causality claim | must compare retained heap/drop-anchor against retained checked regions |
-| prior-work-style headline claim | compare natural heap/GC against checked Rift first, then use controls in appendix |
-| topology lower bound | summary-only/direct-aggregate rows are useful, but not pure GC/reclaim wins |
-| final timing | L1 final-clean uses external `/usr/bin/time -l` only |
-| interpretation | L2 stats provide GC/RSS/region counters; L3/L4 diagnostics and profiles explain bottlenecks |
+| Lifetime APIs | `epoch`, page/window token, retained query, transaction, stable/transient/capsule. |
+| Static analysis | Proves which owner a value belongs to, or leaves the allocation on the heap. |
+| Runtime backend | Rift streaming slabs or checked scoped/SafeZone-family regions. |
+| Controls | Same-shape heap, summary-only, legacy checked, unsafe/rootless, and L4 profiles. |
 
-Profiler elapsed from `samply`, `sample`, or `perf` is diagnostic, not a
-headline median.
+## Slide 4: Region Syntax And Ergonomics
 
-## Slide 4: Canonical Memory Modes
+```scala
+RiftRegion.epoch { region ?=>
+  val item: Item^{region} = new Item(key, value)
+  buffer.append(item)
+}
+```
 
-| Name | Meaning |
+The goal is ordinary Scala allocation syntax. Explicit allocation helpers still
+exist, but the compiler now places many `new`, `Some`, `Option`, tuple, array,
+generic wrapper, and closure objects into checked regions when the owner is
+known.
+
+## Slide 5: Region Inference Done
+
+| Implemented | Examples |
 |---|---|
-| `gc-heap` | Scala Native Immix baseline. |
-| `region-scoped-rooted` | SafeZone-family scoped regions with improved roots. |
-| `region-scoped-rootless` | Unsafe lower-bound SafeZone no-root mode. |
-| `region-hp-rootless` / `region-stream-rootless` | Trusted region backend potential. |
-| `checked-region-stream` | Checked Rift API over Rift backend. |
-| `checked-region-scoped` | Checked Rift API over SafeZone-family scoped backend. |
-| `checked-page-token` | Operator-owned checked page/event/window append fast path. |
+| Expected-type local placement | `val x: T^{r} = new T(...)` |
+| Branch/match placement | every path returns the same checked owner |
+| Method/effect summaries | direct, returned-local, forwarding, branch/match, selected local factories |
+| Owner-token call sites | `consume(using region)(new T(...))` |
+| Framework/operator owners | page-token, epoch-buffer, buffer, priority queue, rank/table paths |
+| Synthetic allocations | `Some`, `Option.apply`, `None`, `Tuple2`-`Tuple22`, arrays, generic `Cell` |
+| Closure placement | nonescaping closure objects and narrow captured-owner closure-body allocations |
+| Diagnostics | region, heap, unknown, and rejected placement decisions |
 
-Raw labels remain aliases in scripts and source result packs.
+## Slide 6: Region Inference Left
 
-Default final-selection runs now show safe/rooted and checked candidates.
-Rootless/current SafeZone controls require an explicit control flag.
-
-## Slide 5: Runtime Lesson
-
-Old SafeZone was not just "regions are slow." Its root bookkeeping was the
-cliff. Improved roots and page-size configuration make SafeZone a strong
-baseline, and rootless SafeZone shows a lower bound for what allocator/pool
-mechanics can do when roots are unnecessary.
-
-## Slide 6: Static Safety Should Remove Runtime Work
-
-| Static property | Runtime work we want absent |
+| Remaining track | Work still needed |
 |---|---|
-| no region escape | no escape table, no promotion barrier |
-| no heap-retains-region | no dynamic retention tracker |
-| safe region-to-heap only through static/rooted metadata | no blanket page roots for eligible checked code |
-| no outer-retains-inner | no close-time graph scan |
-| no closure escape | no runtime closure tracker |
-| diagnostics opt-in | no per-allocation global atomics |
+| Closure/effect summaries | escaping-safe closures, closure-body effects, hidden owner capture, lambda environment rewriting |
+| Type-only recovery | recover a runtime owner when `T^{r}` has a unique owner term; otherwise keep heap fallback |
+| General summaries | more callees, forwarding wrappers, helper libraries, and selected framework boundaries |
+| Polymorphic safety | conservative handling for virtual dispatch, mutation, callbacks, exceptions, erased generics, and generic containers |
+| Boxes/libraries | primitive boxes, boxed keys, iterators, collection nodes, strings, buffers, parser helpers |
 
-## Slide 6: What We Actually Removed So Far
+## Slide 7: Static Safety
 
-| Removed/avoided overhead | Status |
+Negative coverage includes heap-retains-region, outer-retains-inner, closure
+escape, widened `AnyRef`, generic hiding, unsafe array stores, mutable
+reassignment, unrooted heap metadata, constructor `this` escape, stale
+token/use-after-close, and child-after-parent-close.
+
+Dynamic heap metadata requires `HeapRoot` unless static immutable safety is
+proven. Runtime checks are only removed when compiler/runtime probes prove the
+invariant.
+
+## Slide 8: Evaluation Contract
+
+| Level | Use |
 |---|---|
-| Rift per-allocation byte-counter atomics | implemented; Common Crawl-like q1/q2 improved. |
-| SafeZone per-page root removal cliff | implemented as improved roots mode. |
-| AppendWindow per-entry close callback | implemented cursor close. |
-| Page/token append per-record open checks/lookups plus generic leftover-drain close work | implemented in `StreamPageTokenAppendWindow`; 2026-05-07 batch-close/current-bucket fast path strengthened focused and generated Common Crawl-shaped rows. |
-| Page/token no-drain close | implemented as an operator-owned option; cost matrix says it is safe but not the main bottleneck. |
-| Rootless SafeZone root registration | benchmark-only lower bound, not safety claim. |
+| L1 final-clean | Headline elapsed/RSS. |
+| L2 stats | GC/region counter interpretation. |
+| L3 diagnostics | Allocation-stat and safety proof slices. |
+| L4 profiles | Diagnostic bucket attribution only. |
 
-Remaining generic fold/join/rank hot-path checks and rootless checked backend
-require more static probes before removal.
+Headline comparison is natural Immix heap versus checked Rift. Backend rows are
+comparison rows under the same Rift system; unsafe/rootless rows are lower
+bounds only.
 
-## Slide 7: Strongest GC-Heavy Stream Detector
+## Slide 9: Latest Current-State Matrix
 
-Generated Common Crawl WET-shaped q1/q2 is not real-input proof, but it is the
-clearest memory-regime detector.
+Completed run:
 
-| Query | heap elapsed / GC | improved SafeZone 32K | checked page-token | checked scoped page-token |
-|---|---:|---:|---:|---:|
-| q1 tokenization | `5577.965 ms` / `1741.640 ms` | `4595.446 ms` | `3933.900 ms` | `3707.214 ms` |
-| q2 domain window | `5183.074 ms` / `1565.074 ms` | `4410.391 ms` | `4040.310 ms` | `3902.795 ms` |
+`/private/tmp/rift-eval-current-full-20260521`
 
-Interpretation: region placement removes GC, and an operator-owned checked
-path can also remove enough redundant runtime overhead to win on this generated
-stressor. This is not yet real-input proof.
+It produced 19 summary files with no failure or mismatch markers. This was a
+dirty working-tree run, so use it as latest engineering evidence, not clean
+publication evidence.
 
-## Slide 8: Why Allocation Still Matters
+## Slide 10: Real Or Local Input Results
 
-Region close is cheap, but ordinary object construction is not free.
-
-| Cost | Still paid in region rows? |
-|---|---|
-| object header / RTTI setup | yes |
-| zero/init and field stores | yes |
-| constructor body | yes |
-| checked allocation through `allocImpl` | yes, but clean retained-array rows no longer make it the primary bottleneck |
-| bucket append / cursor traversal / aggregation | yes, application/query CPU |
-| GC tracing of closed region objects | no |
-
-The retained-region-array `ObjectAllocationLoweringMatrix` now isolates object
-allocation from generic checked-container overhead. At 100k objects, checked
-Rift is `1.576 ms` and checked SafeZone-backed is `1.395 ms` versus heap
-`1.691 ms`. At 10M objects, heap reaches about `971 MB` RSS and spends
-`105.807 ms` median timed GC; trusted Rift HP is `199.627 ms`, checked Rift is
-`165.774 ms`, and checked SafeZone-backed allocation is `143.319 ms` with
-about `404 MB` RSS. This says allocation/reclaim is already a win in the clean
-shape; generic checked buffers/operators are the next overhead target.
-
-The first generic-buffer decomposition confirms that target: at 10 x 100k
-records, `rift-checked-array` is `18.574 ms`, fixed `ObjectBuffer` is
-`25.788 ms`, growable `RegionBuffer` is `29.968 ms`, and pre-sized
-`RegionBuffer` is `25.980 ms`. Static safety is already enough to make exact
-region arrays fast; the remaining checked work is turning common operators
-into array/chunk-owned fast paths without losing the safe boundary.
-
-The first fixed-chunk append path is a useful negative control, not the next
-fast path. At 1M records, `rift-checked-chunk-token` is `34.273 ms` versus
-linked page-token `28.452 ms`; SafeZone-backed chunk-token is `33.108 ms`
-versus page-token `27.214 ms`. Chunk allocation/control overhead outweighs the
-saved per-record link write in this sequential append/drain workload.
-
-GH Archive shows both the evaluation issue and the next reusable optimization:
-the legacy file-backed parser spent most time in `BufferedReader`/UTF-8/
-`StringBuilder` work, while the new byte-slice parser-scratch path removes
-that allocation cliff. With two real hourly files / 200k events, byte-slice q1
-is heap `3806.120 ms` versus checked scoped page-token `3629.193 ms`; byte-
-slice q2 is heap `3756.950 ms` versus checked scoped page-token `3626.107 ms`.
-Both checked rows cut RSS from about `290 MB` to `211 MB` and report zero timed
-GC. This is a modest real-input throughput/RSS/tail win, not a GC-heavy case
-study: heap GC is only about `58-62 ms` inside roughly `3.8 s` elapsed.
-
-LogHub BGL is now the next real log control. At 1M real lines, q1 heap is
-`5568.252 ms` with `99.271 ms` GC and trusted Streaming is `5491.033 ms`; q2
-heap is `5646.824 ms` with `157.198 ms` GC and improved SafeZone-32k is
-`5509.481 ms`. Full-file q2 loads all `4747963` BGL lines: heap
-`32161.391 ms`, `595.599 ms` GC, RSS `576 MB`; checked scoped page-token
-`31165.087 ms`, zero timed GC, RSS `491 MB`. This strengthens the real-input
-modest-win story, but still not the missing huge-GC case.
-
-The richer BGL q3 template/session query materializes line, template-token, and
-session-candidate records. At 1M real lines, heap is `8683.558 ms` with
-`84.166 ms` median GC and RSS `290 MB`; trusted Streaming is `8615.627 ms` with
-RSS `237 MB`; checked scoped page-token is `8722.008 ms` with RSS `237 MB`.
-This is an RSS/tail control and a correctness validation for the richer log
-shape, not a throughput flagship.
-
-DSPBench Spike Detection is now measured as the first DSPS local-kernel row.
-At 1M real sensor events replayed from `79999` usable lines, checked scoped
-page-token q1 is `1163.045 ms` vs heap `1187.525 ms`; trusted Streaming q2 is
-`1258.164 ms` vs heap `1271.677 ms`. Heap GC is real but small
-(`10.880-32.793 ms`), so Spike is a real-input modest/control row. Fraud
-Detection is now measured too. The first 1M q2 matrix made trusted Streaming
-the best row (`763.819 ms` vs heap `801.790 ms`). The dirty 2026-05-07
-page-token batch-close fast-path direction check made checked scoped
-page-token fastest: `818.574 ms` versus heap `862.834 ms`, improved SafeZone
-`873.859 ms`, and trusted Streaming `834.447 ms`, with RSS cut from about
-`358 MB` to `279 MB`. This was useful direction evidence, not final headline
-data.
-
-The first committed-code q2 rerun was conservative: trusted Streaming was
-fastest at `788.040 ms`; checked scoped page-token was `810.770 ms`; heap was
-`820.945 ms`. After owned-cursor link-clearing and open-allocation removal, q2
-is now: trusted Streaming `778.975 ms`, checked scoped page-token `797.782 ms`,
-and heap `806.697 ms`. Checked scoped has a modest elapsed/RSS win over heap,
-but trusted Streaming remains the lower-bound row.
-
-DSPBench Log Processing adds a second DSPBench real-input control using the
-bundled `http-server.log` common-log file. At 1M events, q2 is the useful row:
-checked scoped page-token is `1733.654 ms`, trusted Streaming is `1737.469 ms`,
-and heap is `1750.291 ms`; checked scoped cuts max GC from `88.210 ms` to
-`18.584 ms`. This is modest real-input throughput/GC-tail evidence, not the
-flagship: heap GC is only about `2.6%` of elapsed and region RSS is higher.
-
-Latest non-headline attribution changes the next tuning target. In DSPBench
-Fraud q2, estimated bucket open/switch is below `1 ms`; trusted Streaming
-append is `131.493 ms`, checked scoped append is `144.353 ms`, and heap append
-is `186.048 ms`. Generated Common Crawl-shaped q1/q2 shows the same pattern at
-larger scale: bucket open is only about `3-10 ms`, while allocation+append is
-about `3.18-3.52 s` and close traversal is about `0.76-0.81 s` for `137M`
-records. The remaining checked work is cursor/node traversal and query CPU,
-not bucket opening.
-
-## Slide 9: Best Checked Stream Rows
-
-| Query | heap | improved SafeZone | best checked | Interpretation |
-|---|---:|---:|---:|---|
-| NEXMark Q3 L1 x20 | `6.18 s` | `6.38 s` | `5.86 s` | checked generated-methodology win. |
-| NEXMark Q8 L1 x20 | `9.54 s` | `10.13 s` | `9.21 s` | checked modest elapsed/RSS win. |
-| NEXMark Q9 L1 x20 | `16.27 s` | `18.10 s` | `15.03 s` | strongest selected NEXMark L1 row. |
-| NEXMark Q11 L1 x20 | `4.47 s` | `5.11 s` | `4.36 s` | checked modest elapsed/RSS win. |
-
-NEXMark uses generated Beam-default methodology, not the Beam runner. These
-are L1 final-clean total-process rows; L2 rows remain the source for GC
-interpretation.
-
-## Slide 10: Cheap Checked Operators
-
-Focused 1M append/window rows:
-
-| Mode | Median |
-|---|---:|
-| `heap-immix` | `36.920 ms` |
-| `rift-checked-page-token` | `29.319 ms` |
-| `rift-checked-safezone-page-token` | `27.549 ms` |
-
-The generic SafeZone-backed cursor was a useful backend step. The page/token
-operator is stronger: generated Common Crawl-shaped q1/q2 improves current
-checked by about `16-23%` in the 2026-05-06 staged sweep.
-The 2026-05-07 fast-path regression keeps linked page-token ahead of
-chunk-token. The post-fast-path selected 1M sweep makes checked scoped
-page-token fastest on generated Common Crawl-shaped q1 (`3840.668 ms`) and q2
-(`3839.158 ms`), and it keeps Dataflow SELECT scoped page-token fastest at
-`18.572 ms`.
-
-`Page/token` means an operator-owned child-bucket append path: one
-page/event/window owns many short-lived records, the operator caches the child
-bucket/region, and static lifetime ownership justifies removing per-record
-defensive checks.
-
-First cheap-family focused rows now pass their initial gates with RSS:
-Dataflow SELECT scoped page-token is `19.063 ms` versus heap `29.272 ms`.
-ListOfLists checked builder is `6053.235 ms` versus heap `15820.172 ms` and
-improved SafeZone `10133.449 ms`. Dataflow AGGREGATE checked is a near-tie
-with improved SafeZone (`41.827 ms` vs `41.810 ms`) and should not be
-presented as a generic `EpochFold` win.
-
-The StreamFlex follow-up strengthens that lesson. `TransactionRegion` was a
-partial checked win, but direct checked epoch is better when all temporary
-stage objects share one batch lifetime. In L1 final-clean timing, 20 x 200k
-throughput is checked scoped direct epoch `0.58 s` versus heap `0.79 s` and
-improved SafeZone `0.77 s`. The latency row is also favorable: checked scoped
-direct epoch is `0.17 s` versus heap `0.18 s`, and deadline misses drop from
-heap `4` to checked `0`. The user-facing topology should be `epoch { ... }`
-first; specialized operators are for shapes direct epoch cannot express
-cleanly.
-
-Stancu-style transaction batches now show the same pattern. In L1 final-clean
-timing, 20 x 200k transactions are checked scoped direct epoch `0.57 s` versus
-heap `0.85 s` and improved SafeZone `0.71 s`. This is the clearest local
-transaction-boundary checked win so far.
-
-## Slide 11: What Counts As A Win
-
-| Outcome | Meaning |
-|---|---|
-| representative throughput win | large elapsed win with a reusable shape and correct outputs. |
-| modest throughput win | faster, but margin/provenance is not enough for the final headline. |
-| RSS win | materially lower resident memory, even with tied/slightly worse elapsed. |
-| fixed-memory/tail win | heap wins uncapped by growing large, but regions win under a cap or reduce max-GC tails. |
-| speed-gated | correct API, but CPU overhead too high for public performance claims. |
-| ceiling/negative | no material throughput, RSS, GC, or latency benefit. |
-
-Throughput is total completed work per unit time; lower batch elapsed means
-higher throughput. Latency is per-event/request time, usually p50/p95/max or
-deadline misses. They can move in different directions.
-
-## Slide 12: What Is Gated Or Negative
-
-| Negative result | Meaning |
-|---|---|
-| current Rift HP loses to improved SafeZone on linked/prior rows | learn from SafeZone internals. |
-| TableRank/rank/fold fail 1M gates | do not use them in app claims yet. |
-| real WET/WAT/old preloaded Wikimedia counter/Linear Road/RIoTBench-MHEALTH mostly heap-fastest or median-GC-zero; GH Archive/LogHub/DSPBench are modest wins | Many public stream rows are parser/query dominated and remain controls. The retained-state exceptions are Theodolite UC4 and Wikimedia clickstream-session. |
-| pipeline surrogate heap wins | CPU-bound workloads are not Rift targets. |
-
-## Slide 13: Benchmark Ladder
-
-Next realistic GC-heavy search:
-
-1. larger/full-input Wikimedia clickstream scale checks if disk/time allow;
-2. richer LogHub/Spark/Windows session/template joins over compressed archives;
-3. larger provenance-clean StackExchange/SNAP/Twitter/security traces;
-4. Theodolite UC4 and Wikimedia clickstream as positive retained-stream case studies, with GH Archive, DSPBench, and RIoTBench/MHEALTH as modest-win or ceiling controls;
-5. NEXMark Q3/Q8/Q9/Q11 as generated controls;
-6. exact MLKit/ReML source benchmark reproduction as a non-stream typed-region axis.
-
-The first real WAT shard now validates link-object placement and modestly
-favors SafeZone-backed page-token, but heap still reports zero timed GC.
-RIoTBench/MHEALTH fixes one IoT provenance gap but is also zero-GC at 1M.
-Theodolite source is cloned, but its official load generator is simulated
-smart-meter input; use it as methodology unless paired with real energy data.
-Theodolite retained UC4 and Wikimedia retained clickstream-session are now the
-positive real-streaming retained-state candidates. GH Archive remains a useful
-parser/RSS control rather than the missing GC-heavy proof. The 8-hour preloaded
-oracle row has heap winning uncapped median by growing to about `1.7 GB`, but
-the same q1 shape under a `1G` heap cap makes checked SafeZone-backed
-page-token faster than heap. The legacy file-backed q1/q2 rows showed RSS/
-fixed-memory wins but were dominated by string parser allocation. The new
-byte-slice file-backed rows keep gzip/JSON parsing in timing while reusing
-parser scratch, and now show modest checked throughput wins plus zero timed GC
-in region rows. LogHub BGL adds a real multi-million-line system-log control,
-including q3 template/session mining, but full-file q2 heap GC is still under
-2% of elapsed and q3 heap GC is under 1%. Heap GC remains a small share of
-elapsed in current real inputs, so next benchmark work still needs a real-input
-workload with materially higher GC pressure.
-
-The 2-hour file-backed GH Archive rows strengthen that interpretation:
-heap uses about `2.43 GB` RSS, while region rows use about `0.72-0.93 GB`.
-Trusted Streaming is modestly faster on q1/q2, checked scoped page-token is
-near-tied, and a sampled q1 profile shows the remaining bottleneck is
-`BufferedReader`/UTF-8/StringBuilder/field parsing/hashing/gzip rather than
-region close.
-
-## Slide 14: ReML / MLKit Axis
-
-This is not stream evidence; it tests the MLKit/ReML lineage: higher-order,
-polymorphic, region+GC safety.
-
-| Workload | Heap | Best checked | Meaning |
+| Benchmark | Immix heap | Checked Rift / best safe checked | Classification |
 |---|---:|---:|---|
-| `msort` | `124.983 ms`, RSS `21.4 MB`, GC `27.180 ms` | checked stream `104.358 ms`, RSS `10.4 MB`, GC `6.063 ms` | local linked-allocation win. |
-| `msort-r` | `126.163 ms`, RSS `39.2 MB`, GC `27.280 ms` | checked stream `104.929 ms`, RSS `10.4 MB`, GC `6.005 ms` | local reverse-list allocation win. |
-| `ratio` | `51.302 ms`, RSS `44.0 MB`, GC `3.191 ms` | checked scoped `48.929 ms`, RSS `16.0 MB`, GC `0` | modest elapsed, strong RSS/GC win. |
+| DSPBench Fraud q2 10M | `208405.569 ms` | `187882.928 ms`; SafeZone `186988.431 ms` | real/local stream win |
+| DSPBench Log q2 10M | `306392.943 ms` | `273860.718 ms` | real/local stream win |
+| Theodolite q2 real | `2256.219 ms`, RSS `147.9 MB` | `2160.896 ms`, RSS `80.4 MB` | real time-series modest win |
 
-Exact ReML/MLKit reproduction is still open: public MLKit sources and likely
-paper-era tags are found, but host `mlkit`/`mlton` are missing and Docker is
-not running. Until exact artifacts run locally, compare ratios and safety
-properties, not raw cross-language wall-clock.
+## Slide 11: Generated, Methodology, And Microbenchmark Results
 
-Every stream headline should now say whether the win is uncapped throughput,
-fixed-memory, RSS, or tail-latency evidence.
+| Benchmark | Immix heap | Checked Rift / best safe checked | Classification |
+|---|---:|---:|---|
+| Broom aggregate 10M | `1071.498 ms`, RSS `148.7 MB` | `862.143 ms`, RSS `16.4 MB` | retained dataflow methodology win |
+| Broom join 10M | `1043.463 ms`, RSS `76.9 MB` | `896.583 ms`, RSS `15.1 MB` | retained dataflow methodology win |
+| StreamFlex throughput 10M | `5138.231 ms` | `3800.585 ms` | design-stressor win |
+| Common Crawl q1 10M | `70410.059 ms` | `46491.537 ms` | generated stressor win |
+| Common Crawl q2 10M | `67398.152 ms` | `46094.232 ms` | generated stressor win |
+| SPECjbb-style port | `1674.726 ms` | `1231.076 ms` | transaction-lifetime win |
 
-## Slide 14: ReML / MLKit Lineage
+## Slide 12: Honest Controls
 
-The ReML paper is a separate comparison axis: higher-order/polymorphic
-region+GC safety, not stream processing. We now have:
-
-- paper-reported Figure 9 data transcribed;
-- local Scala Native Tier 1 ports;
-- fixed ReML-style erased-generic heap-retention probes;
-- public MLKit source provenance in ignored cache.
-
-Exact speed comparison is still open. The public MLKit repo contains many
-Figure 9-style sources, and tags `v4.7.4`/`v4.7.5`/`v4.7.6` bracket the
-paper-era ReML release. We still need local `mlkit`/`mlton` executables and
-verified command mappings for `rg`, `rg-`, and `r`.
-
-## Slide 15: Current Claim
-
-Rift has credible trusted-runtime wins on epochal object-heavy streams and
-early checked safety/operator evidence. It now has a checked generated-stressor
-win, but it does not yet have a final checked real-input application win.
-
-## Slide 16: Next Work
-
-1. Keep allocation and generic checked-container overhead separated; optimize buffers/operators next.
-2. Keep `StreamPageTokenAppendWindow` as the first cheap checked operator.
-3. Add heap-size-controlled rows for GH Archive, Common Crawl-shaped, and NEXMark.
-4. Test larger/multiple real WET/WAT, GH Archive file-backed, GDELT/logs, and DSPBench-style local kernels.
-5. Promote only repeated winning shapes; keep TableRank/rank gated out.
-6. Run exact MLKit/ReML artifact reproduction if toolchain/provenance is pinned.
-7. Apply `docs/FINAL_COMPONENT_SELECTION.md`: public candidates only in the
-   default story; rootless/loss rows only as explicit controls.
-
-## Slide 15: ReML / MLKit Lineage Track
-
-This is not a stream benchmark. It asks whether Rift's checked region model
-also addresses the classic typed-region problem: higher-order and polymorphic
-programs where region values can be hidden by type abstraction.
-
-| Evidence | Status |
-|---|---|
-| ReML paper Figure 9 | transcribed as paper-reported, not rerun. |
-| Exact MLKit/ReML artifact | gated/low-priority; resume only if raw same-machine timing becomes necessary. |
-| Scala Native Tier 1 ports | scaffolded for `fib37`, `tak`, `mandel`, `msort`, `msort-r`, `life`, `fft`, `ratio`. |
-| Safety probes | erased-generic heap retention is now rejected in durable/static state; local polymorphic use remains legal. |
-
-Claim boundary: compare relative region-vs-heap/RSS/GC effects and safety
-burden. Do not spend thesis time on exact artifact reruns unless raw
-same-machine ReML timing becomes necessary. The generic-retention fix is
-compiler probe evidence, not a full mechanized proof.
-
-## Slide 16: Prior-Work Memory-Management Lesson
-
-The prior systems are not primarily operator-library stories. They are lifetime
-visibility stories.
-
-| System | What becomes visible | Why it helps |
+| Row | Result | Lesson |
 |---|---|---|
-| Broom | dataflow/operator lifetime | short-lived fate-sharing data does not need repeated heap tracing |
-| Yak | data-space epochs separate from durable control space | data objects are reclaimed by epoch; control objects remain under GC |
-| StreamFlex | stream/filter/period scopes | fewer GC-induced tail pauses and deadline misses |
-| Stancu et al. | transaction/phase scopes | transaction-local allocation can be region-freed |
-| ReML/MLKit | inferred lexical regions with GC safety | tracing GC work is reduced while preserving polymorphic safety |
+| GH Archive q2 | heap `3848.235 ms`, checked `3842.741 ms` | tie; parser/query floor dominates |
+| NEXMark q9 | heap `8790.376 ms`, checked `7929.885 ms`, SafeZone `7639.168 ms` | checked beats heap, scoped backend best |
+| Window fold | heap `898.906 ms`, checked `930.973 ms` | traversal/API overhead can exceed removed GC |
+| Object allocation | heap `263.639 ms`, checked Rift `161.281 ms`, checked SafeZone `133.532 ms` | allocation lowering works; backend substrate still matters |
 
-Rift's central claim should be framed the same way: checked capture/separation
-rules make epoch/page/window/transaction lifetimes visible enough that the
-runtime can avoid escape tables, promotion barriers, close-time scans, and
-unnecessary tracing of temporary data.
+## Slide 13: What Profiles Explain
 
-## Slide 17: Design Ideas To Borrow Carefully
+Checked rows often show larger parser/hash/session percentages because GC has
+disappeared. Separate:
 
-| Idea | Use in Rift |
+- shared floors: input, parser, hashing, query mutator;
+- real Rift overhead: allocation/init, token/handle plumbing, closure/capsule
+  traversal, residual heap helpers;
+- removed work: heap allocation/GC tracing and retained graph scanning.
+
+Recent fixes removed DSPBench tuple returns, checked-loop boxed `Ref` captures,
+and several accidental helper allocations through inference.
+
+## Slide 14: What Has Been Built
+
+- Checked region runtime and Scala Native compiler lowering.
+- Staged region inference with diagnostics and runtime allocation-stat proofs.
+- Checked APIs for epochs, page/window token paths, retained query shapes,
+  buffers, priority queues, and selected rank/table/top-k helpers.
+- Safety test coverage for the main heap/region and closure/container hazards.
+- A broad benchmark/evidence suite spanning Broom, StreamFlex, Yak/Stancu-style
+  rows, ReML-style kernels, Common Crawl, NEXMark, LogHub, GH Archive,
+  DSPBench, Theodolite, and microbenchmarks.
+
+## Slide 15: What Is Left
+
+| Track | Remaining work |
 |---|---|
-| active / closed regions | internal probes now cover direct epoch, page-token, count-by-key, map/filter, epoch buffer, and stale public page-token regions; future public typestate depends on measured payoff |
-| immutable/static metadata | open-allocation compiler probes accept stable static metadata in direct epoch and operator-owned page/epoch-buffer paths; root-free backend claims still need proof/evidence |
-| bridge/root handles | existing `HeapRoot` is the v1 bridge handle and is now covered on direct epoch and operator-owned page/epoch-buffer paths |
-| control path / data path split | report what stays on heap and what moves to regions |
-| reference capabilities | future way to name mutable, read-only, transferable, and region-scoped refs |
+| Full inference | broad closure/effect summaries, hidden owner capture, type-only recovery, polymorphic/library summaries |
+| Boxes/libraries | primitive boxes, boxed keys, iterators, collection nodes, strings, buffers, parser helpers |
+| Runtime checks | remove only after proof-gated active-handle/stale-token/lifetime probes |
+| Performance | fold/traversal/capsule overhead, token plumbing, object init/zeroing, residual parser/helper heap allocation |
+| Evidence | rerun latest selected matrix from a clean committed tree |
+| Proof | mechanize the small-core containment and close/reset safety argument |
 
-Rule: add a capability to the user-facing API only if it removes measured
-runtime work or makes the safety proof simpler. Do not add type vocabulary just
-because another paper has it.
+## Slide 16: Final Takeaway
 
-## Slide 18: Prior-System Metric Rule
-
-Compare each prior system on the axes it actually reported:
-
-| System | Axes to preserve |
-|---|---|
-| Broom | runtime speedup, GC share, dataflow synchronization delays |
-| Yak | normalized runtime, GC time, app time, epoch/promotion behavior |
-| StreamFlex | throughput, latency tails, deadline misses |
-| Stancu et al. | young-gen sensitivity, collections, annotation burden, region-freed memory |
-| ReML/MLKit | real time, RSS, GC count |
-
-Then show Rift's local standardized metrics separately: elapsed, GC time/count,
-RSS, region op time, correctness, and annotation/API burden. For latency rows,
-also show throughput, p50, p95, max, deadline misses, GC max, and runs-with-GC.
+Rift has reached a working checked-region system with meaningful Scala syntax,
+static safety, inference, and benchmark wins against Immix. It is not yet full
+ReML/MLKit inference, but it has the right architecture: proven allocations go
+to regions, unproven allocations stay on the heap, and performance claims are
+classified by whether the workload actually has region-friendly lifetime
+structure.

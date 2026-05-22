@@ -1,7 +1,7 @@
 # Evaluation Classified Summary
 
 Date: 2026-05-09
-Last updated: 2026-05-18 16:22 CEST
+Last updated: 2026-05-18 17:41 CEST
 
 Status: thesis-facing classified summary built from committed evidence.
 Baseline commits for clean rows: parent `1cc3b2c`, child `13a3df1c7`.
@@ -144,6 +144,13 @@ planned. JVM, Scala.js, Wasm, and analysis-only Rift are now tracked as future
 backend experiments in `docs/SCALA_LEVEL_BACKEND_PLAN.md`; they inherit the
 intended Scala-level safety/topology model but have no current performance
 rows.
+`evidence/UNIFIED_HEAP_RIFT_AUDIT.md` is now the compact audit for the
+heap-vs-Rift story. It records the rule that headline rows should compare the
+natural heap/GC program against the fastest safe checked Rift backend for the
+same logical program, output, operator semantics, and lifetime boundary.
+Same-shape heap, retained/drop-anchor mechanism controls, summary-only rows,
+legacy checked controls, and unsafe/rootless modes remain appendix/control
+evidence unless explicitly used for causality or backend-potential analysis.
 The latest normalized selected prior-work sweep is
 `evidence/SELECTED_PRIOR_WORK_SWEEP_2026_05_16.md`, run from parent
 `14038d3` and child `15c4c39ac`. It should be used as the current

@@ -1,7 +1,7 @@
 # Prior Work Memory-Management Interpretation
 
 Date: 2026-05-11
-Last updated: 2026-05-11 13:30 CEST
+Last updated: 2026-05-18 17:18 CEST
 
 Status: interpretation guide for the Rift report and benchmark design. This
 file complements `docs/LITERATURE_BENCHMARK_CONTRACT.md`: that file records
@@ -51,6 +51,38 @@ framework exposes lifetimes to the runtime:
 - Page/window token APIs expose event-page or bucket lifetimes.
 - Top-k, join, rank, and median APIs should exist only when they expose a real
   shared lifetime and can beat same-shape heap controls.
+
+## Prior-Work-Style Heap Versus Region Shape
+
+The main comparison model for Rift is:
+
+```text
+heap baseline:
+  natural framework/program object shape on the GC heap
+
+checked Rift:
+  same logical program and output
+  same operator semantics and lifetime boundary
+  short-lived data-path objects allocated in checked regions
+  durable control state remains on the heap
+
+appendix controls:
+  same-shape heap controls
+  summary-on-append lower bounds
+  unsafe/rootless lower bounds
+```
+
+This is closer to the prior systems than treating every possible heap rewrite
+as a headline baseline. The important design question is whether the program has
+a natural lifetime boundary that can be made visible to the allocator.
+
+| Prior system | Natural heap shape | Region-enabled shape | Rift analogue |
+|---|---|---|---|
+| Broom / Naiad-style dataflow | Operators keep ordinary per-time/per-key objects in heap dictionaries until notification. | Objects with the same fate are allocated in a region attached to that time/operator and reclaimed at notification. | Broom retained aggregate/join/shopper/q17 rows: heap dictionaries versus checked per-timestamp regions. |
+| Yak | Control objects and data objects are ordinary JVM heap objects. | Data-path objects are allocated in epoch data space; control objects stay under tracing GC; escaping data objects require dynamic handling. | `RiftRegion.epoch` with static capture/separation checks instead of Yak-style dynamic promotion/barriers where possible. |
+| StreamFlex | Stream filter code uses ordinary objects and stable state; GC can interrupt periods. | Stable state, transient scoped objects, and transfer capsules make period lifetimes explicit. | `epoch`, `page/window`, and explicit output/export handles; report throughput plus latency tails/deadlines. |
+| Stancu et al. | Java allocation sites normally allocate on the heap. | Analysis and annotations move proven phase-local allocation sites into regions; escaping sites remain heap. | Checked transaction/epoch scopes, region-freed proxy metrics, and API/annotation burden counts. |
+| ReML / MLKit | Source programs are compiled under heap/GC and region/GC modes. | Compiler-inferred region effects place values in lexical regions where sound, with GC for remaining dynamic values. | Future automatic placement inference for Scala Native: infer region allocation inside explicit lifetimes first, then consider broader inference. |
 
 The current report should therefore separate:
 

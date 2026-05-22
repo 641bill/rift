@@ -1,9 +1,377 @@
 # Rift Roadmap
 
-Last updated: 2026-05-17 17:45 CEST
+Last updated: 2026-05-22 08:54 CEST
 
 Status: revised from the active fork state, benchmark notes, handoff, and the
 literature-review comparison contract.
+
+Current evaluation contract:
+Headline tables should use the prior-work-style comparison: natural heap/GC
+program versus checked Rift with the same logical program, output, operator
+semantics, and lifetime boundary. Short-lived data-path objects move into
+checked regions; durable control state stays on the heap. Best safe backend
+rows are comparison rows under the Rift umbrella. Same-shape heap controls,
+summary-on-append lower bounds, legacy checked rows, and unsafe/rootless rows
+belong in appendix/mechanism tables unless a causality question requires them.
+For final reporting, choose the fastest safe checked backend for each
+API/workload shape as the headline Rift row. Treat checked scoped versus
+checked stream as backend selection, not as separate systems to defeat each
+other.
+Rows where checked scoped beats checked stream should feed the profiling queue:
+either improve the Rift streaming backend or make scoped lowering the automatic
+choice for that shape.
+
+## Final Wrap-Up Status: 2026-05-22
+
+Rift is now a working Scala Native checked-region prototype with a broad
+capture-directed inference layer, checked APIs, runtime safety tests, and
+current benchmark evidence against Immix. The latest full selected
+current-state matrix completed at
+`/private/tmp/rift-eval-current-full-20260521` with 19 summary files, matching
+checksums/output counts within benchmark families, and no failure/mismatch
+markers. That matrix was run on a dirty working tree, so it is current
+engineering evidence rather than clean committed presentation evidence.
+
+Current best summary:
+
+| Area | Status |
+|---|---|
+| Runtime/compiler | Implemented for Scala Native: Rift allocation, open/close/reset, checked scoped/stream backends, NIR allocation zones, and inference diagnostics. |
+| Static safety | Strong negative coverage for heap-retains-region, outer-retains-inner, closure escape, widened `AnyRef`, generic hiding, unsafe arrays, mutation, unrooted heap metadata, constructor escape, stale tokens, and child-after-parent-close. |
+| Ergonomics | Ordinary `new` now works in many owner-proven regions; explicit allocation helpers remain as fallback. |
+| Inference | Local expected-type, aliases, branch/match, method-return/forwarding summaries, owner-token arguments, framework/operator owners, arrays, `Some`/`Option`, tuples, generic cells, closure objects, and selected closure-body effects are validated. |
+| Performance | Current matrix has clear checked wins on retained Broom aggregate/join, StreamFlexDesign, Common Crawl-shaped q1/q2, generated LogHub q2/q3, DSPBench Fraud/Log q2, Theodolite q2, SPECjbb-style transactions, object allocation, and append-window paths. |
+| Honest controls | GH Archive q2 is a tie, NEXMark q9 favors the scoped backend over checked stream, and checked window-fold currently regresses versus heap because traversal/API overhead exceeds removed GC. |
+
+Remaining roadmap:
+
+1. Finish broad closure/effect summaries: escaping-closure summaries,
+   hidden-owner capture, type-only owner recovery, lambda signature/environment
+   rewriting, and arbitrary callee/library summaries.
+2. Add primitive box and boxed-key placement only after an allocation-zone design
+   preserves identity/cache semantics.
+3. Expand library-created allocation support for iterators, collection nodes,
+   strings, buffers, parser helpers, wrappers, erased generic paths, and common
+   Scala collection nodes.
+4. Keep runtime checks until compiler/runtime probes prove active-handle,
+   stale-token, owner, and close-order invariants.
+5. Rerun the latest selected matrix from a clean committed tree before using the
+   current dirty-run numbers as final publication claims.
+6. Mechanize the core proof for containment, heap roots, owner tokens, and
+   close/reset safety.
+7. Treat JVM, Scala.js, Wasm, and analysis-only backends as future tracks; only
+   Scala Native has validated performance evidence today.
+
+Automatic placement inference is now a started Scala Native compiler track.
+The lineage and scope boundary are recorded in
+`docs/REGION_INFERENCE_LINEAGE.md`: Rift is currently an explicit checked
+lifetime-boundary system with capture/separation safety and selective compiler
+placement lowering, not a full Tofte/Talpin, MLKit, or ReML whole-program
+region-inference implementation. The goal is nevertheless to reproduce the
+ReML/MLKit region-inference style as far as Scala Native and Scala
+capture/separation checking allow: remove unnecessary accidental heap
+allocations, keep hot checked region paths monomorphic and inlineable, reduce
+token/handle plumbing in operator-owned paths, improve object construction and
+initialization for proven region-local records, and remove runtime region/GC
+bookkeeping only when the compiler has a sound ownership/lifetime proof.
+The first implemented slice marks direct ordinary `new` sites whose expected
+type is captured by an explicit checked `ScopedRegion` or `OpenStreamingRegion`
+and lowers them into Rift allocation zones in GenNIR. Immutable checked owner
+aliases such as `val owner = region` are now validated as local owner
+constraints too: `val x: T^{owner} = new T(...)` is runtime-proven to allocate
+in the checked region, while unrooted dynamic heap metadata through the alias is
+rejected. Owner aliases are now canonicalized to their underlying checked
+handle, so method-return summaries can safely carry a local `T^{owner}` value
+through a `T^{r}` result type when `owner` aliases `r`. The second implemented
+slice infers unannotated immutable local direct `new` values when captured
+val/assignment constraints or checked `RegionList` prepend calls provide a
+unique checked owner. The first method-summary slice now handles direct `new`
+returned from a method with an explicit checked region handle parameter,
+`def make(using r: RiftRegion.ScopedRegion^): T^{r} = new T(...)`, plus the
+returned-local form
+`def make(using r: RiftRegion.ScopedRegion^): T^{r} = { val x = new T(...); x }`.
+The returned-local method case is validated for both scoped regions and direct
+epoch/open-streaming regions. Simple branch-returned direct allocation is also
+covered when all returned allocations share the explicit checked region result
+owner. Branch-returned local allocations are now covered too, for the shape
+`if p then { val x = new T(...); x } else { val y = new T(...); y }`, when the
+method has an explicit checked region parameter. Simple match-returned direct
+and local allocations are now covered under that same explicit-region-parameter
+rule. Methods whose captured return
+owner is only an outer region remain heap
+fallback until Rift can pass or synthesize runtime region handles safely.
+Generic `ObjectBuffer`/`RegionBuffer` owner-token append calls now infer
+immutable local direct `new` values, including extension append syntax, while
+scoped checked priority-queue owner-token `push`/`put` calls now infer
+immutable local direct `new` values for `RegionPriorityQueue`,
+`RegionIndexedPriorityQueue`, and `RegionLongIndexedPriorityQueue`. The owner-
+token slice now also covers direct and block-final inline construction at
+those scoped checked boundaries: `prependRegionList(region, list, new T(...))`,
+`prependRegionList(region, list, { ...; new T(...) })`,
+`RiftRegion.append(region, buffer, new T(...))`,
+`region.append(buffer, { ...; new T(...) })` for fixed/growable checked
+buffers, and priority-queue `push`/`put` calls with `new T(...)` or
+`{ ...; new T(...) }` value arguments. Runtime allocation-stat tests prove
+these inline forms are region allocated, and compiler negative tests reject
+unrooted dynamic heap metadata in the inline constructor arguments. The first
+page/window/transaction child-owner slice is now validated for locals returned
+by selected checked child-region helpers such as `pageTokenAppendRegionFor`,
+`pageTokenMapFilterRegionFor`, `pageTokenCountByKeyRegionFor`,
+`transactionRegionFor`, and `chunkAppendRegionFor`, so a
+bucket-local record can be written as
+`val event: Event^{region} = new Event(...)` when `region` is the selected
+child bucket or transaction-local region. Parent `StreamingRegion` remains
+excluded from generic allocation-owner inference.
+The open-child-owner follow-up is now validated for operator-owned active
+helpers too: `pageTokenAppendOpenRegionFor`,
+`pageTokenMapFilterOpenRegionFor`, `pageTokenCountByKeyOpenRegionFor`, and
+`epochBufferOpenRegionFor` can own ordinary `new` records typed as
+`T^{region}`. Runtime allocation counters prove those records land in Rift
+region memory, and compiler negatives reject unrooted dynamic heap metadata in
+the open page-token helper family, so these paths can remove explicit
+`allocOpen(new ...)` source plumbing when the active owner is statically known.
+The internal page-token Rift open-handle helper is now validated as well:
+`pageTokenAppendRiftOpenHandleFor` can own ordinary `new` records through a
+raw `RiftOpenStreamingHandle`, with runtime allocation counters proving Rift
+region placement and a compiler negative rejecting unrooted dynamic heap
+metadata. This is an internal/provenance helper, not a public API expansion.
+The first
+common Scala allocation shape is also validated for captured `Some(...)`:
+proven region-owned `scala.Some.apply` calls lower into checked-region `Some`
+objects through exact `Some` or widened `Option` expected types, while
+unproven calls remain heap fallback and unrooted dynamic heap metadata is
+rejected. The `None`/`Option.apply(...)` follow-up is now validated too:
+`None` and `Option(null)` remain allocation-free static empty options, while
+`Option(new T(...))` lowers to a checked-region `Some` plus nested payload
+when the expected type proves one checked owner. Captured tuple factory
+allocation is now the second common Scala allocation shape: proven region-owned
+`scala.TupleN.apply` calls for arities 2 through 22 lower into checked-region
+tuple objects when all fields are region-safe references. `Tuple2(...)` and
+normal tuple syntax `(a, b)` remain the base proof point, and Tuple3 is now
+validated for local array-store, owner-token method-argument, and
+explicit-region method-return shapes. Primitive/boxed tuple fields remain
+future boxed-key/object-boxing work.
+The nested-direct-construction slice now also attaches direct constructor or
+factory arguments to the same proven owner, so shapes such as
+`new Wrapper(new T(...))`, `Some(new T(...))`, and
+`Tuple2(new A(...), new B(...))` can be region-allocated end to end when the
+outer allocation is captured by the checked region. Helper-returned heap
+objects are still rejected rather than retroactively inferred. The method-
+summary path now also carries captured `Some(...)`/widened-`Option` and
+`Tuple2(...)`/tuple-literal factory results when the method has an explicit
+checked region parameter, so the common factory shapes are validated both as
+local captured allocations and as method-returned region values.
+The first narrow ReML-style generic object slice is also validated:
+`Cell[T^{region}]^{region} = new Cell[T^{region}](value)` is placed in the
+checked region when the expected type and argument prove the same owner.
+Widened `AnyRef` escape and unrooted dynamic heap metadata in the generic
+cell are rejected, and runtime allocation stats prove the `Cell` object is
+actually region allocated. The same generic cell shape is also validated as a
+method-returned factory result when the method has an explicit checked region
+parameter, including the returned-local form where the method names the
+`Cell[T^{r}]^{r}` in a local before returning it. This is still expected-type
+placement plus a narrow method summary, not full polymorphic effect inference.
+The generic method-summary slice now also propagates through simple branch and
+match wrappers: `Cell[T^{r}]^{r}` results can be forwarded by wrapper methods
+when every path returns a value owned by the same explicit checked region
+parameter, with runtime allocation stats proving both the selected `Cell` and
+its contained region-owned value are region allocated.
+The method/factory slice now also handles returned local `Option` values
+initialized from `Some(...)`, so a method can name the factory result before
+returning it without falling back to heap placement.
+The same method/factory summary now propagates through simple branch and match
+wrappers for method-returned `Option = Some(...)` values when every path
+forwards the same explicit checked owner; runtime stats prove the selected
+`Some` objects and nested values remain region allocated.
+The narrow `None` follow-up is now validated too: `None` can satisfy
+`Option[T^{r}]^{r}` without allocating a region object, and
+`if flag then Some(new T(...)) else None` is covered for local captured
+expected types plus explicit checked region-parameter method results.
+The null-preserving `Option.apply(...)` slice is validated for local and
+explicit checked region-parameter method results, with compiler negatives for
+unrooted heap metadata and primitive/boxed paths. It is now also runtime-proven
+through owner-token method arguments and region-owned array element stores,
+using the same checked-owner proof path as `Some(...)`.
+The same returned-local factory slice is now validated for captured
+`Tuple2(...)` values, so method code can name tuple factory results before
+returning them while still allocating the tuple and nested values in the
+checked region.
+The method/factory forwarding slice now covers `Tuple2(...)` as well:
+branch/match wrappers can forward method-returned tuples when every path uses
+the same explicit checked owner, with runtime stats proving the selected tuple
+objects and nested values remain region allocated.
+The first synthetic-closure object slice is now validated for local
+nonescaping closures that capture a region value: the closure object can be
+allocated in the same checked region as the captured value, runtime allocation
+stats prove materialized region allocation, and unrooted dynamic heap metadata
+captures are rejected in that proven path. This is not closure-body allocation
+placement or full closure effect inference.
+The capture-free local closure follow-up is now validated too:
+`val f: Function1[Int, Int]^{region} = (n: Int) => n + 40` is recognized
+through function capture syntax such as `Int ->{region} Int`; runtime
+allocation stats prove the materialized closure object is region allocated,
+and a compiler negative rejects unrooted heap metadata captures in that
+expected-type-owner path. The method/closure follow-up now validates returning
+a capture-free local closure object from an explicit checked region-parameter
+method, with runtime allocation stats proving the materialized closure object
+is region allocated and unrooted heap captures rejected. That method-return
+shape is now validated for closures that capture a region-local value too,
+with runtime allocation stats proving both the captured record and closure
+object land in the checked region. The same method-return closure shape is now
+validated through immutable checked owner aliases, so method bodies can use
+`val owner = r`, construct the captured value and closure under `owner`, and
+return the closure as captured by `r`. That closure-return summary now
+propagates through a simple wrapper method:
+`def wrap(using r): Function1[Int, Int]^{r} = make(using r)`, with runtime
+allocation stats proving the forwarded closure object and captured value are
+still region allocated and a compiler negative rejecting forwarded unrooted
+heap captures. The same propagation is validated through one immutable
+method-local alias:
+`def wrap(using r): Function1[Int, Int]^{r} = { val f = make(using r); f }`.
+The forwarding slice is also validated through simple branch and match
+wrappers when every path forwards the same explicit checked owner:
+`if flag then make(using r) else make(using r)` and
+`selector match { case 0 => make(using r); case _ => make(using r) }`.
+Closure-body allocation is only partially implemented: a narrow captured-owner
+case is validated when the region-owned closure explicitly captures the same
+runtime checked owner term and uses it for the body-local returned `new`.
+Hidden owner capture remains deferred when the owner exists only in the type,
+so broader closure-body placement still needs safe owner capture or
+lambda-signature rewriting. Primitive boxing/boxed-key placement is also
+deferred: NIR
+`Op.Box(ty, obj)` has no allocation-zone operand, unlike
+`Classalloc` and `Arrayalloc`, so region-owned boxes need an explicit
+NIR/runtime lowering design.
+The first captured region-owned array slice is now validated:
+`val items: Array[T^{region}]^{region} = new Array[T^{region}](n)` is lowered
+into checked region memory when the expected array type names the checked
+owner. Runtime allocation stats prove the array and named region-local element
+objects are region allocated; compiler negatives reject unrooted heap-object
+stores and heap/static escape. Inline direct element construction is now
+validated for the narrow owner-proven shape `items(i) = new T(...)` when
+`items` has type `Array[T^{region}]^{region}`. The element type must carry the
+checked owner; heap-looking element arrays such as `Array[Metadata]^{region}`
+still reject inline `new Metadata(...)` stores.
+The same owner-proven array-store rule now covers the first synthetic store
+shape: `items(i) = Some(new T(...))` where `items` has type
+`Array[Option[T^{region}]^{region}]^{region}`. Runtime allocation stats prove
+the array, stored `Some`, and nested direct value are region allocated, while
+`Some(metadata)` with unrooted heap metadata is rejected.
+The same array element-owner path now covers closure objects stored into
+region-owned arrays: direct inline closures and selected immutable local
+closure aliases can be placed when the element type is
+`Function1[...]^{region}` and the array is `Array[...]{region}`. Runtime
+allocation stats prove the materialized closure objects are region allocated,
+while closures that capture unrooted heap metadata remain rejected. This is
+closure-object placement at a proven array boundary, not broad closure/effect
+inference.
+The first call-site method-argument slice is now validated too:
+`def consume(x: T^{region}): Int = ...; consume(new T(...))` can allocate the
+argument object in the checked region when the parameter type names an
+in-scope checked owner. Runtime allocation stats prove placement, and
+unrooted heap metadata in the inferred argument object is rejected. The
+owner-token follow-up is also validated for the valid dependent parameter
+order `def consume(using r: RiftRegion.ScopedRegion^)(x: T^{r})` called as
+`consume(using region)(new T(...))`. The inference phase now substitutes the
+callee owner parameter with the actual checked owner argument for that fully
+applied call shape, while broader method/effect substitution remains future
+work. The same call-site substitution now covers inline closure object
+arguments to owner-token methods, for example
+`def consume(using r)(f: Function1[Int, Int]^{r})` called with
+`consume(using region)((n: Int) => n + 40)`. Runtime allocation stats prove the
+closure object is region allocated, and unrooted heap captures are rejected;
+closure-body allocation placement remains deferred until generated lambda
+bodies can safely receive or capture a runtime owner handle. The framework
+container follow-up now applies the same closure-object owner proof at checked
+owner-token stores: `ObjectBuffer`, `RegionBuffer`, and ordinary
+`RegionPriorityQueue` can consume inline or selected immutable local closure
+values whose value type is `Function1[...]^{region}`; runtime stats prove the
+materialized closures are region allocations and unrooted heap captures are
+rejected. The same bounded proof now reaches checked stream-window rank and
+table-rank `put` APIs for inline and selected immutable local closure values
+typed as `Function1[...]^{stream}`, again with unrooted heap captures rejected.
+The same call-site
+path now has direct coverage for inline `Some(new T(...))` factory arguments:
+`def consume(using r)(option: Option[T^{r}]^{r})` called with
+`consume(using region)(Some(new T(...)))` region-allocates both the `Some`
+factory object and nested payload, while `Some(metadata)` with unrooted dynamic
+heap metadata is rejected. Tuple factory arguments now have the same
+owner-token call-site coverage:
+`def consume(using r)(pair: Tuple2[A^{r}, B^{r}]^{r})` called with
+`consume(using region)(Tuple2(new A(...), new B(...)))` region-allocates the
+`Tuple2` object plus both nested payloads; tuple literal syntax is covered too,
+and unrooted heap payloads are rejected. The same owner-token argument path now
+covers a narrow generic object shape:
+`def consume(using r)(cell: Cell[T^{r}]^{r})` called with
+`consume(using region)(new Cell(new T(...)))` region-allocates both the
+generic `Cell` object and its nested payload; unrooted heap payloads and
+widened `AnyRef` generic hiding/heap escape are rejected. This remains a
+narrow call-site substitution slice, not full polymorphic region/effect
+inference.
+The same array placement now propagates through explicit checked
+region-parameter methods for named returned arrays:
+`def make(using r): Array[T^{r}]^{r} = { val items = new Array[T^{r}](n); items }`.
+Runtime allocation stats prove the returned array and named region-local
+element objects are region allocated, and compiler negatives reject unrooted
+heap-object stores plus heap/static retention of the returned array.
+Forwarded method-returned arrays are validated as well:
+`def wrap(using r): Array[T^{r}]^{r} = make(using r)` and the one-local-alias
+form preserve the array-return summary. Runtime allocation stats prove the
+forwarded array and element objects remain region allocated, and compiler
+negatives preserve unrooted-store and heap/static escape rejection.
+The same array-return summary now propagates through simple branch and match
+wrappers when every path forwards the same explicit checked owner:
+`if flag then make(using r) else make(using r)` and
+`selector match { case 0 => make(using r); case _ => make(using r) }`.
+Runtime allocation stats prove the selected forwarded array and named
+region-local element objects remain region allocated, and compiler negatives
+preserve unrooted-store and heap/static escape rejection.
+Broader container flows, primitive/boxed tuple fields,
+stream-window rank/table-rank operators, and independently expiring
+page/window child buckets beyond the validated append/map-filter/count-by-key,
+transaction, and chunk-append local-owner forms remain explicit.
+`HeapRoot` remains required for
+dynamic heap metadata. The inference core now tracks `Region`, `Unknown`, and
+`Rejected` decisions and exposes the opt-in
+`-P:scalanative:riftInferReport` diagnostic mode. Evidence is recorded in
+`evidence/RIFT_REGION_INFERENCE_MATRIX.md`. The first focused allocation-stat
+gate is now wired into `ObjectAllocationLoweringMatrix` with paired
+`rift-checked-scoped-explicit` and `rift-checked-scoped-inferred` modes. The
+20k primitive and reference smoke rows show inferred ordinary `new` reaching
+the same checked-region object counts and checksums as explicit
+`RiftRegion.alloc(new ...)`; this validates actual lowering for the current
+slice, but not yet performance at headline scale. The same focused gate now has
+5M primitive/reference and 10M reference scale points. The reference-shaped rows
+are positive: inferred scoped ordinary `new` matches explicit region object
+counts/checksums, eliminates timed GC, and is slightly faster than explicit
+scoped allocation at 5M and 10M. The primitive 5M row is a control/negative:
+inferred allocation is correct but slower than explicit scoped and heap, so the
+next optimization queue remains constructor/init lowering and allocation-zone
+hot-path simplification. The remaining safe sequence is: add representative
+benchmark rows that use inferred ordinary `new`, extend framework/operator
+signature inference beyond explicit page/window child-region locals, broaden
+method/closure effect summaries, and only later attempt broader ReML-style
+whole-module inference.
+The representative active-handle inference slice is now validated across three
+benchmark families. Broom retained-dataflow aggregate/join at 1M records
+matches explicit checked Rift checksums, output counts, region allocation
+counts, and zero-GC behavior; aggregate is a near tie/slightly faster than
+explicit, while join shows small inferred-path overhead. StreamFlexDesign
+throughput at 1M events confirms the same stable/transient/capsule logic and
+`24997627` region objects for explicit and inferred checked epoch stream;
+inferred is a near tie against explicit (`379.663 ms` versus `377.317 ms`) and
+removes heap GC. LogHub retained session over compressed HDFS streaming input
+is the real-input source-ergonomics row: inferred checked Rift matches
+checksum/output and region object counts and lowers RSS from `185 MB` heap to
+about `43 MB`, but it is slower than explicit and slightly slower than heap in
+the current 1M rerun, so this is the main profile target before claiming
+application-level inference overhead is negligible. Remaining roadmap work for
+the full ReML-style goal is broader: closure-body placement and closure effect
+summaries beyond the first nonescaping closure-object slice,
+generic/polymorphic summaries, broader page/window operator inference beyond
+explicit child-region locals, broader array flows beyond captured local arrays,
+explicit-region-parameter method returns, and simple forwarding wrappers, plus
+profiling of source shapes that regress against explicit checked allocation.
 
 Backend portability branch split:
 JVM/HotSpot/Scala.js/Wasm portability work now has a dedicated parent branch,
