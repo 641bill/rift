@@ -1,6 +1,6 @@
 # Current Rift Status
 
-Last updated: 2026-05-22 08:54 CEST
+Last updated: 2026-05-24 15:59 CEST
 
 Status: hot status file. Update this file for routine turn-by-turn progress
 instead of editing `docs/HANDOFF.md`, `docs/ROADMAP.md`,
@@ -14,6 +14,295 @@ instead of editing `docs/HANDOFF.md`, `docs/ROADMAP.md`,
 | Backend portability | parent branch `backend-portability` | JVM/HotSpot/Scala.js/Wasm portability docs, prototype evidence, and `experimental/**` patch exports are isolated on `backend-portability` at `065b521`. Keep `main` focused on Scala Native evidence unless backend results are intentionally promoted to presentation context. |
 | Benchmark search | parent `evidence/**` plus child sandbox result files | Broom q17 retained join/aggregate and Broom shopper are complete generated methodology rows. SPECjbb/Stancu-style 8M transaction scaling is recorded as generated clean-room methodology evidence, not real-input proof. LogHub Spark archive-wide retained session, Yak LiveJournal streaming graph, AskUbuntu streaming text, and the new named Wikimedia retained clickstream-session row are all recorded as compressed real-streaming evidence. The strongest real-streaming retained-object rows are now Theodolite retained UC4 and Wikimedia retained clickstream-session. |
 | Presentation report | `docs/PERFORMANCE_EVALUATION_REPORT.md` and generated `docs/report.html` | Do not edit/regenerate unless presentation claims or tables change. |
+
+## Latest Region-Inference Status
+
+- 2026-05-24: the lambda-lifted lexical-owner returned-local closure helper
+  bridge is now validated and promoted for the bounded shape
+  `def build(...) = { val inner = (n: Int) => new T(...); inner }`.
+  Source inference records a unique owner-typed method-return/closure
+  candidate by exact symbol, source span, and normalized source line, while NIR
+  only attaches the allocation zone when the lowered helper environment has a
+  concrete checked runtime owner value.
+- Follow-up slice: the same lambda-lifted source-line bridge now covers local
+  helpers that return a named local direct allocation, such as
+  `def build(...) = { val x: T^{owner} = new T(...); x }`, when the helper
+  body contains a runtime use of the checked owner term and the lowered helper
+  environment resolves that owner to a concrete Rift handle.
+- Follow-up library-wrapper proof: the helper bridge also covers local helpers
+  that return named local `Some(new T(...))`, `Option(new T(...))`, and
+  `Tuple2(new A(...), new B(...))` wrappers under the same runtime-owner-term
+  and lowered-handle gate. Runtime stats prove the outer closure,
+  helper-returned wrapper, and payloads are checked-region allocations.
+- Follow-up direct-control-flow proof: local helpers inside checked-owner
+  closure bodies can now directly return an `if` or `match` expression whose
+  arms construct `T^{owner}` without first binding a named local result, when
+  the helper body contains a runtime checked-owner term and the lowered helper
+  resolves that owner to a concrete Rift handle.
+- Follow-up forwarding proof: a local helper can now branch-forward the result
+  or match-forward the result of another inferred lexical-owner helper when
+  both summaries resolve to the same checked owner and the forwarding helper
+  also contains a runtime owner term. Conflicting, ambiguous, or type-only
+  forwarded owners remain heap fallback or rejection.
+- Follow-up alias-forwarding proof: the same forwarded helper summary also
+  covers an immutable local alias such as
+  `val forwarded: T^{owner} = allocate(...); forwarded`, again only when the
+  alias owner, forwarded helper owner, and runtime owner term are unique and
+  agree.
+- Follow-up array proof: the bridge now has focused proof for lambda-lifted
+  helpers returning `Array[T^{r}]^{r}` with a region-owned element store. The
+  accepted array result must use the original checked owner in the array type;
+  a local owner alias is useful as the runtime owner term but is not treated as
+  a substitute array result owner.
+- Follow-up primitive-array proof: the same bridge now covers
+  helper-returned `Array[Int]^{r}` values, with a heap-escape negative proving
+  returned primitive arrays still cannot be retained in durable heap state.
+- Follow-up `Either` wrapper proof: the helper bridge now covers
+  helper-returned `Left(new T(...))` and `Right(new T(...))` case wrappers
+  under the same runtime-owner-term and lowered-handle gate. Runtime stats
+  prove the outer closure, selected `Either` case wrapper, and payload are
+  checked-region allocations; paired type-only helpers remain heap fallback.
+- Follow-up general `Either` method-summary proof: explicit checked-region
+  local methods can now return `Either[A^{r}, B^{r}]^{r}` through direct
+  `Left(new A(...))`/`Right(new B(...))` construction and through one
+  branch/match forwarding helper. Runtime allocation stats prove the returned
+  `Either` case wrappers and payloads are checked-region allocations in the
+  direct and forwarded method-summary paths. Compiler negatives reject
+  unrooted heap metadata in the returned `Either` and heap retention through
+  widened `AnyRef`.
+- Follow-up polymorphic `Either` method-summary proof: the same direct and
+  branch/match-forwarded `Either` result shape now works for simple
+  polymorphic methods with explicit checked owner parameters, such as
+  `def make[A, B](using r)(left: A^{r}, right: B^{r}): Either[A^{r}, B^{r}]^{r}`.
+  The accepted path still requires the concrete checked owner argument at the
+  call site; unrooted heap arguments and widened heap retention are rejected.
+- Follow-up closure-body `Either` callee-summary proof: a checked-owner
+  closure body can call an explicit checked-region callee returning
+  `Either[A^{r}, B^{r}]^{r}`, including a selected local `Left`/`Right`
+  result inside the callee, when the closure body captures and passes the
+  concrete owner term. Runtime stats prove the closure wrapper, selected
+  `Either` case wrapper, and payloads are checked-region allocations. Compiler
+  negatives reject unrooted heap metadata flowing through direct or selected
+  `Either` callees.
+- Follow-up closure-body `Either` wrapper proof: a checked-owner closure body
+  can directly return `Left(inlineClosure)`/`Right(inlineClosure)` or
+  `Left(selectedClosure)`/`Right(selectedClosure)` when the wrapped closure
+  value and its nested body allocation both capture the same concrete checked
+  runtime owner term. Runtime stats prove the outer closure, `Either` case
+  wrapper, wrapped closure value, and nested body allocation are
+  checked-region allocations. Compiler negatives reject unrooted heap metadata
+  captured by the nested closure bodies through the `Either` wrapper.
+- Follow-up method-returned generic-wrapper closure proof: explicit
+  checked-region methods can now return `new Wrapper(inlineClosure)` or
+  `new Wrapper(selectedClosure)` where the wrapper, wrapped closure value, and
+  nested closure-body allocation all use the same checked runtime owner.
+  Runtime stats prove the wrapper, closure value, and body allocation are
+  checked-region allocations for inline closures (`delta >= 3`) and selected
+  closures (`delta >= 4`). A compiler negative rejects unrooted heap metadata
+  captured by the nested closure body through the returned wrapper.
+- Follow-up forwarded generic-wrapper closure proof: simple direct and
+  branch-forwarded checked-region methods can forward those
+  `Wrapper(closure)` results while preserving the wrapper owner, wrapped
+  closure owner, and nested body-allocation owner. Runtime stats prove the
+  forwarded wrapper, closure value, and body allocation are checked-region
+  allocations for direct forwarding (`delta >= 3`) and branch forwarding
+  (`delta >= 4`). A compiler negative rejects unrooted heap metadata through
+  the forwarded wrapper path.
+- Follow-up method-returned `Some(Wrapper(payload))` proof: explicit
+  checked-region methods can now return
+  `Option[Wrapper[T^{r}]^{r}]^{r}` through
+  `Some(new Wrapper(new T(...)))`, with the outer `Some`, wrapper record, and
+  nested payload all allocated in the checked region. The corresponding
+  closure-field shape `Some(new Wrapper(closure))`, plus alias/match forwarded
+  generic-wrapper closure values, currently hits Scala capture-widening before
+  Rift can recover the owner, so those cases are recorded as safe fallback and
+  future lambda signature/environment rewriting work.
+- Follow-up forwarded `Some(Wrapper(payload))` proof: simple direct and
+  branch-forwarded explicit checked-region methods can now forward
+  `Option[Wrapper[T^{r}]^{r}]^{r}` results produced by
+  `Some(new Wrapper(new T(...)))` while preserving the outer `Some`, wrapper,
+  and payload owner. Runtime stats prove three direct/forwarded
+  `Some`/wrapper/payload chains allocate in checked-region memory
+  (`delta >= 9`). A selected-local alias of
+  `Option[Wrapper[T^{r}]^{r}]^{r}` and the analogous match-forwarded
+  wrapper result still hit source capture widening before Rift lowering, so
+  they are documented as safe fallback.
+- Follow-up `Option.apply(Wrapper(payload))` proof: the same direct and
+  branch-forwarded explicit checked-region method-summary path now covers
+  null-preserving `Option(new Wrapper(new T(...)))` results. Runtime stats
+  prove three direct/forwarded `Option.apply` non-null `Some` branches,
+  wrapper records, and nested payloads allocate in checked-region memory
+  (`delta >= 9`). A compiler negative rejects unrooted heap metadata through
+  the forwarded `Option.apply` wrapper path.
+- Follow-up `Either(Wrapper(payload))` construction proof: direct and
+  branch-forwarded explicit checked-region methods can now construct and
+  return `Either[Wrapper[T^{r}]^{r}, Wrapper[T^{r}]^{r}]^{r}` as
+  `Left(new Wrapper(new T(...)))` or `Right(new Wrapper(new T(...)))` when the
+  call-site result is kept at the captured owner type. Runtime stats prove
+  three direct/forwarded `Either`, wrapper, and nested payload chains allocate
+  in checked-region memory (`delta >= 9`). Pattern extraction of the nested
+  wrapper through synthesized `Left.value`/`Right.value` still widens the
+  captured payload owner, so that case is recorded as safe fallback.
+- Follow-up `Option(Either(payload))` construction proof: direct and
+  branch-forwarded explicit checked-region methods can now construct and
+  return `Option[Either[T^{r}, T^{r}]^{r}]^{r}` as
+  `Option(Left(new T(...)))` or `Option(Right(new T(...)))` when the call-site
+  result keeps the captured owner type. Runtime stats prove three
+  direct/forwarded `Option.apply`, `Either` case wrapper, and nested payload
+  chains allocate in checked-region memory (`delta >= 9`). A compiler negative
+  rejects unrooted heap metadata through the forwarded path.
+- Follow-up `Either(Option(payload))` construction proof: direct and
+  branch-forwarded explicit checked-region methods can now construct and
+  return `Either[Option[T^{r}]^{r}, Option[T^{r}]^{r}]^{r}` as
+  `Left(Option(new T(...)))` or `Right(Option(new T(...)))` when the call-site
+  result keeps the captured owner type. Runtime stats prove three
+  direct/forwarded `Either`, `Option.apply`, and nested payload chains allocate
+  in checked-region memory (`delta >= 9`). A compiler negative rejects
+  unrooted heap metadata through the forwarded path.
+- Follow-up selected-local `Either(Option(payload))` proof: explicit
+  checked-region methods can now name both candidate
+  `Either[Option[T^{r}]^{r}, Option[T^{r}]^{r}]^{r}` values in immutable
+  locals, select between them, and return the selected local while preserving
+  the `Either`, non-null `Option.apply` `Some`, and payload owner. Runtime
+  stats prove three selected direct/forwarded calls allocate both candidate
+  chains in checked-region memory (`delta >= 18`). A compiler negative rejects
+  unrooted heap metadata hidden behind the selected-local option/either path.
+- Tuple wrapper-payload boundary: direct and branch-forwarded explicit
+  checked-region methods returning
+  `Tuple2[Wrapper[T^{r}]^{r}, Wrapper[T^{r}]^{r}]^{r}` through
+  `Tuple2(new Wrapper(new T(...)), new Wrapper(new T(...)))` currently fail
+  source capture typing before Rift lowering because the tuple field types
+  widen the nested captured payload. The corresponding compiler tests now
+  record this as safe fallback; no runtime allocation-stat proof is claimed for
+  this shape.
+- Follow-up owner-token/array-store `Either` proof: explicit checked-region
+  method arguments and region-owned array elements now cover direct and
+  selected `Either[A^{r}, B^{r}]^{r}` factories under the same owner-token or
+  array-element owner proof used for `Some`/`Option.apply`/`Tuple2`. Runtime
+  stats prove inline owner-token `Either`, selected owner-token `Either`,
+  inline array-store `Either`, and selected array-store `Either` wrappers and
+  payloads are checked-region allocations. Compiler negatives reject unrooted
+  heap metadata in owner-token and array-store `Either` paths.
+- Follow-up checked-buffer `Either` proof: checked `ObjectBuffer` and
+  `RegionBuffer` append boundaries now cover selected local and direct
+  branch/match `Either[A^{r}, B^{r}]^{r}` factories under the same explicit
+  framework owner token used for `Some`/`Option.apply`/`Tuple2`. Runtime stats
+  prove the selected and branch buffer `Either` wrappers and payloads are
+  checked-region allocations. Compiler negatives reject unrooted heap metadata
+  in selected and branch/match checked-buffer `Either` stores.
+- Follow-up checked-priority-queue `Either` proof: ordinary
+  `RegionPriorityQueue`, `RegionIndexedPriorityQueue`, and
+  `RegionLongIndexedPriorityQueue` owner-token boundaries now cover selected
+  local and direct branch/match `Either[A^{r}, B^{r}]^{r}` factories under the
+  same explicit queue owner token. Runtime stats prove the selected and
+  branch/match priority-queue `Either` wrappers and payloads are
+  checked-region allocations. Compiler negatives reject unrooted heap metadata
+  in selected and branch/match checked-priority-queue `Either` stores.
+- Follow-up lexicographic checked-priority-queue `Either` proof:
+  `RegionIndexedPriorityQueueLexicographic` and
+  `RegionLongIndexedPriorityQueueLexicographic` owner-token boundaries now
+  cover selected local and direct branch/match `Either[A^{r}, B^{r}]^{r}`
+  factories under the same explicit queue owner token. Runtime stats prove the
+  selected and branch/match lexicographic queue `Either` wrappers and payloads
+  are checked-region allocations. Compiler negatives reject unrooted heap
+  metadata in selected and match lexicographic checked-priority-queue `Either`
+  stores.
+- Follow-up checked stream-rank/table-rank `Either` proof:
+  `putWindowRank`, `putWindowRankInBucket`, and `putTableRankInBucket`
+  owner-token boundaries now cover selected local and direct branch/match
+  `Either[A^{r}, B^{r}]^{r}` factories under the same explicit stream owner
+  token used for `Some`/`Option.apply`/`Tuple2`. Runtime stats prove the
+  selected and branch/match stream-rank `Either` wrappers and payloads are
+  checked-region allocations. Compiler negatives reject unrooted heap metadata
+  in selected indexed-rank and match table-rank `Either` stores.
+- Follow-up checked `RegionList` `Either` proof: captured `RegionList` node
+  constructors can now contain selected local and direct branch/match
+  `Either[A^{r}, B^{r}]^{r}` factories when `prependRegionList` supplies the
+  explicit checked owner token. Runtime stats prove the selected and
+  branch/match `RegionList` nodes, `Either` wrappers, and payloads are
+  checked-region allocations. Compiler negatives reject unrooted heap metadata
+  hidden in branch/match and selected nested `RegionList` `Either` fields.
+- Primitive-box audit result: primitive boxes and boxed keys remain heap
+  fallback. `nir.Op.Box` still carries only `(ty, obj)` and has no allocation
+  zone/owner operand; lowering rewrites it through the standard box runtime
+  call, where cache/identity behavior must remain intact. A new `Either[Int,
+  Int]^{region}` negative joins the existing `Option[Int]^{region}`,
+  `Tuple2[Int, T^{region}]^{region}`, and preboxed-`Any` negatives so the new
+  `Either` placement cannot accidentally admit boxed primitives.
+- The bridge also accepts lambda-lifted checked owner aliases only when the
+  capture symbol and inferred owner symbol resolve to the same lowered runtime
+  value. This keeps type-only helper cases on the heap when no runtime owner
+  handle exists.
+- Validation passed at 2026-05-24 15:59 CEST:
+  `RiftRegionCheckedCompilerTest` `702/702`, `RiftRegionCheckedTest`
+  `316/316`, and `sandbox3_next` compile passed. Runtime allocation proofs now
+  cover the helper-returned local closure shape (`delta >= 3`), the
+  helper-returned local direct allocation shape (`delta >= 2`), and the
+  helper-returned `Some`/`Option.apply` wrapper-payload shapes (`delta >= 3`)
+  plus `Tuple2` wrapper/payload shape (`delta >= 4`) and `Left`/`Right`
+  `Either` wrapper/payload shape (`delta >= 3`), direct `if`/`match`
+  helper-returned allocation shapes (`delta >= 2`), and branch/match-forwarded
+  helper allocation shapes (`delta >= 2`), plus immutable alias-forwarded
+  helper allocation (`delta >= 2`) and helper-returned array plus element
+  allocation (`delta >= 3`), plus helper-returned primitive array allocation
+  (`delta >= 2`). The new general `Either` method-summary proof covers direct
+  method-returned `Either` wrapper/payload allocation (`delta >= 2`) and
+  branch/match-forwarded method-returned `Either` wrapper/payload allocation
+  (`delta >= 4`). The new polymorphic `Either` proof covers direct
+  polymorphic method-returned `Either` wrapper plus argument payload allocation
+  (`delta >= 3`) and branch/match-forwarded polymorphic `Either` wrapper plus
+  payload allocation (`delta >= 4`). The new closure-body `Either`
+  callee-summary proof covers closure wrapper plus direct callee-returned
+  `Either` wrapper/payload allocation (`delta >= 3`) and selected local
+  callee-returned `Either` wrapper/payload allocation (`delta >= 5`), and the
+  new closure-body `Either` wrapper proof covers inline wrapped closure
+  allocation plus nested body allocation (`delta >= 4`) and selected wrapped
+  closure allocation plus nested body allocation (`delta >= 5`). The new
+  method-returned generic-wrapper closure proof covers wrapper plus inline
+  closure and nested body allocation (`delta >= 3`) and wrapper plus selected
+  closure values and nested body allocation (`delta >= 4`). The new forwarded
+  generic-wrapper proof covers direct-forwarded wrapper plus inline closure and
+  nested body allocation (`delta >= 3`) and branch-forwarded wrapper plus
+  selected closure values and nested body allocation (`delta >= 4`). The new
+  method-returned `Some(Wrapper(payload))` proof covers outer `Some`, wrapper,
+  and nested direct payload allocation (`delta >= 3`), while the attempted
+  `Some(Wrapper(closure))` shape remains a source-capture fallback. The new
+  forwarded `Some(Wrapper(payload))` proof covers three direct/forwarded
+  `Some`, wrapper, and payload chains (`delta >= 9`), while selected-local
+  `Option[Wrapper[T^{r}]^{r}]^{r}` aliases and match-forwarded
+  `Some(Wrapper(payload))` results remain source-capture fallback. The new
+  forwarded `Option.apply(Wrapper(payload))` proof covers three direct/forwarded
+  non-null `Some`, wrapper, and payload chains (`delta >= 9`). The new
+  forwarded `Either(Wrapper(payload))` construction proof covers three
+  direct/forwarded `Either`, wrapper, and payload chains (`delta >= 9`), while
+  nested wrapper extraction through `Left.value`/`Right.value` remains a
+  source-capture fallback. The new forwarded `Option(Either(payload))`
+  construction proof covers three direct/forwarded `Option.apply`, `Either`,
+  and payload chains (`delta >= 9`). The new forwarded
+  `Either(Option(payload))` construction proof covers three direct/forwarded
+  `Either`, `Option.apply`, and payload chains (`delta >= 9`). The new
+  selected-local `Either(Option(payload))` proof covers three selected
+  direct/forwarded calls that allocate both local candidate `Either`,
+  `Option.apply`, and payload chains (`delta >= 18`). The new
+  owner-token/array-store `Either` proof covers inline owner-token `Either`
+  (`delta >= 2`), selected owner-token `Either` (`delta >= 4`), inline
+  array-store `Either` (`delta >= 3`), and selected array-store `Either`
+  (`delta >= 5`), plus checked-buffer selected and branch/match `Either`
+  wrappers and payloads (`delta >= 12`) and checked-priority-queue selected
+  and branch/match `Either` wrappers and payloads (`delta >= 8`), plus
+  lexicographic checked-priority-queue selected and branch/match `Either`
+  wrappers and payloads (`delta >= 12`), plus checked stream-rank/table-rank
+  selected and branch/match `Either` wrappers and payloads (`delta >= 8`),
+  plus checked `RegionList` selected and branch/match `Either` nodes,
+  wrappers, and payloads (`delta >= 10`).
+  Paired type-only fallback tests keep
+  each helper-bridge shape below its promoted threshold when no runtime owner
+  handle exists.
+- This is still not full closure/effect inference: escaping closures, mutable
+  closure flow, hidden owner capture without a lowered runtime handle, virtual
+  dispatch, erased generic flow, arbitrary library closure wrappers, and
+  lambda signature/environment rewriting beyond this source-line bridge remain
+  future work.
 
 ## Current-State Full Matrix
 
@@ -551,16 +840,21 @@ Current interpretation:
 ## Latest Validation
 
 - Current validation gate for the active compiler/runtime/inference tree passed
-  on 2026-05-21 19:28-19:30 CEST:
+  on 2026-05-24 15:57-15:59 CEST:
   `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "nscplugin3_next/testOnly org.scalanative.RiftRegionCheckedCompilerTest"`
-  reported `565/565`;
-  `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/clean" "tests3_next/testOnly scala.scalanative.memory.RiftRegionCheckedTest"`
-  reported `247/247`;
+  reported `702/702`;
+  `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "tests3_next/testOnly scala.scalanative.memory.RiftRegionCheckedTest"`
+  reported `316/316`;
   `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile`
   passed. The earlier
   `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" "set Compile / scalacOptions += \"-P:scalanative:riftInferReport\"" compile`
   gate passed after the stream-rank closure slice and was not rerun for this
-  closure-body branch/match forwarded-callee summary proof slice. This is the current
+  forwarded `Option.apply(Wrapper(payload))` proof slice,
+  `Either(Wrapper(payload))` construction proof,
+  `Option(Either(payload))` construction proof,
+  direct/forwarded plus selected-local `Either(Option(payload))` construction
+  proof, plus tuple-wrapper and
+  `Either` field-extraction source-capture boundary updates. This is the current
   safety/allocation-stat/sandbox compile evidence
   after adding compiler positives/negatives and runtime allocation-stat proof
   for selected immutable aliases of ordinary direct allocations through method
@@ -590,6 +884,12 @@ Current interpretation:
   appends, ordinary checked priority-queue push/put calls, dense/long
   lexicographic priority-queue put overloads, and checked stream-window
   rank/table-rank APIs while unrooted heap metadata remains rejected;
+  direct and selected `Either` case factories passed through explicit
+  owner-token method arguments, stored into region-owned array elements, or
+  appended to checked `ObjectBuffer`/`RegionBuffer` values or pushed/put into
+  ordinary and lexicographic checked priority queues, plus checked
+  stream-rank/table-rank APIs and checked `RegionList` node fields, while
+  unrooted heap metadata remains rejected;
   checked `RegionList` prepend now accepts captured node element types
   (`T <: RegionListNode^`) and branch/match-created list nodes whose direct
   constructor arguments contain `Some(new T(...))`, `Option(new T(...))`, or
@@ -606,9 +906,19 @@ Current interpretation:
   elements, checked buffers, and ordinary `RegionPriorityQueue` owner-token
   APIs, including priority-queue closure-body allocation when the pushed
   closure captures the same runtime owner; plus direct inline and selected
-  immutable local closures nested inside a region-owned wrapper constructor
-  or method-returned `Some` wrapper whose closure body allocates through the
-  same captured runtime owner, plus direct `new Wrapper(closure)` values passed
+  immutable local closures nested inside a region-owned wrapper constructor,
+  method-returned `Some` wrapper, closure-body returned `Either` wrapper,
+  method-returned generic `new Wrapper(closure)` value, or simple
+  forwarded method-returned generic `Wrapper(closure)` value whose closure
+  body allocates through the same captured runtime owner, plus method-returned
+  `Some(new Wrapper(new T(...)))` values whose wrapper and payload share the
+  explicit checked owner while `Some(new Wrapper(closure))` remains a
+  source-capture fallback, plus direct/branch-forwarded
+  `Some(new Wrapper(new T(...)))` results while selected-local
+  `Option[Wrapper[T^{r}]^{r}]^{r}` aliases and match-forwarded wrapper
+  results remain source-capture fallback, plus direct/branch-forwarded
+  `Option(new Wrapper(new T(...)))` results, plus direct
+  `new Wrapper(closure)` values passed
   through explicit owner-token method arguments; plus region-owned closure
   bodies that call explicit checked-region methods such as
   `build(value)(using owner): T^{owner}` and return that callee-allocated
@@ -622,7 +932,7 @@ Current interpretation:
   objects consumed by checked `ObjectBuffer`, `RegionBuffer`, and ordinary
   `RegionPriorityQueue` owner-token APIs; compiler negatives reject unrooted
   heap captures, and runtime allocation stats prove the materialized closure
-  objects are checked-region allocations. The latest stream-rank follow-up now
+  objects are checked-region allocations. The stream-rank closure follow-up
   proves the same closure-object placement at checked stream-window rank and
   table-rank APIs (`putWindowRank`, `putWindowRankInBucket`, and
   `putTableRankInBucket`): inline and selected immutable local closure values
