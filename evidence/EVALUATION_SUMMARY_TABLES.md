@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Tables
 
 Date: 2026-05-01
-Last updated: 2026-05-09 23:31 CEST
+Last updated: 2026-06-01 15:03 CEST
 
 Status: seeded summary pack for the comprehensive evaluation. Rows below are
 current checked-in evidence unless marked pending rerun. They are L2
@@ -568,7 +568,7 @@ trusted HPZone `4403.007 ms`; q2 `rift-checked` is `5061.479 ms` versus heap
 | SafeZone-backed AppendWindow backend | 1M events | checked SafeZone-backed `29.444 ms` | heap `35.511 ms`; current cursor `30.922 ms` | Backend-assisted checked operator win | 2026-05-03 focused gate passed |
 | Checked page/token append operator | 1M events | checked page-token `27.141 ms`; SafeZone-backed page-token `26.191 ms` | heap `35.652 ms`; current checked `30.819 ms` | Checked operator-owned overhead-removal win | 2026-05-03 focused gate passed |
 | Object allocation lowering | 100k/1M/10M retained-region-array records | 10M checked SafeZone-backed `143.319 ms`; checked Rift `165.774 ms`; trusted HP `199.627 ms` | 10M heap `271.121 ms`, GC median `105.807 ms`, RSS `971 MB` | Allocation/reclaim win at scale; generic checked container overhead isolated | 2026-05-05 refined focused rows validated |
-| WindowFold additive API | 1M events | checked `118.726 ms` | `103.244 ms` | Checked aggregate overhead | Pending clean sweep rerun |
+| WindowFold additive API | 1M events | checked `97.321 ms` | `99.302 ms` | Focused checked operator win after redundant open-check removal | 2026-06-01 focused rerun; application gates still pending |
 
 ## Existing Stream/Application Evidence
 
@@ -581,6 +581,7 @@ trusted HPZone `4403.007 ms`; q2 `rift-checked` is `5061.479 ms` versus heap
 | NEXMark Beam Q1 | 1M generated-profile | Streaming `919.670 ms`, checked `945.372 ms` | `950.341 ms` | `929.887 ms` | Trusted modest win; checked does not win | Clean stream sweep |
 | NEXMark Beam Q2 | 1M generated-profile | Streaming `563.282 ms`, checked `572.005 ms` | `586.607 ms` | `576.228 ms` | Modest trusted/checked stream row | Clean stream sweep |
 | NEXMark Beam Q3 | 1M generated-profile | checked `295.166 ms` | `315.715 ms` | `302.668 ms` | Best checked stream row, below 10% gate | Clean stream sweep |
+| NEXMark q5 fold API | 1M generated-local | checked fold API `419.855 ms` | `470.288 ms` | n/a | Generated fold application gate, not exact Beam evidence | 2026-06-01 L2 rerun |
 | NEXMark Beam Q8 | 1M generated-profile | checked `457.518 ms` | `470.798 ms` | `457.725 ms` | Checked near-tie with improved SafeZone | Clean stream sweep |
 | NEXMark Beam Q11 | 1M generated-profile | HPZone `228.741 ms` | `218.774 ms` | `229.557 ms` | Heap wins elapsed; region rows reduce GC only | Clean stream sweep |
 | Common Crawl WET-shaped Q1 | 1M generated pages / 137M token records | HPZone `4386.590 ms`, Streaming `4395.599 ms`; checked RSS rerun `5088.712 ms` | `5466.535 ms`; RSS rerun `5670.270 ms` | improved-32k `4608.641 ms`; RSS rerun `4644.747 ms` | GC-heavy trusted-Rift win after fast-allocation counter cleanup; checked beats heap but misses improved-SafeZone/trusted gate | 2026-05-02 follow-up |

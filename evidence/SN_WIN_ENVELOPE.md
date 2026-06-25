@@ -1,7 +1,7 @@
 # Scala Native Win Envelope
 
 Date: 2026-05-01
-Last updated: 2026-05-11 12:43 CEST
+Last updated: 2026-06-01 15:03 CEST
 
 Status: Phase 6/7 evidence synthesis. This note classifies where Rift currently
 wins against Scala Native Immix, where it only reduces memory pressure, and
@@ -210,10 +210,10 @@ live window payload still dominate.
 | Checked page/token append operator | 1M events | fast-path `rift-checked-page-token` `29.319 ms`; SafeZone-backed page-token `27.549 ms` | heap `36.920 ms`; chunk-token `34.737/32.294 ms` | Cheap checked operator win | Batch-close/current-bucket fast path passed; linked page-token still beats chunk-token |
 | Object allocation lowering | ordinary object construction only | 10M checked SafeZone-backed `143.319 ms`; checked Rift `165.774 ms`; trusted HP `199.627 ms` | 10M heap `271.121 ms`, GC median `105.807 ms`, RSS `971 MB` | Allocation/reclaim win at scale; generic checked buffer overhead isolated | 2026-05-05 retained-region-array rows |
 | Reusable `StreamAppendWindow` prepend cursor API | 1M events | prepend cursor `34.662 ms` | same-run heap-prepend `36.836 ms` | Cheap checked operator win, not better than append cursor | Focused control; do not move to DEBS yet |
-| Reusable `StreamWindowFold` additive API | 1M events | checked `118.726 ms` | heap `103.244 ms` | Checked aggregate-table overhead | Focused gate failed; lower RSS and zero measured GC, but block application integration |
+| Reusable `StreamWindowFold` additive API | 1M events | checked `97.321 ms` | heap `99.302 ms` | Redundant open-check removal | Focused gate now narrowly passes with lower RSS and zero checked GC; application integration still needs its own gates |
 | NEXMark-lite Q1 conversion | 1M events | checked `374.767 ms`; Streaming `371.404 ms` | heap `384.595 ms` | Region-friendly stream map win | Local methodology benchmark, not exact Beam NEXMark |
 | NEXMark-lite Q2 selection | 1M events | checked `287.808 ms` | heap `297.053 ms` | Low-output input-region win | Local methodology benchmark; checked RSS higher than heap |
-| NEXMark-lite Q5 hot items | 1M events | checked `355.100 ms` | heap `350.941 ms` | Window aggregate not yet a win | Local methodology benchmark; needs operator/footprint work |
+| NEXMark-lite Q5 hot items | 1M events | fold API checked `419.855 ms` | heap `470.288 ms` | Generic fold API win | Local generated methodology benchmark; not exact Beam NEXMark |
 | NEXMark-lite Q8 window join | 1M events | checked `291.832 ms` | heap `322.210 ms` | Region-friendly checked join-window win | Local methodology benchmark, not exact Beam NEXMark |
 | NEXMark-lite Q8 `StreamJoinWindow` API | 1M events | packed checked join API `20.987 ms` | heap join API `17.393 ms` | Specialized checked join API is lower-GC/lower-RSS but slower than fair heap control | Focused framework evidence; not a speed claim |
 | NEXMark-lite Q5 diagnostic | 1M events | checked `393.415 ms` clean; top scan `46.823 ms` diagnostic | heap `361.882 ms` clean; top scan `45.340 ms` diagnostic | Window aggregate checked overhead | Diagnostic profile plus clean control |
@@ -390,8 +390,11 @@ The strongest local categories are:
 - Checked ranking/indexing containers are still too expensive at 1M:
   `StreamWindowRank`, `StreamWindowLongIndexedRank`, and `StreamWindowTableRank`
   are functionally important, but not ready as throughput evidence.
-- The first NEXMark-lite Q5 hot-items row is not a win: region modes reduce GC
-  but live-window arrays and top scanning dominate elapsed time and RSS.
+- The first NEXMark-lite Q5 hot-items row was not a win: region modes reduced
+  GC but live-window arrays and top scanning dominated elapsed time and RSS.
+  The 2026-06-01 `StreamWindowFold` API path now passes the generated 1M L2
+  gate: checked `419.855 ms` versus heap `470.288 ms`, zero checked GC, and
+  lower RSS.
 - The Q5 diagnostic follow-up shows the top scan itself is about `45 ms` at 1M
   in every mode (`123` scans over `65536` entries), while checked Rift is still
   slower in the clean control. That makes Q5 a checked per-entry/window
@@ -408,12 +411,12 @@ The strongest local categories are:
   reusable API form to pass the focused gate. This is a warning that framework
   APIs must be benchmarked separately from handwritten benchmark logic before
   application integration.
-- `StreamWindowFold` confirms that warning for aggregate tables. Its 1M
-  checked row removes measured GC and cuts RSS (`40402944` bytes versus heap
-  `75022336` bytes), but loses elapsed time (`118.726 ms` versus
-  `103.244 ms`). Common Crawl WET and NEXMark Q5 fold-backed integration should
-  stay blocked until the fold table/API overhead is reduced or a different
-  object-heavy shape passes a focused gate.
+- `StreamWindowFold` used to confirm that warning for aggregate tables. The
+  2026-06-01 focused rerun after redundant open-check removal now passes
+  narrowly: checked `97.321 ms` versus heap `99.302 ms`, same checksum, checked
+  GC `0.000 ms`, and RSS `40386560` bytes versus heap `75005952` bytes.
+  NEXMark Q5 now has that application-specific generated L2 gate; Common Crawl
+  WET or other fold-backed integrations still need their own gates.
 - The generated Common Crawl WET-shaped detector is now split. q1 tokenization
   and q2 domain-window aggregation are strong trusted-Rift elapsed/GC wins
   after fast-path counter cleanup, but not RSS wins. Checked q1/q2 allocate the

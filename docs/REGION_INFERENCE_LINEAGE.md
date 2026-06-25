@@ -1,6 +1,6 @@
 # Region Inference Lineage And Rift Adaptation
 
-Last updated: 2026-05-24 15:59 CEST
+Last updated: 2026-06-15 11:30 CEST
 
 Status: design investigation and roadmap note. This document records how Rift
 relates to the Tofte/Talpin, MLKit, and ReML region-inference lineage. It is
@@ -31,6 +31,426 @@ whole-program region inference
 ```
 
 The implemented Scala Native inference slices are deliberately narrow:
+
+- 2026-06-15 `RiftRegion.ownedEitherFold` branch-specific abstract `Either`
+  extraction bridge: Rift now has a source-level object-only fold helper for
+  `Either[A, B]^{r}` when both branch payloads are already owned by the same
+  checked region. Runtime allocation stats prove the branch case objects,
+  wrapper records, wrapper closure values, and closure-body payloads allocate
+  in checked-region memory, and compiler negatives reject unrooted heap
+  metadata hidden behind a folded branch payload. The helper now preserves the
+  full branch payload types, so callback parameter owners flow from the
+  region-owned `Either` instead of requiring explicit callback ascriptions.
+  A follow-up compiler boundary test proves untyped `ownedLeft(using r)` /
+  `ownedRight(using r)` construction under an expected abstract
+  `Either[A, B]^{r}` still widens owner flow before the fold. This is still a
+  bridge, not full ReML-style pattern-match inference: raw abstract `Either`
+  pattern matching and expected-owner propagation for untyped branch helpers
+  remain future effect/flow work.
+
+- 2026-06-15 raw concrete `Left(...)` / `Right(...)` direct-nested
+  wrapper-payload construction proof: the concrete branch constructor rewrite
+  now has explicit payload coverage. Runtime allocation stats prove concrete
+  branch case objects, wrapper records, and nested payloads allocate in
+  checked-region memory for raw `Left(new Wrapper(new Box(...)))` and
+  `Right(new Wrapper(new Box(...)))` assigned to owner-typed immutable locals.
+  A follow-up compiler negative proves raw
+  `Left(new Wrapper(new Entry(metadata)))` still rejects unrooted heap
+  metadata hidden in the nested payload.
+  This remains a concrete-case source rewrite; abstract `Either[A, B]`
+  construction and raw branch/match owner preservation are still future
+  effect/flow work.
+
+- 2026-06-14 raw concrete `Left.value` / `Right.value` direct-nested
+  wrapper-payload extraction proof: the existing concrete branch accessor
+  rewrite now has explicit payload coverage. Runtime allocation stats prove
+  concrete branch case objects, wrapper records, and nested payloads allocate
+  in checked-region memory while raw `.value` extraction preserves the owner.
+  Compiler negatives reject unrooted heap metadata hidden behind the extracted
+  wrapper payload. This remains a concrete-case source rewrite; abstract
+  `Either[A, B]` pattern extraction and raw branch/match owner preservation are
+  still future effect/flow work.
+
+- 2026-06-14 raw `Some(...)` / `Option(...)` direct-nested wrapper-payload
+  rewrite: the raw option rewrite now also covers owner-typed immutable locals
+  where the raw option constructor wraps a direct region construct that itself
+  contains another direct region construct, for example
+  `Some(new Wrapper(new Box(...)))`. Runtime allocation stats prove the option
+  wrapper, nested wrapper record, and nested payload allocate in checked-region
+  memory, and compiler negatives reject unrooted heap metadata hidden in the
+  nested payload. This is still a capture-directed source rewrite, not broad
+  library inference: selected/match method-returned wrapper payloads still
+  require stronger owner-flow summaries, and ordinary direct payloads stay on
+  the older direct allocation-zone path.
+
+- 2026-06-13 raw `Some(...)` / `Option(...)` direct-nested wrapper-closure
+  rewrite: Rift now has a pre-capture rewrite for immutable owner-typed locals
+  whose RHS is raw `Some(...)` or `Option(...)`, but only for the
+  wrapper-closure residual shape where the constructor argument contains a
+  nested closure allocation effect. The rewrite requires one checked owner in
+  the expected result type and a concrete runtime owner term, preserves source
+  owner aliases separately from canonical owner classification, and emits
+  owner-token-specific non-inline compiler bridges. Runtime allocation stats
+  prove the raw option wrapper, wrapper record, closure value, and closure-body
+  payload allocate in checked-region memory. This is not general `Option`
+  library inference: broad rewriting of all raw `Some`/`Option` construction
+  was rejected during validation because it displaced previously validated
+  direct allocation-zone marking for ordinary `Some(new Payload)` shapes.
+  Branch/match selection, ambiguous owners, primitive boxes, boxed keys,
+  generic containers, and unknown library factories remain fallback.
+
+- 2026-06-12 concrete raw `Left(...)` / `Right(...)` construction rewrite:
+  Rift now has a pre-capture rewrite for immutable owner-typed locals whose
+  RHS is a concrete raw branch constructor. The rewrite is accepted only when
+  the expected local type is a concrete `Left[...]^{r}` or `Right[...]^{r}`
+  value, the expected type has one checked owner, and a concrete runtime owner
+  term is available through a scoped/open/open-handle checked owner. The
+  compiler emits non-inline owner-token-specific bridges because public
+  `ownedLeft` / `ownedRight` are inline helper APIs and generic `RiftRegion^`
+  bridges do not prove allocation placement for the case objects. Runtime
+  allocation stats prove the concrete case objects, wrapper records, closure
+  values, and closure-body payloads allocate in checked-region memory.
+  Abstract `Either[A, B]` construction, branch/match selection, pattern
+  extraction, and ambiguous owner flow remain future effect/flow work.
+
+- 2026-06-11 concrete raw `Left.value` / `Right.value` extraction rewrite:
+  Rift now has a pre-capture rewrite for immutable owner-typed locals whose
+  RHS is a concrete raw branch accessor. The rewrite is accepted only when the
+  qualifier is a concrete `Left[...]^{r}` or `Right[...]^{r}` value, the
+  expected result has one checked owner, and the qualifier has the same
+  concrete runtime owner. Runtime allocation stats prove the concrete case
+  objects, wrapper records, closure values, and closure-body payloads allocate
+  in checked-region memory. Abstract `Either[A, B]` pattern matching and
+  branch/match selection remain future effect/flow work.
+
+- 2026-06-11 hidden-owner/type-only closure-effect correction: the previous
+  hidden effect-owner method-parameter bridge is no longer promoted as current
+  validated behavior. It could add a hidden owner parameter to lambda-lifted or
+  adapted closure-body methods without rewriting the closure class environment
+  and every generated adapter consistently. Current Rift keeps those
+  hidden/type-only closure-body effects on heap fallback unless a concrete
+  runtime owner is available through a normal captured value or another proven
+  lowered owner term. This is the main remaining closure/effect-summary step
+  toward a more ReML-like system.
+
+- 2026-06-11 `RiftRegion.ownedSelect` for `Tuple2` wrappers: the same
+  non-allocating same-owner helper now has compiler proof for selecting
+  between helper-backed `ownedTuple2` wrapper-closure values and then
+  extracting `_1` / `_2`. Runtime allocation stats prove the tuple objects,
+  wrapper records, closure values, and selected closure-body payloads allocate
+  in checked-region memory for the helper-backed selected path. Raw tuple
+  syntax and raw branch/match selection still widen owner information before
+  lowering.
+
+- 2026-06-11 `RiftRegion.ownedSelect` for `Either` wrappers: the same
+  non-allocating same-owner helper now has proof for selecting between
+  helper-backed `ownedLeft` / `ownedRight` wrapper-closure values and then
+  extracting through `ownedEitherValue`. Runtime allocation stats prove the
+  case objects, wrapper records, closure values, and selected closure-body
+  payloads allocate in checked-region memory; compiler negatives preserve
+  heap-escape and unrooted-metadata rejection. This remains a source bridge:
+  raw branch/match selection and unannotated selected `Either` locals still
+  widen owner information before extraction.
+
+- 2026-06-11 `RiftRegion.ownedSelect` helper: raw `if` / `match` selection
+  of selected `Option[Wrapper[T^{r}]^{r}]^{r}` values still widens ownership
+  before Rift lowering, so the promoted path is a non-allocating same-owner
+  selection helper. `ownedSelect[A](first, second)` requires both operands to
+  already be typed as owned by the same checked region and returns the selected
+  value with that owner. Runtime allocation stats prove the helper-backed
+  `ownedSome` / `ownedOption` selected-wrapper-closure shape keeps the option
+  wrappers, wrapper records, closure values, and closure-body payloads in
+  checked-region memory; compiler negatives preserve heap-escape and
+  unrooted-metadata rejection. This is not automatic branch/match owner
+  inference for arbitrary library values.
+
+- 2026-06-10 direct-nested `RiftRegion.ownedTuple2` helper operands: the
+  reusable object-only tuple helper now has proof for direct-nested wrapper
+  closures, such as
+  `ownedTuple2[Wrapper[A^{r}], Wrapper[B^{r}]](new Wrapper(closure), new Wrapper(closure))`,
+  including `_1` / `_2` extraction and closure-body allocation through the
+  extracted wrappers. Runtime allocation stats prove the tuple objects,
+  wrapper records, closure values, and closure-body payloads allocate in
+  checked-region memory; compiler negatives preserve heap-escape and
+  unrooted-metadata rejection. This is not general tuple syntax inference:
+  raw `Tuple2(new Wrapper(...), new Wrapper(...))`, tuple literals,
+  primitive boxes, boxed keys, and unknown library paths remain source-capture
+  or library-boundary fallbacks unless they go through a capture-preserving
+  helper.
+
+- 2026-06-10 direct-nested `RiftRegion.ownedLeft` / `ownedRight` helper
+  operands: the reusable object-only `Either` construction helpers now have
+  proof for direct-nested wrapper closures, such as
+  `ownedLeft[Wrapper[T^{r}], ...](new Wrapper(closure))`, when the wrapper is
+  already proven owned by the same checked region. Runtime allocation stats
+  prove the case objects, wrapper records, closure values, and closure-body
+  payloads allocate in checked-region memory; compiler negatives preserve
+  heap-escape and unrooted-metadata rejection. At this checkpoint this was not
+  general `Left(...)` / `Right(...)` library inference: raw direct-nested
+  `Left` / `Right` syntax remained a source-capture fallback unless it went
+  through a capture-preserving helper. The later 2026-06-12 rewrite covers
+  only concrete owner-typed immutable local raw constructors with a unique
+  runtime owner.
+
+- 2026-06-10 `RiftRegion.ownedSome` / `ownedOption` helpers: the direct-nested
+  `Some(new Wrapper(closure))` / `Option(new Wrapper(closure))` capture
+  widening gap now has reusable object-only helper bridges when the payload is
+  already proven owned by the same checked region. Runtime allocation stats
+  prove the wrapper records, closure values, and closure-body payloads allocate
+  in checked-region memory through the helper path; compiler negatives preserve
+  heap-escape and unrooted-metadata rejection. This is not general
+  `Option.apply` library inference or lambda environment rewriting: raw
+  direct-nested `Some(...)` / `Option(...)` syntax remains a source-capture
+  fallback unless it goes through a capture-preserving helper or staged typed
+  local.
+
+- 2026-06-10 `RiftRegion.ownedLeftValue` / `ownedRightValue` helpers: the
+  concrete `Either` branch extraction gap now has reusable, object-only
+  branch-specific bridges
+  `Left[A^{r}, B^{r}]^{r} => A^{r}` and
+  `Right[A^{r}, B^{r}]^{r} => B^{r}`. `ownedLeft` / `ownedRight` now return
+  concrete case types, so code that preserves the branch case can extract
+  unrelated branch payload types without raw `.value` owner widening. Runtime
+  allocation stats prove the concrete case objects, wrapper records, closure
+  values, and closure-body payloads allocate in checked-region memory; compiler
+  negatives preserve heap-escape and unrooted-metadata rejection. This is not
+  abstract `Either[A, B]` pattern-match effect inference. At this checkpoint raw
+  `Left.value` / `Right.value` syntax remained a source-capture fallback; the
+  later 2026-06-11 pre-capture rewrite covers only concrete owner-typed
+  immutable locals whose expected result and qualifier prove the same unique
+  runtime owner.
+
+- 2026-06-09 `RiftRegion.ownedEitherValue` helper: the typed `Either`
+  extraction gap now has a reusable, object-only same-type bridge
+  `Either[A^{r}, A^{r}]^{r} => A^{r}`. It is intentionally non-inline:
+  direct inline pattern matching reintroduced the same `Left.value` /
+  `Right.value` owner widening seen in raw source. The helper uses a cast
+  boundary only after the method argument type proves that both branches have
+  the same checked owner and value type. Runtime allocation stats prove the
+  extracted wrapper, closure value, and closure-body payload are checked-region
+  allocations; compiler negatives preserve heap-escape and unrooted-metadata
+  rejection. This is not branch-polymorphic `Either[A, B]` effect inference.
+  At this checkpoint raw `Left.value` / `Right.value` syntax remained a
+  source-capture fallback. Later `ownedLeftValue` / `ownedRightValue` helpers
+  cover concrete branch values whose case type is preserved, and the 2026-06-11
+  pre-capture rewrite covers concrete owner-typed immutable local accessors.
+  Abstract `Either[A, B]` pattern extraction, branch/match selection, and
+  ambiguous owner accessors remain fallback.
+
+- 2026-06-09 `RiftRegion.ownedLeft` / `ownedRight` helpers: the typed
+  `Either` construction proof is now exposed as reusable, object-only checked
+  helpers. They preserve owner flow for `Either[A^{r}, B^{r}]^{r}` case
+  construction and have compiler/runtime proof for wrapper-closure values.
+  This is construction only; raw `Left.value` / `Right.value` extraction for
+  wrapper-closure payloads remains a separate capture-widening fallback. The
+  later `ownedEitherValue` helper covers only the same-owner same-type
+  extraction bridge.
+
+- 2026-06-07 `RiftRegion.ownedTuple2` helper: the local method/effect-summary
+  shape below is now exposed as a reusable, object-only checked helper. It
+  preserves the owner through `Tuple2[A^{r}, B^{r}]^{r}` for values already
+  owned by the same checked region and has compiler/runtime proof for
+  wrapper-closure locals. It is not general tuple inference: primitive boxes,
+  boxed keys, raw `Tuple2(first, second)`, and tuple literal `(first, second)`
+  remain separate fallback/design cases.
+
+- 2026-06-07 polymorphic `Tuple2` factory bridge proof: a local
+  owner-preserving factory with signature
+  `make[A, B](using r)(left: A^{r}, right: B^{r}): Tuple2[A^{r}, B^{r}]^{r}`
+  validates the wrapper-closure local operand shape that raw
+  `Tuple2(first, second)` rejects, when the call instantiates
+  `A` and `B` as `Wrapper[T^{r}]`. Runtime allocation stats prove tuple
+  objects, wrapper records, and inline closure values allocate in
+  checked-region memory (`delta >= 15`). This is a concrete Rift analogue of a
+  small method/effect summary, not full ReML/MLKit inference: it still depends
+  on a source-visible owner-preserving factory signature, and ambiguous
+  untyped tuple construction remains heap/fallback. Follow-up safety negatives
+  prove the same bridge still rejects durable-heap escape and unrooted heap
+  metadata retained by closure-body region allocation.
+
+- 2026-06-07 untyped tuple closure-field layer diagnosis: the accepted typed
+  tuple proofs are backend/placeable once Scala capture checking preserves the
+  owner in the typed tree. The rejected untyped tuple spellings fail earlier:
+  before `RiftRegionInference` and `GenNIR`, the Scala frontend has already
+  widened the wrapper element owner or rejected owner flow. This is exactly the
+  kind of case full ReML/MLKit-style effect inference would solve in the
+  type/effect system; in Rift it requires capture-preserving tuple
+  factory/library signatures or a capture-checking frontend bridge, not a
+  late allocation-zone rewrite.
+
+- 2026-06-07 tuple-literal local-operands wrapper-closure boundary: tuple
+  literal syntax `(first, second)` remains rejected for the same owner-typed
+  local operand shape as untyped `Tuple2(first, second)`. This confirms the
+  remaining gap is the standard untyped tuple construction path. The
+  source-expressible accepted form still requires explicit tuple type
+  arguments; broader support needs capture-preserving expected-type propagation
+  or a tuple factory/source-summary bridge.
+
+- 2026-06-05 untyped `Tuple2` local-operands wrapper-closure boundary: even
+  when both tuple operands are first staged as explicit
+  `Wrapper[T^{r}]^{r}` locals, the untyped factory call
+  `Tuple2(first, second)` remains rejected. The wrapper element owner is
+  widened by `Tuple2.apply` before it can conform to the owner-typed tuple
+  result. The accepted source-expressible spelling therefore still requires
+  explicit tuple type arguments; broader support needs capture-preserving
+  expected-type propagation or a source-summary bridge for tuple factories.
+
+- 2026-06-05 local-ascribed untyped `Tuple2` wrapper-closure boundary:
+  source-local result ascription is not enough to preserve owner flow for the
+  untyped tuple factory. The shape
+  `val pair: Tuple2[Wrapper[T^{r}]^{r}, Wrapper[T^{r}]^{r}]^{r} =
+  Tuple2(new Wrapper(...), new Wrapper(...))` remains rejected because
+  capability `r` cannot flow into the fresh tuple capture set. This narrows the
+  remaining work: the fallback is not just a missing user-level ascription, but
+  a need for capture-preserving expected-type propagation or a source-summary
+  bridge before lowering.
+
+- 2026-06-05 untyped direct-nested `Tuple2` wrapper-closure boundary: the
+  untyped constructor spelling
+  `Tuple2(new Wrapper(...), new Wrapper(...))` remains rejected even when the
+  enclosing method result is explicitly
+  `Tuple2[Wrapper[T^{r}]^{r}, Wrapper[T^{r}]^{r}]^{r}`. Scala capture checking
+  infers a boxed/widened nested wrapper owner before Rift lowering can recover
+  the checked owner. The compiler negative
+  `inferredForwardedMethodReturnedUntypedDirectNestedTupleWrapperCaptureWideningFallsBack`
+  now records this as a source-capture preservation gap, while the explicitly
+  typed tuple constructor shape below remains promoted.
+
+- 2026-06-05 direct-nested typed `Tuple2` wrapper-closure value proof:
+  explicitly typed
+  `Tuple2[Wrapper[T^{r}]^{r}, Wrapper[T^{r}]^{r}](new Wrapper(...), new Wrapper(...))`
+  now validates when both direct nested wrappers contain checked-owner
+  closures. Runtime allocation stats prove three direct/forwarded tuple chains
+  allocate tuple objects, wrapper records, and closure values in checked-region
+  memory (`delta >= 15`). This removes the previous blanket fallback for
+  direct-nested typed tuple wrapper-closure construction; untyped direct
+  nesting and tuple wrapper-payload extraction remain future work.
+
+- 2026-06-05 typed `Either` field-extraction boundary: even the
+  source-expressible owner-typed pattern that first binds the returned
+  `Either[Wrapper[T^{r}]^{r}, Wrapper[T^{r}]^{r}]^{r}` and then binds the
+  extracted wrapper as `Wrapper[T^{region}]^{region}` remains rejected. Scala
+  synthesizes `Left.value`/`Right.value` extraction with a boxed/widened payload
+  owner, so Rift cannot safely recover the wrapper owner after capture
+  checking. This keeps typed `Either` wrapper-closure construction promoted but
+  leaves capture-preserving `Left.value`/`Right.value` extraction for future
+  frontend/library-summary work.
+
+- 2026-06-05 typed `Tuple2` field-extraction closure-body proof: the staged
+  typed tuple wrapper-closure method-summary shape now also works through
+  `_1`/`_2` when the returned tuple and extracted wrappers are bound as
+  explicitly owner-typed locals. Runtime allocation stats prove three tuple
+  objects, six wrapper records, six closure values, and six closure-body
+  payloads allocate in checked-region memory (`delta >= 21`). This is a narrow
+  capture-preserving field-extraction proof for source-expressible typed
+  locals; untyped tuple extraction and tuple wrapper-payload extraction remain
+  future work.
+
+- 2026-06-04 typed `Tuple2` wrapper-closure value proof: the typed
+  wrapper-closure method-summary shape now also works through explicitly typed
+  `Tuple2[Wrapper[T^{r}]^{r}, Wrapper[T^{r}]^{r}](first, second)`, including
+  simple direct and branch-forwarded checked-region method wrappers, when
+  `first` and `second` are staged owner-typed wrapper locals containing
+  checked-owner closures. Runtime allocation stats prove three tuple objects,
+  six wrapper records, and six closure values allocate in checked-region memory
+  (`delta >= 15`). This is value-placement proof for returned typed tuple
+  wrapper-closure chains; the direct-nested typed counterpart was validated in
+  the later 2026-06-05 proof.
+
+- 2026-06-04 typed `Either` wrapper-closure value proof: the typed
+  wrapper-closure method-summary shape now also works through explicitly typed
+  `Left[Wrapper[T^{r}]^{r}, Wrapper[T^{r}]^{r}](wrapper)` and
+  `Right[Wrapper[T^{r}]^{r}, Wrapper[T^{r}]^{r}](wrapper)`, including simple
+  direct and branch-forwarded checked-region method wrappers. Runtime
+  allocation stats prove three `Either` case wrappers, wrapper records, and
+  closure values allocate in checked-region memory (`delta >= 9`). This is
+  value-placement proof for returned `Either` wrapper-closure chains; executing
+  the nested closure body through raw synthesized `Left.value`/`Right.value`
+  remains future capture-preserving field-extraction work. The later
+  `ownedEitherValue` helper covers a same-owner same-type extraction bridge,
+  not general branch-polymorphic extraction.
+
+- 2026-06-04 typed `Option.apply` wrapper-closure proof: the typed
+  wrapper-closure method-summary shape now also works through
+  `Option[Wrapper[T^{r}]^{r}](wrapper)`, including simple direct and
+  branch-forwarded checked-region method wrappers. Runtime allocation stats
+  prove three non-null `Option.apply` branches allocate their `Some` objects,
+  wrapper records, closure values, and closure-body payloads in checked-region
+  memory (`delta >= 12`). This is the null-preserving counterpart to the typed
+  `Some` wrapper-closure proof; it does not change the direct nested
+  `Option(new Wrapper(closure))` / `Some(new Wrapper(closure))` capture
+  widening boundary.
+
+- 2026-06-04 typed and forwarded `Some` wrapper-closure proof: explicit
+  checked-region methods can now return
+  `Option[Wrapper[T^{r}]^{r}]^{r}` where the wrapper stores a closure, provided
+  source first binds the wrapper as an owner-typed local and calls
+  `Some[Wrapper[T^{r}]^{r}](wrapper)`. Simple direct and branch-forwarding
+  methods preserve the same owner/effect summary. Runtime allocation stats
+  prove the outer `Some`, wrapper record, closure value, and closure-body
+  payload are all checked-region objects (`delta >= 4` for one chain and
+  `delta >= 12` for three forwarded chains). The direct nested spelling
+  `Some(new Wrapper(closure))` still fails in Scala capture checking before
+  Rift lowering because the generic wrapper/closure field is widened. This is
+  a source-expressible method/effect-summary forwarding slice, not full lambda
+  signature/environment rewriting.
+
+- Superseded hidden-owner note, current as of 2026-06-11 13:51 CEST: the
+  hidden-owner entries below are historical. The backend bridge that added
+  hidden owner parameters to closure-body methods is no longer promoted
+  because lambda-lifted/adapted methods require coordinated closure
+  environment and adapter rewriting. Current validated behavior is heap
+  fallback for type-only hidden-owner closure bodies unless a concrete runtime
+  owner is available through normal capture or another proven lowered owner
+  term.
+
+- Historical 2026-06-04 hidden-owner `Option` synthetic-factory proof:
+  this proof is superseded by the 2026-06-11 fallback correction above. The
+  old path showed why a hidden owner would be useful for closure bodies
+  returning `Some(new T(...))`, but it depended on a lowered hidden
+  effect-owner handle that was not propagated through lambda environments and
+  adapters as a complete invariant. Current validated behavior keeps this
+  type-only hidden-owner body path on the heap until that rewrite exists.
+
+- 2026-06-03 hidden-owner closure/effect bridge: Rift now validates the
+  bounded shape where a checked-owner closure body returns another closure and
+  the returned closure captures the checked runtime owner through a local
+  alias. Source inference records closure-body owners by exact symbol plus
+  source span/unique line; GenNIR adds or uses a backend-internal hidden
+  effect-owner handle only when lowering can resolve a concrete checked owner
+  value. Runtime allocation stats now prove the outer closure, returned inner
+  closure, and nested body allocation are all checked-region objects
+  (`delta >= 3`). The corresponding LLVM for the former
+  `make$61$$anonfun$1` failure now allocates `Lambda$367` through the checked
+  region allocator rather than `scalanative_GC_alloc_small`. This is a
+  closure/effect-summary and lowered-owner bridge, not arbitrary escaping
+  closure inference, virtual dispatch inference, or full lambda
+  signature/environment rewriting.
+
+- 2026-06-02 effect-polymorphic closure guardrail: expected-type-only closure
+  effects are not promoted as hidden-owner allocation placement. A runtime
+  allocation-stat test now proves that a closure of type
+  `Function1[Int, T^{r}]^{r}` whose body does not capture a concrete runtime
+  owner term keeps both the closure value and the body allocation on the heap
+  (`delta == 0`). This is sound fallback and confirms that real ReML-style
+  closure effects require lambda signature/environment rewriting so the
+  lowered closure body receives a checked owner handle. The source-phase
+  closure capture checker was also narrowed so local vals are not considered
+  safe captured region parameters by type alone; they must be parameters,
+  roots/static/primitives, owner handles/aliases, or proven region
+  allocations.
+
+- 2026-06-01 validation correction: a later prototype added broad
+  local-escape tracking and automatic region-scope wrapping, then was gated
+  behind `-P:scalanative:riftInferAutomaticScopes` after it reached ordinary
+  javalib/concurrency heap allocations too broadly. The current child worktree
+  passes the compiler checked suite (`718/718`), native runtime checked suite
+  (`323/323` after the 2026-06-02 closure fallback guardrail), and
+  `sandbox3_next` compile with automatic scopes default-off.
+  That automatic-scope path is not promoted and should be treated as
+  experimental until it has allocation-site precision, library exclusion,
+  exception-safe close, and runtime allocation-stat proof. The promoted default
+  remains the capture-directed, explicit-owner system recorded below.
 
 - 2026-05-24 lambda-lifted returned-local closure helper bridge: Rift now
   validates the bounded lexical helper shape where a checked-owner closure body
@@ -122,8 +542,14 @@ The implemented Scala Native inference slices are deliberately narrow:
   `Some(new Wrapper(new T(...)))`, placing the outer `Some`, wrapper record,
   and nested direct payload under the same checked owner. Simple direct and
   branch-forwarding wrappers over that `Some(Wrapper(payload))` result are now
-  validated too. The closure-field variant `Some(new Wrapper(closure))`,
-  selected-local `Option[Wrapper[T^{r}]^{r}]^{r}` aliases, match-forwarded
+  validated too. The staged typed closure-field forms
+  `Some[Wrapper[T^{r}]^{r}](wrapper)` and
+  `Option[Wrapper[T^{r}]^{r}](wrapper)` are now validated when `wrapper` is an
+  owner-typed local containing a checked-owner closure, including simple
+  direct and branch-forwarded checked-region method wrappers. The direct nested
+  spellings `Some(new Wrapper(closure))` and
+  `Option(new Wrapper(closure))`, selected-local
+  `Option[Wrapper[T^{r}]^{r}]^{r}` aliases, match-forwarded
   `Some(Wrapper(payload))` results, and alias/match forwarded generic wrapper
   closure values remain documented source-capture fallbacks because the generic
   wrapper/captured option shape widens before Rift can soundly rewrite the
@@ -136,9 +562,27 @@ The implemented Scala Native inference slices are deliberately narrow:
   `Left(new Wrapper(new T(...)))` and `Right(new Wrapper(new T(...)))` place
   the selected `Either` case wrapper, wrapper record, and nested payload under
   the checked owner when the call-site result keeps the captured owner type.
+  The typed wrapper-closure counterpart is also validated for explicitly typed
+  `Left[Wrapper[T^{r}]^{r}, Wrapper[T^{r}]^{r}](wrapper)` and
+  `Right[Wrapper[T^{r}]^{r}, Wrapper[T^{r}]^{r}](wrapper)`, placing the
+  selected `Either` case wrapper, wrapper record, and closure value under the
+  checked owner. It does not yet execute the nested closure body through
+  `Left.value`/`Right.value`.
   Extracting that nested wrapper through synthesized `Left.value`/`Right.value`
   still widens the captured payload owner, so field extraction remains future
-  lambda/environment rewriting work. A further nested synthetic proof validates
+  lambda/environment rewriting work. The typed `Tuple2` wrapper-closure
+  counterpart is now validated for explicitly typed
+  `Tuple2[Wrapper[T^{r}]^{r}, Wrapper[T^{r}]^{r}](first, second)` when both
+  operands are staged owner-typed wrapper locals containing checked-owner
+  closures. That proof places the tuple object, wrapper records, and closure
+  values under the checked owner through direct and branch-forwarded method
+  wrappers. A follow-up now extracts `_1` and `_2` into explicitly owner-typed
+  wrapper locals and executes the nested closure bodies, proving the body
+  payloads allocate under the same checked owner. Another follow-up validates
+  explicitly typed direct-nested `Tuple2(new Wrapper(closure), new
+  Wrapper(closure))` construction. Untyped tuple extraction and tuple
+  wrapper-payload extraction remain fallbacks.
+  A further nested synthetic proof validates
   `Option(Left(new T(...)))` and `Option(Right(new T(...)))`: the non-null
   `Option.apply` `Some` branch, selected `Either` case wrapper, and payload
   are checked-region allocations under the same captured call-site owner. The
@@ -149,7 +593,7 @@ The implemented Scala Native inference slices are deliberately narrow:
   selected-local candidates inside the explicit checked-region method: both
   local `Left(Option(new T(...)))` and `Right(Option(new T(...)))` chains are
   placed under the checked owner before the selected local is returned. The
-  analogous
+  analogous payload-oriented
   `Tuple2(new Wrapper(new T(...)), new Wrapper(new T(...)))` method-summary
   shape is currently a documented source-capture fallback: tuple field typing
   widens the nested captured payload before Rift lowering can recover a unique

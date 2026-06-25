@@ -1,13 +1,28 @@
 # Rift Project Handoff
 
 Date: 2026-05-03
-Last updated: 2026-05-17 17:45 CEST
+Last updated: 2026-06-01 15:20 CEST
 
 Active worktree for this update:
 `/Users/siyaoliu/rift/scala-native-rift`
 
 Active implementation branch for this update:
 `feature/rift`
+
+Latest validation correction:
+Parent `main` is at `56efa9a` plus local doc/evidence updates and ahead of
+`origin/main` by 3 commits. Child `scala-native-rift` is on `feature/rift` at
+`685f2b67e` plus a local validation fix, ahead of `origin/feature/rift` by 22
+commits before that fix is committed. The child fix gates broad automatic
+local-escape scope insertion behind
+`-P:scalanative:riftInferAutomaticScopes`, guards the GenNIR source-span
+automatic-region hook with the same default-off flag, and adds regression
+coverage for ordinary heap/concurrency-style allocations. Validation restored:
+`RiftRegionCheckedCompilerTest` passes `718/718`,
+`RiftRegionCheckedTest` passes `322/322`, and `sandbox3_next` compile passes.
+Broad automatic compiler-inserted scopes remain prototype work, not completed
+full ReML/MLKit-style inference. The validated default is explicit lifetime
+boundaries plus capture-directed region placement with heap fallback.
 
 Backend portability branch split:
 In-progress JVM/HotSpot/Scala.js/Wasm portability docs, prototype evidence, and
@@ -3450,8 +3465,8 @@ the focused matrix lives in
 `scala-native-rift/sandbox/src/main/scala-next/CheckedWindowFoldMatrix.scala`
 and is run by `scala-native-rift/sandbox/run_checked_window_fold_matrix.sh`.
 
-The focused gate failed, so Common Crawl WET, NEXMark Q5 fold integration, and
-DEBS fold integration remain blocked:
+Historical fold checkpoint before the redundant `putFoldInBucket` open-check
+removal:
 
 | Scale | Mode | Median ms | GC ms | Rift op ms | RSS bytes | Interpretation |
 |---:|---|---:|---:|---:|---:|---|
@@ -3473,10 +3488,15 @@ Interpretation:
 
 - The memory-management direction is useful: checked fold removes measured GC
   and cuts 1M RSS from `75022336` to `40402944` bytes.
-- The elapsed gate fails: checked fold is `118.726 ms` versus heap
+- The old elapsed gate failed: checked fold was `118.726 ms` versus heap
   `103.244 ms`.
-- The next implementation step should profile/reduce checked aggregate-table
-  overhead before using this API in Common Crawl WET or NEXMark Q5.
+- Superseding 2026-06-01 rerun after `putFoldInBucket` check removal:
+  heap `99.302 ms`, checked Rift `97.321 ms`, same checksum
+  `-6322631816023653086`, checked GC `0.000 ms`, Rift op `0.148 ms`, and RSS
+  `40386560` checked versus `75005952` heap. This promotes the fix as focused
+  operator evidence, but Common Crawl WET, NEXMark Q5, and DEBS fold
+  integrations still need their own smokes/L1/L2 before becoming application
+  claims.
 
 Previous NEXMark checkpoint:
 `NexmarkRegionMatrix` adds the first non-DEBS NEXMark-style stream-processing
@@ -3529,6 +3549,13 @@ Current NEXMark-lite 1M medians:
 | q2 selection | `297.053 ms` | `287.808 ms` | `294.806 ms` | `305.249 ms` | checked elapsed/GC win, but checked RSS is higher than heap |
 | q5 hot items | `350.941 ms` | `355.100 ms` | `356.015 ms` | `356.588 ms` | not a window-aggregate win yet |
 | q8 window join | `322.210 ms` | `291.832 ms` | `305.338 ms` | `305.410 ms` | strongest NEXMark-lite checked win so far |
+
+2026-06-01 follow-up: the older generic q5 row above is superseded for fold API
+evidence by the Q5-only `rift-checked-fold-api` path. The generated-local 1M
+L2 gate reports heap `470.288 ms` versus checked fold API `419.855 ms`, with
+matching checksum/output, zero checked GC, Rift op `0.204 ms`, and RSS
+`219.5 MB` checked versus `289.9 MB` heap. This is a generated application API
+gate, not exact Beam NEXMark evidence.
 
 Focused Q8 join API 1M medians:
 

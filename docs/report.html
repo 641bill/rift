@@ -701,7 +701,7 @@ pre code {
         </div>
       </div>
       <aside class="hero-panel" aria-label="Report metadata">
-        <div class="panel-row"><span>Generated</span><strong>2026-05-22 09:02 CEST</strong></div>
+        <div class="panel-row"><span>Generated</span><strong>2026-06-01 15:27 CEST</strong></div>
         <div class="panel-row"><span>Source</span><strong>docs/PERFORMANCE_EVALUATION_REPORT.md</strong></div>
         <div class="panel-row"><span>Audience</span><strong>External systems / PL reader</strong></div>
         <div class="panel-row"><span>Headline rule</span><strong>Clean total time and RSS first</strong></div>
@@ -946,6 +946,9 @@ pre code {
         types, owner-token arguments, framework boundaries, and local
         method/effect summaries to find a concrete checked runtime owner. When
         that proof is missing, the allocation remains on the Immix heap.
+        Automatic compiler-inserted scope wrapping is still experimental; the
+        current broad local-escape prototype is default-off after reaching
+        ordinary heap/library allocations too broadly.
       </p>
       <figure class="figure-block">
   <figcaption>Table 2. Region inference implemented today.</figcaption>
@@ -996,6 +999,10 @@ pre code {
 <th>Remaining inference track</th>
 <th>Next work</th>
 </tr></thead><tbody>
+<tr>
+<td>Automatic scopes</td>
+<td>The local-escape wrapping prototype is default-off after reaching ordinary heap/library allocations too broadly; keep explicit lifetime boundaries until allocation-site precision, library exclusion, and exception-safe close are proven.</td>
+</tr>
 <tr>
 <td>Closure/effect summaries</td>
 <td>Finish escaping-safe closures, closure-body effects, hidden owner capture, and lambda environment rewriting.</td>
@@ -1208,10 +1215,10 @@ pre code {
 </tr>
 <tr>
 <td>NEXMark generated queries</td>
-<td>Generated Beam-default q3/q8/q9/q11 stream methodology rows.</td>
-<td>Checked q3/q8/q9/q11: <code>2591 / 4157 / 7929 / 2188 ms</code>.</td>
-<td>Immix heap: <code>2848 / 4432 / 8790 / 2217 ms</code>.</td>
-<td>Checked beats heap on these rows, but q9 favors the scoped/SafeZone backend.</td>
+<td>Generated Beam-default q3/q8/q9/q11 plus generated-local q5 fold API.</td>
+<td>Checked q3/q8/q9/q11: <code>2591 / 4157 / 7929 / 2188 ms</code>; q5 fold API: <code>419.855 ms</code>.</td>
+<td>Immix heap q3/q8/q9/q11: <code>2848 / 4432 / 8790 / 2217 ms</code>; q5: <code>470.288 ms</code>.</td>
+<td>Generated methodology wins; q9 favors the scoped/SafeZone backend and q5 is not exact Beam evidence.</td>
 </tr>
 <tr>
 <td>GH Archive-shaped q1/q2</td>
@@ -1229,10 +1236,10 @@ pre code {
 </tr>
 <tr>
 <td>Window fold</td>
-<td>Checked fold/traversal microbenchmark, 10M objects.</td>
-<td>Checked Rift: <code>930.973 ms</code>.</td>
-<td>Immix heap: <code>898.906 ms</code>.</td>
-<td>Negative control: traversal/API overhead can exceed removed GC and remains an optimization target.</td>
+<td>Published 10M fold control plus current focused 1M rerun.</td>
+<td>Published checked 10M: <code>930.973 ms</code>; current checked 1M: <code>97.321 ms</code>.</td>
+<td>Published heap 10M: <code>898.906 ms</code>; current heap 1M: <code>99.302 ms</code>.</td>
+<td>The published row remains a regression/control; the current focused rerun now passes narrowly after redundant open-check removal, with application fold rows still requiring their own gates.</td>
 </tr>
 </tbody></table></div>
   <p class="so-what"><strong>So what?</strong> These rows test memory-management shape, prior-work axes, or runtime/API overhead; they are useful evidence but not real-input proof.</p>
@@ -1304,8 +1311,9 @@ pre code {
       <figure class="figure-block">
   <figcaption>Figure 6. What these results do not prove yet.</figcaption>
   <ul class="limitations-list">
+<li>Current child worktree passes the compiler checked suite 718/718, native runtime checked suite 322/322, and sandbox compile after broad automatic local-escape scopes were gated off by default.</li>
 <li>The latest full matrix was a dirty working-tree engineering run; rerun from a clean committed tree before treating the exact numbers as publication evidence.</li>
-<li>Rift is not full ReML/MLKit inference yet: broad closure/effect summaries, hidden/type-only owner recovery, primitive boxes, and library summaries remain open.</li>
+<li>Rift is not full ReML/MLKit inference yet: automatic scopes, broad closure/effect summaries, hidden/type-only owner recovery, primitive boxes, and library summaries remain open.</li>
 <li>Some rows are dominated by parsing, hashing, traversal, or query CPU, so removing GC does not guarantee an elapsed-time win.</li>
 <li>Unsafe/rootless rows remain lower-bound controls, not user-facing safety claims.</li>
 <li>Runtime checks stay unless compiler/runtime probes prove active-handle, stale-token, owner, and close-order invariants.</li>
@@ -1334,6 +1342,10 @@ pre code {
 <th>Open track</th>
 <th>Next action</th>
 </tr></thead><tbody>
+<tr>
+<td>Automatic local-escape wrapping</td>
+<td>Fix or disable the overbroad prototype path, then reintroduce it only with allocation-site precision, library exclusion, exception-safe close, and allocation-stat proof.</td>
+</tr>
 <tr>
 <td>Clean final matrix</td>
 <td>Rerun the latest selected matrix from a clean committed tree and promote only validated rows.</td>

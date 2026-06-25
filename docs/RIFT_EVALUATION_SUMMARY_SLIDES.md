@@ -1,7 +1,7 @@
 # Rift Evaluation Summary Slides
 
 Date: 2026-05-03
-Last updated: 2026-05-22 08:54 CEST
+Last updated: 2026-06-01 15:20 CEST
 
 Status: final talk-outline slide source. Use
 `docs/PERFORMANCE_EVALUATION_REPORT.md` as the main narrative report and
@@ -66,6 +66,7 @@ known.
 | General summaries | more callees, forwarding wrappers, helper libraries, and selected framework boundaries |
 | Polymorphic safety | conservative handling for virtual dispatch, mutation, callbacks, exceptions, erased generics, and generic containers |
 | Boxes/libraries | primitive boxes, boxed keys, iterators, collection nodes, strings, buffers, parser helpers |
+| Automatic scopes | prototype local-escape wrapping is default-off after reaching ordinary heap/library allocations too broadly; keep explicit lifetimes until allocation-site precision and close safety are proven |
 
 ## Slide 7: Static Safety
 
@@ -118,6 +119,7 @@ publication evidence.
 | StreamFlex throughput 10M | `5138.231 ms` | `3800.585 ms` | design-stressor win |
 | Common Crawl q1 10M | `70410.059 ms` | `46491.537 ms` | generated stressor win |
 | Common Crawl q2 10M | `67398.152 ms` | `46094.232 ms` | generated stressor win |
+| NEXMark q5 fold API 1M | `470.288 ms` | `419.855 ms` | generated fold API gate |
 | SPECjbb-style port | `1674.726 ms` | `1231.076 ms` | transaction-lifetime win |
 
 ## Slide 12: Honest Controls
@@ -126,7 +128,7 @@ publication evidence.
 |---|---|---|
 | GH Archive q2 | heap `3848.235 ms`, checked `3842.741 ms` | tie; parser/query floor dominates |
 | NEXMark q9 | heap `8790.376 ms`, checked `7929.885 ms`, SafeZone `7639.168 ms` | checked beats heap, scoped backend best |
-| Window fold | heap `898.906 ms`, checked `930.973 ms` | traversal/API overhead can exceed removed GC |
+| Window fold | published 10M control regressed; current 1M focused rerun heap `99.302 ms`, checked `97.321 ms` | focused gate now passes narrowly; NEXMark q5 now has a generated-local fold API gate; other application fold rows still need gates |
 | Object allocation | heap `263.639 ms`, checked Rift `161.281 ms`, checked SafeZone `133.532 ms` | allocation lowering works; backend substrate still matters |
 
 ## Slide 13: What Profiles Explain

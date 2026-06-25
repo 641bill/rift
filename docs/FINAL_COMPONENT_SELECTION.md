@@ -1,6 +1,6 @@
 # Final Component Selection
 
-Last updated: 2026-05-06 16:14 CEST
+Last updated: 2026-06-01 15:03 CEST
 
 Status: selection policy for the final Rift story. This document classifies
 components by evidence without deleting runtime code. Losing and unsafe modes
@@ -52,7 +52,7 @@ wins on their own axes.
 | Component | Status | Reason |
 |---|---|---|
 | `EpochFold` | Gated | Correct, but true reusable Dataflow AGGREGATE row failed the speed gate. |
-| `StreamWindowFold` | Gated | Correct/lower RSS, but focused 1M speed gate failed. |
+| `StreamWindowFold` | Focused pass, application-gated | Latest focused 1M rerun after redundant open-check removal is checked `97.321 ms` versus heap `99.302 ms`, with lower RSS and zero checked GC. Application fold integrations still need their own gates. |
 | `StreamWindowRank` / `TableRank` | Gated | Correct/profilable, but rank/table CPU overhead dominates at 1M. |
 | fixed chunk append | Rejected/control for sequential append | Correct, but slower than linked page-token and fair heap chunk control in current rows. |
 | DEBS ranking/median operators | Deferred | Current evidence does not show ranking/median as primarily memory-management-bound. |

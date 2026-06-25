@@ -1,7 +1,7 @@
 # Rift Project And Performance Evaluation Report
 
 Date: 2026-05-03
-Last updated: 2026-05-22 08:54 CEST
+Last updated: 2026-06-01 15:20 CEST
 
 Status: final project wrap-up report source. This Markdown file is the
 narrative source for `docs/report.html`; regenerate the HTML with
@@ -50,6 +50,13 @@ It used a dirty working tree and should therefore be read as current engineering
 evidence, not clean committed presentation evidence. The run produced 19
 summary files, no failure or mismatch markers, and matching checksums/output
 counts within each benchmark family.
+
+Current implementation validation note, 2026-06-01: the latest child worktree
+passes the compiler checked suite (`718/718`), the native runtime checked suite
+(`322/322`), and `sandbox3_next` compile after broad automatic local-escape
+scope insertion was gated behind explicit opt-in. The performance numbers below
+remain the latest recorded engineering/presentation evidence; the
+automatic-scope prototype is not promoted as performance or safety evidence.
 
 ## 2. System Model
 
@@ -120,6 +127,11 @@ allocation when the owner is only type-level with no runtime handle, when a
 closure may escape, when virtual dispatch or erased generics hide owner flow,
 when mutable state can retarget the owner, when a heap object would retain a
 region reference, or when dynamic heap metadata is not rooted.
+
+Automatic compiler-inserted region creation/deallocation is not promoted. A
+prototype local-escape wrapping path is now gated behind explicit opt-in after
+it reached ordinary library/test heap allocations too broadly; the default
+validated system keeps those allocations on the heap.
 
 ### 4.2 What Is Left For Full Region Inference
 
@@ -235,6 +247,7 @@ specific memory-management shapes, prior-work axes, or runtime/API overheads.
 | Common Crawl q1 10M pages | Generated WET-shaped tokenization stressor. | Generated stream stressor | `70410.059 ms`, GC `17551.246 ms` | checked page-token `46491.537 ms`, GC `296.167 ms` | Strong generated object-pressure win. |
 | Common Crawl q2 10M pages | Generated domain/window stressor. | Generated stream stressor | `67398.152 ms`, GC `17995.183 ms` | checked page-token `46094.232 ms`, GC `344.296 ms` | Strong generated page/window win. |
 | NEXMark q3/q8/q11 | Generated Beam-default stream queries. | Generated methodology | q3 `2848.152`, q8 `4431.702`, q11 `2217.263 ms` | checked `2591.178`, `4157.367`, `2188.282 ms` | Modest checked wins; q9 is also faster than heap but SafeZone is best. |
+| NEXMark q5 fold API 1M | Generated hot-auction window aggregate using `StreamWindowFold`. | Generated methodology / application API gate | `470.288 ms`, GC `29.921 ms`, RSS `289.9 MB` | checked fold API `419.855 ms`, GC `0`, RSS `219.5 MB` | Generated Q5 fold API gate passes; not exact Beam NEXMark evidence. |
 | GH Archive q1/q2 | Generated GH Archive-shaped preloaded events. | Generated/preloaded control | q1 `3975.523`, q2 `3848.235 ms` | checked q1 `3822.250`, q2 `3842.741 ms` | Small win/tie; parser/query floor dominates. |
 | LogHub q2 generated | Window counts over generated log-shaped events. | Generated stream/operator | `6677.914 ms`, GC `1517.648 ms` | checked epoch stream `2600.244 ms`, GC `0` | Very strong checked-lifetime/API win. |
 | LogHub q3 generated | Template/session generated log query. | Generated stream/operator | `32867.576 ms`, GC `4695.691 ms` | checked epoch stream `26291.412 ms`, GC `1369.451 ms` | Strong win, but query/session CPU still large. |
@@ -243,6 +256,7 @@ specific memory-management shapes, prior-work axes, or runtime/API overheads.
 | Object allocation 10M | Primitive-field object allocation microbenchmark. | Runtime overhead | `263.639 ms`, GC `107.693 ms` | checked Rift `161.281 ms`; checked SafeZone `133.532 ms` | Allocation lowering is effective; SafeZone substrate remains a lower overhead backend for this shape. |
 | Append window 10M | Checked append/page-token microbenchmark. | API overhead | `338.362 ms`, GC `88.807 ms` | checked Rift `252.007 ms` | Good operator-owned append win. |
 | Window fold 10M | Checked fold microbenchmark. | API overhead | `898.906 ms`, GC `61.506 ms` | checked Rift `930.973 ms` | Regression/control: fold traversal/API overhead exceeds removed GC. |
+| Window fold focused 1M rerun | Current validated rerun after redundant `putFoldInBucket` open-check removal. | API overhead | `99.302 ms`, GC `10.518 ms`, RSS `75.0 MB` | checked Rift `97.321 ms`, GC `0`, RSS `40.4 MB` | Focused gate now narrowly passes; NEXMark q5 has a generated-local fold API gate, while other application fold rows still need their own smokes/L1/L2. |
 
 ## 10. What The Profiles Say
 
@@ -293,6 +307,7 @@ The project is substantial but not complete. The next work should focus on:
 | Area | Remaining work |
 |---|---|
 | Full region inference | Add broad closure/effect summaries, escaping-closure summaries, hidden owner capture, type-only owner recovery, polymorphic summaries, and library-boundary summaries. |
+| Automatic scope inference | Rework or disable broad local-escape wrapping until allocation-site escape precision, library exclusion, exception-safe close, and runtime allocation-stat proof are in place. |
 | Primitive boxes | Design a safe allocation-zone path for `nir.Op.Box` and boxed keys without breaking cache/identity semantics. |
 | Library-created allocations | Extend inference or library support for iterators, collection nodes, strings, buffers, parser helpers, boxed keys, wrappers, and erased generic paths. |
 | Runtime check removal | Remove checks only where compiler/runtime probes prove active-handle, stale-token, and lifetime invariants. |

@@ -357,6 +357,7 @@ INFERENCE_DONE_ROWS = [
 
 
 INFERENCE_LEFT_ROWS = [
+    ["Automatic scopes", "The local-escape wrapping prototype is default-off after reaching ordinary heap/library allocations too broadly; keep explicit lifetime boundaries until allocation-site precision, library exclusion, and exception-safe close are proven."],
     ["Closure/effect summaries", "Finish escaping-safe closures, closure-body effects, hidden owner capture, and lambda environment rewriting."],
     ["Type-only owner recovery", "Recover a runtime owner when `T^{r}` has a unique owner term; otherwise keep heap fallback."],
     ["General callee summaries", "Support more callees, forwarding wrappers, helper libraries, and selected framework boundaries."],
@@ -491,10 +492,10 @@ RESULT_ROWS = [
     ],
     [
         "NEXMark generated queries",
-        "Generated Beam-default q3/q8/q9/q11 stream methodology rows.",
-        "Checked q3/q8/q9/q11: `2591 / 4157 / 7929 / 2188 ms`.",
-        "Immix heap: `2848 / 4432 / 8790 / 2217 ms`.",
-        "Checked beats heap on these rows, but q9 favors the scoped/SafeZone backend.",
+        "Generated Beam-default q3/q8/q9/q11 plus generated-local q5 fold API.",
+        "Checked q3/q8/q9/q11: `2591 / 4157 / 7929 / 2188 ms`; q5 fold API: `419.855 ms`.",
+        "Immix heap q3/q8/q9/q11: `2848 / 4432 / 8790 / 2217 ms`; q5: `470.288 ms`.",
+        "Generated methodology wins; q9 favors the scoped/SafeZone backend and q5 is not exact Beam evidence.",
     ],
     [
         "GH Archive-shaped q1/q2",
@@ -512,10 +513,10 @@ RESULT_ROWS = [
     ],
     [
         "Window fold",
-        "Checked fold/traversal microbenchmark, 10M objects.",
-        "Checked Rift: `930.973 ms`.",
-        "Immix heap: `898.906 ms`.",
-        "Negative control: traversal/API overhead can exceed removed GC and remains an optimization target.",
+        "Published 10M fold control plus current focused 1M rerun.",
+        "Published checked 10M: `930.973 ms`; current checked 1M: `97.321 ms`.",
+        "Published heap 10M: `898.906 ms`; current heap 1M: `99.302 ms`.",
+        "The published row remains a regression/control; the current focused rerun now passes narrowly after redundant open-check removal, with application fold rows still requiring their own gates.",
     ],
 ]
 
@@ -531,8 +532,9 @@ REAL_INPUT_ROWS = [
 
 
 LIMITATIONS = [
+    "Current child worktree passes the compiler checked suite 718/718, native runtime checked suite 322/322, and sandbox compile after broad automatic local-escape scopes were gated off by default.",
     "The latest full matrix was a dirty working-tree engineering run; rerun from a clean committed tree before treating the exact numbers as publication evidence.",
-    "Rift is not full ReML/MLKit inference yet: broad closure/effect summaries, hidden/type-only owner recovery, primitive boxes, and library summaries remain open.",
+    "Rift is not full ReML/MLKit inference yet: automatic scopes, broad closure/effect summaries, hidden/type-only owner recovery, primitive boxes, and library summaries remain open.",
     "Some rows are dominated by parsing, hashing, traversal, or query CPU, so removing GC does not guarantee an elapsed-time win.",
     "Unsafe/rootless rows remain lower-bound controls, not user-facing safety claims.",
     "Runtime checks stay unless compiler/runtime probes prove active-handle, stale-token, owner, and close-order invariants.",
@@ -540,6 +542,7 @@ LIMITATIONS = [
 
 
 OPEN_WORK_ROWS = [
+    ["Automatic local-escape wrapping", "Fix or disable the overbroad prototype path, then reintroduce it only with allocation-site precision, library exclusion, exception-safe close, and allocation-stat proof."],
     ["Clean final matrix", "Rerun the latest selected matrix from a clean committed tree and promote only validated rows."],
     ["Closure/effect summaries", "Finish escaping-closure summaries, hidden owner capture, type-only owner recovery, and lambda environment rewriting."],
     ["Library inference", "Handle primitive boxes, boxed keys, iterators, collection nodes, strings, buffers, parser helpers, wrappers, and erased generic paths."],
@@ -1148,6 +1151,9 @@ def build_html(source: Path, markdown: str, title: str) -> str:
         types, owner-token arguments, framework boundaries, and local
         method/effect summaries to find a concrete checked runtime owner. When
         that proof is missing, the allocation remains on the Immix heap.
+        Automatic compiler-inserted scope wrapping is still experimental; the
+        current broad local-escape prototype is default-off after reaching
+        ordinary heap/library allocations too broadly.
       </p>
       {render_region_inference()}
     </section>

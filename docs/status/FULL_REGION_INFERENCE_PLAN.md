@@ -1,14 +1,22 @@
 # Plan: Full Region Inference for Rift
 
-Last updated: 2026-05-30 02:20 CEST
+Last updated: 2026-06-02 14:16 CEST
 
-Status: **ALL PHASES COMPLETE** ✅
+Status: **experimental plan with validation restored for the default mode**.
+
+The May 30 "all phases complete" label is no longer a validated claim. The
+current implementation has broad capture-directed placement plus prototype
+automatic-scope hooks, but the broad escape-driven wrapping path is now gated
+behind explicit opt-in and is not promoted as a default feature.
 
 ## Goal
 
 Move Rift from its current "explicit checked lifetime topology + selective compiler placement lowering" to a ReML-style "inferred region variables + inferred allocation/effect summaries + compiler-inserted region creation/deallocation" system.
 
-The concrete deliverable: a Scala programmer writes ordinary code with no region annotations, and the compiler infers which allocations go into checked regions, inserts region creation/deallocation, and falls back to heap only when inference fails.
+The concrete deliverable remains a future target: a Scala programmer writes
+ordinary code with no region annotations, and the compiler infers which
+allocations go into checked regions, inserts region creation/deallocation, and
+falls back to heap only when inference fails.
 
 ## Why It Matters
 
@@ -17,9 +25,49 @@ Currently Rift requires programmers to:
 2. Carry region tokens through method signatures
 3. Write `allocOpen(new T(...))` instead of `new T(...)`
 
-Full region inference eliminates all three burdens while preserving the same safety guarantees. The programmer writes natural Scala; the compiler inserts region topology.
+Full region inference should eliminate all three burdens while preserving the
+same safety guarantees. The programmer writes natural Scala; the compiler
+inserts region topology only after ownership, lifetime, dispatch, mutation, and
+heap-root safety are proven.
 
-## Current State (validated 2026-05-24)
+## Current State (checked 2026-06-02)
+
+- Child repo base head: `685f2b67e` on `feature/rift`, plus a local validation
+  fix that gates broad automatic local-escape region scopes behind
+  `-P:scalanative:riftInferAutomaticScopes`.
+- Compiler suite passed:
+  `RiftRegionCheckedCompilerTest` `718/718`.
+- Runtime checked suite passed:
+  `RiftRegionCheckedTest` `323/323`.
+- Sandbox compile passed:
+  `ENABLE_EXPERIMENTAL_COMPILER=1 sbt "project sandbox3_next" compile`.
+- Latest closure/effect guardrail: expected-type-only closure allocation
+  effects without a concrete runtime owner capture are validated heap fallback,
+  not region placement. Runtime stats prove `delta == 0` for the closure value
+  and body allocation until lambda owner/environment rewriting is implemented.
+  This keeps the ReML-style effect-polymorphic closure track honest: existing
+  promoted closure-body allocation still requires a concrete checked runtime
+  owner term.
+- Cause of the earlier regression: broad automatic local-escape wrapping was
+  active by default in `RiftRegionInference.collectLocalEscapeAllocations` and
+  the GenNIR source-span local-escape hook, so ordinary heap code was pulled
+  into or rejected by Rift inference too broadly.
+- Consequence: automatic compiler-inserted region scopes remain prototype
+  work. The validated default keeps ordinary unproven allocations on the heap
+  and only lowers owner-proven allocations into checked regions.
+
+## Current Fully Validated Default Baseline (2026-06-02)
+
+- Compiler: `718/718` tests pass
+- Runtime: `323/323` tests pass
+- Sandbox: `sandbox3_next/compile` passes
+- Inference phase: capture-directed placement, owner/effect summaries, wrapper
+  and selected synthetic allocation shapes, and explicit checked owner/runtime
+  handle gates remain active.
+- Automatic scopes: default-off prototype only; no speedup or safety claim is
+  promoted for compiler-inserted region creation/deallocation.
+
+## Previous Fully Validated Inference Baseline (2026-05-24)
 
 - Compiler: `702/702` tests pass
 - Runtime: `316/316` tests pass
@@ -27,7 +75,7 @@ Full region inference eliminates all three burdens while preserving the same saf
 - Inference phase: `RiftRegionInference.scala` (3512 lines) handles local `new`, method returns, closure objects, owner-token containers, arrays, Some/Option/Tuple2/Either factories, lambda-lifted helpers, and closure-body allocation through explicit owner capture
 - Gap: closure bodies without explicit owner capture, automatic region scope insertion, effect polymorphism on function types
 
-## Prerequisites (all satisfied)
+## Prerequisites (baseline satisfied; full inference still open)
 
 - [x] Scala 3 capture checking integrated (`T^{r}` types)
 - [x] Rift region runtime with open/close/reset
@@ -359,10 +407,10 @@ After each phase:
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
 | Effect polymorphism breaks existing capture checking | Medium | High | Start with narrow closure types, expand gradually. Keep explicit-owner paths as fallback. |
-| Automatic region insertion creates too many regions | Medium | Medium | Use liveness analysis to minimize region count. Benchmark region overhead. |
+| Automatic region insertion applies to ordinary heap/library code | High in the current prototype | High | Keep the broad path disabled or gated until escape analysis is allocation-site precise, excludes unsafe library/test code, and proves exception-safe close. |
 | Parallel safety constraints are too restrictive | Low | Medium | Start with simple disjointness, expand to more sophisticated aliasing analysis. |
 | Performance regression from inference overhead | Low | Medium | Profile inference phase. Cache inference results. Keep explicit paths as lower bound. |
-| Inference soundness issues | Low | High | Mechanize core proof in Lean. Extensive negative testing. |
+| Inference soundness issues | Medium | High | Mechanize core proof in Lean. Extensive negative testing. Runtime/allocation-stat gates must pass before promotion. |
 
 ## References
 
@@ -377,42 +425,59 @@ After each phase:
 
 ---
 
-## Completion Summary (2026-05-30)
+## Prototype Summary (2026-05-30 to 2026-06-01)
 
-All four phases of the full region inference plan are now complete.
+The May 30 implementation added useful scaffolding for all four planned
+tracks, but it did not complete a validated full region-inference system. The
+June 1 validation fix keeps the automatic local-escape path default-off after
+it was shown to be too broad for ordinary javalib/concurrency heap
+allocations.
 
-### Phase 1: Effect-Polymorphic Closure Types ✅
-- Closures can allocate in expected type's region without explicit owner capture
-- 4 new tests added and passing
-- Benchmark validation: StreamFlexDesign 25% faster, zero GC
+### Phase 1: Effect-Polymorphic Closure Types
+- Prototype tracking exists for closure allocation effects.
+- Existing validated closure-body placement still requires concrete checked
+  runtime owner flow in the promoted paths.
+- Expected-type-only closure effects are now runtime-proven heap fallback:
+  without lambda signature/environment rewriting, the lowered closure body has
+  no owner handle, so neither the closure value nor body allocation is promoted
+  from heap in that shape.
+- Hidden/type-only owner capture and lambda signature/environment rewriting
+  remain open.
 
-### Phase 2: Automatic Region Scope Inference ✅
-- Escape analysis identifies local-escape allocations
-- Region creation via `scalanative_rift_region_open`
-- Region closing via `scalanative_rift_region_close`
-- Full liveness analysis for optimal region boundaries
-- Scope-based region splitting
-- Benchmark validation: same performance as explicit regions
+### Phase 2: Automatic Region Scope Inference
+- Prototype escape/liveness/scope tracking exists.
+- Broad wrapping is not promoted and now requires
+  `-P:scalanative:riftInferAutomaticScopes` to run.
+- Required next step: rebuild the wrapping path with
+  allocation-site precision, library exclusion, exception-safe close, and
+  runtime allocation-stat proof.
 
-### Phase 3: Effect Constraints for Parallel Safety ✅
-- Disjointness constraints tracking
-- Mutation effects tracking
-- Effect constraint verification functions
+### Phase 3: Effect Constraints for Parallel Safety
+- Disjointness and mutation-effect tracking scaffolds exist.
+- They are not yet a validated basis for removing runtime checks or proving
+  parallel region safety.
 
-### Phase 4: Broader Inference and Optimization ✅
-- Collection factory and operation effects tracking
-- Higher-order function effects tracking
-- Region polymorphism tracking
-- HeapRoot elimination tracking
+### Phase 4: Broader Inference and Optimization
+- Collection, higher-order, region-polymorphism, and HeapRoot-elimination
+  tracking scaffolds exist.
+- They remain tracking/prototype infrastructure until wired to conservative
+  lowering with positive and negative tests.
 
 ### Validation
-- Compiler: 710/710 tests pass
-- Runtime: 316/316 tests pass
-- Sandbox: compile passes
-- Benchmarks: 25% faster, zero GC, matching checksums
+- Current child worktree on base head `685f2b67e` plus the local automatic-scope
+  gate fix: compiler checked suite passes `718/718`.
+- Runtime checked suite passes `323/323`.
+- `sandbox3_next` compile passed.
+- No benchmark speedup is promoted for the broad automatic-scope prototype.
+  Existing performance claims remain tied to the earlier validated
+  capture-directed checked-region system and recorded benchmark matrices.
 
 ### Commit History (child repo)
 ```
+685f2b67e Remove redundant checkOpen() in putFoldInBucket
+8d351659f Re-enable Phase 4 escape analysis with constructor-arg and class-body safety guards
+5d9fec0ac Fix Phase 4 compilation: guard stdlib allocations, disable premature escape-driven region wrapping
+b0b6d0a08 Add extended region inference: branch/match forwarding, alias selection, polymorphic owner-token, effect-polymorphic closure coverage (Phase 4)
 ae85c6dc4 Add HeapRoot elimination tracking (Phase 4 Step 4.4)
 bc449acf6 Add region polymorphism tracking (Phase 4 Step 4.3)
 9fa59d2fe Add higher-order function effects tracking (Phase 4 Step 4.2)

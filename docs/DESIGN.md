@@ -2,7 +2,7 @@
 
 Status: active research design for the Scala Native fork.
 
-Last updated: 2026-05-21 07:48 CEST
+Last updated: 2026-06-01 14:54 CEST
 
 Active worktree: `/Users/siyaoliu/rift/scala-native-rift`
 
@@ -68,6 +68,16 @@ The detailed lineage/evaluation note is
 version is: Rift is ReML/MLKit-inspired, but capture-checking-native and
 stream/dataflow-oriented. It should not be described as a full Tofte/Talpin,
 MLKit, or ReML whole-program inference implementation yet.
+
+Current 2026-06-01 validation boundary: a later prototype re-enabled broad
+automatic local-escape wrapping and GenNIR source-span local-escape placement,
+then was gated off by default after it reached ordinary javalib/concurrency
+heap allocations too broadly. The child worktree now passes the compiler
+checked suite (`718/718`), native runtime checked suite (`322/322`), and
+`sandbox3_next` compile with automatic scopes default-off. Automatic
+compiler-inserted region scopes are therefore design/prototype work, not a
+promoted feature. The validated system remains explicit lifetime boundaries
+plus capture-directed placement with heap fallback.
 
 1. **Explicit lifetime, inferred allocation placement.** Inside a checked
    `epoch`, `window`, `page`, or `transaction`, the compiler may lower ordinary
